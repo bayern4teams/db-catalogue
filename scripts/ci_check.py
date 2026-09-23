@@ -13,7 +13,6 @@ REQUIRED = (
     "ARCHITECTURE_RESEARCH.md",
     "TODO.md",
     "AGENTS.md",
-    "AGENT.md",
     "CLAUDE.md",
     ".env.example",
     ".githooks/pre-commit",
@@ -41,7 +40,10 @@ def main() -> None:
     if forbidden:
         raise SystemExit("Forbidden tracked files: " + ", ".join(sorted(forbidden)))
 
-    for document in ("README.md", "TECHNICAL_IMPLEMENTATION.md", "TODO.md", "AGENTS.md", "AGENT.md", "CLAUDE.md"):
+    if (ROOT / "AGENT.md").exists():
+        raise SystemExit("Use only the canonical AGENTS.md; remove AGENT.md")
+
+    for document in ("README.md", "TECHNICAL_IMPLEMENTATION.md", "TODO.md", "AGENTS.md", "CLAUDE.md"):
         text = (ROOT / document).read_text(encoding="utf-8")
         for target in re.findall(r"\]\(([^)]+)\)", text):
             if target.startswith(("https://", "http://", "#", "mailto:")):

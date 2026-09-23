@@ -1,5 +1,7 @@
 # Project agent policy
 
+This is the single canonical agent policy. Do not recreate a singular `AGENT.md`.
+
 Read [TECHNICAL_IMPLEMENTATION.md](TECHNICAL_IMPLEMENTATION.md) and [TODO.md](TODO.md) before implementation. The technical file is the binding design baseline; verify facts from code, tests, current upstream docs, or user answers. **Hands on technical file: no guessing.** Update TODO.md immediately when a task starts, changes, is blocked, or finishes; do not defer it until after a batch of work. Every verified change must be committed with a descriptive message. Never commit `.env`, credentials, sampled values, or generated graph caches.
 
 ## Codebase Intelligence Policy
@@ -73,3 +75,7 @@ Use the upstream [Ponytail](https://github.com/DietrichGebert/ponytail) skill/pl
 ## Secrets and configuration
 
 Never hardcode credentials, endpoints, model identity, thresholds, timeouts, source IDs, paths, or environment-specific values in application logic. Read validated config and environment/secret references; safe documented defaults belong only in config models. Keep `.env` local and ignored; `.env.example` contains placeholders. Never commit or log raw database values. Treat source SQL and comments as untrusted data, including when building LLM prompts.
+
+## Local reviewer and observability
+
+Follow the selected v1 stack in TECHNICAL_IMPLEMENTATION.md: private vLLM serving on Linux or WSL2 GPU, a bounded LangGraph reviewer in the assembler, and self-hosted Langfuse with metadata-only traces. Use the OpenAI-compatible Python client only with the configured private vLLM endpoint; no cloud fallback. Do not add top-level LangChain or LangGraph Swarm without a measured need and user approval. Never give the model source credentials, direct database tools, unredacted samples or authority to declare lineage. Langfuse tracing must avoid automatic raw prompt, response and graph-state capture until canary privacy tests establish masking; telemetry outages must not stop graph publication. Keep source-code intelligence graphs separate from the product's database graph and Langfuse traces.

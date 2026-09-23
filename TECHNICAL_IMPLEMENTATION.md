@@ -32,8 +32,11 @@ flowchart TB
   V --> S[SQLite run state]
   V --> R[Candidate and evidence engine]
   O[Observed SQL / pipeline events] --> R
-  R --> M[Local Ollama/Qwen review]
-  M --> R
+  R --> W[Bounded LangGraph reviewer]
+  W --> VLLM[Local vLLM on Linux or WSL2 GPU]
+  VLLM --> W
+  W --> LF[Self-hosted Langfuse metadata traces]
+  W --> R
   R --> G[Versioned graph writer]
   G --> J[JSONL + manifest + schema]
 ```
@@ -60,7 +63,8 @@ src/dbig/
   profile/               # typed metrics, safe sampling, value tokenization
   match/                 # blocking, lexical/type/key/value evidence, direction, abstain
   lineage/               # SQLGlot resolver, observed run importer, OpenLineage adapter
-  llm/                   # Ollama client, redacted prompt, schema, cache, timeout
+  llm/                   # LangGraph review nodes, vLLM client, prompt schema, cache, timeout
+  observability/         # Langfuse metadata-only spans and local diagnostics
   assemble/              # reconciliation, graph writer, run state
   security/              # redaction, secret resolution, path and bundle validation
 tests/fixtures/          # labeled synthetic PG/CH/Mongo cases, SQL and event fixtures
@@ -88,10 +92,10 @@ One Python distribution with extras: base assembler, `postgres`, `clickhouse`, `
 | Matching | RapidFuzz plus our deterministic policies | Name similarity is one feature, never sufficient alone. |
 | Graph algorithms | NetworkX `MultiDiGraph`, optional internal view | Parallel typed edges and traversal; canonical persisted IR is independent of NetworkX. |
 | Pipeline interchange | OpenLineage spec; `openlineage-python` extra only if needed | Import/export observed job/run/dataset facets, preserve provenance. |
-| Local LLM | Ollama Python client, Ollama server, trial Qwen3 8B | One bounded structured-output call per ambiguous candidate batch; no cloud fallback. Record model digest, prompt/schema version, latency. |
-| Agent framework | None in v1 | The reviewer is a fixed call, not an autonomous tool loop. Revisit PydanticAI/LangGraph only on measured need. |
+| Local LLM | vLLM OpenAI-compatible server on Linux or WSL2 GPU; `openai` Python client against its private base URL; trial Qwen3 8B | One bounded structured-output call per ambiguous candidate batch; no cloud fallback. Record model digest, prompt/schema version, latency. Confirm GPU support and JSON conformance on the pinned versions. |
+| Review workflow | LangGraph `StateGraph` | Explicit nodes for redaction, model call, validation and evidence conversion. Our deterministic assembler owns scheduling and publication. No autonomous tools, DB access, dynamic handoffs or model-selected SQL. Top-level `langchain` and `langgraph-swarm` are excluded; `langchain-core` may enter transitively with LangGraph. |
 | Runtime state | SQLite stdlib | Local assembler run index, bundle receipts, stable IDs, edge history, cache keys. WAL mode where appropriate. |
-| Telemetry | stdlib `logging` JSON formatter initially; OpenTelemetry later only if justified | Source/run IDs, counts, timings, errors. Never log values or credentials. |
+| Telemetry | stdlib structured logging plus self-hosted Langfuse Python SDK | Trace reviewer nodes, local model latency/usage, validation outcomes and redacted error codes with approved metadata only. Never export raw prompts, outputs, SQL, values or credentials. Langfuse is observability, not source catalog state. |
 | Test/tooling | pytest, Ruff, mypy/pyright, Bandit, pip-audit, `cyclonedx-py` or equivalent, license checker selected during dependency lock | CI must run deterministic unit, integration, contract, security and license gates. |
 | Source-code intelligence | Graphify, Graft, Codebase Memory MCP | Developer-only structural graphs. Graphify first, then Graft, then CBM. Git hooks/CI refresh them without LLM/deep modes. |
 | Ponytail | Ponytail plugin skills | Agent design/review discipline; use all named skills when available, record results and do not equate a slash command with a CI test. |
@@ -102,7 +106,7 @@ Version numbers and exact lock hashes are deliberately pending. The installed de
 
 Configuration is explicit TOML plus `DBIG_*` environment overrides, with a strict precedence contract: CLI explicit flag > process environment > TOML > documented safe default. `.env` is a developer-local input to a launcher, never read implicitly in production. `.env` is ignored; `.env.example` has harmless placeholders. Secret values are resolved at runtime from process environment or an approved secret manager reference. Never put passwords, DSNs with embedded credentials, HMAC keys, tokens, or private SQL in source, examples, artifacts, logs, test snapshots, or graph tool indexes.
 
-Source config fields: source ID, kind, connection reference, allowed databases/schemas/collections, TLS policy, read timeout, query budget, sample rows/documents, byte budget, concurrency, history access flag, permitted lineage event path, sensitivity policy. Assembler config fields: bundle roots, output path, freshness threshold, matching thresholds, local Ollama URL/model/digest, request timeout, batching, GPU concurrency, logging, bundle verification policy. Every user-supplied path is canonicalized and constrained to an approved root.
+Source config fields: source ID, kind, connection reference, allowed databases/schemas/collections, TLS policy, read timeout, query budget, sample rows/documents, byte budget, concurrency, history access flag, permitted lineage event path, sensitivity policy. Assembler config fields: bundle roots, output path, freshness threshold, matching thresholds, private vLLM base URL/auth reference/model/digest, request timeout, batching, GPU concurrency, self-hosted Langfuse URL/key references, telemetry enablement, logging, bundle verification policy. Every user-supplied path is canonicalized and constrained to an approved root. The vLLM and Langfuse services have separate deployment secrets and network policies.
 
 Secrets are never passed on command lines. Collector has least-privilege read permissions and a query cancellation timeout. The cross-source comparison key has run scope, a key ID only in manifests, and secure distribution to authorized collectors. If no shared key is available, disable cross-source value evidence and record that capability as unavailable rather than comparing incompatible hashes. Decide retention and cryptographic signing before production rollout.
 
@@ -144,9 +148,11 @@ OpenLineage import maps dataset namespace/name to source/object IDs and run/job 
 
 ## 10. Local LLM review in version 1
 
-After deterministic scoring, send only ambiguous candidates within a configured token/time budget to assembler-local Ollama. Trial model is Qwen3 8B; final model, quantization and digest depend on GPU VRAM and measured latency/accuracy. Prompt includes normalized object/field labels, types, structural metrics, sanitized descriptions, source context and evidence IDs. It excludes raw rows, token sets, SQL literals and connection details. Require JSON Schema output: candidate ID, decision (`supports`, `opposes`, `unknown`), short reason, cited evidence IDs, and any suggested follow-up. Validate with Pydantic; reject malformed, uncited or invented evidence. Persist model/digest, prompt/schema versions and response hash for audit; redact response text as necessary.
+After deterministic scoring, a bounded LangGraph `StateGraph` runs `redact -> request_vllm -> validate -> record_suggestion` for ambiguous candidate batches within configured token, request and time budgets. The trial model is Qwen3 8B; final model, quantization and digest depend on GPU VRAM and measured latency/accuracy. vLLM runs on a Linux or WSL2 GPU host; the assembler calls its private OpenAI-compatible endpoint through the `openai` Python client. This API compatibility does not authorize an OpenAI cloud call. Prompt includes normalized object/field labels, types, structural metrics, sanitized descriptions, source context and evidence IDs. It excludes raw rows, token sets, SQL literals and connection details. Require schema-constrained output: candidate ID, decision (`supports`, `opposes`, `unknown`), short reason, cited evidence IDs, and any suggested follow-up. Validate again with Pydantic and check all IDs; reject malformed, uncited or invented evidence. Persist model/digest, prompt/schema versions and response hash for audit; redact response text as necessary. Verify vLLM's pinned structured-output behavior against the schema before deployment.
 
-The reviewer adds only `MODEL_SUGGESTION` evidence and can reprioritize review; it cannot convert a candidate into a declared FK or an observed lineage edge. A timeout, local server outage or invalid output produces a typed diagnostic and the deterministic graph still publishes. The v1 deployment enables review for ambiguous cases, then compares precision/recall and latency with the no-LLM baseline. No agent framework, tool calling, autonomous query planning or cloud API in v1.
+The reviewer adds only `MODEL_SUGGESTION` evidence and can reprioritize review; it cannot convert a candidate into a declared FK or an observed lineage edge. A timeout, local server outage or invalid output produces a typed diagnostic and the deterministic graph still publishes. The v1 deployment enables review for ambiguous cases, then compares precision/recall and latency with the no-LLM baseline. LangGraph is a fixed workflow, not a free-running agent: no model tool calls, autonomous query planning, peer-agent handoffs or cloud API. Top-level LangChain and LangGraph Swarm add no needed v1 capability; reconsider only if a measured workflow requires their features.
+
+Self-hosted Langfuse receives spans for run/candidate IDs, workflow node names, model artifact identity, prompt/schema versions, token counts, timing, validation status and redacted error codes. Start with manual SDK spans so model inputs/outputs and LangGraph state are not captured automatically. A LangGraph callback/agent visualization is allowed only after tests prove it transmits approved metadata alone. Langfuse requires its own web/worker, PostgreSQL, ClickHouse, Redis/Valkey and S3-compatible storage; these are telemetry infrastructure, not data sources or assembler dependencies. Restrict network access and retention. Langfuse unavailability must not block graph publication; bound any telemetry queue and emit local diagnostics. Test that canary secrets, sample values and SQL literals never appear in traces.
 
 ## 11. Assembler, state and incremental runs
 

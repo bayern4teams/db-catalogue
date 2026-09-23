@@ -2,6 +2,14 @@
 
 Update this file when work starts, a fact changes, a decision is needed, a check runs, or work finishes. Do not batch updates at the end. Use `- [ ]`, `- [x]`, or `- [~]` (in progress); add a short evidence link/command with every completion. Ask the user about any question, suggestion, or debt as soon as it is discovered. All verified changes are committed. This ledger is a plan, not a claim of implemented runtime capability.
 
+## Current change: local agent framework decision
+
+- [x] Remove duplicate `AGENT.md` and keep the complete policy in `AGENTS.md`; update README/CLAUDE.md and repository check. Evidence: `AGENT.md` deleted, `scripts/ci_check.py` rejects its return, local policy check passed.
+- [x] Research vLLM, LangGraph, LangChain, LangGraph Swarm and Langfuse from official documentation; update README, implementation contract, research, CLAUDE.md, AGENTS.md and this ledger consistently. Evidence: upstream links and decision analysis in `ARCHITECTURE_RESEARCH.md` §§19, 26, 29–30.
+- [x] Use only justified v1 modules: vLLM serving, LangGraph bounded reviewer, Langfuse self-hosted telemetry; defer top-level LangChain and LangGraph Swarm. Evidence: user decision on 2026-09-23; upstream project documentation is linked in `ARCHITECTURE_RESEARCH.md`.
+- [x] Keep agent telemetry inside the environment and serve the GPU model on Linux or WSL2. Evidence: user decisions on 2026-09-23.
+- [~] Run repository policy and graph checks, commit all changes, push, and inspect the actual GitHub Actions result. Local policy check and `git diff --check` passed; commit and remote CI pending.
+
 ## 0. Repository and workflow foundation
 
 - [x] Create Git repository on `main` in this folder. Evidence: `git init -b main` on 2026-09-23.
@@ -97,8 +105,12 @@ Update this file when work starts, a fact changes, a decision is needed, a check
 
 - [ ] Implement SQLite state, idempotent bundle receipts, incremental invalidation and partial-source semantics.
 - [ ] Implement deterministic graph writer with stable sort, evidence integrity and validation.
-- [ ] Add Ollama structured-output reviewer for ambiguous candidates only, enabled in v1 deployment.
+- [ ] Add bounded LangGraph reviewer for ambiguous candidates only: redaction, vLLM request, response validation and weak-evidence conversion; enable in v1 deployment.
 - [ ] Validate/redact model input and output; ensure timeout or server failure does not prevent graph publication.
+- [ ] Deploy vLLM on a Linux or WSL2 GPU host behind a protected private endpoint; validate GPU support, model fit, structured-output contract and no cloud fallback.
+- [ ] Deploy self-hosted Langfuse with isolated web/worker, PostgreSQL, ClickHouse, Redis/Valkey and object storage; configure retention, access controls and private network path.
+- [ ] Instrument manual Langfuse metadata-only spans; prove canary secrets, raw values, SQL literals, prompt text and model outputs never enter traces. Test telemetry outage and bounded queue behavior.
+- [ ] Consider LangGraph callback/agent graph view only after masking/privacy tests pass; do not auto-capture state or messages by default.
 - [ ] Pin evaluated Qwen model artifact/digest after GPU benchmark; record prompt/schema versions.
 - [ ] Compare deterministic-only baseline against LLM reviewer on held-out examples and report cost/latency.
 
@@ -115,7 +127,7 @@ Update this file when work starts, a fact changes, a decision is needed, a check
 
 - [ ] No accepted implementation debt yet. Add each debt item here with owner, reason, risk, due milestone and user decision; ask immediately when discovered.
 - [ ] Assess whether Graft/Graphify/CBM tool versions should be pinned exactly in CI and developer bootstrap after first working run.
-- [ ] Revisit optional Valentine, embeddings, vLLM, and agent framework only against measured v1 gaps; request approval before changing the chosen architecture.
+- [ ] Revisit optional Valentine, embeddings, top-level LangChain and LangGraph Swarm only against measured v1 gaps; request approval before changing the chosen architecture.
 
 ## 13. Verification record
 
