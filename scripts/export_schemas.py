@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from dbig_contracts.models import Constraint, Edge, Evidence, Field, Manifest, Object, Source
+from dbig_contracts.scan import ScanReceipt, ScanRequest, SignedScanRequest
 from jsonschema import Draft202012Validator
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -17,6 +18,9 @@ MODELS = {
     "evidence": Evidence,
     "edge": Edge,
     "manifest": Manifest,
+    "scan-request": ScanRequest,
+    "signed-scan-request": SignedScanRequest,
+    "scan-receipt": ScanReceipt,
 }
 
 

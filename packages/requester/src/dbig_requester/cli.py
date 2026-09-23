@@ -1,0 +1,123 @@
+"""Requester CLI using the same functions as its REST service."""
+
+import json
+from ipaddress import ip_address
+from pathlib import Path
+
+import click
+from dbig_contracts.scan import ScanRequest
+
+from .answer import answer_question
+from .config import load_config
+from .scan import dispatch_scan
+from .search import SearchRequest, index_snapshot, search
+
+
+@click.group()
+def main() -> None:
+    pass
+
+
+@main.command("index")
+@click.option(
+    "--config", "config_path", type=click.Path(path_type=Path, exists=True), required=True
+)
+def index(config_path: Path) -> None:
+    config = load_config(config_path)
+    click.echo(index_snapshot(config.snapshot_dir, config.state_dir))
+
+
+@main.command("search")
+@click.option(
+    "--config", "config_path", type=click.Path(path_type=Path, exists=True), required=True
+)
+@click.option("--query", default="")
+@click.option("--source-id")
+@click.option("--kind")
+@click.option("--data-type")
+@click.option("--tag")
+@click.option("--capability")
+@click.option("--evidence-status")
+@click.option("--max-age-seconds", type=int)
+@click.option("--limit", type=int, default=20)
+@click.option("--offset", type=int, default=0)
+def search_command(
+    config_path: Path,
+    query: str,
+    source_id: str | None,
+    kind: str | None,
+    data_type: str | None,
+    tag: str | None,
+    capability: str | None,
+    evidence_status: str | None,
+    max_age_seconds: int | None,
+    limit: int,
+    offset: int,
+) -> None:
+    config = load_config(config_path)
+    click.echo(
+        json.dumps(
+            search(
+                config.state_dir,
+                SearchRequest(
+                    query=query,
+                    source_id=source_id,
+                    kind=kind,
+                    data_type=data_type,
+                    tag=tag,
+                    capability=capability,
+                    evidence_status=evidence_status,
+                    max_age_seconds=max_age_seconds,
+                    limit=limit,
+                    offset=offset,
+                ),
+            ),
+            sort_keys=True,
+        )
+    )
+
+
+@main.command("ask")
+@click.option(
+    "--config", "config_path", type=click.Path(path_type=Path, exists=True), required=True
+)
+@click.option("--question", required=True)
+def ask(config_path: Path, question: str) -> None:
+    config = load_config(config_path)
+    if config.answer is None:
+        raise click.ClickException("private answer model is not configured")
+    click.echo(
+        json.dumps(answer_question(config.state_dir, question, config.answer), sort_keys=True)
+    )
+
+
+@main.command("request-scan")
+@click.option(
+    "--config", "config_path", type=click.Path(path_type=Path, exists=True), required=True
+)
+@click.option(
+    "--request", "request_path", type=click.Path(path_type=Path, exists=True), required=True
+)
+@click.option("--dispatch", "adapter", type=click.Choice(["bundle", "http"]), required=True)
+def request_scan(config_path: Path, request_path: Path, adapter: str) -> None:
+    config = load_config(config_path)
+    if config.scan is None:
+        raise click.ClickException("scan dispatch is not configured")
+    request = ScanRequest.model_validate_json(request_path.read_bytes())
+    click.echo(dispatch_scan(request, config.scan, config.state_dir, adapter).model_dump_json())
+
+
+@main.command("serve")
+@click.option(
+    "--config", "config_path", type=click.Path(path_type=Path, exists=True), required=True
+)
+@click.option("--host", required=True)
+@click.option("--port", type=int, required=True)
+def serve(config_path: Path, host: str, port: int) -> None:
+    if not ip_address(host).is_loopback:
+        raise click.UsageError("requester API binds only to loopback; use a private TLS proxy")
+    import uvicorn
+
+    from .api import create_app
+
+    uvicorn.run(create_app(load_config(config_path)), host=host, port=port)

@@ -8,6 +8,7 @@ dependencies = ["dbig-contracts==0.1.0", "click>=8.2,<9"]
 postgresql = ["pg8000>=1.31,<2"]
 clickhouse = ["clickhouse-connect>=0.9,<1"]
 mongodb = ["pymongo>=4.14,<5"]
+api = ["fastapi>=0.120,<1", "uvicorn>=0.35,<1"]
 
 [project.scripts]
 dbig = "dbig_collectors.cli:main"

@@ -24,6 +24,13 @@
       "title": "Attributes",
       "type": "object"
     },
+    "capabilities": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Capabilities",
+      "type": "array"
+    },
     "collector_version": {
       "minLength": 1,
       "title": "Collector Version",
@@ -98,6 +105,13 @@
       "minLength": 1,
       "title": "Source Id",
       "type": "string"
+    },
+    "tags": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Tags",
+      "type": "array"
     }
   },
   "required": [

@@ -15,7 +15,14 @@ def source_bundle(path):
         "provenance": "synthetic",
     }
     customer = Object(
-        id="customer", native_id="1", kind="table", name="customers", namespace="public", **common
+        id="customer",
+        native_id="1",
+        kind="table",
+        name="customers",
+        namespace="public",
+        tags=["billing"],
+        capabilities=["sql_read"],
+        **common,
     )
     order = Object(
         id="order", native_id="2", kind="table", name="orders", namespace="public", **common

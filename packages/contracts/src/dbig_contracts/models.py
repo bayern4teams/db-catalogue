@@ -52,6 +52,8 @@ class Object(Record):
     namespace: str | None = None
     parent_id: str | None = None
     attributes: dict[str, str | int | float | bool | None] = PydanticField(default_factory=dict)
+    tags: list[str] = PydanticField(default_factory=list)
+    capabilities: list[str] = PydanticField(default_factory=list)
 
 
 class Field(Record):
@@ -63,6 +65,8 @@ class Field(Record):
     nullable: bool | None = None
     ordinal: int | None = None
     attributes: dict[str, str | int | float | bool | None] = PydanticField(default_factory=dict)
+    tags: list[str] = PydanticField(default_factory=list)
+    capabilities: list[str] = PydanticField(default_factory=list)
 
 
 class Constraint(Record):

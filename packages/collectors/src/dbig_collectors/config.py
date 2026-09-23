@@ -26,6 +26,10 @@ class SourceConfig(BaseModel):
     sample_rows: int = Field(default=0, ge=0)
     max_path_depth: int = Field(default=4, ge=1)
     history_access: bool = False
+    authorized_requesters: list[str] = Field(default_factory=list)
+    http_token_env: str | None = None
+    max_queued_scans: int = Field(default=20, ge=1)
+    max_request_ttl_seconds: int = Field(default=3600, ge=1)
 
     @field_validator("namespaces")
     @classmethod
@@ -40,7 +44,14 @@ def load_config(path: Path) -> SourceConfig:
     if set(raw) != {"source"}:
         raise ValueError("configuration must contain only [source]")
     source = raw["source"]
-    string_fields = {"source_id", "kind", "connection_env", "signing_key_env", "signing_key_id"}
+    string_fields = {
+        "source_id",
+        "kind",
+        "connection_env",
+        "signing_key_env",
+        "signing_key_id",
+        "http_token_env",
+    }
     for key in SourceConfig.model_fields:
         env = os.getenv("DBIG_" + key.upper())
         if env is not None:
