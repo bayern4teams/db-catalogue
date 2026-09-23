@@ -1,6 +1,6 @@
 # Database Intelligence Graph Generator
 
-Evidence-first discovery of database objects, likely relationships, and **observed** data lineage across PostgreSQL, ClickHouse, and MongoDB, with two independent user-facing modules. Implementation is in progress: the artifact contract and source-local collector package now exist; the builder, requester, and planner remain TODO work.
+Evidence-first discovery of database objects, likely relationships, and **observed** data lineage across PostgreSQL, ClickHouse, and MongoDB, with two independent user-facing modules. Implementation is in progress: contracts, source-local collectors, and the central builder exist; the requester and planner remain TODO work.
 
 ## What the system will do
 
@@ -37,7 +37,7 @@ flowchart LR
 
 ## Current state
 
-The `dbig-contracts` package validates signed JSONL collector bundles and catalog snapshots. The `dbig-collectors` package has PostgreSQL, ClickHouse, and MongoDB metadata discovery with source-local credentials and defensive limits. Its current tests use synthetic driver objects; live database version and privilege tests are still required. The central builder, requester, and planner have not been implemented yet, so the product is not deployable end to end.
+The `dbig-contracts` package validates signed JSONL collector bundles and catalog snapshots. The `dbig-collectors` package has PostgreSQL, ClickHouse, and MongoDB metadata discovery with source-local credentials and defensive limits. The `dbig-catalog-builder` package validates signed source bundles, publishes a sealed snapshot, distinguishes declared foreign keys from tentative references, and can review ambiguous candidates through a configured private vLLM endpoint with metadata-only Langfuse spans. Its model output is cited, validated weak evidence; model failure still publishes the deterministic snapshot as partial. Current tests use synthetic drivers and a fake model; live database, GPU/model and telemetry deployment tests are still required. The requester and planner have not been implemented yet, so the product is not deployable end to end.
 
 For local development, run `uv sync --locked --dev` and `uv run pytest`. Build a package with `uv build --package dbig-contracts` or `uv build --package dbig-collectors`. At a source site, install only the matching collector extra (`postgresql`, `clickhouse`, or `mongodb`), set the configured connection JSON and signing key in the process environment, then run `dbig collect --config <source.toml> --out <new-bundle-directory>`. The config's `[source]` section requires `source_id`, `kind`, `connection_env`, `signing_key_env`, `signing_key_id`, and an allowed `namespaces` list. The collector refuses plaintext transport and records a partial bundle when stable source identity is unavailable. Never put credentials in TOML or shell arguments.
 

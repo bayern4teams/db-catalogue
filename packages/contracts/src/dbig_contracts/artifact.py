@@ -16,6 +16,7 @@ from pydantic import BaseModel
 from pydantic import Field as PydanticField
 
 from .models import (
+    Constraint,
     Edge,
     Evidence,
     Field,
@@ -42,6 +43,7 @@ MODELS: dict[str, type[Record]] = {
     "sources.jsonl": Source,
     "objects.jsonl": Object,
     "fields.jsonl": Field,
+    "constraints.jsonl": Constraint,
     "nodes.jsonl": Record,
     "edges.jsonl": Edge,
     "evidence.jsonl": Evidence,
@@ -122,7 +124,10 @@ def write_artifact(
             size = 0
             with path.open("wb") as stream:
                 for record in records:
-                    model = MODELS.get(name, Record).model_validate(record)
+                    data = (
+                        record.model_dump(mode="json") if isinstance(record, BaseModel) else record
+                    )
+                    model = MODELS.get(name, Record).model_validate(data)
                     line = canonical(model) + b"\n"
                     stream.write(line)
                     digest.update(line)
@@ -223,4 +228,11 @@ def read_artifact(
         field = Field.model_validate(record)
         if field.object_id not in object_ids:
             raise ValueError(f"dangling field: {field.id}")
+    for record in result.get("constraints.jsonl", []):
+        constraint = Constraint.model_validate(record)
+        if constraint.object_id not in object_ids or (
+            constraint.target_object_id is not None
+            and constraint.target_object_id not in object_ids
+        ):
+            raise ValueError(f"dangling constraint: {constraint.id}")
     return manifest, result

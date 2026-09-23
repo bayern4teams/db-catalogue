@@ -1,6 +1,6 @@
 # Technical implementation contract
 
-Status: binding design baseline with partial implementation, 2026-09-23. The artifact contract and metadata-first collector package are implemented and tested with synthetic drivers; the builder, requester, planner, live connector matrix, benchmarks and deployment remain open in [TODO.md](TODO.md). This file records **decisions to implement and verify**, not claims that every role works. The research and source links behind these decisions are in [ARCHITECTURE_RESEARCH.md](ARCHITECTURE_RESEARCH.md).
+Status: binding design baseline with partial implementation, 2026-09-23. The artifact contract, metadata-first collectors, and deterministic catalog builder with an optional bounded private-model reviewer are implemented and tested with synthetic inputs. The requester, planner, live connector matrix, model/telemetry deployment, benchmarks and acceptance tests remain open in [TODO.md](TODO.md). This file records **decisions to implement and verify**, not claims that every role works. The research and source links behind these decisions are in [ARCHITECTURE_RESEARCH.md](ARCHITECTURE_RESEARCH.md).
 
 ## 1. Product boundary and non-negotiable behavior
 

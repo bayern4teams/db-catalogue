@@ -1,0 +1,106 @@
+{
+  "additionalProperties": true,
+  "properties": {
+    "collector_version": {
+      "minLength": 1,
+      "title": "Collector Version",
+      "type": "string"
+    },
+    "field_names": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Field Names",
+      "type": "array"
+    },
+    "field_ordinals": {
+      "items": {
+        "type": "integer"
+      },
+      "title": "Field Ordinals",
+      "type": "array"
+    },
+    "id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Id",
+      "type": "string"
+    },
+    "ir_version": {
+      "default": "1.0",
+      "title": "Ir Version",
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "primary",
+        "unique",
+        "foreign",
+        "index"
+      ],
+      "title": "Kind",
+      "type": "string"
+    },
+    "native_id": {
+      "title": "Native Id",
+      "type": "string"
+    },
+    "object_id": {
+      "title": "Object Id",
+      "type": "string"
+    },
+    "observed_at": {
+      "format": "date-time",
+      "title": "Observed At",
+      "type": "string"
+    },
+    "provenance": {
+      "minLength": 1,
+      "title": "Provenance",
+      "type": "string"
+    },
+    "record_type": {
+      "const": "constraint",
+      "default": "constraint",
+      "title": "Record Type",
+      "type": "string"
+    },
+    "source_id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Source Id",
+      "type": "string"
+    },
+    "target_field_ordinals": {
+      "items": {
+        "type": "integer"
+      },
+      "title": "Target Field Ordinals",
+      "type": "array"
+    },
+    "target_object_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Target Object Id"
+    }
+  },
+  "required": [
+    "id",
+    "source_id",
+    "observed_at",
+    "collector_version",
+    "provenance",
+    "native_id",
+    "kind",
+    "object_id"
+  ],
+  "title": "Constraint",
+  "type": "object"
+}

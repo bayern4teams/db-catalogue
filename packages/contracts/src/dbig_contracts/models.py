@@ -65,6 +65,17 @@ class Field(Record):
     attributes: dict[str, str | int | float | bool | None] = PydanticField(default_factory=dict)
 
 
+class Constraint(Record):
+    record_type: Literal["constraint"] = "constraint"
+    native_id: str
+    kind: Literal["primary", "unique", "foreign", "index"]
+    object_id: str
+    target_object_id: str | None = None
+    field_ordinals: list[int] = PydanticField(default_factory=list)
+    target_field_ordinals: list[int] = PydanticField(default_factory=list)
+    field_names: list[str] = PydanticField(default_factory=list)
+
+
 class Evidence(Record):
     record_type: Literal["evidence"] = "evidence"
     kind: str

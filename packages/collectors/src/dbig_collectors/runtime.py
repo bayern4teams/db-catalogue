@@ -120,7 +120,21 @@ def discover_postgresql(
             constraint_rows = cursor.fetchall()
             if len(constraint_rows) > config.max_fields:
                 raise RuntimeError("BUDGET_EXHAUSTED")
+            discovered_oids = {row[0] for row in rows}
             for oid, owner_oid, target_oid, kind, keys, target_keys in constraint_rows:
+                if kind == "f" and target_oid not in discovered_oids:
+                    tables["diagnostics.jsonl"].append(
+                        Record.model_validate(
+                            {
+                                "record_type": "diagnostic",
+                                "id": stable_id(config.source_id, "diagnostic", str(oid)),
+                                "code": "OUT_OF_SCOPE_REFERENCE",
+                                "message": "foreign key target outside approved scan scope",
+                                **common,
+                            }
+                        )
+                    )
+                    continue
                 tables["constraints.jsonl"].append(
                     Record.model_validate(
                         {
