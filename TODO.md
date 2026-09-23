@@ -8,7 +8,7 @@ Update this file when work starts, a fact changes, a decision is needed, a check
 - [x] Research vLLM, LangGraph, LangChain, LangGraph Swarm and Langfuse from official documentation; update README, implementation contract, research, CLAUDE.md, AGENTS.md and this ledger consistently. Evidence: upstream links and decision analysis in `ARCHITECTURE_RESEARCH.md` §§19, 26, 29–30.
 - [x] Use only justified v1 modules: vLLM serving, LangGraph bounded reviewer, Langfuse self-hosted telemetry; defer top-level LangChain and LangGraph Swarm. Evidence: user decision on 2026-09-23; upstream project documentation is linked in `ARCHITECTURE_RESEARCH.md`.
 - [x] Keep agent telemetry inside the environment and serve the GPU model on Linux or WSL2. Evidence: user decisions on 2026-09-23.
-- [~] Run repository policy and graph checks, commit all changes, push, and inspect the actual GitHub Actions result. Local policy check and `git diff --check` passed; commit and remote CI pending.
+- [x] Run repository policy and graph checks, commit all changes, push, and inspect the actual GitHub Actions result. Evidence: local `python scripts/ci_check.py`, `git diff --check`, Python compile check and both three-tool hooks passed; commit `5d46f51` pushed; [CI run 35875953671](https://github.com/Reza-Sh83/db-catalogue/actions/runs/35875953671) passed repository-policy, graph-index, application-quality planning gate and ci-success.
 
 ## 0. Repository and workflow foundation
 
@@ -23,9 +23,9 @@ Update this file when work starts, a fact changes, a decision is needed, a check
 - [x] Inspect GitHub Actions result with `gh`. Evidence: [CI run 35871915777](https://github.com/Reza-Sh83/db-catalogue/actions/runs/35871915777) completed successfully: repository-policy, graph-index, application-quality (planning-stage gate), and ci-success all passed.
 - [x] Check branch protection/ruleset availability. GitHub returned HTTP 403: current plan requires Pro or a public repository. User chose to keep this repository private; enforcement is local hooks plus visible CI results, not a server-side merge block.
 - [x] Replace deprecated Node 20 workflow actions with reviewed Node 24 releases pinned by commit SHA. User approved. Evidence: [CI run 35872465691](https://github.com/Reza-Sh83/db-catalogue/actions/runs/35872465691) passed all four jobs after commit `b634042`.
-- [x] Install Ponytail 4.10.0 from its official Codex marketplace. Evidence: `codex plugin marketplace add DietrichGebert/ponytail` and `codex plugin add ponytail@ponytail`; a new Codex session/restart is required to expose its skills here.
-- [ ] Verify Ponytail skill availability in a new agent session. This running session read all six installed SKILL.md files and applies their checks manually; it has not invoked newly loaded slash skills.
-- [x] Apply manual Ponytail review/audit/debt checks to this planning repository while new skills are not loaded: no speculative runtime code, no added app dependency, no `ponytail:` code markers; no per-repository gain claimed without a baseline. `gain` and `help` instructions were read, not invoked as loaded skills.
+- [x] Install Ponytail 4.10.0 from its official Codex marketplace. Evidence: `codex plugin marketplace add DietrichGebert/ponytail` and `codex plugin add ponytail@ponytail`; the resumed session exposes its six skills.
+- [x] Verify Ponytail skill availability in a new agent session. Evidence: all six Ponytail skills are listed in the resumed session on 2026-09-23; full-mode design, diff review, repository audit and debt scan were applied to this planning repository.
+- [x] Apply Ponytail full/review/audit/debt checks to this planning repository: no speculative runtime code, no added app dependency, no `ponytail:` code markers and no justified complexity cuts. Gain/help guidance was read; no per-repository gain is claimed without a baseline.
 - [x] No `gh` skill is installed in this Codex session; user confirmed there is no specific skill to install. Use authenticated `gh` CLI directly.
 
 ## 1. Critical product decisions still open
@@ -137,3 +137,4 @@ Update this file when work starts, a fact changes, a decision is needed, a check
 - [x] Pre-commit and post-commit graph refresh both passed on first commit `f165266`: Graphify 114 nodes/125 edges; Graft check OK; CBM 154 nodes/208 edges.
 - [x] CI repository-policy and graph-index passed at [run 35871915777](https://github.com/Reza-Sh83/db-catalogue/actions/runs/35871915777). Application quality job passed its planning-stage path because `src/` and `pyproject.toml` do not exist yet; this is not a runtime test result.
 - [x] `git status --short --branch` showed a clean tracked tree after commit `b634042`, before this final verification entry; `git check-ignore` confirmed `.env`, Graphify and Graft caches are ignored. Recheck after the final commit/push.
+- [x] Architecture update verification: [CI run 35875953671](https://github.com/Reza-Sh83/db-catalogue/actions/runs/35875953671) passed all four jobs at commit `5d46f51`; `gh run view` inspected job conclusions. Ponytail diff review and whole-repo audit found no justified complexity cuts in this planning-stage tree; `rg -n '(#|//)\s*ponytail:'` found zero debt markers. `/ponytail-gain` has no per-repository baseline to claim.
