@@ -130,6 +130,89 @@ def test_builder_rejects_wrong_signature(tmp_path, monkeypatch):
     assert not (tmp_path / "snapshot").exists()
 
 
+def test_cross_source_mongo_unique_key_is_tentative_not_lineage(tmp_path, monkeypatch):
+    source_bundle(tmp_path / "pg")
+    common = {
+        "source_id": "site-b",
+        "observed_at": datetime.now(UTC),
+        "collector_version": "synthetic",
+        "provenance": "synthetic",
+    }
+    mongo_customer = Object(
+        id="mongo-customer",
+        native_id="uuid-1",
+        kind="collection",
+        name="customers",
+        namespace="app",
+        **common,
+    )
+    invoice = Object(
+        id="mongo-invoice",
+        native_id="uuid-2",
+        kind="collection",
+        name="invoices",
+        namespace="app",
+        **common,
+    )
+    fields = [
+        Field(
+            id="mongo-id",
+            object_id="mongo-customer",
+            native_id="uuid-1:_id",
+            name="_id",
+            data_type="int",
+            **common,
+        ),
+        Field(
+            id="mongo-invoice-customer",
+            object_id="mongo-invoice",
+            native_id="uuid-2:customer_id",
+            name="customer_id",
+            data_type="string",
+            **common,
+        ),
+    ]
+    unique = Record.model_validate(
+        {
+            "record_type": "constraint",
+            "id": "mongo-unique",
+            "native_id": "uuid-1:_id_",
+            "kind": "unique",
+            "object_id": "mongo-customer",
+            "field_names": ["_id"],
+            **common,
+        }
+    )
+    write_artifact(
+        tmp_path / "mongo",
+        "collector-bundle",
+        {
+            "sources.jsonl": [Source(id="site-b", kind="mongodb", name="mongo", **common)],
+            "objects.jsonl": [mongo_customer, invoice],
+            "fields.jsonl": fields,
+            "constraints.jsonl": [unique],
+        },
+        producer="synthetic",
+        source_run_ids=["mongo-run"],
+        signing_key=b"synthetic-key-12345678901234567890",
+        key_id="test",
+    )
+    monkeypatch.setenv("BUNDLE_KEY", "synthetic-key-12345678901234567890")
+    assemble(
+        [tmp_path / "pg", tmp_path / "mongo"],
+        tmp_path / "snapshot",
+        BuilderConfig(signing_keys={"test": "BUNDLE_KEY"}),
+    )
+    _, records = read_artifact(tmp_path / "snapshot")
+    candidates = [edge for edge in records["edges.jsonl"] if edge.kind == "REFERENCE_CANDIDATE"]
+    assert any(
+        edge.from_id == "loose" and edge.to_id == "mongo-customer" and edge.status == "tentative"
+        for edge in candidates
+    )
+    assert not any(edge.from_id == "mongo-invoice" for edge in candidates)
+    assert not any(edge.kind == "DERIVES_FROM" for edge in records["edges.jsonl"])
+
+
 def test_builder_publishes_when_model_is_down(tmp_path, monkeypatch):
     source_bundle(tmp_path / "bundle")
     monkeypatch.setenv("BUNDLE_KEY", "synthetic-key-12345678901234567890")

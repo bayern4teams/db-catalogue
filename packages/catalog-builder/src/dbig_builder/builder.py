@@ -121,9 +121,11 @@ def assemble(bundle_paths: list[Path], output: Path, config: BuilderConfig) -> M
         if value.record_type == "field"
     }
     by_object: dict[str, dict[int, Field]] = defaultdict(dict)
+    by_object_name: dict[str, dict[str, Field]] = defaultdict(dict)
     for field in fields.values():
         if field.ordinal is not None:
             by_object[field.object_id][field.ordinal] = field
+        by_object_name[field.object_id][field.name] = field
     evidence: dict[str, Evidence] = {}
     edges: dict[str, Edge] = {}
     unique_fields: list[Field] = []
@@ -134,6 +136,10 @@ def assemble(bundle_paths: list[Path], output: Path, config: BuilderConfig) -> M
         ordinals = constraint.field_ordinals
         if kind in {"primary", "unique"} and len(ordinals) == 1:
             unique_field = by_object.get(owner, {}).get(ordinals[0])
+            if unique_field:
+                unique_fields.append(unique_field)
+        elif kind in {"primary", "unique"} and len(constraint.field_names) == 1:
+            unique_field = by_object_name.get(owner, {}).get(constraint.field_names[0])
             if unique_field:
                 unique_fields.append(unique_field)
         if kind != "foreign":
