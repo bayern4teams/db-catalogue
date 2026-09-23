@@ -14,9 +14,10 @@ Update this file when work starts, a fact changes, a decision is needed, a check
 - [x] Push `main` after first local commit and checks. Evidence: `git push -u origin main` at `9db735a`.
 - [x] Inspect GitHub Actions result with `gh`. Evidence: [CI run 35871915777](https://github.com/Reza-Sh83/db-catalogue/actions/runs/35871915777) completed successfully: repository-policy, graph-index, application-quality (planning-stage gate), and ci-success all passed.
 - [x] Check branch protection/ruleset availability. GitHub returned HTTP 403: current plan requires Pro or a public repository. User chose to keep this repository private; enforcement is local hooks plus visible CI results, not a server-side merge block.
-- [~] GitHub warned that older workflow actions use deprecated Node 20. User approved an update; pinned reviewed Node 24 action releases by commit SHA. Rerun CI after committing/pushing.
+- [x] Replace deprecated Node 20 workflow actions with reviewed Node 24 releases pinned by commit SHA. User approved. Evidence: [CI run 35872465691](https://github.com/Reza-Sh83/db-catalogue/actions/runs/35872465691) passed all four jobs after commit `b634042`.
 - [x] Install Ponytail 4.10.0 from its official Codex marketplace. Evidence: `codex plugin marketplace add DietrichGebert/ponytail` and `codex plugin add ponytail@ponytail`; a new Codex session/restart is required to expose its skills here.
 - [ ] Verify Ponytail skill availability in a new agent session. This running session read all six installed SKILL.md files and applies their checks manually; it has not invoked newly loaded slash skills.
+- [x] Apply manual Ponytail review/audit/debt checks to this planning repository while new skills are not loaded: no speculative runtime code, no added app dependency, no `ponytail:` code markers; no per-repository gain claimed without a baseline. `gain` and `help` instructions were read, not invoked as loaded skills.
 - [x] No `gh` skill is installed in this Codex session; user confirmed there is no specific skill to install. Use authenticated `gh` CLI directly.
 
 ## 1. Critical product decisions still open
@@ -123,4 +124,4 @@ Update this file when work starts, a fact changes, a decision is needed, a check
 - [x] `python scripts/ci_check.py`, `python -m compileall -q scripts`, and `git diff --check` passed locally.
 - [x] Pre-commit and post-commit graph refresh both passed on first commit `f165266`: Graphify 114 nodes/125 edges; Graft check OK; CBM 154 nodes/208 edges.
 - [x] CI repository-policy and graph-index passed at [run 35871915777](https://github.com/Reza-Sh83/db-catalogue/actions/runs/35871915777). Application quality job passed its planning-stage path because `src/` and `pyproject.toml` do not exist yet; this is not a runtime test result.
-- [ ] Git status clean after final verification update/commit/push, excluding ignored `.env` and caches.
+- [x] `git status --short --branch` showed a clean tracked tree after commit `b634042`, before this final verification entry; `git check-ignore` confirmed `.env`, Graphify and Graft caches are ignored. Recheck after the final commit/push.
