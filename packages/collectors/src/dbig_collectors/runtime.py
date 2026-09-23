@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import ssl
@@ -83,6 +84,25 @@ def discover_postgresql(
                     **common,
                 )
             )
+        view_oids = [oid for oid, _, _, relkind in rows if relkind in {"v", "m"}]
+        if view_oids:
+            budget.charge()
+            cursor.execute(
+                "SELECT c.oid, pg_catalog.pg_get_viewdef(c.oid, true) "
+                "FROM pg_catalog.pg_class c WHERE c.oid = ANY(%s) ORDER BY c.oid",
+                (view_oids,),
+            )
+            definitions = {oid: definition for oid, definition in cursor.fetchall()}
+            for item in tables["objects.jsonl"]:
+                if (
+                    isinstance(item, Object)
+                    and int(item.native_id) in definitions
+                    and definitions[int(item.native_id)]
+                ):
+                    item.attributes["view_definition_sha256"] = hashlib.sha256(
+                        definitions[int(item.native_id)].encode("utf-8")
+                    ).hexdigest()
+                    item.attributes["view_definition_available"] = True
         if rows:
             budget.charge()
             cursor.execute(
@@ -168,7 +188,8 @@ def discover_clickhouse(
     for database in config.namespaces:
         budget.charge()
         rows = client.query(
-            "SELECT name, toString(uuid), engine FROM system.tables "
+            "SELECT name, toString(uuid), engine, partition_key, sorting_key, "
+            "primary_key, dependencies_database, dependencies_table FROM system.tables "
             "WHERE database = {db:String} ORDER BY name LIMIT {lim:UInt64}",
             parameters={"db": database, "lim": config.max_objects + 1},
             settings={"max_execution_time": config.read_timeout_seconds},
@@ -176,7 +197,16 @@ def discover_clickhouse(
         if len(rows) > config.max_objects:
             raise RuntimeError("BUDGET_EXHAUSTED")
         identities: dict[str, str] = {}
-        for name, uuid, engine in rows:
+        for (
+            name,
+            uuid,
+            engine,
+            partition_key,
+            sorting_key,
+            primary_key,
+            dependency_dbs,
+            dependency_tables,
+        ) in rows:
             if not uuid or uuid == "00000000-0000-0000-0000-000000000000":
                 tables["diagnostics.jsonl"].append(
                     Record.model_validate(
@@ -191,14 +221,39 @@ def discover_clickhouse(
                 )
                 continue
             identities[name] = uuid
+            attributes: dict[str, str | int | float | bool | None] = {
+                "engine": engine,
+                "is_view": engine in {"View", "MaterializedView", "LiveView"},
+                "dependency_count": len(dependency_tables),
+            }
+            for key, expression in (
+                ("partition", partition_key),
+                ("sort", sorting_key),
+                ("primary", primary_key),
+            ):
+                if expression:
+                    attributes[f"{key}_key_sha256"] = hashlib.sha256(
+                        expression.encode("utf-8")
+                    ).hexdigest()
+            if dependency_tables:
+                attributes["dependencies"] = ",".join(
+                    sorted(
+                        f"{db}.{table}"
+                        for db, table in zip(dependency_dbs, dependency_tables, strict=True)
+                    )
+                )
             tables["objects.jsonl"].append(
                 Object(
                     id=stable_id(config.source_id, "object", uuid),
                     native_id=uuid,
-                    kind="table",
+                    kind="materialized_view"
+                    if engine == "MaterializedView"
+                    else "view"
+                    if engine == "View"
+                    else "table",
                     name=name,
                     namespace=database,
-                    attributes={"engine": engine},
+                    attributes=attributes,
                     **common,
                 )
             )
@@ -230,23 +285,66 @@ def discover_clickhouse(
 
 
 def _mongo_paths(
-    document: dict[str, Any], prefix: str, depth: int, limit: int, found: dict[str, set[str]]
+    document: dict[str, Any],
+    prefix: str,
+    depth: int,
+    limit: int,
+    array_limit: int,
+    found: dict[str, set[str]],
+    present: set[str],
 ) -> None:
     if depth > limit:
         return
     for key, value in document.items():
         path = f"{prefix}.{key}" if prefix else key
+        present.add(path)
         found[path].add(type(value).__name__)
         if isinstance(value, dict):
-            _mongo_paths(value, path, depth + 1, limit, found)
-        elif isinstance(value, list) and value and isinstance(value[0], dict):
-            _mongo_paths(value[0], path + "[]", depth + 1, limit, found)
+            _mongo_paths(value, path, depth + 1, limit, array_limit, found, present)
+        elif isinstance(value, list):
+            for element in value[:array_limit]:
+                found[path + "[]"].add(type(element).__name__)
+                present.add(path + "[]")
+                if isinstance(element, dict):
+                    _mongo_paths(
+                        element, path + "[]", depth + 1, limit, array_limit, found, present
+                    )
+
+
+def _mongo_schema_paths(
+    schema: dict[str, Any],
+    prefix: str,
+    depth: int,
+    limit: int,
+    found: dict[str, set[str]],
+    origins: dict[str, set[str]],
+    required: set[str],
+) -> None:
+    if depth > limit:
+        return
+    required_here = set(schema.get("required", []))
+    for key, definition in schema.get("properties", {}).items():
+        if not isinstance(definition, dict):
+            continue
+        path = f"{prefix}.{key}" if prefix else key
+        types = definition.get("bsonType", definition.get("type", "unknown"))
+        found[path].update(types if isinstance(types, list) else [str(types)])
+        origins[path].add("validator")
+        if key in required_here:
+            required.add(path)
+        _mongo_schema_paths(definition, path, depth + 1, limit, found, origins, required)
+        items = definition.get("items")
+        if isinstance(items, dict):
+            child = {"properties": items.get("properties", {})}
+            _mongo_schema_paths(child, path + "[]", depth + 1, limit, found, origins, required)
 
 
 def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[str, list[Record]]:
     common = _common(config)
     tables: dict[str, list[Record]] = defaultdict(list)
     total = 0
+    sampled_rows_total = 0
+    sampled_bytes_total = 0
     for database in config.namespaces:
         budget.charge()
         for info in client[database].list_collections():
@@ -271,6 +369,7 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
                 continue
             name = info["name"]
             object_id = stable_id(config.source_id, "object", native)
+            options = info.get("options", {})
             tables["objects.jsonl"].append(
                 Object(
                     id=object_id,
@@ -278,11 +377,24 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
                     kind="collection",
                     name=name,
                     namespace=database,
+                    attributes={
+                        "collection_type": info.get("type", "collection"),
+                        "has_validator": bool(options.get("validator")),
+                    },
                     **common,
                 )
             )
+            paths: dict[str, set[str]] = defaultdict(set)
+            origins: dict[str, set[str]] = defaultdict(set)
+            required: set[str] = set()
+            validator = options.get("validator", {})
+            if isinstance(validator, dict) and isinstance(validator.get("$jsonSchema"), dict):
+                _mongo_schema_paths(
+                    validator["$jsonSchema"], "", 1, config.max_path_depth, paths, origins, required
+                )
             budget.charge()
             for index in client[database][name].list_indexes():
+                field_names = list(index["key"])
                 tables["constraints.jsonl"].append(
                     Record.model_validate(
                         {
@@ -291,19 +403,67 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
                             "native_id": f"{native}:{index['name']}",
                             "kind": "unique" if index.get("unique") else "index",
                             "object_id": object_id,
-                            "field_names": list(index["key"]),
+                            "field_names": field_names,
                             **common,
                         }
                     )
                 )
-            paths: dict[str, set[str]] = defaultdict(set)
-            if config.sample_rows:
+                for field_name in field_names:
+                    if field_name != "$**" and not field_name.endswith(".$**"):
+                        paths[field_name].add("unknown")
+                        origins[field_name].add("index")
+            sample_count = 0
+            present_counts: dict[str, int] = defaultdict(int)
+            if (
+                config.sample_rows
+                and sampled_rows_total < config.sample_rows
+                and sampled_bytes_total < config.max_sample_bytes
+            ):
                 budget.charge()
-                cursor = client[database][name].find({}).limit(config.sample_rows)
+                cursor = (
+                    client[database][name].find({}).limit(config.sample_rows - sampled_rows_total)
+                )
                 cursor.max_time_ms(config.read_timeout_seconds * 1000)
-                for document in cursor:
-                    _mongo_paths(document, "", 1, config.max_path_depth, paths)
+                try:
+                    for document in cursor:
+                        document_bytes = len(str(document).encode("utf-8"))
+                        if sampled_bytes_total + document_bytes > config.max_sample_bytes:
+                            tables["diagnostics.jsonl"].append(
+                                Record.model_validate(
+                                    {
+                                        "record_type": "diagnostic",
+                                        "id": stable_id(
+                                            config.source_id, "diagnostic", f"{native}:sample-bytes"
+                                        ),
+                                        "code": "SAMPLE_BYTE_LIMIT",
+                                        "message": "type-only sample stopped at byte budget",
+                                        **common,
+                                    }
+                                )
+                            )
+                            break
+                        sampled_bytes_total += document_bytes
+                        sampled_rows_total += 1
+                        sample_count += 1
+                        present: set[str] = set()
+                        _mongo_paths(
+                            document,
+                            "",
+                            1,
+                            config.max_path_depth,
+                            config.max_array_elements,
+                            paths,
+                            present,
+                        )
+                        for path in present:
+                            present_counts[path] += 1
+                            origins[path].add("sample")
+                finally:
+                    if hasattr(cursor, "close"):
+                        cursor.close()
             for path, types in sorted(paths.items()):
+                if len(tables["fields.jsonl"]) >= config.max_fields:
+                    raise RuntimeError("BUDGET_EXHAUSTED")
                 field_native = f"{native}:{path}"
                 tables["fields.jsonl"].append(
                     Field(
@@ -311,7 +471,11 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
                         object_id=object_id,
                         native_id=field_native,
                         name=path,
-                        data_type="|".join(sorted(types)),
+                        data_type="|".join(sorted(types - {"unknown"})) or "unknown",
+                        nullable=(present_counts[path] < sample_count or "NoneType" in types)
+                        if sample_count
+                        else (False if path in required else None),
+                        attributes={"field_origin": ",".join(sorted(origins[path]))},
                         **common,
                     )
                 )

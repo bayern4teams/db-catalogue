@@ -24,6 +24,8 @@ class SourceConfig(BaseModel):
     max_fields: int = Field(default=10000, ge=1)
     read_timeout_seconds: int = Field(default=10, ge=1)
     sample_rows: int = Field(default=0, ge=0)
+    max_sample_bytes: int = Field(default=1_048_576, ge=1)
+    max_array_elements: int = Field(default=16, ge=1, le=256)
     max_path_depth: int = Field(default=4, ge=1)
     history_access: bool = False
     authorized_requesters: list[str] = Field(default_factory=list)
