@@ -7,6 +7,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -19,6 +20,34 @@ def run(*args: str) -> None:
     if os.name == "nt" and executable == "graft":
         executable = shutil.which("graft.cmd") or executable
     subprocess.run((executable, *args[1:]), cwd=ROOT, check=True)  # noqa: S603
+
+
+def refresh_codebase_memory() -> None:
+    command = (
+        "codebase-memory-mcp",
+        "cli",
+        "index_repository",
+        "--repo-path",
+        str(ROOT),
+        "--mode",
+        "fast",
+        "--persistence",
+        "false",
+    )
+    for attempt in range(3):
+        print("+", *command, flush=True)
+        result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)  # noqa: S603
+        print(result.stdout, end="")
+        print(result.stderr, end="", file=sys.stderr)
+        if result.returncode == 0:
+            return
+        if (
+            "another index operation for this project is active"
+            not in result.stdout + result.stderr
+            or attempt == 2
+        ):
+            raise subprocess.CalledProcessError(result.returncode, command)
+        time.sleep(2)
 
 
 def staged_paths() -> set[str]:
@@ -75,17 +104,7 @@ def main() -> int:
         run("graphify", "update", ".")
         run("graft", "build", ".")
         run("graft", "check", ".")
-        run(
-            "codebase-memory-mcp",
-            "cli",
-            "index_repository",
-            "--repo-path",
-            str(ROOT),
-            "--mode",
-            "fast",
-            "--persistence",
-            "false",
-        )
+        refresh_codebase_memory()
     except subprocess.CalledProcessError as error:
         print(f"Graph refresh failed (exit {error.returncode}).", file=sys.stderr)
         return error.returncode or 1

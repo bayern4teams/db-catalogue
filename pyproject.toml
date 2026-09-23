@@ -13,6 +13,7 @@ members = ["packages/*"]
 [dependency-groups]
 dev = [
   "dbig-contracts",
+  "dbig-collectors",
   "pytest>=9.0.3,<10",
   "ruff>=0.13,<0.14",
   "mypy>=1.18,<2",
@@ -21,6 +22,7 @@ dev = [
 
 [tool.uv.sources]
 dbig-contracts = { workspace = true }
+dbig-collectors = { workspace = true }
 
 [tool.ruff]
 line-length = 100

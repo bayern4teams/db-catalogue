@@ -1,0 +1,23 @@
+[project]
+name = "dbig-collectors"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = ["dbig-contracts==0.1.0", "click>=8.2,<9"]
+
+[project.optional-dependencies]
+postgresql = ["pg8000>=1.31,<2"]
+clickhouse = ["clickhouse-connect>=0.9,<1"]
+mongodb = ["pymongo>=4.14,<5"]
+
+[project.scripts]
+dbig = "dbig_collectors.cli:main"
+
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/dbig_collectors"]
+
+[tool.uv.sources]
+dbig-contracts = { workspace = true }

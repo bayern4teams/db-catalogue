@@ -1,6 +1,6 @@
 # Database Intelligence Graph Generator
 
-Evidence-first discovery of database objects, likely relationships, and **observed** data lineage across PostgreSQL, ClickHouse, and MongoDB, with two independent user-facing modules. The project is in the architecture and implementation-planning stage; no application runtime has been implemented yet.
+Evidence-first discovery of database objects, likely relationships, and **observed** data lineage across PostgreSQL, ClickHouse, and MongoDB, with two independent user-facing modules. Implementation is in progress: the artifact contract and source-local collector package now exist; the builder, requester, and planner remain TODO work.
 
 ## What the system will do
 
@@ -37,7 +37,9 @@ flowchart LR
 
 ## Current state
 
-This repository contains plans, workflow policy, Git hooks, and CI scaffolding. It does **not** yet contain application code. The technical plan defines package and API contracts to implement and validate; no module is deployable yet.
+The `dbig-contracts` package validates signed JSONL collector bundles and catalog snapshots. The `dbig-collectors` package has PostgreSQL, ClickHouse, and MongoDB metadata discovery with source-local credentials and defensive limits. Its current tests use synthetic driver objects; live database version and privilege tests are still required. The central builder, requester, and planner have not been implemented yet, so the product is not deployable end to end.
+
+For local development, run `uv sync --locked --dev` and `uv run pytest`. Build a package with `uv build --package dbig-contracts` or `uv build --package dbig-collectors`. At a source site, install only the matching collector extra (`postgresql`, `clickhouse`, or `mongodb`), set the configured connection JSON and signing key in the process environment, then run `dbig collect --config <source.toml> --out <new-bundle-directory>`. The config's `[source]` section requires `source_id`, `kind`, `connection_env`, `signing_key_env`, `signing_key_id`, and an allowed `namespaces` list. The collector refuses plaintext transport and records a partial bundle when stable source identity is unavailable. Never put credentials in TOML or shell arguments.
 
 The selected LLM stack is vLLM for private GPU serving, LangGraph for the builder's fixed review workflow, and self-hosted Langfuse for metadata-only visibility. The requester also calls the private vLLM endpoint for grounded catalogue questions. The planner is deterministic and makes no LLM call. Top-level LangChain and LangGraph Swarm remain deferred. The exact GPU, model revision, service versions and telemetry infrastructure must be validated before deployment.
 

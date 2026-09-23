@@ -1,6 +1,6 @@
 # Technical implementation contract
 
-Status: design baseline, 2026-09-23. This file records **decisions to implement and verify**. It does not imply that the runtime, connectors, benchmarks, or lockfile already exist. Every unresolved fact is tracked in [TODO.md](TODO.md); agents must request a user decision where a choice changes behavior, security, cost, or scope. The research and source links behind these decisions are in [ARCHITECTURE_RESEARCH.md](ARCHITECTURE_RESEARCH.md).
+Status: binding design baseline with partial implementation, 2026-09-23. The artifact contract and metadata-first collector package are implemented and tested with synthetic drivers; the builder, requester, planner, live connector matrix, benchmarks and deployment remain open in [TODO.md](TODO.md). This file records **decisions to implement and verify**, not claims that every role works. The research and source links behind these decisions are in [ARCHITECTURE_RESEARCH.md](ARCHITECTURE_RESEARCH.md).
 
 ## 1. Product boundary and non-negotiable behavior
 
