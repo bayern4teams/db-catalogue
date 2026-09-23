@@ -10,6 +10,12 @@ Update this file when work starts, a fact changes, a decision is needed, a check
 - [x] Keep agent telemetry inside the environment and serve the GPU model on Linux or WSL2. Evidence: user decisions on 2026-09-23.
 - [x] Run repository policy and graph checks, commit all changes, push, and inspect the actual GitHub Actions result. Evidence: local `python scripts/ci_check.py`, `git diff --check`, Python compile check and both three-tool hooks passed; commit `5d46f51` pushed; [CI run 35875953671](https://github.com/Reza-Sh83/db-catalogue/actions/runs/35875953671) passed repository-policy, graph-index, application-quality planning gate and ci-success.
 
+## Current change: Amundsen/OpenLineage and independent module boundaries
+
+- [x] Review Amundsen and OpenLineage architecture, packages, maintenance and licenses. Evidence: official upstream links and comparison in `ARCHITECTURE_RESEARCH.md` §31; Amundsen repository says archived 2026-09-10, OpenLineage remains the event contract reference.
+- [x] Define independent requester/planner behavior and deployment form from user answers, without substituting guessed behavior. Evidence: `TECHNICAL_IMPLEMENTATION.md` §17 records both package/CLI and HTTP REST boundaries, search and local-LLM Q&A, scan dispatch adapters, observed lineage and candidate joins, SQL/Mongo plan rendering, no execution, and logical cross-source steps with unresolved staging. The user chose architecture and TODO before package skeletons.
+- [~] Update technical, research, README, agent policy and this ledger; run local checks, commit, push and inspect GitHub Actions. Design edits are in progress; no runtime implementation is claimed.
+
 ## 0. Repository and workflow foundation
 
 - [x] Create Git repository on `main` in this folder. Evidence: `git init -b main` on 2026-09-23.
@@ -41,7 +47,8 @@ Update this file when work starts, a fact changes, a decision is needed, a check
 
 ## 2. Package skeleton and dependency governance
 
-- [ ] Create `pyproject.toml` with Python 3.12+ and extras for PostgreSQL, ClickHouse, MongoDB, LLM and OpenLineage.
+- [ ] Create a `uv` workspace and separately installable `dbig-contracts`, `dbig-collectors`, `dbig-catalog-builder`, `dbig-catalogue-requester`, and `dbig-lineage-planner` distributions. Verify final names against package indexes. Keep source-driver and HTTP API extras scoped to owners.
+- [ ] Build each wheel and install it in a clean environment on Windows and Linux; prove requester and planner have no mutual imports or source-driver dependencies.
 - [ ] Pin exact app dependencies with `uv.lock`; inspect all transitive licenses, vulnerabilities and platform wheels.
 - [ ] Set Ruff, type checker, pytest and coverage configuration with strict settings justified by code.
 - [ ] Produce SBOM and a repeatable license report from the lockfile.
@@ -100,6 +107,25 @@ Update this file when work starts, a fact changes, a decision is needed, a check
 - [ ] Import OpenLineage run/job/dataset/column facets with strict source mapping.
 - [ ] Test CTEs, aliases, stars, INSERT SELECT, CTAS, materialized views, unsupported SQL and Mongo pipelines.
 - [ ] Prove no inferred relationship is mislabeled as lineage.
+- [ ] Map OpenLineage RunEvent/JobEvent and lineage/column facets conservatively; test multi-input/multi-output ambiguity and unresolved dataset names.
+
+## 9a. Independent catalogue requester
+
+- [ ] Build snapshot validation and SQLite FTS5 index with digest/freshness checks, structured filters, pagination and stable ordering.
+- [ ] Implement grounded natural-language catalogue Q&A against private vLLM with validated cited object IDs, redaction, budgets and model-outage behavior.
+- [ ] Define scan-request schema and authorization, expiry, idempotency, signature, replay and receipt/status contracts.
+- [ ] Implement both signed scheduler-bundle and private collector-HTTP scan dispatch adapters; test collector-side scope/load checks.
+- [ ] Provide CLI and optional FastAPI/Uvicorn HTTP JSON REST endpoints on the same application functions.
+- [ ] Determine the actual scheduler interface, HTTP authentication, key management and retention with deployment owners before production implementation.
+
+## 9b. Independent lineage and path planner
+
+- [ ] Build separate observed-lineage and reference-candidate graph views with evidence/freshness and configured path limits.
+- [ ] Implement lineage-path and candidate join-path CLI/API contracts with clear unresolved and partial statuses.
+- [ ] Generate reviewed, read-only, dialect-specific SQL segments using SQLGlot ASTs and validated catalog identifiers; never execute generated queries.
+- [ ] Generate validated MongoDB aggregation pipeline JSON for Mongo segments.
+- [ ] Return ordered cross-source source-side reads and logical transfer/join steps; mark staging/final execution unresolved until an approved target is configured.
+- [ ] Provide optional FastAPI/Uvicorn HTTP JSON REST endpoints and clean-wheel/CLI/API/contract-isolation tests.
 
 ## 10. Central assembler and local LLM
 
@@ -119,6 +145,7 @@ Update this file when work starts, a fact changes, a decision is needed, a check
 - [ ] Threat-model collector privileges, bundle transfer, prompt injection, unsafe SQL, secret leakage and replay.
 - [ ] Add secret scanning and dependency/license gates to CI once lockfile exists.
 - [ ] Add integration services in CI or an authorized test environment; run least-privilege tests.
+- [ ] Add requester/planner API contract, wheel-isolation, authorization, prompt-privacy and no-query-execution gates as code appears.
 - [ ] Benchmark 10 sources/200 objects/1,000 fields, source load, memory, bundle size and LLM p95.
 - [ ] Define deployment target and approval path; create CD only after package and target are real.
 - [ ] Publish release notes, checksums, SBOM and provenance for a tested release.

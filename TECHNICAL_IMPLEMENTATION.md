@@ -4,7 +4,7 @@ Status: design baseline, 2026-09-23. This file records **decisions to implement 
 
 ## 1. Product boundary and non-negotiable behavior
 
-The product is a headless generator of a versioned, machine-readable database intelligence graph. It discovers PostgreSQL tables/views/columns/keys; ClickHouse databases/tables/columns/engines; MongoDB databases/collections/indexes/validators/document paths. It profiles within explicit budgets and infers *candidates* for undeclared same-source and cross-source references. It emits actual lineage only when defined or observed SQL, job metadata, or OpenLineage events show a transformation. Similar values alone are not lineage. No UI, catalog server, broad query agent, or central DB login belongs in v1.
+The product has four independently deployable roles: source collectors, a catalog builder, a catalogue requester, and a lineage and path planner. The requester and planner are independently installable Python packages with CLIs and optional HTTP JSON REST services. Collectors discover PostgreSQL, ClickHouse, and MongoDB metadata; the builder profiles within explicit budgets and infers *candidates* for same-source and cross-source references. The requester searches an existing snapshot, answers grounded natural-language questions through the private local model, and requests new scans. The planner returns observed transformation lineage, candidate join paths, and reviewable SQL/MongoDB plans without executing them. Similar values alone are never lineage. No central source-database login belongs in v1.
 
 Each source has a separate collector process and network/credential boundary. One trusted assembler receives collector bundles. Cross-source sampled values may be compared **in memory**; raw values are discarded after feature extraction. Production requires an approved secure bundle transfer and common tokenization key distribution. The assembler's local LLM gets only minimized, redacted candidate context; it never gets credentials, raw sampled values, SQL literals, or live DB tools.
 
@@ -31,42 +31,38 @@ flowchart TB
   B3 --> V
   V --> S[SQLite run state]
   V --> R[Candidate and evidence engine]
-  O[Observed SQL / pipeline events] --> R
+  O[Observed SQL / pipeline events] --> P[Lineage and path planner]
   R --> W[Bounded LangGraph reviewer]
   W --> VLLM[Local vLLM on Linux or WSL2 GPU]
   VLLM --> W
   W --> LF[Self-hosted Langfuse metadata traces]
   W --> R
-  R --> G[Versioned graph writer]
+  R --> G[Versioned catalog snapshot writer]
   G --> J[JSONL + manifest + schema]
+  J --> Q[Catalogue requester CLI and REST]
+  J --> P
+  Q -->|signed request bundle or private HTTP| C1
+  Q -->|signed request bundle or private HTTP| C2
+  Q -->|signed request bundle or private HTTP| C3
+  P --> LP[Observed lineage paths and candidate join paths]
+  P --> PL[SQL, Mongo pipeline or unresolved cross-source plan]
+  Q --> VLLM
 ```
 
-Collector responsibilities: scope authorization, source discovery, bounded profiling, source-local feature extraction, permitted SQL/pipeline observation, redaction, bundle schema validation, manifest hashes, and atomic publication. Assembler responsibilities: validation and identity resolution, run reconciliation, cross-source feature comparison, candidate blocking and ranking, evidence policy, observed lineage parsing, local semantic review, graph materialization, QA, and deterministic artifact publication.
+Collector responsibilities: scope authorization, source discovery, bounded profiling, source-local feature extraction, permitted SQL/pipeline observation, redaction, bundle schema validation, manifest hashes, and atomic publication. Builder responsibilities: validation and identity resolution, run reconciliation, cross-source feature comparison, candidate blocking and ranking, evidence policy, local semantic review, QA, and deterministic catalog publication. The requester owns search, grounded answers, and authorized scan dispatch. The planner owns lineage parsing/import, typed path search, and query-plan rendering. Both consume versioned artifacts without importing each other or source drivers.
 
 No collector waits for another collector. A run can mark a missing source as `partial`, preserve prior known state with age metadata, and avoid silently deleting unseen objects. Source-local exceptions become typed diagnostics.
 
 ## 3. Repository and deployable boundaries
 
-Proposed package layout (create only as implementation tasks become active):
+Approved package boundaries (create only as implementation tasks become active; exact published names remain subject to package-index checks):
 
 ```text
-src/dbig/
-  cli.py                 # click CLI: collect, assemble, validate, inspect
-  config.py              # tomllib load, environment/secret references, Pydantic validation
-  ir/                    # Pydantic records, IDs, schema export, migrations
-  bundle/                # JSONL writer/reader, digest/signature, manifest, atomicity
-  collectors/
-    base.py              # typed Protocol, budgets, diagnostics
-    postgres.py          # pg8000 metadata, keys, views, sample plan
-    clickhouse.py        # clickhouse-connect system tables and sample plan
-    mongodb.py           # PyMongo metadata, validators, document paths
-  profile/               # typed metrics, safe sampling, value tokenization
-  match/                 # blocking, lexical/type/key/value evidence, direction, abstain
-  lineage/               # SQLGlot resolver, observed run importer, OpenLineage adapter
-  llm/                   # LangGraph review nodes, vLLM client, prompt schema, cache, timeout
-  observability/         # Langfuse metadata-only spans and local diagnostics
-  assemble/              # reconciliation, graph writer, run state
-  security/              # redaction, secret resolution, path and bundle validation
+packages/contracts/         # versioned JSON Schemas, Pydantic boundary models, artifact validation
+packages/collectors/        # source-site CLI, source drivers, budgets and sealed bundles
+packages/catalog-builder/   # central profile matching, reviewer, snapshot publication
+packages/requester/         # independent search, grounded questions, scan requests, CLI and REST
+packages/planner/           # independent lineage, paths, SQL/Mongo plans, CLI and REST
 tests/fixtures/          # labeled synthetic PG/CH/Mongo cases, SQL and event fixtures
 schemas/                 # immutable published JSON Schemas per IR version
 config/                  # safe example TOML only; local.toml ignored
@@ -75,7 +71,7 @@ scripts/                 # developer graph/CI helpers, not runtime modules
 .github/workflows/       # required PR checks
 ```
 
-One Python distribution with extras: base assembler, `postgres`, `clickhouse`, `mongo`, `llm`, and `openlineage`. Collector packages install only the matching driver and shared IR/bundle/profile modules. The assembler uses no DB driver and receives no source credentials. Build separate lockfile slices or pinned artifacts after dependency/license audit. `uv` manages developer resolution; deployed binaries/wheels do not require `uv` at runtime.
+Use a `uv` workspace for development, but publish separate wheels: contracts, collectors, catalog builder, catalogue requester, and lineage planner. Each role depends only on contracts and its own justified libraries; requester and planner never import one another. Collector driver extras install only the matching driver. The builder, requester, and planner have no source drivers or source credentials. REST serving is an optional extra on requester/planner. A shared workspace lock does not prove package isolation: CI must install each wheel in a clean environment and test CLI, API, and file-contract compatibility independently. `uv` is not required at runtime.
 
 ## 4. Module and third-party decisions
 
@@ -90,11 +86,13 @@ One Python distribution with extras: base assembler, `postgres`, `clickhouse`, `
 | MongoDB | `pymongo` bundled `bson` | Collection/index/validator metadata, sampled documents; never install unrelated `bson`. |
 | SQL lineage | SQLGlot | Parse supported PostgreSQL/ClickHouse SQL; our resolver binds identifiers to catalog objects. Unsupported SQL is diagnostic, never fabricated lineage. |
 | Matching | RapidFuzz plus our deterministic policies | Name similarity is one feature, never sufficient alone. |
-| Graph algorithms | NetworkX `MultiDiGraph`, optional internal view | Parallel typed edges and traversal; canonical persisted IR is independent of NetworkX. |
+| Graph algorithms | NetworkX `MultiDiGraph`, replaceable planner-local view | Parallel typed edges and bounded path search; canonical persisted IR is independent of NetworkX. |
 | Pipeline interchange | OpenLineage spec; `openlineage-python` extra only if needed | Import/export observed job/run/dataset facets, preserve provenance. |
 | Local LLM | vLLM OpenAI-compatible server on Linux or WSL2 GPU; `openai` Python client against its private base URL; trial Qwen3 8B | One bounded structured-output call per ambiguous candidate batch; no cloud fallback. Record model digest, prompt/schema version, latency. Confirm GPU support and JSON conformance on the pinned versions. |
 | Review workflow | LangGraph `StateGraph` | Explicit nodes for redaction, model call, validation and evidence conversion. Our deterministic assembler owns scheduling and publication. No autonomous tools, DB access, dynamic handoffs or model-selected SQL. Top-level `langchain` and `langgraph-swarm` are excluded; `langchain-core` may enter transitively with LangGraph. |
-| Runtime state | SQLite stdlib | Local assembler run index, bundle receipts, stable IDs, edge history, cache keys. WAL mode where appropriate. |
+| Runtime state | SQLite stdlib and FTS5 where available | Local builder run index; requester search index; planner path index. Each package owns its own rebuildable state. Check FTS5 availability at startup and fail with a typed capability error. |
+| Requester API | FastAPI and Uvicorn in the requester `api` extra | Private HTTP JSON REST over the same application functions used by the CLI; no source drivers or planner dependency. |
+| Planner API | FastAPI and Uvicorn in the planner `api` extra | Private HTTP JSON REST over the same deterministic planner functions used by the CLI; no source credentials or query execution. |
 | Telemetry | stdlib structured logging plus self-hosted Langfuse Python SDK | Trace reviewer nodes, local model latency/usage, validation outcomes and redacted error codes with approved metadata only. Never export raw prompts, outputs, SQL, values or credentials. Langfuse is observability, not source catalog state. |
 | Test/tooling | pytest, Ruff, mypy/pyright, Bandit, pip-audit, `cyclonedx-py` or equivalent, license checker selected during dependency lock | CI must run deterministic unit, integration, contract, security and license gates. |
 | Source-code intelligence | Graphify, Graft, Codebase Memory MCP | Developer-only structural graphs. Graphify first, then Graft, then CBM. Git hooks/CI refresh them without LLM/deep modes. |
@@ -144,7 +142,7 @@ Initial candidate blocking: compare only permitted source pairs; require compati
 
 Inputs are observed SQL text/normalized fingerprints with provenance and times, view definitions, job/run records, and OpenLineage events. A view definition is *defined* transformation lineage, distinguished from an executed job. SQLGlot parses PostgreSQL/ClickHouse dialects; our resolver qualifies tables/columns against a snapshot, handles aliases/CTEs/stars where resolvable, and records unresolved expressions. Capture `INSERT ... SELECT`, `CREATE TABLE AS`, materialized view definitions, configured transformation jobs, and reads/writes. Column lineage is emitted only when expressions map to known fields; otherwise table-level edge plus diagnostic. SQL text stored only under policy after literal/comment redaction; default artifact stores fingerprint, parser version and redacted snippet.
 
-OpenLineage import maps dataset namespace/name to source/object IDs and run/job facets to observed edges. Unmatched datasets remain unresolved observations. Distinguish lineage from observed joins: a SELECT join proves a query used two datasets, not that one was derived from the other. No LLM may invent lineage.
+OpenLineage import maps dataset namespace/name to source/object IDs and run/job facets to observed edges. Preserve RunEvent versus JobEvent provenance. Use an explicit target/source mapping from a lineage facet or resolved transformation SQL before asserting a particular input→output edge; a run listing several inputs and outputs alone does not justify their Cartesian product. Import column lineage only when the facet and field mapping are both available. Unmatched datasets remain unresolved observations. Distinguish lineage from observed joins: a SELECT join proves a query used two datasets, not that one was derived from the other. No LLM may invent lineage.
 
 ## 10. Local LLM review in version 1
 
@@ -171,6 +169,16 @@ dbig assemble --config <assembler.toml> --bundle <path> [--bundle <path> ...] --
 dbig validate-graph <graph-dir> --json
 dbig explain-edge <edge-id> --graph <graph-dir> --json
 dbig schema --version <major.minor> --out <dir>
+dbig-requester index --snapshot <catalog-dir> --state <state-dir>
+dbig-requester search --state <state-dir> --query <text> --json
+dbig-requester ask --state <state-dir> --question <text> --json
+dbig-requester request-scan --source-id <id> --request <json> --dispatch <bundle|http> --json
+dbig-requester serve --config <requester.toml>
+dbig-planner build --snapshot <catalog-dir> --observations <dir> --out <planner-dir>
+dbig-planner lineage-paths --graph <planner-dir> --from <id> --to <id> --json
+dbig-planner join-paths --graph <planner-dir> --from <id> --to <id> --json
+dbig-planner plan --graph <planner-dir> --path-id <id> --json
+dbig-planner serve --config <planner.toml>
 ```
 
 Exit codes: 0 complete success; 2 invalid invocation/config; 3 security/integrity violation; 4 unavailable source or partial result (unless `--allow-partial`); 5 internal error; 6 validation failure. JSON diagnostics have code, severity, source ID, object ID if safe, timestamp, retryability, and redacted message. CLI never prints secrets or raw values.
@@ -207,3 +215,45 @@ Ponytail is a coding-agent methodology, not a runtime dependency. On every meani
 8. Labeled evaluation corpus and acceptance thresholds.
 
 These are tracked in TODO.md. Work that does not depend on them may proceed; behavior-changing assumptions must be surfaced to the user, including in the middle of a task.
+
+## 17. Independent requester and planner contract (approved 2026-09-23)
+
+The user selected **both** separately installable packages/CLIs exchanging versioned files **and** separately deployed HTTP JSON REST services. This section supersedes earlier single-package, headless-only, and planner-in-assembler descriptions in the research record. This change is a binding design decision; no application package or service has yet been implemented. The architecture and TODO are the present deliverable by user choice.
+
+### 17.1 Dependency and ownership rules
+
+| Distribution | Owns | Required application dependencies | Optional dependencies |
+| --- | --- | --- | --- |
+| `dbig-contracts` | IR v1, JSON Schema, manifests, validation, stable IDs, signatures | Pydantic v2, `jsonschema`, Python standard library | None |
+| `dbig-collectors` | Site-specific discovery, profiles and signed bundles | `dbig-contracts`, Click, standard library | `pg8000`, `clickhouse-connect`, or `pymongo` by source extra |
+| `dbig-catalog-builder` | Cross-source evidence, reference candidates, deterministic snapshot, bounded semantic review | `dbig-contracts`, RapidFuzz, LangGraph, OpenAI-compatible Python client, Langfuse SDK, SQLite stdlib | NetworkX only if builder-side traversal proves necessary |
+| `dbig-catalogue-requester` | Structured catalogue search, grounded local-LLM answers, scan dispatch | `dbig-contracts`, Click, SQLite/FTS5 stdlib, OpenAI-compatible Python client | FastAPI/Uvicorn `api` extra; LangGraph only if multi-step request workflow is justified by tests |
+| `dbig-lineage-planner` | Observed lineage import, lineage and join paths, SQL/Mongo/query-plan rendering | `dbig-contracts`, SQLGlot, NetworkX, Click | FastAPI/Uvicorn `api` extra; `openlineage-python` only for typed event emission |
+
+The names are intended distribution names, subject to package-index availability and final lock audit. Do not introduce imports from requester to planner or vice versa. Source credentials and drivers are confined to collectors. The planner makes no LLM call; path selection and rendering use validated IR and deterministic policies. The requester may call the same private vLLM server used by the builder, but the packages share no process state or direct Python dependency. No top-level LangChain, LangGraph Swarm, Amundsen, Elasticsearch, Neo4j, Marquez, OpenLineage SQL parser, or second SQL parser is required. Graphify/Graft/Codebase Memory remain developer-only graphs.
+
+### 17.2 Versioned artifact handoff
+
+The builder publishes a sealed **catalog snapshot** using the section 6 `nodes.jsonl`, `edges.jsonl`, `evidence.jsonl`, `runs.jsonl`, and `manifest.json` convention. The snapshot includes object/field definitions, declared constraints, `REFERENCE_CANDIDATE` edges and their evidence, plus approved observation references. Planner-local lineage and path indexes and requester-local SQLite FTS indexes are derived caches, never the interchange contract. Observed SQL/pipeline metadata and OpenLineage event files enter the planner through validated observation records; raw values and source credentials never enter either package. A planner can operate on a compatible catalog snapshot without a requester. A requester can operate on that snapshot without a planner. OpenLineage-only input can yield lineage paths after dataset mapping, but join paths require compatible field/reference evidence; missing evidence produces an explicit unavailable result.
+
+Every artifact declares schema major/minor version, content type, producer, source run IDs, creation/as-of time, completeness, SHA-256 file digests, counts, and provenance. A reader rejects unknown major versions, invalid references, excessive size, unsafe paths, bad signatures/digests, or ambiguous source identities; a compatible minor version adds fields without changing meaning. Create canonical fixtures and clean-wheel consumer tests before promising compatibility. The research document's earlier `entities.jsonl`/`relationships.jsonl` wording is historical; the section 6 filenames above are the binding design.
+
+### 17.3 Catalogue requester
+
+Structured requests filter by object/field kind, source, name, type, tags/capabilities, freshness, and evidence status, with pagination and stable sort. At the initial scale, build a local SQLite FTS5 index from a validated snapshot, retaining only approved metadata and object IDs. Store a snapshot digest with the index and refuse stale or mismatched requests until reindexed. Natural-language questions use bounded retrieval followed by a private vLLM call against **only retrieved and redacted metadata**; the model returns cited catalog IDs and an answer, validated against those results. It cannot query sources, invent fields, issue scans, assert lineage, or run SQL. If the model is unavailable, structured search remains usable and the natural-language route returns a typed unavailability response. Manual metadata-only Langfuse traces cover this call under the same privacy rules as the builder.
+
+The scan-request contract names an authorized source ID, requested scope/capabilities, reason, requester identity, idempotency key, expiry, and reply location; it contains no source credentials. Two adapters use the same signed, versioned request model: (1) write a signed bundle into the existing scheduler's approved handoff, or (2) POST it over private authenticated HTTP to a collector-side adapter. The collector verifies signature, replay/expiry, caller authorization, allowed scope and local load budget, then queues a scan locally and returns a receipt/status. The requester never bypasses collector policy or directly connects to a database. Exact scheduler interface, HTTP authentication mechanism, key management and retention require deployment evidence and remain open TODO items.
+
+REST v1 routes: `GET /v1/catalogue/search`, `POST /v1/catalogue/questions`, `POST /v1/scan-requests`, and `GET /v1/scan-requests/{id}`. CLI and REST call the same application functions. Responses include contract version, snapshot digest, IDs, evidence/freshness, completeness, and typed errors. API authentication, authorization, payload limits, rate limits and TLS are required before deployment; do not invent their concrete configuration.
+
+### 17.4 Lineage and path planner
+
+Maintain separate edge sets for observed/defined `DERIVES_FROM`/`READS`/`WRITES` lineage and declared or inferred reference candidates. `JOINS_OBSERVED` records that a query used a join, not data movement. A lineage-path request traverses only lineage edges with execution/definition provenance and timestamps. A join-path request traverses approved declared/reference-candidate edges, marks tentative links, applies configured hop/result limits and returns ranked paths with every supporting and contrary evidence ID. Missing mappings, stale snapshots and partial observations are visible; never silently complete a path with an LLM guess. OpenLineage RunEvents, JobEvents and facets are mapped conservatively as described in section 9.
+
+For a selected path, the planner constructs a typed query plan from catalog IDs and approved predicates. For a SQL-capable single-engine segment, render dialect-specific SQL through SQLGlot ASTs with quoted identifiers and bound **values**; validate the resulting AST against the selected objects, joins and read-only policy. Identifiers are allowlisted from the snapshot, never concatenated from user text. For MongoDB segments, emit a JSON aggregation pipeline with validated collection/path references and bounded stages. No generated query is executed by this product. For cross-database paths, return executable **source-side** read queries where possible plus ordered logical extract/transfer/join steps, schemas, expected keys and prerequisites. Until an approved staging/federated target is configured, mark staging and final join execution `unresolved`; do not claim the complete cross-source plan is executable. If a target is later configured, add its dialect/capability checks and explicit approval before rendering target SQL.
+
+REST v1 routes: `POST /v1/lineage/paths`, `POST /v1/join-paths`, and `POST /v1/plans`. CLI and REST use the same validated functions. A plan response carries plan/version ID, snapshot digest, path/evidence IDs, source dialects, rendered SQL with parameter metadata and/or Mongo pipeline JSON, ordered logical steps, unresolved prerequisites, and warnings. Do not include source credentials or raw sample values. The API is read-only with respect to all source databases.
+
+### 17.5 Verification gates
+
+Before calling the two packages independent, build and install each wheel in separate clean Windows and Linux environments and prove neither imports the other or a source driver. Contract fixtures must round-trip through both CLIs and REST APIs using the same sealed snapshot; test unknown major and additive minor versions. Test requester search/answer grounding, stale-index rejection, authorization/replay of both scan adapters, and model outage. Test planner lineage versus join separation, multi-input/multi-output OpenLineage ambiguity, SQL dialect and Mongo pipeline rendering, cross-source unresolved staging, prompt injection, read-only AST policy, and that no execution path exists. CI should start these gates only as the packages are implemented; current CI is a planning-stage policy/graph check, not evidence that these runtime behaviors work.

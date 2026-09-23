@@ -1,10 +1,10 @@
 # Database Intelligence Graph Generator
 
-Headless, evidence-first discovery of database objects, likely relationships, and **observed** data lineage across PostgreSQL, ClickHouse, and MongoDB. The project is in the architecture and implementation-planning stage; no collector or assembler runtime has been implemented yet.
+Evidence-first discovery of database objects, likely relationships, and **observed** data lineage across PostgreSQL, ClickHouse, and MongoDB, with two independent user-facing modules. The project is in the architecture and implementation-planning stage; no application runtime has been implemented yet.
 
 ## What the system will do
 
-Collectors run beside each configured source with read-only credentials. They discover schema and bounded profiles, then produce signed or digest-verified, versioned bundles. A central assembler validates the bundles, compares safe features across sources, ranks relationship candidates, imports observed SQL/pipeline lineage, and emits a machine-readable graph. In version 1, a bounded LangGraph workflow asks a local vLLM model to review ambiguous candidates. Self-hosted Langfuse records approved workflow metadata. Model suggestions cannot, by themselves, establish a foreign key or lineage edge.
+Collectors run beside each configured source with read-only credentials and produce versioned bundles. A central builder validates them, compares permitted features across sources, ranks relationship candidates, and publishes a versioned catalog snapshot. The **catalogue requester** independently searches that snapshot, answers grounded natural-language questions with a private local LLM, and dispatches new scan requests. The **lineage and path planner** independently imports observed SQL/pipeline metadata and OpenLineage events, returns observed lineage or possible join paths, and generates reviewable SQL/MongoDB plans without executing them. Both modules will ship as separate installable Python packages with CLIs and optional HTTP JSON REST services; they share only the artifact contract.
 
 ```mermaid
 flowchart LR
@@ -14,13 +14,18 @@ flowchart LR
   B1 --> A[Central assembler]
   B2 --> A
   B3 --> A
-  P[Observed SQL and pipeline events] --> A
   A --> L[Bounded LangGraph reviewer]
   L --> V[vLLM on Linux or WSL2 GPU]
   V --> L
   L --> F[Self-hosted Langfuse traces]
   L --> A
-  A --> IR[Versioned graph JSONL and manifest]
+  A --> IR[Versioned catalog snapshot]
+  IR --> R[Catalogue requester CLI and REST]
+  IR --> P[Lineage and path planner CLI and REST]
+  O[Observed SQL, pipeline and OpenLineage events] --> P
+  R -->|signed bundle or private HTTP| C[Site collector scan adapter]
+  R -->|grounded questions| V
+  P --> X[Lineage paths, join paths, SQL/Mongo plans]
 ```
 
 ## Project documents
@@ -32,9 +37,9 @@ flowchart LR
 
 ## Current state
 
-This repository contains plans, workflow policy, Git hooks, and CI scaffolding. It does **not** yet contain production code. The tools and versions listed in the technical plan are choices to validate in an implementation lockfile, not claims that the application is deployable now.
+This repository contains plans, workflow policy, Git hooks, and CI scaffolding. It does **not** yet contain application code. The technical plan defines package and API contracts to implement and validate; no module is deployable yet.
 
-The selected LLM stack is vLLM for private GPU serving, LangGraph for the fixed review workflow, and self-hosted Langfuse for metadata-only visibility. The assembler uses the OpenAI-compatible Python client against the private vLLM endpoint. Top-level LangChain and LangGraph Swarm are deferred because v1 has no model-selected tools or agent handoffs. The model and Langfuse deployment are still design tasks; the exact GPU, model revision, service versions and telemetry infrastructure must be validated before deployment.
+The selected LLM stack is vLLM for private GPU serving, LangGraph for the builder's fixed review workflow, and self-hosted Langfuse for metadata-only visibility. The requester also calls the private vLLM endpoint for grounded catalogue questions. The planner is deterministic and makes no LLM call. Top-level LangChain and LangGraph Swarm remain deferred. The exact GPU, model revision, service versions and telemetry infrastructure must be validated before deployment.
 
 ## Developer setup
 
@@ -50,6 +55,8 @@ The **pre-commit** hook refreshes Graphify, Graft, and Codebase Memory and abort
 
 ## Licenses and upstream tools
 
-Apache-2.0 and MIT are free for small and commercial uses. [DataHub](https://github.com/datahub-project/datahub) is Apache-2.0 and usable as a reference or integration target; the complete platform is outside this headless v1. [OpenMetadata](https://github.com/open-metadata/OpenMetadata) has different terms for its `ingestion/` subtree, so the project does not embed that code under its permissive-core policy. Full reasoning and citations are in the research document.
+Apache-2.0 and MIT are free for small and commercial uses. [DataHub](https://github.com/datahub-project/datahub) is Apache-2.0 and usable as a reference or integration target; its complete platform is outside this project's chosen scope. [OpenMetadata](https://github.com/open-metadata/OpenMetadata) has different terms for its `ingestion/` subtree, so the project does not embed that code under its permissive-core policy. Full reasoning and citations are in the research document.
+
+[Amundsen](https://github.com/amundsen-io/amundsen) is Apache-2.0 but its repository was archived in September 2026; use its ingestion/search architecture as a reference, not a v1 runtime dependency. [OpenLineage](https://github.com/OpenLineage/OpenLineage) is Apache-2.0 and supplies the run/job/dataset/facet event standard for planner import/export. Neither repository requires deploying its complete stack. The binding module boundaries and exact package decisions are in [TECHNICAL_IMPLEMENTATION.md](TECHNICAL_IMPLEMENTATION.md#17-independent-requester-and-planner-contract-approved-2026-09-23).
 
 The graph tools named above index **this source repository** for developers. They are not runtime dependencies of the Database Intelligence Graph Generator and are not the graph artifact delivered to its users.
