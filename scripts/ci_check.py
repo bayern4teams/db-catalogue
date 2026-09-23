@@ -43,7 +43,13 @@ def main() -> None:
     if (ROOT / "AGENT.md").exists():
         raise SystemExit("Use only the canonical AGENTS.md; remove AGENT.md")
 
-    for document in ("README.md", "TECHNICAL_IMPLEMENTATION.md", "TODO.md", "AGENTS.md", "CLAUDE.md"):
+    for document in (
+        "README.md",
+        "TECHNICAL_IMPLEMENTATION.md",
+        "TODO.md",
+        "AGENTS.md",
+        "CLAUDE.md",
+    ):
         text = (ROOT / document).read_text(encoding="utf-8")
         for target in re.findall(r"\]\(([^)]+)\)", text):
             if target.startswith(("https://", "http://", "#", "mailto:")):
@@ -56,7 +62,9 @@ def main() -> None:
     if "## 13. Verification record" not in todo or "- [ ]" not in todo:
         raise SystemExit("TODO.md must retain a live verification record and open tasks")
     if (ROOT / "src").exists() and not (ROOT / "pyproject.toml").is_file():
-        raise SystemExit("Application source requires pyproject.toml and the application quality gate")
+        raise SystemExit(
+            "Application source requires pyproject.toml and the application quality gate"
+        )
     if (ROOT / "pyproject.toml").exists() and not (ROOT / "uv.lock").is_file():
         raise SystemExit("A deployable Python package requires uv.lock")
 

@@ -1,0 +1,148 @@
+{
+  "additionalProperties": true,
+  "properties": {
+    "collector_version": {
+      "minLength": 1,
+      "title": "Collector Version",
+      "type": "string"
+    },
+    "confidence": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Confidence"
+    },
+    "evidence_ids": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Evidence Ids",
+      "type": "array"
+    },
+    "explanation": {
+      "default": "",
+      "title": "Explanation",
+      "type": "string"
+    },
+    "first_seen": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "First Seen"
+    },
+    "from_id": {
+      "title": "From Id",
+      "type": "string"
+    },
+    "id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Id",
+      "type": "string"
+    },
+    "ir_version": {
+      "default": "1.0",
+      "title": "Ir Version",
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "CONTAINS",
+        "DECLARES_FK",
+        "REFERENCE_CANDIDATE",
+        "JOINS_OBSERVED",
+        "WRITES",
+        "READS",
+        "DERIVES_FROM",
+        "RUNS_JOB"
+      ],
+      "title": "Kind",
+      "type": "string"
+    },
+    "last_seen": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Last Seen"
+    },
+    "limitations": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Limitations",
+      "type": "array"
+    },
+    "observed_at": {
+      "format": "date-time",
+      "title": "Observed At",
+      "type": "string"
+    },
+    "provenance": {
+      "minLength": 1,
+      "title": "Provenance",
+      "type": "string"
+    },
+    "record_type": {
+      "const": "edge",
+      "default": "edge",
+      "title": "Record Type",
+      "type": "string"
+    },
+    "source_id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Source Id",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "declared",
+        "strong",
+        "tentative",
+        "rejected",
+        "observed"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "to_id": {
+      "title": "To Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "source_id",
+    "observed_at",
+    "collector_version",
+    "provenance",
+    "kind",
+    "from_id",
+    "to_id",
+    "status",
+    "evidence_ids"
+  ],
+  "title": "Edge",
+  "type": "object"
+}

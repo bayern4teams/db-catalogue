@@ -1,0 +1,140 @@
+{
+  "$defs": {
+    "FileEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "bytes": {
+          "minimum": 0,
+          "title": "Bytes",
+          "type": "integer"
+        },
+        "count": {
+          "minimum": 0,
+          "title": "Count",
+          "type": "integer"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "bytes",
+        "sha256",
+        "count"
+      ],
+      "title": "FileEntry",
+      "type": "object"
+    },
+    "Signature": {
+      "properties": {
+        "algorithm": {
+          "const": "hmac-sha256",
+          "default": "hmac-sha256",
+          "title": "Algorithm",
+          "type": "string"
+        },
+        "key_id": {
+          "title": "Key Id",
+          "type": "string"
+        },
+        "value": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "key_id",
+        "value"
+      ],
+      "title": "Signature",
+      "type": "object"
+    }
+  },
+  "additionalProperties": true,
+  "properties": {
+    "as_of": {
+      "format": "date-time",
+      "title": "As Of",
+      "type": "string"
+    },
+    "classification": {
+      "default": "metadata",
+      "title": "Classification",
+      "type": "string"
+    },
+    "completeness": {
+      "enum": [
+        "complete",
+        "partial"
+      ],
+      "title": "Completeness",
+      "type": "string"
+    },
+    "content_type": {
+      "enum": [
+        "collector-bundle",
+        "catalog-snapshot"
+      ],
+      "title": "Content Type",
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "files": {
+      "items": {
+        "$ref": "#/$defs/FileEntry"
+      },
+      "title": "Files",
+      "type": "array"
+    },
+    "ir_version": {
+      "default": "1.0",
+      "title": "Ir Version",
+      "type": "string"
+    },
+    "producer": {
+      "title": "Producer",
+      "type": "string"
+    },
+    "signature": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Signature"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "source_run_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Source Run Ids",
+      "type": "array"
+    }
+  },
+  "required": [
+    "content_type",
+    "producer",
+    "source_run_ids",
+    "created_at",
+    "as_of",
+    "completeness",
+    "files"
+  ],
+  "title": "Manifest",
+  "type": "object"
+}

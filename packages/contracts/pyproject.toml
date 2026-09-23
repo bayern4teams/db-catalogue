@@ -1,0 +1,12 @@
+[project]
+name = "dbig-contracts"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = ["pydantic>=2.11,<3", "jsonschema>=4.25,<5"]
+
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/dbig_contracts"]

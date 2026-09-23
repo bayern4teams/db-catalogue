@@ -18,7 +18,7 @@ def run(*args: str) -> None:
     executable = args[0]
     if os.name == "nt" and executable == "graft":
         executable = shutil.which("graft.cmd") or executable
-    subprocess.run((executable, *args[1:]), cwd=ROOT, check=True)
+    subprocess.run((executable, *args[1:]), cwd=ROOT, check=True)  # noqa: S603
 
 
 def staged_paths() -> set[str]:
@@ -50,8 +50,7 @@ def main() -> int:
     missing = [
         name
         for name in TOOLS
-        if shutil.which("graft.cmd" if os.name == "nt" and name == "graft" else name)
-        is None
+        if shutil.which("graft.cmd" if os.name == "nt" and name == "graft" else name) is None
     ]
     if missing:
         print("Required graph tools missing: " + ", ".join(missing), file=sys.stderr)

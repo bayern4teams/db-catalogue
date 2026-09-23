@@ -1,0 +1,102 @@
+{
+  "additionalProperties": true,
+  "properties": {
+    "collector_version": {
+      "minLength": 1,
+      "title": "Collector Version",
+      "type": "string"
+    },
+    "explanation": {
+      "default": "",
+      "title": "Explanation",
+      "type": "string"
+    },
+    "id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Id",
+      "type": "string"
+    },
+    "ir_version": {
+      "default": "1.0",
+      "title": "Ir Version",
+      "type": "string"
+    },
+    "kind": {
+      "title": "Kind",
+      "type": "string"
+    },
+    "metrics": {
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "integer"
+          },
+          {
+            "type": "number"
+          },
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "title": "Metrics",
+      "type": "object"
+    },
+    "object_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Object Id"
+    },
+    "observed_at": {
+      "format": "date-time",
+      "title": "Observed At",
+      "type": "string"
+    },
+    "provenance": {
+      "minLength": 1,
+      "title": "Provenance",
+      "type": "string"
+    },
+    "record_type": {
+      "const": "evidence",
+      "default": "evidence",
+      "title": "Record Type",
+      "type": "string"
+    },
+    "source_id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Source Id",
+      "type": "string"
+    },
+    "subject_id": {
+      "title": "Subject Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "source_id",
+    "observed_at",
+    "collector_version",
+    "provenance",
+    "kind",
+    "subject_id"
+  ],
+  "title": "Evidence",
+  "type": "object"
+}

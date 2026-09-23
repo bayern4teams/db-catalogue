@@ -1,0 +1,67 @@
+{
+  "additionalProperties": true,
+  "properties": {
+    "collector_version": {
+      "minLength": 1,
+      "title": "Collector Version",
+      "type": "string"
+    },
+    "id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Id",
+      "type": "string"
+    },
+    "ir_version": {
+      "default": "1.0",
+      "title": "Ir Version",
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "postgresql",
+        "clickhouse",
+        "mongodb"
+      ],
+      "title": "Kind",
+      "type": "string"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "observed_at": {
+      "format": "date-time",
+      "title": "Observed At",
+      "type": "string"
+    },
+    "provenance": {
+      "minLength": 1,
+      "title": "Provenance",
+      "type": "string"
+    },
+    "record_type": {
+      "const": "source",
+      "default": "source",
+      "title": "Record Type",
+      "type": "string"
+    },
+    "source_id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Source Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "source_id",
+    "observed_at",
+    "collector_version",
+    "provenance",
+    "kind",
+    "name"
+  ],
+  "title": "Source",
+  "type": "object"
+}

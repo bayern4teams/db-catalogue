@@ -1,0 +1,41 @@
+[project]
+name = "dbig-workspace"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["packages/*"]
+
+[dependency-groups]
+dev = [
+  "dbig-contracts",
+  "pytest>=9.0.3,<10",
+  "ruff>=0.13,<0.14",
+  "mypy>=1.18,<2",
+  "pip-audit>=2.9,<3",
+]
+
+[tool.uv.sources]
+dbig-contracts = { workspace = true }
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["packages"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

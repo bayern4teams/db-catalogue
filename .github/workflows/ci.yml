@@ -66,7 +66,7 @@ jobs:
           fi
           uv sync --locked --all-extras --dev
           uv run ruff check .
-          uv run mypy src
+          uv run mypy packages
           uv run pytest
           uv run pip-audit
 

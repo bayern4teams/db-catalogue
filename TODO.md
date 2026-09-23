@@ -2,6 +2,13 @@
 
 Update this file when work starts, a fact changes, a decision is needed, a check runs, or work finishes. Do not batch updates at the end. Use `- [ ]`, `- [x]`, or `- [~]` (in progress); add a short evidence link/command with every completion. Ask the user about any question, suggestion, or debt as soon as it is discovered. All verified changes are committed. This ledger is a plan, not a claim of implemented runtime capability.
 
+## Current change: v1 implementation
+
+- [~] Implement the approved v1 in dependency order, beginning with package boundaries and versioned artifact contracts. Evidence: user request on 2026-09-23; existing repository is design-only (`git status --short --branch`, Graphify query).
+- [x] User delegated previously open implementation choices on 2026-09-23. Conservative local profile and measurement boundaries are recorded in `TECHNICAL_IMPLEMENTATION.md` §16; no live source or GPU facts are assumed.
+- [x] Build the first `dbig-contracts` increment: IR boundary models, stable IDs, signed atomic JSONL artifacts, published JSON Schemas, and malformed/compatibility tests. Evidence: `uv lock`, `uv run pytest` (4 passed), `uv run mypy packages` (passed), `uv build --package dbig-contracts` (wheel and sdist built), `uv run ruff check .` (passed), and `uv run pip-audit` (no known vulnerabilities after upgrading pytest from 8.4.2 to 9.1.1). CI inspection follows commit/push.
+- [~] Commit verification: first pre-commit Graphify and Graft passed; Codebase Memory refused a simultaneous index operation. Its `index_status` now reports `ready` with no parse gaps, so the required hook will be retried without bypass.
+
 ## Current change: local agent framework decision
 
 - [x] Remove duplicate `AGENT.md` and keep the complete policy in `AGENTS.md`; update README/CLAUDE.md and repository check. Evidence: `AGENT.md` deleted, `scripts/ci_check.py` rejects its return, local policy check passed.
