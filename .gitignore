@@ -1,0 +1,31 @@
+# Secrets and machine-specific configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+
+# Python and test products
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# Regenerable source-code intelligence caches
+graphify-out/
+graft/
+.graft/
+.codebase-memory/
+
+# Local runtime products
+.data/
+artifacts/
+config/local.toml
+*.log
