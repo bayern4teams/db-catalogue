@@ -9,7 +9,7 @@ Update this file when work starts, a fact changes, a decision is needed, a check
 - [x] Ask whether to commit source-code graph caches. Decision: regenerate locally/CI; do not commit.
 - [x] Ask whether to make first commit. Decision: yes.
 - [x] Ask for GitHub remote. Decision: `https://github.com/Reza-Sh83/db-catalogue.git`.
-- [~] Write README, binding implementation contract, agent instructions, local `.env` scaffold, hooks and strict CI baseline; local policy and graph checks passed; first commit pending.
+- [x] Write README, binding implementation contract, agent instructions, local `.env` scaffold, hooks and CI baseline. Evidence: first commit `f165266` after local policy and three-tool graph checks.
 - [x] Configure `origin` and inspect GitHub auth/repository. Evidence: `git remote -v`, `gh auth status`, `gh repo view`; `Reza-Sh83/db-catalogue` is private and Actions are enabled.
 - [ ] Push `main` after first local commit and checks.
 - [ ] Inspect GitHub Actions run results with `gh`; repair any failures before calling CI green.
@@ -120,6 +120,6 @@ Update this file when work starts, a fact changes, a decision is needed, a check
 - [x] Hook path installed (`git config --local --get core.hooksPath` -> `.githooks`); `python scripts/graph_sync.py --check-tools` found all tools.
 - [x] Manual three-tool graph refresh passed outside filesystem sandbox on 2026-09-23. Graphify 114 nodes/125 edges, Graft check OK, CBM 152 nodes/206 edges. CBM CLI cannot create its coordination endpoint inside the restricted sandbox; actual local hooks/CI run with normal local permissions.
 - [x] `python scripts/ci_check.py`, `python -m compileall -q scripts`, and `git diff --check` passed locally.
-- [ ] Pre-commit and post-commit graph refresh result for first commit.
+- [x] Pre-commit and post-commit graph refresh both passed on first commit `f165266`: Graphify 114 nodes/125 edges; Graft check OK; CBM 154 nodes/208 edges.
 - [ ] CI lint/docs/graph result and GitHub Actions URL.
 - [ ] Git status clean after first commit/push, excluding ignored `.env` and caches.
