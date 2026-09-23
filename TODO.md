@@ -14,7 +14,8 @@ Update this file when work starts, a fact changes, a decision is needed, a check
 - [x] Implement central builder increment: signed intake, typed constraint resolution, separate declared and tentative edges with evidence, and sealed snapshot publication. Evidence: `uv run pytest` (16 passed), `uv run mypy packages`, `uv run ruff check .`, `uv build --package dbig-catalog-builder`, and `pip-audit` (no known vulnerabilities). Live connector and incremental-state tests remain open.
 - [x] Add bounded LangGraph review of ambiguous candidates through a private vLLM URL with cited-ID validation, metadata-only Langfuse spans, and deterministic publication on model outage. Evidence: synthetic fake-client, bad-citation, outage, URL, and trace tests included in the 16-test suite. Actual GPU/model JSON conformance and self-hosted Langfuse deployment remain unverified.
 - [x] Implement catalogue requester search, grounded private-model answers, signed scheduler/HTTP scan dispatch, CLI and REST; add collector-side queue, scope/load/replay checks. Evidence: `uv run pytest -q` (23 passed), Ruff, mypy, both wheel builds, policy check and `pip-audit` passed on 2026-09-23. Live scheduler, TLS proxy, model and source operations still need deployment verification.
-- [~] Implement separate lineage/path planner with observed SQL, pipeline and OpenLineage intake, candidate paths, query rendering, CLI and REST. Started after requester verification.
+- [~] Implement separate lineage/path planner with observed SQL, pipeline and OpenLineage intake, candidate paths, query rendering, CLI and REST. Evidence: `uv run pytest -q` (29 passed), Ruff/mypy, and Windows clean-wheel/API/CLI isolation passed. Exact OpenLineage facet mapping, full SQL resolution, Linux wheel result, and live input sources remain open.
+- [x] Requester and scan increment `7947435` pushed; [CI run 35908200102](https://github.com/Reza-Sh83/db-catalogue/actions/runs/35908200102) completed with repository-policy, graph-index, application-quality and ci-success successful. This verifies synthetic behavior, not live deployment.
 - [x] Builder increment `e3d2f51` pushed; [CI run 35905976696](https://github.com/Reza-Sh83/db-catalogue/actions/runs/35905976696) passed repository-policy, graph-index, application-quality, and ci-success. Live vLLM and Langfuse deployment remain untested.
 
 ## Current change: local agent framework decision
@@ -63,7 +64,8 @@ Update this file when work starts, a fact changes, a decision is needed, a check
 ## 2. Package skeleton and dependency governance
 
 - [ ] Create a `uv` workspace and separately installable `dbig-contracts`, `dbig-collectors`, `dbig-catalog-builder`, `dbig-catalogue-requester`, and `dbig-lineage-planner` distributions. Verify final names against package indexes. Keep source-driver and HTTP API extras scoped to owners.
-- [ ] Build each wheel and install it in a clean environment on Windows and Linux; prove requester and planner have no mutual imports or source-driver dependencies.
+- [~] Build each wheel and install requester/planner in clean Windows and Linux environments; prove no mutual imports or source-driver dependencies. Windows `uv build --all-packages` and `python scripts/package_isolation.py` passed; CI Linux/Windows matrix added but not yet run.
+- [x] Verify the five intended `dbig-*` distribution names against PyPI JSON endpoints on 2026-09-23; all returned HTTP 404 (unoccupied at check time). Recheck before any publication.
 - [ ] Pin exact app dependencies with `uv.lock`; inspect all transitive licenses, vulnerabilities and platform wheels.
 - [ ] Set Ruff, type checker, pytest and coverage configuration with strict settings justified by code.
 - [ ] Produce SBOM and a repeatable license report from the lockfile.
@@ -126,21 +128,21 @@ Update this file when work starts, a fact changes, a decision is needed, a check
 
 ## 9a. Independent catalogue requester
 
-- [ ] Build snapshot validation and SQLite FTS5 index with digest/freshness checks, structured filters, pagination and stable ordering.
-- [ ] Implement grounded natural-language catalogue Q&A against private vLLM with validated cited object IDs, redaction, budgets and model-outage behavior.
-- [ ] Define scan-request schema and authorization, expiry, idempotency, signature, replay and receipt/status contracts.
-- [ ] Implement both signed scheduler-bundle and private collector-HTTP scan dispatch adapters; test collector-side scope/load checks.
-- [ ] Provide CLI and optional FastAPI/Uvicorn HTTP JSON REST endpoints on the same application functions.
+- [x] Build snapshot validation and SQLite FTS5 index with digest/freshness checks, structured filters, pagination and stable ordering. Evidence: requester search tests in 23-test increment `7947435`.
+- [x] Implement grounded natural-language catalogue Q&A against private vLLM with validated cited object IDs, redaction, budgets and model-outage behavior. Evidence: fake-client citation/outage/telemetry tests in increment `7947435`; live vLLM remains open.
+- [x] Define scan-request schema and authorization, expiry, idempotency, signature, replay and receipt/status contracts. Evidence: schemas and signature/replay tests in increment `7947435`.
+- [x] Implement signed scheduler-bundle and private collector-HTTP scan dispatch adapters with collector-side scope/load checks. Evidence: synthetic adapter and queue tests in increment `7947435`; production handoff/TLS remains open.
+- [x] Provide requester CLI and optional FastAPI/Uvicorn HTTP JSON REST endpoints on the same application functions. Evidence: API tests and wheel CLI smoke in increment `7947435`.
 - [ ] Determine the actual scheduler interface, HTTP authentication, key management and retention with deployment owners before production implementation.
 
 ## 9b. Independent lineage and path planner
 
-- [ ] Build separate observed-lineage and reference-candidate graph views with evidence/freshness and configured path limits.
-- [ ] Implement lineage-path and candidate join-path CLI/API contracts with clear unresolved and partial statuses.
-- [ ] Generate reviewed, read-only, dialect-specific SQL segments using SQLGlot ASTs and validated catalog identifiers; never execute generated queries.
-- [ ] Generate validated MongoDB aggregation pipeline JSON for Mongo segments.
-- [ ] Return ordered cross-source source-side reads and logical transfer/join steps; mark staging/final execution unresolved until an approved target is configured.
-- [ ] Provide optional FastAPI/Uvicorn HTTP JSON REST endpoints and clean-wheel/CLI/API/contract-isolation tests.
+- [~] Build separate observed-lineage and reference-candidate graph views with evidence/freshness and configured path limits. Initial derived graph and bounded paths implemented; complete column facets and contrary evidence remain open.
+- [~] Implement lineage-path and candidate join-path CLI/API contracts with clear unresolved and partial statuses. Synthetic paths pass; richer ambiguity and ranking checks remain open.
+- [~] Generate reviewed, read-only, dialect-specific SQL segments using SQLGlot ASTs and validated catalog identifiers; never execute generated queries. Initial PostgreSQL/ClickHouse SELECT AST renderer passes synthetic tests; user predicates and dialect matrix remain open.
+- [~] Generate validated MongoDB aggregation pipeline JSON for Mongo segments. Initial bounded `$lookup` and `$limit` planner passes synthetic tests; full pipeline schema and live server remain open.
+- [x] Return ordered cross-source source-side reads and logical transfer/join steps; mark staging/final execution unresolved until an approved target is configured. Evidence: synthetic mixed PG/Mongo test in planner suite.
+- [~] Provide optional FastAPI/Uvicorn HTTP JSON REST endpoints and clean-wheel/CLI/API/contract-isolation tests. Windows clean wheel, CLI, API and no-import check passed; Linux CI pending.
 
 ## 10. Central assembler and local LLM
 

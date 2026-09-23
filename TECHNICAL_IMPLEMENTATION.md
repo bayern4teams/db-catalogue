@@ -1,6 +1,6 @@
 # Technical implementation contract
 
-Status: binding design baseline with partial implementation, 2026-09-23. The artifact contract, metadata-first collectors, deterministic catalog builder, requester, and scan adapters are implemented and tested with synthetic inputs. The planner, live connector matrix, model/telemetry deployment, benchmarks and acceptance tests remain open in [TODO.md](TODO.md). This file records **decisions to implement and verify**, not claims that every role works. The research and source links behind these decisions are in [ARCHITECTURE_RESEARCH.md](ARCHITECTURE_RESEARCH.md).
+Status: binding design baseline with partial implementation, 2026-09-23. The artifact contract, metadata-first collectors, deterministic catalog builder, requester, scan adapters, and initial planner are implemented and tested with synthetic inputs. Live connector matrix, model/telemetry deployment, full lineage facets, benchmarks and acceptance tests remain open in [TODO.md](TODO.md). This file records **decisions to implement and verify**, not claims that every role works. The research and source links behind these decisions are in [ARCHITECTURE_RESEARCH.md](ARCHITECTURE_RESEARCH.md).
 
 ## 1. Product boundary and non-negotiable behavior
 
@@ -220,7 +220,7 @@ On 2026-09-23 the user delegated these choices to implementation. The initial lo
 
 ## 17. Independent requester and planner contract (approved 2026-09-23)
 
-The user selected **both** separately installable packages/CLIs exchanging versioned files **and** separately deployed HTTP JSON REST services. This section supersedes earlier single-package, headless-only, and planner-in-assembler descriptions in the research record. The requester and scan adapters have a synthetic-tested implementation; the planner remains in progress. The architecture and TODO record the binding scope.
+The user selected **both** separately installable packages/CLIs exchanging versioned files **and** separately deployed HTTP JSON REST services. This section supersedes earlier single-package, headless-only, and planner-in-assembler descriptions in the research record. The requester, scan adapters, and initial planner have synthetic-tested implementations. The architecture and TODO record the binding scope and remaining work.
 
 ### 17.1 Dependency and ownership rules
 

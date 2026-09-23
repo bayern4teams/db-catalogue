@@ -1,0 +1,363 @@
+import json
+from datetime import UTC, datetime
+
+import pytest
+from click.testing import CliRunner
+from dbig_builder.builder import assemble
+from dbig_builder.config import BuilderConfig
+from dbig_contracts.artifact import write_artifact
+from dbig_contracts.models import Edge, Evidence, Field, Object, Source
+from dbig_planner.api import create_app
+from dbig_planner.cli import main
+from dbig_planner.config import PlannerConfig
+from dbig_planner.graph import build_graph
+from dbig_planner.observations import DatasetMapping
+from dbig_planner.paths import PathRequest, find_paths
+from dbig_planner.plans import PlanRequest, _mongo_name, _sql_read, render_plan
+from fastapi.testclient import TestClient
+from sqlglot import exp, parse_one
+from test_builder import source_bundle
+
+
+def _line(path, record):
+    with path.open("a", encoding="utf-8") as stream:
+        stream.write(json.dumps(record) + "\n")
+
+
+def sql_graph(tmp_path, monkeypatch):
+    source_bundle(tmp_path / "bundle")
+    monkeypatch.setenv("BUNDLE_KEY", "synthetic-key-12345678901234567890")
+    assemble(
+        [tmp_path / "bundle"],
+        tmp_path / "snapshot",
+        BuilderConfig(signing_keys={"test": "BUNDLE_KEY"}),
+    )
+    observations = tmp_path / "observations"
+    observations.mkdir()
+    _line(
+        observations / "sql.jsonl",
+        {
+            "kind": "sql",
+            "id": "sql-1",
+            "source_id": "site-a",
+            "dialect": "postgres",
+            "sql": "INSERT INTO orders SELECT * FROM customers",
+            "observed_at": datetime.now(UTC).isoformat(),
+            "status": "executed",
+        },
+    )
+    _line(
+        observations / "sql.jsonl",
+        {
+            "kind": "sql",
+            "id": "sql-join",
+            "source_id": "site-a",
+            "dialect": "postgres",
+            "sql": "SELECT * FROM orders JOIN customers ON orders.customer_id = customers.id",
+            "observed_at": datetime.now(UTC).isoformat(),
+            "status": "executed",
+        },
+    )
+    _line(
+        observations / "ol.jsonl",
+        {
+            "eventType": "COMPLETE",
+            "eventTime": datetime.now(UTC).isoformat(),
+            "run": {"runId": "run-1"},
+            "job": {"namespace": "jobs", "name": "transform"},
+            "inputs": [{"namespace": "site", "name": "orders"}],
+            "outputs": [
+                {"namespace": "site", "name": "customers"},
+                {"namespace": "site", "name": "loose_orders"},
+            ],
+        },
+    )
+    config = PlannerConfig(graph_dir=tmp_path / "graph", api_key_env="PLANNER_TOKEN")
+    graph = build_graph(
+        tmp_path / "snapshot",
+        observations,
+        config.graph_dir,
+        config,
+        DatasetMapping(dataset_to_object_id={"site/orders": "order", "site/customers": "customer"}),
+    )
+    return config, graph
+
+
+def test_sql_lineage_and_join_paths_are_separate(tmp_path, monkeypatch):
+    config, graph = sql_graph(tmp_path, monkeypatch)
+    assert len(graph["lineage"]) == 1
+    assert "INSERT INTO" not in (config.graph_dir / "graph.json").read_text(encoding="utf-8")
+    assert graph["observed_joins"]
+    assert any(item["code"] == "AMBIGUOUS_OPENLINEAGE_OUTPUT" for item in graph["diagnostics"])
+    lineage = find_paths(
+        config.graph_dir, PathRequest(from_id="customer", to_id="order"), "lineage", config
+    )
+    assert lineage["paths"][0]["status"] == "observed"
+    assert (
+        find_paths(
+            config.graph_dir, PathRequest(from_id="order", to_id="customer"), "lineage", config
+        )["paths"]
+        == []
+    )
+    joins = find_paths(
+        config.graph_dir, PathRequest(from_id="order", to_id="customer"), "join", config
+    )
+    assert joins["paths"][0]["status"] == "declared"
+    plan = render_plan(config.graph_dir, PlanRequest(path_id=joins["paths"][0]["path_id"]), config)
+    assert plan["steps"][0]["kind"] == "sql_read"
+    assert "JOIN" in plan["steps"][0]["sql"]
+    assert "LIMIT" in plan["steps"][0]["sql"]
+    assert plan["unresolved_prerequisites"] == []
+
+
+def test_planner_api_auth_and_cli(tmp_path, monkeypatch):
+    config, _ = sql_graph(tmp_path, monkeypatch)
+    monkeypatch.setenv("PLANNER_TOKEN", "synthetic-private-token")
+    with TestClient(create_app(config)) as client:
+        assert (
+            client.post(
+                "/v1/join-paths", json={"from_id": "order", "to_id": "customer"}
+            ).status_code
+            == 401
+        )
+        response = client.post(
+            "/v1/join-paths",
+            json={"from_id": "order", "to_id": "customer"},
+            headers={"Authorization": "Bearer synthetic-private-token"},
+        )
+        assert response.status_code == 200
+        path_id = response.json()["paths"][0]["path_id"]
+        assert (
+            client.post(
+                "/v1/plans",
+                json={"path_id": path_id},
+                headers={"Authorization": "Bearer synthetic-private-token"},
+            ).status_code
+            == 200
+        )
+    result = CliRunner().invoke(
+        main, ["plan", "--graph", str(config.graph_dir), "--path-id", path_id, "--json"]
+    )
+    assert result.exit_code == 0
+    assert json.loads(result.output)["path_id"] == path_id
+
+
+def test_mongo_and_cross_source_plans(tmp_path):
+    now = datetime.now(UTC)
+    common = {"observed_at": now, "collector_version": "synthetic", "provenance": "fixture"}
+    pg = Source(id="pg", source_id="pg", kind="postgresql", name="pg", **common)
+    mongo = Source(id="mongo", source_id="mongo", kind="mongodb", name="mongo", **common)
+    objects = [
+        Object(
+            id="orders", source_id="pg", native_id="orders", kind="table", name="orders", **common
+        ),
+        Object(
+            id="users",
+            source_id="mongo",
+            native_id="users",
+            kind="collection",
+            name="users",
+            **common,
+        ),
+        Object(
+            id="details",
+            source_id="mongo",
+            native_id="details",
+            kind="collection",
+            name="details",
+            **common,
+        ),
+    ]
+    fields = [
+        Field(
+            id="orders-user",
+            object_id="orders",
+            source_id="pg",
+            native_id="user_id",
+            name="user_id",
+            data_type="string",
+            **common,
+        ),
+        Field(
+            id="users-id",
+            object_id="users",
+            source_id="mongo",
+            native_id="_id",
+            name="_id",
+            data_type="string",
+            **common,
+        ),
+        Field(
+            id="details-id",
+            object_id="details",
+            source_id="mongo",
+            native_id="user_id",
+            name="user_id",
+            data_type="string",
+            **common,
+        ),
+    ]
+    evidence = [
+        Evidence(id="ev1", source_id="pg", kind="fixture", subject_id="orders", **common),
+        Evidence(id="ev2", source_id="mongo", kind="fixture", subject_id="users", **common),
+    ]
+    edges = [
+        Edge.model_validate(
+            {
+                "id": "edge-cross",
+                "source_id": "pg",
+                "kind": "REFERENCE_CANDIDATE",
+                "from_id": "orders",
+                "to_id": "users",
+                "status": "tentative",
+                "evidence_ids": ["ev1"],
+                "field_pairs": [["orders-user", "users-id"]],
+                **common,
+            }
+        ),
+        Edge.model_validate(
+            {
+                "id": "edge-mongo",
+                "source_id": "mongo",
+                "kind": "DECLARES_FK",
+                "from_id": "details",
+                "to_id": "users",
+                "status": "declared",
+                "evidence_ids": ["ev2"],
+                "field_pairs": [["details-id", "users-id"]],
+                **common,
+            }
+        ),
+    ]
+    snapshot = tmp_path / "snapshot"
+    write_artifact(
+        snapshot,
+        "catalog-snapshot",
+        {
+            "nodes.jsonl": [pg, mongo, *objects, *fields],
+            "edges.jsonl": edges,
+            "evidence.jsonl": evidence,
+        },
+        producer="fixture",
+        source_run_ids=[],
+    )
+    observations = tmp_path / "observations"
+    observations.mkdir()
+    config = PlannerConfig(graph_dir=tmp_path / "graph")
+    build_graph(snapshot, observations, config.graph_dir, config)
+    cross = find_paths(
+        config.graph_dir, PathRequest(from_id="orders", to_id="users"), "join", config
+    )
+    plan = render_plan(config.graph_dir, PlanRequest(path_id=cross["paths"][0]["path_id"]), config)
+    assert plan["status"] == "unresolved"
+    assert "approved_staging_or_federated_target" in plan["unresolved_prerequisites"]
+    assert [step["kind"] for step in plan["steps"]] == [
+        "source_read",
+        "source_read",
+        "logical_join",
+    ]
+    path = find_paths(
+        config.graph_dir, PathRequest(from_id="details", to_id="users"), "join", config
+    )
+    mongo_plan = render_plan(
+        config.graph_dir, PlanRequest(path_id=path["paths"][0]["path_id"]), config
+    )
+    assert mongo_plan["steps"][0]["pipeline"][0]["$lookup"]["foreignField"] == "_id"
+
+
+def test_sql_parser_rejects_unsafe_and_unmapped(tmp_path, monkeypatch):
+    config, _ = sql_graph(tmp_path, monkeypatch)
+    with pytest.raises(ValueError, match="UNKNOWN_OBJECT"):
+        find_paths(config.graph_dir, PathRequest(from_id="unknown", to_id="order"), "join", config)
+    observations = tmp_path / "other"
+    observations.mkdir()
+    _line(
+        observations / "bad.jsonl",
+        {
+            "kind": "sql",
+            "id": "bad",
+            "source_id": "site-a",
+            "dialect": "postgres",
+            "sql": "DELETE FROM orders",
+            "observed_at": datetime.now(UTC).isoformat(),
+            "status": "executed",
+        },
+    )
+    other = tmp_path / "other-graph"
+    graph = build_graph(tmp_path / "snapshot", observations, other, PlannerConfig(graph_dir=other))
+    assert not graph["lineage"]
+    assert graph["diagnostics"][0]["code"] == "UNRESOLVED_SQL"
+    _line(
+        observations / "bad.jsonl",
+        {
+            "kind": "sql",
+            "id": "cte",
+            "source_id": "site-a",
+            "dialect": "postgres",
+            "sql": "INSERT INTO orders WITH x AS (SELECT * FROM customers) SELECT * FROM x",
+            "observed_at": datetime.now(UTC).isoformat(),
+            "status": "executed",
+        },
+    )
+    newer = tmp_path / "newer-graph"
+    graph = build_graph(tmp_path / "snapshot", observations, newer, PlannerConfig(graph_dir=newer))
+    assert not graph["lineage"]
+    assert len(graph["diagnostics"]) == 2
+
+
+def test_pipeline_and_openlineage_input_mapping(tmp_path, monkeypatch):
+    config, _ = sql_graph(tmp_path, monkeypatch)
+    observations = tmp_path / "mapped-observations"
+    observations.mkdir()
+    _line(
+        observations / "events.jsonl",
+        {
+            "kind": "pipeline",
+            "id": "pipeline-1",
+            "input_object_ids": ["customer"],
+            "output_object_id": "order",
+            "observed_at": datetime.now(UTC).isoformat(),
+            "status": "defined",
+        },
+    )
+    _line(
+        observations / "events.jsonl",
+        {
+            "eventType": "COMPLETE",
+            "eventTime": datetime.now(UTC).isoformat(),
+            "run": {"runId": "run-2"},
+            "job": {"namespace": "jobs", "name": "transform"},
+            "inputs": [
+                {"namespace": "site", "name": "customers"},
+                {"namespace": "site", "name": "loose_orders"},
+            ],
+            "outputs": [{"namespace": "site", "name": "orders"}],
+        },
+    )
+    mapped = DatasetMapping(
+        dataset_to_object_id={
+            "site/customers": "customer",
+            "site/loose_orders": "loose",
+            "site/orders": "order",
+        }
+    )
+    target = tmp_path / "mapped-graph"
+    graph = build_graph(
+        tmp_path / "snapshot", observations, target, PlannerConfig(graph_dir=target), mapped
+    )
+    assert len(graph["lineage"]) == 3
+    assert any(
+        "multi_input_column_mapping_unresolved" in edge["limitations"] for edge in graph["lineage"]
+    )
+    assert not graph["diagnostics"]
+
+
+def test_catalog_identifiers_are_quoted_and_mongo_operators_refused():
+    malicious = 'users"; DROP TABLE secret; --'
+    sql = _sql_read({"name": malicious, "namespace": "public"}, "postgres", 10)
+    assert '"users""; DROP TABLE secret; --"' in sql
+    parsed = parse_one(sql, read="postgres")
+    assert isinstance(parsed, exp.Select)
+    assert [table.name for table in parsed.find_all(exp.Table)] == [malicious]
+    with pytest.raises(ValueError, match="UNSAFE_MONGO_IDENTIFIER"):
+        _mongo_name("$where")
