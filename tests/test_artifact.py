@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from dbig_contracts.artifact import read_artifact, write_artifact
 from dbig_contracts.ids import stable_id
-from dbig_contracts.models import Field, Object, Source
+from dbig_contracts.models import Edge, Evidence, Field, Object, Record, Source
 from jsonschema import Draft202012Validator
 
 
@@ -82,3 +82,70 @@ def test_published_schema_accepts_synthetic_object():
     schema_path = Path(__file__).resolve().parents[1] / "schemas/ir-v1/object.schema.json"
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
     Draft202012Validator(schema).validate(records()["objects.jsonl"][0].model_dump(mode="json"))
+
+
+@pytest.mark.parametrize(
+    ("damage", "message"),
+    [
+        ("field_owner", "dangling snapshot field"),
+        ("source", "dangling snapshot source"),
+        ("node_type", "invalid snapshot node type"),
+        ("evidence_target", "dangling evidence target"),
+        ("field_pair", "dangling edge field pair"),
+        ("run_reference", "snapshot run references mismatch"),
+    ],
+)
+def test_snapshot_rejects_broken_references_before_publish(tmp_path, damage, message):
+    bundle = records()
+    source = bundle["sources.jsonl"][0]
+    obj = bundle["objects.jsonl"][0]
+    field = bundle["fields.jsonl"][0]
+    common = {
+        "source_id": source.id,
+        "observed_at": datetime.now(UTC),
+        "collector_version": "test",
+        "provenance": "synthetic",
+    }
+    evidence = Evidence(
+        id="evidence", kind="catalog_key", subject_id=field.id, object_id=obj.id, **common
+    )
+    edge = Edge(
+        id="edge",
+        kind="DECLARES_FK",
+        from_id=obj.id,
+        to_id=obj.id,
+        status="declared",
+        evidence_ids=[evidence.id],
+        field_pairs=[[field.id, field.id]],
+        **common,
+    )
+    run = Record(id="run", record_type="run", **common)
+    nodes = [source, obj, field]
+    run_ids = [run.id]
+    if damage == "field_owner":
+        field.object_id = "missing"
+    elif damage == "source":
+        obj.source_id = "missing"
+    elif damage == "node_type":
+        nodes.append(Record(id="bad", record_type="diagnostic", **common))
+    elif damage == "evidence_target":
+        evidence.object_id = "missing"
+    elif damage == "field_pair":
+        edge.field_pairs = [[field.id, "missing"]]
+    elif damage == "run_reference":
+        run_ids = ["missing"]
+    path = tmp_path / damage
+    with pytest.raises(ValueError, match=message):
+        write_artifact(
+            path,
+            "catalog-snapshot",
+            {
+                "nodes.jsonl": nodes,
+                "edges.jsonl": [edge],
+                "evidence.jsonl": [evidence],
+                "runs.jsonl": [run],
+            },
+            producer="test",
+            source_run_ids=run_ids,
+        )
+    assert not path.exists()

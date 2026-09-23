@@ -215,14 +215,48 @@ def read_artifact(
         if len(records) != entry.count:
             raise ValueError(f"record count mismatch: {entry.path}")
         result[entry.path] = records
-    node_ids = {record.id for record in result.get("nodes.jsonl", [])}
+    nodes = {record.id: record for record in result.get("nodes.jsonl", [])}
+    node_ids = set(nodes)
     evidence_ids = {record.id for record in result.get("evidence.jsonl", [])}
+    if manifest.content_type == "catalog-snapshot":
+        for node in nodes.values():
+            if node.record_type not in {"source", "object", "field"}:
+                raise ValueError(f"invalid snapshot node type: {node.id}")
+            if node.record_type == "field":
+                field = Field.model_validate(node.model_dump())
+                owner = nodes.get(field.object_id)
+                if owner is None or owner.record_type != "object":
+                    raise ValueError(f"dangling snapshot field: {field.id}")
+            if node.record_type != "source" and node.source_id not in nodes:
+                raise ValueError(f"dangling snapshot source: {node.id}")
+        for record in result["evidence.jsonl"]:
+            item = Evidence.model_validate(record.model_dump())
+            if item.object_id is not None and item.object_id not in nodes:
+                raise ValueError(f"dangling evidence target: {item.id}")
+        run_ids = {record.id for record in result["runs.jsonl"]}
+        if set(manifest.source_run_ids) != run_ids:
+            raise ValueError("snapshot run references mismatch")
     for record in result.get("edges.jsonl", []):
         edge = Edge.model_validate(record)
         if edge.from_id not in node_ids or edge.to_id not in node_ids:
             raise ValueError(f"dangling edge: {edge.id}")
         if not set(edge.evidence_ids) <= evidence_ids:
             raise ValueError(f"dangling evidence: {edge.id}")
+        if manifest.content_type == "catalog-snapshot":
+            for pair in getattr(edge, "field_pairs", []):
+                if not isinstance(pair, list) or len(pair) != 2:
+                    raise ValueError(f"invalid edge field pair: {edge.id}")
+                left = nodes.get(pair[0]) if isinstance(pair[0], str) else None
+                right = nodes.get(pair[1]) if isinstance(pair[1], str) else None
+                if (
+                    left is None
+                    or right is None
+                    or left.record_type != "field"
+                    or right.record_type != "field"
+                    or Field.model_validate(left.model_dump()).object_id != edge.from_id
+                    or Field.model_validate(right.model_dump()).object_id != edge.to_id
+                ):
+                    raise ValueError(f"dangling edge field pair: {edge.id}")
     object_ids = {record.id for record in result.get("objects.jsonl", [])}
     for record in result.get("fields.jsonl", []):
         field = Field.model_validate(record)

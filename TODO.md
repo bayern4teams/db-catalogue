@@ -22,6 +22,8 @@ Update this file when work starts, a fact changes, a decision is needed, a check
 - [x] Collector metadata increment `d76d5ab` pushed; [CI run 35910935940](https://github.com/Reza-Sh83/db-catalogue/actions/runs/35910935940) passed repository-policy, application-quality, graph-index, both package-isolation jobs and ci-success. No live DB test ran.
 - [x] Add Linux CI service integration for PostgreSQL 16.15, ClickHouse 25.8.33.6 and MongoDB 7.0.41 metadata discovery using synthetic schemas. [CI run 35911699728](https://github.com/Reza-Sh83/db-catalogue/actions/runs/35911699728) completed successfully; source-integration log shows `3 passed in 1.01s`, and all other jobs plus ci-success passed. Local `uv run pytest -q` passed 33 synthetic tests and skipped the 3 service tests because Docker is unavailable. The CI services use ephemeral fixture auth, so production TLS/auth and version matrix beyond these versions remain open.
 - [x] User decision on 2026-09-23: configure private vLLM interfaces now, retain synthetic answer/reviewer/privacy tests, and defer live GPU/model and Langfuse deployment tests until the user reports an accessible GPU host. Do not treat skipped live LLM tests as passed or select a model digest before benchmarking.
+- [x] Documentation decision commit `29b0169` pushed; [CI run 35912165912](https://github.com/Reza-Sh83/db-catalogue/actions/runs/35912165912) passed all jobs, including the three live source metadata fixtures.
+- [x] Strengthen snapshot referential validation for node types, field ownership, source IDs, evidence targets, edge field pairs and run references. Six negative publication fixtures plus builder tests pass; full local suite: 39 passed, 3 service tests skipped without Docker. Ruff and mypy passed. Commit and CI inspection follow.
 - [x] Cross-source candidate increment `c785adb` pushed; [CI run 35911329411](https://github.com/Reza-Sh83/db-catalogue/actions/runs/35911329411) passed repository-policy, application-quality, graph-index, both clean-wheel jobs and ci-success. Live source integration was not yet in that run.
 - [x] Builder increment `e3d2f51` pushed; [CI run 35905976696](https://github.com/Reza-Sh83/db-catalogue/actions/runs/35905976696) passed repository-policy, graph-index, application-quality, and ci-success. Live vLLM and Langfuse deployment remain untested.
 
@@ -154,7 +156,7 @@ Update this file when work starts, a fact changes, a decision is needed, a check
 ## 10. Central assembler and local LLM
 
 - [ ] Implement SQLite state, idempotent bundle receipts, incremental invalidation and partial-source semantics.
-- [ ] Implement deterministic graph writer with stable sort, evidence integrity and validation.
+- [~] Implement deterministic graph writer with stable sort, evidence integrity and validation. Referential checks were strengthened and six negative contract fixtures pass; deterministic serialization across repeated runs and further evidence integrity checks remain open.
 - [ ] Add bounded LangGraph reviewer for ambiguous candidates only: redaction, vLLM request, response validation and weak-evidence conversion; enable in v1 deployment.
 - [ ] Validate/redact model input and output; ensure timeout or server failure does not prevent graph publication.
 - [ ] Deploy vLLM on a Linux or WSL2 GPU host behind a protected private endpoint; validate GPU support, model fit, structured-output contract and no cloud fallback. Explicitly deferred by user until GPU host access is provided; synthetic model tests continue.
