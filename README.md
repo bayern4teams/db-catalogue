@@ -41,7 +41,7 @@ This repository contains plans, workflow policy, Git hooks, and CI scaffolding. 
 
 ## Commit and CI policy
 
-The **pre-commit** hook refreshes Graphify, Graft, and Codebase Memory and aborts on any failure. The **post-commit** hook refreshes them again against the committed tree. This ordering matters: a post-commit hook alone cannot reject a commit already written. Graph caches are local regeneration products by default; CI rebuilds them and enforces freshness. The check is also required in GitHub Actions. A developer can bypass local hooks with Git options, so a protected branch must require the CI job before merge.
+The **pre-commit** hook refreshes Graphify, Graft, and Codebase Memory and aborts on any failure. The **post-commit** hook refreshes them again against the committed tree. This ordering matters: a post-commit hook alone cannot reject a commit already written. Graph caches are local regeneration products; CI rebuilds them and enforces freshness. GitHub currently denies branch protection/rulesets for this private repository on the account plan, so CI is visible but cannot be made a mandatory remote merge gate. The owner chose to keep the repository private and rely on local hooks plus inspected CI results.
 
 ## Licenses and upstream tools
 

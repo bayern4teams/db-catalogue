@@ -11,9 +11,10 @@ Update this file when work starts, a fact changes, a decision is needed, a check
 - [x] Ask for GitHub remote. Decision: `https://github.com/Reza-Sh83/db-catalogue.git`.
 - [x] Write README, binding implementation contract, agent instructions, local `.env` scaffold, hooks and CI baseline. Evidence: first commit `f165266` after local policy and three-tool graph checks.
 - [x] Configure `origin` and inspect GitHub auth/repository. Evidence: `git remote -v`, `gh auth status`, `gh repo view`; `Reza-Sh83/db-catalogue` is private and Actions are enabled.
-- [ ] Push `main` after first local commit and checks.
-- [ ] Inspect GitHub Actions run results with `gh`; repair any failures before calling CI green.
-- [ ] Confirm branch protection/ruleset can require the CI job and reject direct bypasses. If repository permissions prevent configuration, ask the user.
+- [x] Push `main` after first local commit and checks. Evidence: `git push -u origin main` at `9db735a`.
+- [x] Inspect GitHub Actions result with `gh`. Evidence: [CI run 35871915777](https://github.com/Reza-Sh83/db-catalogue/actions/runs/35871915777) completed successfully: repository-policy, graph-index, application-quality (planning-stage gate), and ci-success all passed.
+- [x] Check branch protection/ruleset availability. GitHub returned HTTP 403: current plan requires Pro or a public repository. User chose to keep this repository private; enforcement is local hooks plus visible CI results, not a server-side merge block.
+- [~] GitHub warned that older workflow actions use deprecated Node 20. User approved an update; pinned reviewed Node 24 action releases by commit SHA. Rerun CI after committing/pushing.
 - [x] Install Ponytail 4.10.0 from its official Codex marketplace. Evidence: `codex plugin marketplace add DietrichGebert/ponytail` and `codex plugin add ponytail@ponytail`; a new Codex session/restart is required to expose its skills here.
 - [ ] Verify Ponytail skill availability in a new agent session. This running session read all six installed SKILL.md files and applies their checks manually; it has not invoked newly loaded slash skills.
 - [x] No `gh` skill is installed in this Codex session; user confirmed there is no specific skill to install. Use authenticated `gh` CLI directly.
@@ -121,5 +122,5 @@ Update this file when work starts, a fact changes, a decision is needed, a check
 - [x] Manual three-tool graph refresh passed outside filesystem sandbox on 2026-09-23. Graphify 114 nodes/125 edges, Graft check OK, CBM 152 nodes/206 edges. CBM CLI cannot create its coordination endpoint inside the restricted sandbox; actual local hooks/CI run with normal local permissions.
 - [x] `python scripts/ci_check.py`, `python -m compileall -q scripts`, and `git diff --check` passed locally.
 - [x] Pre-commit and post-commit graph refresh both passed on first commit `f165266`: Graphify 114 nodes/125 edges; Graft check OK; CBM 154 nodes/208 edges.
-- [ ] CI lint/docs/graph result and GitHub Actions URL.
-- [ ] Git status clean after first commit/push, excluding ignored `.env` and caches.
+- [x] CI repository-policy and graph-index passed at [run 35871915777](https://github.com/Reza-Sh83/db-catalogue/actions/runs/35871915777). Application quality job passed its planning-stage path because `src/` and `pyproject.toml` do not exist yet; this is not a runtime test result.
+- [ ] Git status clean after final verification update/commit/push, excluding ignored `.env` and caches.
