@@ -14,7 +14,7 @@ Update this file when work starts, a fact changes, a decision is needed, a check
 
 - [x] Review Amundsen and OpenLineage architecture, packages, maintenance and licenses. Evidence: official upstream links and comparison in `ARCHITECTURE_RESEARCH.md` §31; Amundsen repository says archived 2026-09-10, OpenLineage remains the event contract reference.
 - [x] Define independent requester/planner behavior and deployment form from user answers, without substituting guessed behavior. Evidence: `TECHNICAL_IMPLEMENTATION.md` §17 records both package/CLI and HTTP REST boundaries, search and local-LLM Q&A, scan dispatch adapters, observed lineage and candidate joins, SQL/Mongo plan rendering, no execution, and logical cross-source steps with unresolved staging. The user chose architecture and TODO before package skeletons.
-- [~] Update technical, research, README, agent policy and this ledger; run local checks, commit, push and inspect GitHub Actions. Design edits are in progress; no runtime implementation is claimed.
+- [x] Update technical, research, README, agent policy and this ledger; run local checks, commit, push and inspect GitHub Actions. Evidence: `python scripts/ci_check.py` and `git diff --check` passed; Ponytail full/review/audit found no application-code complexity to cut and debt scan found zero `ponytail:` comment markers; both three-tool Git hooks passed; commit `d42ff6c` pushed; [CI run 35899250817](https://github.com/Reza-Sh83/db-catalogue/actions/runs/35899250817) passed repository-policy, graph-index, application-quality planning gate and ci-success. This ledger completion is a separate follow-up commit.
 
 ## 0. Repository and workflow foundation
 
