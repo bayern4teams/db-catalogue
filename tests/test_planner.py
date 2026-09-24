@@ -11,7 +11,7 @@ from dbig_planner.api import create_app
 from dbig_planner.cli import main
 from dbig_planner.config import PlannerConfig
 from dbig_planner.graph import build_graph
-from dbig_planner.observations import DatasetMapping, SQLRelation, sql_relations
+from dbig_planner.observations import DatasetMapping, SQLRelation, read_lines, sql_relations
 from dbig_planner.paths import PathRequest, find_paths
 from dbig_planner.plans import PlanRequest, _mongo_name, _sql_read, render_plan
 from fastapi.testclient import TestClient
@@ -22,6 +22,33 @@ from test_builder import source_bundle
 def _line(path, record):
     with path.open("a", encoding="utf-8") as stream:
         stream.write(json.dumps(record) + "\n")
+
+
+def test_observation_directory_enforces_aggregate_byte_and_file_limits(tmp_path):
+    directory = tmp_path / "observations"
+    directory.mkdir()
+    (directory / "a.jsonl").write_bytes(b"{}\n")
+    (directory / "b.jsonl").write_bytes(b"{}\n")
+    with pytest.raises(ValueError, match="UNSAFE_OR_OVERSIZED_OBSERVATIONS"):
+        read_lines(directory, max_bytes=5, max_records=10)
+    assert read_lines(directory, max_bytes=6, max_records=10) == [{}, {}]
+
+    (directory / "a.jsonl").write_bytes(b"")
+    (directory / "b.jsonl").write_bytes(b"")
+    with pytest.raises(ValueError, match="OBSERVATION_LIMIT"):
+        read_lines(directory, max_bytes=6, max_records=1)
+
+
+def test_observation_directory_rejects_linked_root(tmp_path):
+    directory = tmp_path / "observations"
+    directory.mkdir()
+    link = tmp_path / "linked"
+    try:
+        link.symlink_to(directory, target_is_directory=True)
+    except OSError:
+        pytest.skip("directory symlinks unavailable on this host")
+    with pytest.raises(ValueError, match="UNSAFE_OBSERVATION_DIRECTORY"):
+        read_lines(link, max_bytes=100, max_records=10)
 
 
 def sql_graph(tmp_path, monkeypatch):

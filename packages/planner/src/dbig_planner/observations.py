@@ -142,12 +142,27 @@ def _unique_pairs(pairs: list[tuple[str, object]]) -> dict:
 
 def read_lines(directory: Path, max_bytes: int, max_records: int) -> list[dict]:
     records: list[dict] = []
+    if directory.is_symlink():
+        raise ValueError("UNSAFE_OBSERVATION_DIRECTORY")
     if not directory.exists():
         return records
+    if not directory.is_dir():
+        raise ValueError("UNSAFE_OBSERVATION_DIRECTORY")
+    total_bytes = 0
+    file_count = 0
     for path in sorted(directory.glob("*.jsonl")):
-        if path.is_symlink() or path.stat().st_size > max_bytes:
+        file_count += 1
+        if file_count > max_records:
+            raise ValueError("OBSERVATION_LIMIT")
+        remaining = max_bytes - total_bytes
+        if path.is_symlink() or not path.is_file() or path.stat().st_size > remaining:
             raise ValueError("UNSAFE_OR_OVERSIZED_OBSERVATIONS")
-        for line in path.read_bytes().splitlines():
+        with path.open("rb") as stream:
+            raw = stream.read(remaining + 1)
+        if len(raw) > remaining:
+            raise ValueError("UNSAFE_OR_OVERSIZED_OBSERVATIONS")
+        total_bytes += len(raw)
+        for line in raw.splitlines():
             if len(line) > max_bytes or len(records) >= max_records:
                 raise ValueError("OBSERVATION_LIMIT")
             record = json.loads(
