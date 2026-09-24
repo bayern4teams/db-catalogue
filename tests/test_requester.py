@@ -97,6 +97,31 @@ def test_authenticated_requester_api_and_payload_limit(tmp_path, monkeypatch):
         assert too_large.status_code == 413
 
 
+def test_requester_api_requires_secret_at_startup_and_uses_configured_body_limit(
+    tmp_path, monkeypatch
+):
+    config = RequesterConfig(
+        snapshot_dir=tmp_path / "snapshot",
+        state_dir=tmp_path / "state",
+        api_key_env="REQUESTER_TOKEN",
+        max_request_bytes=16,
+    )
+    monkeypatch.delenv("REQUESTER_TOKEN", raising=False)
+    with pytest.raises(ValueError, match="API key environment reference required"):
+        create_app(config)
+    monkeypatch.setenv("REQUESTER_TOKEN", " ")
+    with pytest.raises(ValueError, match="API key environment reference required"):
+        create_app(config)
+    monkeypatch.setenv("REQUESTER_TOKEN", "synthetic-api-token")
+    with TestClient(create_app(config)) as client:
+        response = client.post(
+            "/v1/catalogue/questions",
+            json={"question": "more than sixteen bytes"},
+            headers={"Authorization": "Bearer synthetic-api-token"},
+        )
+        assert response.status_code == 413
+
+
 def test_answer_telemetry_outage_does_not_hide_answer(tmp_path, monkeypatch):
     state = indexed(tmp_path, monkeypatch)
     rows = search(state, SearchRequest(query="orders"))["results"]

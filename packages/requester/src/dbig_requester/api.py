@@ -30,24 +30,27 @@ class ScanBody(BaseModel):
 
 
 def create_app(config: RequesterConfig) -> FastAPI:
+    token = os.getenv(config.api_key_env)
+    if token is None or not token.strip():
+        raise ValueError("requester API key environment reference required")
+    expected = "Bearer " + token
     app = FastAPI()
     timestamps: deque[float] = deque()
     lock = Lock()
 
     @app.middleware("http")
     async def request_limits(request: Request, call_next):
-        expected = "Bearer " + os.environ[config.api_key_env]
         supplied = request.headers.get("authorization")
         if supplied is None or not hmac.compare_digest(supplied, expected):
             return JSONResponse({"error": {"code": "UNAUTHORIZED"}}, status_code=401)
         if request.method == "POST":
             length = request.headers.get("content-length")
-            if length is None or not length.isdecimal() or int(length) > 65_536:
+            if length is None or not length.isdecimal() or int(length) > config.max_request_bytes:
                 return JSONResponse({"error": {"code": "PAYLOAD_TOO_LARGE"}}, status_code=413)
             body = bytearray()
             async for chunk in request.stream():
                 body.extend(chunk)
-                if len(body) > 65_536:
+                if len(body) > config.max_request_bytes:
                     return JSONResponse({"error": {"code": "PAYLOAD_TOO_LARGE"}}, status_code=413)
             request._body = bytes(body)
         with lock:
@@ -60,7 +63,6 @@ def create_app(config: RequesterConfig) -> FastAPI:
         return await call_next(request)
 
     def authorize(value: str | None) -> None:
-        expected = "Bearer " + os.environ[config.api_key_env]
         if value is None or not hmac.compare_digest(value, expected):
             raise HTTPException(status_code=401, detail={"code": "UNAUTHORIZED"})
 

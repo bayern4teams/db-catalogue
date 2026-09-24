@@ -13,6 +13,7 @@ class PlannerConfig(BaseModel):
 
     graph_dir: Path
     api_key_env: str | None = Field(default=None, pattern=r"^[A-Z][A-Z0-9_]*$")
+    max_request_bytes: int = Field(default=65_536, ge=1)
     max_hops: int = Field(default=4, ge=1, le=10)
     max_paths: int = Field(default=20, ge=1, le=100)
     max_plan_rows: int = Field(default=1000, ge=1, le=100_000)

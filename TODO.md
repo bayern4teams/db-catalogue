@@ -73,7 +73,7 @@ Update this file when work starts, a fact changes, a decision is needed, a check
 
 ## 2. Package skeleton and dependency governance
 
-- [ ] Create a `uv` workspace and separately installable `dbig-contracts`, `dbig-collectors`, `dbig-catalog-builder`, `dbig-catalogue-requester`, and `dbig-lineage-planner` distributions. Verify final names against package indexes. Keep source-driver and HTTP API extras scoped to owners.
+- [x] Create a `uv` workspace with five separately installable `dbig-*` distributions and owner-scoped driver/API extras. Exact names were checked against PyPI on 2026-09-23; recheck before publication. Evidence: `pyproject.toml`, five package manifests, and clean-wheel CI run 35981260693.
 - [x] Build all five wheels and install requester/planner separately on Windows and Linux; prove no mutual imports or source-driver dependencies. Evidence: local Windows `python scripts/package_isolation.py`; [CI run 35910217065](https://github.com/Reza-Sh83/db-catalogue/actions/runs/35910217065) package-isolation-windows-latest and package-isolation-ubuntu-latest passed.
 - [x] Verify the five intended `dbig-*` distribution names against PyPI JSON endpoints on 2026-09-23; all returned HTTP 404 (unoccupied at check time). Recheck before any publication.
 - [ ] Pin exact app dependencies with `uv.lock`; inspect all transitive licenses, vulnerabilities and platform wheels.
@@ -95,14 +95,16 @@ Update this file when work starts, a fact changes, a decision is needed, a check
 - [x] Validate published `Object.parent_id` in sealed source bundles and catalog snapshots. Reject missing, cross-source and cyclic links; accept a visible partition parent. Synthetic contract fixtures pass. Full local suite: 61 passed, 3 live-service tests skipped without Docker; Ruff, mypy, contracts wheel, repository policy and diff checks passed. Commit and CI pending.
 - [x] Parent-link validation commit `05aa0b0` pushed; [CI run 35981260693](https://github.com/Reza-Sh83/db-catalogue/actions/runs/35981260693) passed repository policy, graph indexing, application quality, live source integration, Linux/Windows clean-wheel isolation and ci-success.
 - [x] Bound planner observation intake by total bytes and file count across the directory, and reject linked directories/files. Synthetic tests cover two individually valid files exceeding the combined budget and too many empty files. Local full suite: 62 passed, 4 skipped (three unavailable services and Windows symlink privilege); Ruff, mypy, planner wheel and repository policy passed. Linux CI will exercise the symlink test. Commit and CI pending.
-- [ ] Add reproducible wheel build and command smoke test for Windows and Linux.
+- [x] Planner intake commit `73df4aa` pushed; [CI run 35981937005](https://github.com/Reza-Sh83/db-catalogue/actions/runs/35981937005) passed all jobs; Linux application-quality exercised the symlink test, and live source integration plus Windows/Linux package isolation passed.
+- [x] Move requester/planner REST body ceilings into validated `max_request_bytes` configuration, and fail service startup when API bearer secret references are missing or empty. Both API security fixtures pass. Local full suite: 64 passed, 4 skipped (three services and Windows symlink privilege); Ruff, mypy, both wheels and repository policy passed. CI pending.
+- [x] Build all five wheels and smoke-test requester/planner commands in clean Windows and Linux environments with `scripts/package_isolation.py`. Evidence: CI run 35981260693; package-isolation jobs passed on both platforms.
 
 ## 3. IR, validation and bundles
 
 - [ ] Finalize IR v1 JSON Schemas and typed Pydantic models, including source/object/field/evidence/edge/run/diagnostic.
 - [ ] Define stable IDs, rename semantics, canonical JSON encoding and migration policy.
-- [ ] Implement atomic JSONL bundle writer and strict manifest digest/count/path validation.
-- [ ] Add optional bundle signature contract and security tests for malformed/tampered/oversized input.
+- [x] Implement atomic JSONL bundle writer and strict manifest digest/count/path validation. Evidence: `dbig_contracts.artifact` publication/read path and signed/tamper tests; application-quality and source-integration jobs passed in CI run 35981260693.
+- [x] Add optional HMAC bundle signature contract and malformed/tampered/oversized-input tests. The builder requires signed collector intake. Evidence: contract fixtures and CI run 35981260693.
 - [ ] Define graph output schema, evidence references and `explain-edge` command.
 - [ ] Create synthetic golden bundles and compatibility contract tests.
 

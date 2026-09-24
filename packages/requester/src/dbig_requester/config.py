@@ -62,6 +62,7 @@ class RequesterConfig(BaseModel):
     snapshot_dir: Path
     state_dir: Path
     api_key_env: str = Field(pattern=r"^[A-Z][A-Z0-9_]*$")
+    max_request_bytes: int = Field(default=65_536, ge=1)
     max_requests_per_minute: int = Field(default=60, ge=1)
     answer: AnswerConfig | None = None
     scan: ScanConfig | None = None

@@ -264,6 +264,8 @@ The scan-request contract names an authorized source ID, requested scope/capabil
 
 REST v1 routes: `GET /v1/catalogue/search`, `POST /v1/catalogue/questions`, `POST /v1/scan-requests`, and `GET /v1/scan-requests/{id}`. CLI and REST call the same application functions. Responses include contract version, snapshot digest, IDs, evidence/freshness, completeness, and typed errors. API authentication, authorization, payload limits, rate limits and TLS are required before deployment; do not invent their concrete configuration.
 
+Both requester and planner HTTP services require a nonempty API bearer secret from their configured environment reference before startup. Their request body ceiling is the validated `max_request_bytes` config field (default 65,536), enforced while streaming; per-minute request limits remain separately configurable. Production TLS termination and client identity policy are deployment obligations.
+
 ### 17.4 Lineage and path planner
 
 Maintain separate edge sets for observed/defined `DERIVES_FROM`/`READS`/`WRITES` lineage and declared or inferred reference candidates. `JOINS_OBSERVED` records that a query used a join, not data movement. A lineage-path request traverses only lineage edges with execution/definition provenance and timestamps. A join-path request traverses approved declared/reference-candidate edges, marks tentative links, applies configured hop/result limits and returns ranked paths with every supporting and contrary evidence ID. Missing mappings, stale snapshots and partial observations are visible; never silently complete a path with an LLM guess. OpenLineage RunEvents, JobEvents and facets are mapped conservatively as described in section 9.

@@ -169,6 +169,28 @@ def test_planner_api_auth_and_cli(tmp_path, monkeypatch):
     assert json.loads(result.output)["path_id"] == path_id
 
 
+def test_planner_api_requires_secret_at_startup_and_uses_configured_body_limit(
+    tmp_path, monkeypatch
+):
+    config = PlannerConfig(
+        graph_dir=tmp_path / "graph", api_key_env="PLANNER_TOKEN", max_request_bytes=16
+    )
+    monkeypatch.delenv("PLANNER_TOKEN", raising=False)
+    with pytest.raises(ValueError, match="API key environment reference required"):
+        create_app(config)
+    monkeypatch.setenv("PLANNER_TOKEN", " ")
+    with pytest.raises(ValueError, match="API key environment reference required"):
+        create_app(config)
+    monkeypatch.setenv("PLANNER_TOKEN", "synthetic-private-token")
+    with TestClient(create_app(config)) as client:
+        response = client.post(
+            "/v1/join-paths",
+            json={"from_id": "order", "to_id": "customer"},
+            headers={"Authorization": "Bearer synthetic-private-token"},
+        )
+        assert response.status_code == 413
+
+
 def test_mongo_and_cross_source_plans(tmp_path):
     now = datetime.now(UTC)
     common = {"observed_at": now, "collector_version": "synthetic", "provenance": "fixture"}
