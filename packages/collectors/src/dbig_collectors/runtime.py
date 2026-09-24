@@ -56,7 +56,7 @@ def discover_postgresql(
         budget.charge()
         # Only placeholder tokens are interpolated; schema names remain bound values.
         cursor.execute(
-            "SELECT c.oid, n.nspname, c.relname, c.relkind "  # noqa: S608
+            "SELECT c.oid, n.nspname, c.relname, c.relkind, c.reltuples "  # noqa: S608
             "FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n "
             "ON n.oid = c.relnamespace "
             f"WHERE n.nspname IN ({placeholders}) AND c.relkind IN ('r','p','v','m','f') "
@@ -73,7 +73,11 @@ def discover_postgresql(
             "m": "materialized_view",
             "f": "foreign_table",
         }
-        for oid, schema, name, relkind in rows:
+        for oid, schema, name, relkind, reltuples in rows:
+            attributes: dict[str, str | int | float | bool | None] = {}
+            if relkind in {"r", "m"} and reltuples is not None and reltuples >= 0:
+                attributes["row_count_estimate"] = float(reltuples)
+                attributes["row_count_method"] = "pg_class.reltuples"
             tables["objects.jsonl"].append(
                 Object(
                     id=stable_id(config.source_id, "object", str(oid)),
@@ -81,10 +85,11 @@ def discover_postgresql(
                     kind=kinds[relkind],
                     name=name,
                     namespace=schema,
+                    attributes=attributes,
                     **common,
                 )
             )
-        view_oids = [oid for oid, _, _, relkind in rows if relkind in {"v", "m"}]
+        view_oids = [oid for oid, _, _, relkind, _ in rows if relkind in {"v", "m"}]
         if view_oids:
             budget.charge()
             cursor.execute(
@@ -189,7 +194,8 @@ def discover_clickhouse(
         budget.charge()
         rows = client.query(
             "SELECT name, toString(uuid), engine, partition_key, sorting_key, "
-            "primary_key, dependencies_database, dependencies_table FROM system.tables "
+            "primary_key, dependencies_database, dependencies_table, total_rows "
+            "FROM system.tables "
             "WHERE database = {db:String} ORDER BY name LIMIT {lim:UInt64}",
             parameters={"db": database, "lim": config.max_objects + 1},
             settings={"max_execution_time": config.read_timeout_seconds},
@@ -206,6 +212,7 @@ def discover_clickhouse(
             primary_key,
             dependency_dbs,
             dependency_tables,
+            total_rows,
         ) in rows:
             if not uuid or uuid == "00000000-0000-0000-0000-000000000000":
                 tables["diagnostics.jsonl"].append(
@@ -226,6 +233,9 @@ def discover_clickhouse(
                 "is_view": engine in {"View", "MaterializedView", "LiveView"},
                 "dependency_count": len(dependency_tables),
             }
+            if total_rows is not None:
+                attributes["row_count_estimate"] = int(total_rows)
+                attributes["row_count_method"] = "system.tables.total_rows"
             for key, expression in (
                 ("partition", partition_key),
                 ("sort", sorting_key),
@@ -340,6 +350,8 @@ def _mongo_schema_paths(
 
 
 def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[str, list[Record]]:
+    from pymongo.errors import PyMongoError
+
     common = _common(config)
     tables: dict[str, list[Record]] = defaultdict(list)
     total = 0
@@ -370,20 +382,19 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
             name = info["name"]
             object_id = stable_id(config.source_id, "object", native)
             options = info.get("options", {})
-            tables["objects.jsonl"].append(
-                Object(
-                    id=object_id,
-                    native_id=native,
-                    kind="collection",
-                    name=name,
-                    namespace=database,
-                    attributes={
-                        "collection_type": info.get("type", "collection"),
-                        "has_validator": bool(options.get("validator")),
-                    },
-                    **common,
-                )
+            item = Object(
+                id=object_id,
+                native_id=native,
+                kind="collection",
+                name=name,
+                namespace=database,
+                attributes={
+                    "collection_type": info.get("type", "collection"),
+                    "has_validator": bool(options.get("validator")),
+                },
+                **common,
             )
+            tables["objects.jsonl"].append(item)
             paths: dict[str, set[str]] = defaultdict(set)
             origins: dict[str, set[str]] = defaultdict(set)
             required: set[str] = set()
@@ -479,6 +490,29 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
                         **common,
                     )
                 )
+            if info.get("type", "collection") == "collection" and budget.used < budget.max_queries:
+                budget.charge()
+                try:
+                    estimate = client[database][name].estimated_document_count(
+                        maxTimeMS=config.read_timeout_seconds * 1000
+                    )
+                except PyMongoError:
+                    tables["diagnostics.jsonl"].append(
+                        Record.model_validate(
+                            {
+                                "record_type": "diagnostic",
+                                "id": stable_id(
+                                    config.source_id, "diagnostic", f"{native}:row-count"
+                                ),
+                                "code": "STATS_UNAVAILABLE",
+                                "message": "collection count estimate unavailable",
+                                **common,
+                            }
+                        )
+                    )
+                else:
+                    item.attributes["row_count_estimate"] = int(estimate)
+                    item.attributes["row_count_method"] = "estimated_document_count"
     return tables
 
 

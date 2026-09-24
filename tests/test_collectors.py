@@ -13,6 +13,7 @@ from dbig_collectors.runtime import (
     discover_postgresql,
 )
 from dbig_contracts.artifact import read_artifact
+from pymongo.errors import OperationFailure
 
 
 def config(kind: str = "postgresql") -> SourceConfig:
@@ -39,7 +40,7 @@ class PgCursor:
     def fetchall(self):
         self.index += 1
         if self.index == 1:
-            return [(42, "public", "orders", "r")]
+            return [(42, "public", "orders", "r", 12.5)]
         if self.index == 2:
             return [(42, 1, "id", "integer", True)]
         return [(99, 42, 42, "p", [1], None)]
@@ -70,6 +71,8 @@ def test_postgres_catalog_only_and_stable_ids():
     assert connection.fake_cursor.calls[0][0] == "SET TRANSACTION READ ONLY"
     assert records["fields.jsonl"][0].object_id == records["objects.jsonl"][0].id
     assert records["constraints.jsonl"][0].kind == "primary"
+    assert records["objects.jsonl"][0].attributes["row_count_estimate"] == 12.5
+    assert records["objects.jsonl"][0].attributes["row_count_method"] == "pg_class.reltuples"
     assert all("SELECT *" not in query for query, _ in connection.fake_cursor.calls)
 
 
@@ -78,7 +81,7 @@ def test_postgres_view_definition_is_hashed_without_literals():
         def fetchall(self):
             self.index += 1
             return {
-                1: [(42, "public", "orders_view", "v")],
+                1: [(42, "public", "orders_view", "v", -1.0)],
                 2: [(42, "SELECT * FROM orders WHERE token = 'canary-secret'")],
                 3: [(42, 1, "id", "integer", True)],
                 4: [],
@@ -89,6 +92,7 @@ def test_postgres_view_definition_is_hashed_without_literals():
     records = discover_postgresql(connection, config(), Budget(4))
     attributes = records["objects.jsonl"][0].attributes
     assert attributes["view_definition_available"] is True
+    assert "row_count_estimate" not in attributes
     assert len(attributes["view_definition_sha256"]) == 64
     assert "canary-secret" not in str(records)
 
@@ -97,7 +101,7 @@ class ChClient:
     def query(self, statement, **kwargs):
         class Result:
             result_set = (
-                [("orders", "uuid-42", "MergeTree", "toYYYYMM(day)", "id", "id", [], [])]
+                [("orders", "uuid-42", "MergeTree", "toYYYYMM(day)", "id", "id", [], [], 0)]
                 if "system.tables" in statement
                 else [("orders", "id", "UInt64", 1)]
             )
@@ -109,7 +113,21 @@ def test_clickhouse_uses_uuid_identity():
     records = discover_clickhouse(ChClient(), config("clickhouse"), Budget(2))
     assert records["fields.jsonl"][0].object_id == records["objects.jsonl"][0].id
     assert records["objects.jsonl"][0].attributes["partition_key_sha256"]
+    assert records["objects.jsonl"][0].attributes["row_count_estimate"] == 0
+    assert records["objects.jsonl"][0].attributes["row_count_method"] == "system.tables.total_rows"
     assert "toYYYYMM" not in str(records["objects.jsonl"][0].attributes)
+
+
+def test_clickhouse_omits_unavailable_count():
+    class UnknownCount(ChClient):
+        def query(self, statement, **kwargs):
+            result = super().query(statement, **kwargs)
+            if "system.tables" in statement:
+                result.result_set = [(*result.result_set[0][:-1], None)]
+            return result
+
+    records = discover_clickhouse(UnknownCount(), config("clickhouse"), Budget(2))
+    assert "row_count_estimate" not in records["objects.jsonl"][0].attributes
 
 
 class MongoDb:
@@ -122,6 +140,10 @@ class MongoDb:
     def list_indexes(self):
         return [{"name": "_id_", "unique": True, "key": {"_id": 1}}]
 
+    def estimated_document_count(self, **kwargs):
+        assert kwargs == {"maxTimeMS": 10000}
+        return 7
+
 
 class MongoClient:
     def __getitem__(self, database):
@@ -129,11 +151,30 @@ class MongoClient:
 
 
 def test_mongo_metadata_only_never_samples():
-    records = discover_mongodb(MongoClient(), config("mongodb"), Budget(2))
+    records = discover_mongodb(MongoClient(), config("mongodb"), Budget(3))
     assert records["objects.jsonl"][0].name == "orders"
+    assert records["objects.jsonl"][0].attributes["row_count_estimate"] == 7
+    assert records["objects.jsonl"][0].attributes["row_count_method"] == "estimated_document_count"
     assert [field.name for field in records["fields.jsonl"]] == ["_id"]
     assert records["fields.jsonl"][0].data_type == "unknown"
     assert records["constraints.jsonl"][0].field_names == ["_id"]
+
+
+def test_mongo_count_respects_budget_and_reports_driver_failure():
+    skipped = discover_mongodb(MongoClient(), config("mongodb"), Budget(2))
+    assert "row_count_estimate" not in skipped["objects.jsonl"][0].attributes
+
+    class FailedDb(MongoDb):
+        def estimated_document_count(self, **kwargs):
+            raise OperationFailure("canary-secret")
+
+    class FailedClient:
+        def __getitem__(self, database):
+            return FailedDb()
+
+    failed = discover_mongodb(FailedClient(), config("mongodb"), Budget(3))
+    assert failed["diagnostics.jsonl"][0].code == "STATS_UNAVAILABLE"
+    assert "canary-secret" not in str(failed)
 
 
 def test_mongo_validator_and_type_only_sample():

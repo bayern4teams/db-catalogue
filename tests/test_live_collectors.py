@@ -51,6 +51,8 @@ def test_postgresql_16_catalog_and_read_only_role():
         cursor = admin.cursor()
         cursor.execute("CREATE SCHEMA dbig_ci")
         cursor.execute("CREATE TABLE dbig_ci.customers (id integer PRIMARY KEY)")
+        cursor.execute("INSERT INTO dbig_ci.customers VALUES (1)")
+        cursor.execute("ANALYZE dbig_ci.customers")
         cursor.execute(
             "CREATE TABLE dbig_ci.orders (customer_id integer REFERENCES dbig_ci.customers(id))"
         )
@@ -73,6 +75,9 @@ def test_postgresql_16_catalog_and_read_only_role():
     }
     assert any(item.kind == "foreign" for item in records["constraints.jsonl"])
     assert any(item.attributes.get("view_definition_sha256") for item in records["objects.jsonl"])
+    customers = next(item for item in records["objects.jsonl"] if item.name == "customers")
+    assert customers.attributes["row_count_estimate"] == 1.0
+    assert customers.attributes["row_count_method"] == "pg_class.reltuples"
 
 
 def test_clickhouse_25_8_system_tables():
@@ -90,6 +95,8 @@ def test_clickhouse_25_8_system_tables():
         client.close()
     assert [item.name for item in records["objects.jsonl"]] == ["orders"]
     assert records["objects.jsonl"][0].attributes["partition_key_sha256"]
+    assert records["objects.jsonl"][0].attributes["row_count_estimate"] == 0
+    assert records["objects.jsonl"][0].attributes["row_count_method"] == "system.tables.total_rows"
     assert {item.name for item in records["fields.jsonl"]} == {"id", "day"}
 
 
@@ -104,10 +111,12 @@ def test_mongodb_7_collection_validator_and_index():
             validator={"$jsonSchema": {"properties": {"customer_id": {"bsonType": "int"}}}},
         )
         collection.create_index("customer_id", unique=True)
-        records = discover_mongodb(client, _config("mongodb"), Budget(2))
+        records = discover_mongodb(client, _config("mongodb"), Budget(3))
     finally:
         client.close()
     assert [item.name for item in records["objects.jsonl"]] == ["orders"]
+    assert records["objects.jsonl"][0].attributes["row_count_estimate"] == 0
+    assert records["objects.jsonl"][0].attributes["row_count_method"] == "estimated_document_count"
     assert any(
         item.name == "customer_id" and item.data_type == "int" for item in records["fields.jsonl"]
     )
