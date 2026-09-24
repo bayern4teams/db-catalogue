@@ -91,6 +91,30 @@ def _unsigned(manifest: Manifest) -> bytes:
     return canonical(manifest.model_dump(mode="json", exclude={"signature"}, exclude_none=True))
 
 
+def _validate_object_parents(objects: dict[str, Object]) -> None:
+    visited: dict[str, int] = {}
+    for object_id in objects:
+        chain: list[str] = []
+        current_id: str | None = object_id
+        while current_id is not None:
+            state = visited.get(current_id, 0)
+            if state == 2:
+                break
+            if state == 1:
+                raise ValueError(f"cyclic object parent: {current_id}")
+            item = objects[current_id]
+            visited[current_id] = 1
+            chain.append(current_id)
+            parent_id = item.parent_id
+            if parent_id is not None:
+                parent = objects.get(parent_id)
+                if parent is None or parent.source_id != item.source_id:
+                    raise ValueError(f"invalid object parent: {item.id}")
+            current_id = parent_id
+        for item_id in chain:
+            visited[item_id] = 2
+
+
 def write_artifact(
     destination: Path,
     content_type: str,
@@ -218,6 +242,14 @@ def read_artifact(
     nodes = {record.id: record for record in result.get("nodes.jsonl", [])}
     node_ids = set(nodes)
     evidence_ids = {record.id for record in result.get("evidence.jsonl", [])}
+    object_records = (
+        (record for record in nodes.values() if record.record_type == "object")
+        if manifest.content_type == "catalog-snapshot"
+        else result["objects.jsonl"]
+    )
+    _validate_object_parents(
+        {record.id: Object.model_validate(record.model_dump()) for record in object_records}
+    )
     if manifest.content_type == "catalog-snapshot":
         for node in nodes.values():
             if node.record_type not in {"source", "object", "field"}:

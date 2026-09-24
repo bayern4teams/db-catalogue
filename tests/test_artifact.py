@@ -88,6 +88,51 @@ def test_bundle_rejects_records_from_another_source(tmp_path):
         )
 
 
+@pytest.mark.parametrize(
+    ("parent", "message"),
+    [("missing", "invalid object parent"), ("self", "cyclic object parent")],
+)
+def test_bundle_rejects_invalid_object_parent(tmp_path, parent, message):
+    bundle = records()
+    obj = bundle["objects.jsonl"][0]
+    obj.parent_id = obj.id if parent == "self" else "missing"
+    with pytest.raises(ValueError, match=message):
+        write_artifact(
+            tmp_path / parent,
+            "collector-bundle",
+            bundle,
+            producer="test",
+            source_run_ids=["r"],
+        )
+    assert not (tmp_path / parent).exists()
+
+
+def test_bundle_accepts_visible_object_parent(tmp_path):
+    bundle = records()
+    child = bundle["objects.jsonl"][0]
+    parent = Object(
+        id="parent",
+        source_id=child.source_id,
+        native_id="41",
+        kind="partitioned_table",
+        name="parent",
+        observed_at=child.observed_at,
+        collector_version="test",
+        provenance="synthetic",
+    )
+    child.parent_id = parent.id
+    bundle["objects.jsonl"].insert(0, parent)
+    write_artifact(
+        tmp_path / "partition",
+        "collector-bundle",
+        bundle,
+        producer="test",
+        source_run_ids=["r"],
+    )
+    _, published = read_artifact(tmp_path / "partition")
+    assert published["objects.jsonl"][1].parent_id == parent.id
+
+
 def test_published_schema_accepts_synthetic_object():
     schema_path = Path(__file__).resolve().parents[1] / "schemas/ir-v1/object.schema.json"
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
@@ -159,3 +204,49 @@ def test_snapshot_rejects_broken_references_before_publish(tmp_path, damage, mes
             source_run_ids=run_ids,
         )
     assert not path.exists()
+
+
+def test_snapshot_rejects_cross_source_parent_and_parent_cycle(tmp_path):
+    bundle = records()
+    source = bundle["sources.jsonl"][0]
+    child = bundle["objects.jsonl"][0]
+    other = Source(
+        id="other",
+        source_id="other",
+        kind="postgresql",
+        name="other",
+        observed_at=source.observed_at,
+        collector_version="test",
+        provenance="synthetic",
+    )
+    parent = Object(
+        id="other-table",
+        source_id="other",
+        native_id="43",
+        kind="table",
+        name="other",
+        observed_at=source.observed_at,
+        collector_version="test",
+        provenance="synthetic",
+    )
+    child.parent_id = parent.id
+    tables = {"nodes.jsonl": [source, child, other, parent]}
+    with pytest.raises(ValueError, match="invalid object parent"):
+        write_artifact(
+            tmp_path / "cross-source",
+            "catalog-snapshot",
+            tables,
+            producer="test",
+            source_run_ids=[],
+        )
+
+    parent.source_id = source.id
+    parent.parent_id = child.id
+    with pytest.raises(ValueError, match="cyclic object parent"):
+        write_artifact(
+            tmp_path / "cycle",
+            "catalog-snapshot",
+            tables,
+            producer="test",
+            source_run_ids=[],
+        )
