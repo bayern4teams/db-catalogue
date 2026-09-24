@@ -42,23 +42,36 @@ def load_path(directory: Path, path_id: str) -> dict:
 
 def find_paths(directory: Path, request: PathRequest, kind: str, config: PlannerConfig) -> dict:
     graph = load_graph(directory)
+    if kind not in {"lineage", "join"}:
+        raise ValueError("UNKNOWN_PATH_KIND")
     objects = graph["objects"]
-    if request.from_id not in objects or request.to_id not in objects:
+    fields = graph["fields"]
+    entity_kind = "object"
+    entities = objects
+    if kind == "lineage" and request.from_id in fields and request.to_id in fields:
+        entity_kind = "field"
+        entities = fields
+    elif request.from_id not in objects or request.to_id not in objects:
+        if kind == "lineage" and (
+            request.from_id in fields or request.to_id in fields
+        ):
+            raise ValueError("MIXED_LINEAGE_ENTITY_KINDS")
         raise ValueError("UNKNOWN_OBJECT")
     if request.from_id == request.to_id:
         raise ValueError("SAME_OBJECT")
-    if kind not in {"lineage", "join"}:
-        raise ValueError("UNKNOWN_PATH_KIND")
     max_hops = min(request.max_hops or config.max_hops, config.max_hops)
     max_paths = min(request.max_paths or config.max_paths, config.max_paths)
-    edges = graph["lineage"] if kind == "lineage" else graph["references"]
+    edges = (
+        graph.get("field_lineage", []) if entity_kind == "field"
+        else graph["lineage"] if kind == "lineage" else graph["references"]
+    )
     network: nx.Graph = nx.DiGraph() if kind == "lineage" else nx.Graph()
     selected: dict[tuple[str, str], dict] = {}
     for edge in edges:
         if kind == "join" and edge["status"] == "rejected":
             continue
         left, right = edge["from_id"], edge["to_id"]
-        if left not in objects or right not in objects:
+        if left not in entities or right not in entities:
             continue
         key = (left, right) if kind == "lineage" else tuple(sorted((left, right)))
         if key in selected and selected[key]["status"] == "declared":
@@ -79,8 +92,9 @@ def find_paths(directory: Path, request: PathRequest, kind: str, config: Planner
                     key = (left, right) if kind == "lineage" else tuple(sorted((left, right)))
                     links.append(selected[key])
                 edge_ids = [link["id"] for link in links]
+                digest_kind = "lineage-field" if entity_kind == "field" else kind
                 digest = hashlib.sha256(
-                    json.dumps([kind, nodes, edge_ids], separators=(",", ":")).encode()
+                    json.dumps([digest_kind, nodes, edge_ids], separators=(",", ":")).encode()
                 ).hexdigest()
                 tentative = any(link["status"] == "tentative" for link in links)
                 partial = graph["completeness"] == "partial" or any(
@@ -89,7 +103,8 @@ def find_paths(directory: Path, request: PathRequest, kind: str, config: Planner
                 item = {
                     "path_id": digest,
                     "kind": kind,
-                    "object_ids": nodes,
+                    "entity_kind": entity_kind,
+                    "field_ids" if entity_kind == "field" else "object_ids": nodes,
                     "edge_ids": edge_ids,
                     "evidence_ids": sorted(
                         {evidence for link in links for evidence in link.get("evidence_ids", [])}
@@ -98,6 +113,8 @@ def find_paths(directory: Path, request: PathRequest, kind: str, config: Planner
                     if tentative
                     else "partial"
                     if partial
+                    else "defined"
+                    if kind == "lineage" and any(link["status"] == "defined" for link in links)
                     else "observed"
                     if kind == "lineage"
                     else "declared",

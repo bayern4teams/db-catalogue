@@ -82,6 +82,8 @@ Update this file when work starts, a fact changes, a decision is needed, a check
 - [x] User chose MIT for the repository and five dbig packages on 2026-09-23. Root and package LICENSE files and PEP 639 metadata are added; all five built wheels contain `License-Expression: MIT` and the license text. Local full suite: 39 passed, 3 service tests skipped without Docker; Ruff, mypy, repository policy, SBOM/license check, all-wheel build, and clean requester/planner wheel isolation passed. CI pending.
 - [x] MIT/SBOM increment `7f61168` pushed; [CI run 35975753471](https://github.com/Reza-Sh83/db-catalogue/actions/runs/35975753471) passed repository-policy, graph-index, application-quality including the supply-chain gate, source-integration, Linux/Windows wheel isolation and ci-success.
 - [x] Add SQLite signed-bundle receipts and source-level incremental publication. Replays leave receipt count unchanged; partial rescans preserve the last complete source graph and mark the snapshot partial; a later complete scan reconciles removals. CLI can rebuild from recorded bundles; mixed-source bundles are rejected. Evidence: 43 local tests passed, 3 service tests skipped without Docker; Ruff, mypy, builder wheel and policy check passed. Commit/CI pending.
+- [x] Incremental builder commit `16d0bce` pushed; [CI run 35976508859](https://github.com/Reza-Sh83/db-catalogue/actions/runs/35976508859) passed all jobs, including live source fixtures and both platform wheel checks.
+- [x] Map exact OpenLineage Job, Dataset and Column facet input/output and field edges; expose bounded field lineage paths in CLI/API, distinguish defined JobEvent paths from observed completed RunEvents, and refuse plans from field lineage. Evidence: 48 local tests passed, 3 live-source tests skipped without Docker; Ruff, mypy, planner wheel and policy checks passed. Facet precedence and private transformation-description omission are covered by synthetic fixtures. Commit/CI pending.
 - [ ] Add reproducible wheel build and command smoke test for Windows and Linux.
 
 ## 3. IR, validation and bundles
@@ -137,7 +139,7 @@ Update this file when work starts, a fact changes, a decision is needed, a check
 - [ ] Import OpenLineage run/job/dataset/column facets with strict source mapping.
 - [ ] Test CTEs, aliases, stars, INSERT SELECT, CTAS, materialized views, unsupported SQL and Mongo pipelines.
 - [ ] Prove no inferred relationship is mislabeled as lineage.
-- [ ] Map OpenLineage RunEvent/JobEvent and lineage/column facets conservatively; test multi-input/multi-output ambiguity and unresolved dataset names.
+- [~] Map OpenLineage RunEvent/JobEvent and lineage/column facets conservatively; test multi-input/multi-output ambiguity and unresolved dataset names. Explicit job, dataset and column facets now map exact object/field edges with official precedence and field-path API support; JobEvent paths are `defined`, completed RunEvent paths `observed`, and unsupported/missing mappings abstain. SQL-derived columns, job-to-job facets and complete real producer compatibility remain open.
 
 ## 9a. Independent catalogue requester
 

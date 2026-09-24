@@ -352,6 +352,301 @@ def test_pipeline_and_openlineage_input_mapping(tmp_path, monkeypatch):
     assert not graph["diagnostics"]
 
 
+def test_openlineage_job_facet_maps_multi_output_without_cartesian_edges(tmp_path, monkeypatch):
+    sql_graph(tmp_path, monkeypatch)
+    observations = tmp_path / "facet-observations"
+    observations.mkdir()
+    event = {
+        "eventType": "COMPLETE",
+        "eventTime": datetime.now(UTC).isoformat(),
+        "run": {"runId": "run-facet"},
+        "job": {
+            "namespace": "jobs",
+            "name": "two-outputs",
+            "facets": {
+                "lineage": {
+                    "entries": [
+                        {
+                            "namespace": "site", "name": "customers", "type": "DATASET",
+                            "inputs": [{"namespace": "site", "name": "orders", "type": "DATASET"}],
+                        },
+                        {
+                            "namespace": "site", "name": "orders", "type": "DATASET",
+                            "inputs": [
+                                {"namespace": "site", "name": "loose_orders", "type": "DATASET"}
+                            ],
+                        },
+                    ]
+                }
+            },
+        },
+        "inputs": [
+            {"namespace": "site", "name": "orders"},
+            {"namespace": "site", "name": "loose_orders"},
+        ],
+        "outputs": [
+            {"namespace": "site", "name": "customers"},
+            {"namespace": "site", "name": "orders"},
+        ],
+    }
+    _line(observations / "event.jsonl", event)
+    target = tmp_path / "facet-graph"
+    mapping = DatasetMapping(
+        dataset_to_object_id={
+            "site/customers": "customer", "site/orders": "order", "site/loose_orders": "loose"
+        }
+    )
+    graph = build_graph(
+        tmp_path / "snapshot", observations, target, PlannerConfig(graph_dir=target), mapping
+    )
+    assert {(edge["from_id"], edge["to_id"]) for edge in graph["lineage"]} == {
+        ("order", "customer"), ("loose", "order")
+    }
+    assert not graph["diagnostics"]
+
+    event["job"]["facets"]["lineage"]["entries"] = "invalid"
+    _line(observations / "event.jsonl", event)
+    broken = tmp_path / "broken-facet-graph"
+    graph = build_graph(
+        tmp_path / "snapshot", observations, broken, PlannerConfig(graph_dir=broken), mapping
+    )
+    assert len(graph["lineage"]) == 2
+    assert any(item["code"] == "INVALID_OPENLINEAGE_LINEAGE_FACET" for item in graph["diagnostics"])
+
+
+def test_openlineage_job_facet_maps_exact_field_lineage(tmp_path, monkeypatch):
+    sql_graph(tmp_path, monkeypatch)
+    observations = tmp_path / "field-observations"
+    observations.mkdir()
+    _line(
+        observations / "event.jsonl",
+        {
+            "eventType": "COMPLETE",
+            "eventTime": datetime.now(UTC).isoformat(),
+            "run": {"runId": "run-fields"},
+            "job": {
+                "namespace": "jobs", "name": "field-transform",
+                "facets": {
+                    "lineage": {
+                        "entries": [
+                            {
+                                "namespace": "site", "name": "orders", "type": "DATASET",
+                                "fields": {
+                                    "customer_id": {
+                                        "inputs": [
+                                            {
+                                                "namespace": "site", "name": "loose_orders",
+                                                "type": "DATASET", "field": "customer_id",
+                                                "transformations": [
+                                                    {
+                                                        "type": "DIRECT",
+                                                        "description": "CANARY_PRIVATE_SQL",
+                                                    }
+                                                ],
+                                            }
+                                        ]
+                                    }
+                                },
+                            }
+                        ]
+                    }
+                },
+            },
+            "inputs": [{"namespace": "site", "name": "customers"}],
+            "outputs": [{"namespace": "site", "name": "orders"}],
+        },
+    )
+    target = tmp_path / "field-graph"
+    mapping = DatasetMapping(
+        dataset_to_object_id={
+            "site/customers": "customer", "site/orders": "order", "site/loose_orders": "loose"
+        }
+    )
+    graph = build_graph(
+        tmp_path / "snapshot", observations, target, PlannerConfig(graph_dir=target), mapping
+    )
+    assert {(edge["from_id"], edge["to_id"]) for edge in graph["lineage"]} == {
+        ("loose", "order")
+    }
+    assert {(edge["from_id"], edge["to_id"]) for edge in graph["field_lineage"]} == {
+        ("loose-fk", "order-fk")
+    }
+    assert not graph["diagnostics"]
+    field_paths = find_paths(
+        target, PathRequest(from_id="loose-fk", to_id="order-fk"),
+        "lineage", PlannerConfig(graph_dir=target),
+    )
+    assert field_paths["paths"][0]["field_ids"] == ["loose-fk", "order-fk"]
+    assert field_paths["paths"][0]["status"] == "observed"
+    assert "CANARY_PRIVATE_SQL" not in (target / "graph.json").read_text(encoding="utf-8")
+    with pytest.raises(ValueError, match="STALE_OR_NON_JOIN_PATH"):
+        render_plan(target, PlanRequest(path_id=field_paths["paths"][0]["path_id"]),
+                    PlannerConfig(graph_dir=target))
+    monkeypatch.setenv("PLANNER_TOKEN", "synthetic-private-token")
+    api_config = PlannerConfig(graph_dir=target, api_key_env="PLANNER_TOKEN")
+    with TestClient(create_app(api_config)) as client:
+        response = client.post(
+            "/v1/lineage/paths",
+            json={"from_id": "loose-fk", "to_id": "order-fk"},
+            headers={"Authorization": "Bearer synthetic-private-token"},
+        )
+        assert response.status_code == 200
+        assert response.json()["paths"][0]["entity_kind"] == "field"
+
+
+def test_openlineage_column_facet_maps_fields_without_guessing_other_outputs(
+    tmp_path, monkeypatch
+):
+    sql_graph(tmp_path, monkeypatch)
+    observations = tmp_path / "column-observations"
+    observations.mkdir()
+    _line(
+        observations / "event.jsonl",
+        {
+            "eventType": "COMPLETE",
+            "eventTime": datetime.now(UTC).isoformat(),
+            "run": {"runId": "column-run"},
+            "job": {"namespace": "jobs", "name": "column-transform"},
+            "inputs": [
+                {"namespace": "site", "name": "loose_orders"},
+                {"namespace": "site", "name": "customers"},
+            ],
+            "outputs": [
+                {
+                    "namespace": "site", "name": "orders",
+                    "facets": {
+                        "columnLineage": {
+                            "fields": {
+                                "customer_id": {
+                                    "inputFields": [
+                                        {
+                                            "namespace": "site", "name": "loose_orders",
+                                            "field": "customer_id",
+                                        }
+                                    ]
+                                }
+                            },
+                            "dataset": [],
+                        }
+                    },
+                },
+                {"namespace": "site", "name": "customers"},
+            ],
+        },
+    )
+    target = tmp_path / "column-graph"
+    mapping = DatasetMapping(
+        dataset_to_object_id={
+            "site/customers": "customer", "site/orders": "order", "site/loose_orders": "loose"
+        }
+    )
+    graph = build_graph(
+        tmp_path / "snapshot", observations, target, PlannerConfig(graph_dir=target), mapping
+    )
+    assert {(edge["from_id"], edge["to_id"]) for edge in graph["lineage"]} == {
+        ("loose", "order")
+    }
+    assert {(edge["from_id"], edge["to_id"]) for edge in graph["field_lineage"]} == {
+        ("loose-fk", "order-fk")
+    }
+    assert any(
+        item["code"] == "OPENLINEAGE_OUTPUT_WITHOUT_EXPLICIT_LINEAGE"
+        for item in graph["diagnostics"]
+    )
+
+
+def test_openlineage_job_event_paths_are_defined_not_observed(tmp_path, monkeypatch):
+    sql_graph(tmp_path, monkeypatch)
+    observations = tmp_path / "job-event-observations"
+    observations.mkdir()
+    _line(
+        observations / "job.jsonl",
+        {
+            "kind": "openlineage_job",
+            "eventTime": datetime.now(UTC).isoformat(),
+            "job": {
+                "namespace": "jobs", "name": "defined-transform",
+                "facets": {
+                    "lineage": {
+                        "entries": [
+                            {
+                                "namespace": "site", "name": "orders", "type": "DATASET",
+                                "inputs": [
+                                    {"namespace": "site", "name": "customers", "type": "DATASET"}
+                                ],
+                            }
+                        ]
+                    }
+                },
+            },
+        },
+    )
+    target = tmp_path / "job-event-graph"
+    config = PlannerConfig(graph_dir=target)
+    mapping = DatasetMapping(
+        dataset_to_object_id={"site/customers": "customer", "site/orders": "order"}
+    )
+    build_graph(tmp_path / "snapshot", observations, target, config, mapping)
+    paths = find_paths(target, PathRequest(from_id="customer", to_id="order"), "lineage", config)
+    assert paths["paths"][0]["status"] == "defined"
+
+
+def test_openlineage_dataset_facet_takes_precedence_over_column_facet(tmp_path, monkeypatch):
+    sql_graph(tmp_path, monkeypatch)
+    observations = tmp_path / "dataset-facet-observations"
+    observations.mkdir()
+    _line(
+        observations / "event.jsonl",
+        {
+            "eventType": "COMPLETE",
+            "eventTime": datetime.now(UTC).isoformat(),
+            "run": {"runId": "dataset-facet-run"},
+            "job": {"namespace": "jobs", "name": "dataset-facet"},
+            "inputs": [
+                {"namespace": "site", "name": "customers"},
+                {"namespace": "site", "name": "loose_orders"},
+            ],
+            "outputs": [
+                {
+                    "namespace": "site", "name": "orders",
+                    "facets": {
+                        "lineage": {
+                            "inputs": [
+                                {"namespace": "site", "name": "customers", "type": "DATASET"}
+                            ]
+                        },
+                        "columnLineage": {
+                            "fields": {
+                                "customer_id": {
+                                    "inputFields": [
+                                        {
+                                            "namespace": "site", "name": "loose_orders",
+                                            "field": "customer_id",
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                    },
+                }
+            ],
+        },
+    )
+    target = tmp_path / "dataset-facet-graph"
+    mapping = DatasetMapping(
+        dataset_to_object_id={
+            "site/customers": "customer", "site/orders": "order", "site/loose_orders": "loose"
+        }
+    )
+    graph = build_graph(
+        tmp_path / "snapshot", observations, target, PlannerConfig(graph_dir=target), mapping
+    )
+    assert {(edge["from_id"], edge["to_id"]) for edge in graph["lineage"]} == {
+        ("customer", "order")
+    }
+    assert not graph["field_lineage"]
+
+
 def test_catalog_identifiers_are_quoted_and_mongo_operators_refused():
     malicious = 'users"; DROP TABLE secret; --'
     sql = _sql_read({"name": malicious, "namespace": "public"}, "postgres", 10)

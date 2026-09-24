@@ -6,7 +6,7 @@ import hashlib
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import sqlglot
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -59,6 +59,47 @@ class OpenLineageDataset(BaseModel):
 
     namespace: str = Field(min_length=1)
     name: str = Field(min_length=1)
+    facets: dict[str, Any] = Field(default_factory=dict)
+
+
+class OpenLineageDatasetRef(OpenLineageDataset):
+    type: Literal["DATASET"]
+    field: str | None = Field(default=None, min_length=1)
+
+
+class OpenLineageFieldEntry(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    inputs: list[OpenLineageDatasetRef] = Field(default_factory=list)
+
+
+class OpenLineageLineageEntry(OpenLineageDatasetRef):
+    inputs: list[OpenLineageDatasetRef] = Field(default_factory=list)
+    fields: dict[str, OpenLineageFieldEntry] = Field(default_factory=dict)
+
+
+class OpenLineageDatasetFacet(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    inputs: list[OpenLineageDatasetRef] = Field(default_factory=list)
+    fields: dict[str, OpenLineageFieldEntry] = Field(default_factory=dict)
+
+
+class OpenLineageColumnInput(OpenLineageDataset):
+    field: str = Field(min_length=1)
+
+
+class OpenLineageColumnEntry(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    inputFields: list[OpenLineageColumnInput] = Field(default_factory=list)
+
+
+class OpenLineageColumnFacet(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    fields: dict[str, OpenLineageColumnEntry] = Field(default_factory=dict)
+    dataset: list[OpenLineageColumnInput] = Field(default_factory=list)
 
 
 class OpenLineageEvent(BaseModel):
