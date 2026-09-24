@@ -350,8 +350,6 @@ def _mongo_schema_paths(
 
 
 def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[str, list[Record]]:
-    from pymongo.errors import PyMongoError
-
     common = _common(config)
     tables: dict[str, list[Record]] = defaultdict(list)
     total = 0
@@ -496,7 +494,7 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
                     estimate = client[database][name].estimated_document_count(
                         maxTimeMS=config.read_timeout_seconds * 1000
                     )
-                except PyMongoError:
+                except Exception:  # noqa: BLE001 - optional stats must not fail the metadata scan
                     tables["diagnostics.jsonl"].append(
                         Record.model_validate(
                             {

@@ -13,7 +13,6 @@ from dbig_collectors.runtime import (
     discover_postgresql,
 )
 from dbig_contracts.artifact import read_artifact
-from pymongo.errors import OperationFailure
 
 
 def config(kind: str = "postgresql") -> SourceConfig:
@@ -166,7 +165,7 @@ def test_mongo_count_respects_budget_and_reports_driver_failure():
 
     class FailedDb(MongoDb):
         def estimated_document_count(self, **kwargs):
-            raise OperationFailure("canary-secret")
+            raise RuntimeError("canary-secret")
 
     class FailedClient:
         def __getitem__(self, database):
