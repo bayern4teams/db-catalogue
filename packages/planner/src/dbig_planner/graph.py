@@ -20,6 +20,7 @@ from .observations import (
     OpenLineageLineageEntry,
     PipelineObservation,
     SQLObservation,
+    SQLRelation,
     observation_digest,
     read_lines,
     sql_relations,
@@ -152,8 +153,13 @@ def build_graph(
 
                 source_id = observed.source_id
 
-                def resolve(name: str, source_id: str = source_id) -> str:
-                    ids = by_name.get((source_id, name), [])
+                def resolve(relation: SQLRelation, source_id: str = source_id) -> str:
+                    ids = by_name.get((source_id, relation.name), [])
+                    if relation.namespace is not None:
+                        ids = [
+                            item for item in ids
+                            if objects[item].namespace == relation.namespace
+                        ]
                     if len(ids) != 1:
                         raise ValueError("UNRESOLVED_OR_AMBIGUOUS_SQL_OBJECT")
                     return ids[0]

@@ -5,13 +5,13 @@ import pytest
 from click.testing import CliRunner
 from dbig_builder.builder import assemble
 from dbig_builder.config import BuilderConfig
-from dbig_contracts.artifact import write_artifact
+from dbig_contracts.artifact import read_artifact, write_artifact
 from dbig_contracts.models import Edge, Evidence, Field, Object, Source
 from dbig_planner.api import create_app
 from dbig_planner.cli import main
 from dbig_planner.config import PlannerConfig
 from dbig_planner.graph import build_graph
-from dbig_planner.observations import DatasetMapping
+from dbig_planner.observations import DatasetMapping, SQLRelation, sql_relations
 from dbig_planner.paths import PathRequest, find_paths
 from dbig_planner.plans import PlanRequest, _mongo_name, _sql_read, render_plan
 from fastapi.testclient import TestClient
@@ -301,8 +301,118 @@ def test_sql_parser_rejects_unsafe_and_unmapped(tmp_path, monkeypatch):
     )
     newer = tmp_path / "newer-graph"
     graph = build_graph(tmp_path / "snapshot", observations, newer, PlannerConfig(graph_dir=newer))
-    assert not graph["lineage"]
-    assert len(graph["diagnostics"]) == 2
+    assert {(edge["from_id"], edge["to_id"]) for edge in graph["lineage"]} == {
+        ("customer", "order")
+    }
+    assert len(graph["diagnostics"]) == 1
+
+
+def test_sql_cte_nested_read_qualified_target_and_aliases():
+    target, reads, joins = sql_relations(
+        "WITH x AS (SELECT * FROM public.customers) "
+        "INSERT INTO public.orders SELECT * FROM x",
+        "postgres",
+    )
+    assert target == SQLRelation("orders", "public")
+    assert reads == [SQLRelation("customers", "public")]
+    assert joins == []
+    target, reads, joins = sql_relations(
+        "SELECT * FROM (SELECT * FROM public.orders) x "
+        "JOIN public.customers c ON x.customer_id = c.id",
+        "postgres",
+    )
+    assert target is None
+    assert set(reads) == {
+        SQLRelation("orders", "public"), SQLRelation("customers", "public")
+    }
+    assert joins == []
+    with pytest.raises(ValueError, match="UNSUPPORTED_NESTED_WRITE"):
+        sql_relations(
+            "WITH x AS (DELETE FROM orders RETURNING customer_id) "
+            "INSERT INTO orders SELECT * FROM x",
+            "postgres",
+        )
+
+
+@pytest.mark.parametrize(
+    ("statement", "target_name"),
+    [
+        ("CREATE TABLE public.copy AS SELECT * FROM public.customers", "copy"),
+        ("CREATE MATERIALIZED VIEW public.mv AS SELECT * FROM public.customers", "mv"),
+    ],
+)
+def test_sql_defined_views_and_ctas(statement, target_name):
+    target, reads, joins = sql_relations(statement, "postgres")
+    assert target == SQLRelation(target_name, "public")
+    assert reads == [SQLRelation("customers", "public")]
+    assert joins == []
+
+
+def test_sql_alias_join_keeps_base_table_names():
+    target, reads, joins = sql_relations(
+        "SELECT * FROM public.orders o JOIN public.customers c "
+        "ON o.customer_id = c.id",
+        "postgres",
+    )
+    assert target is None
+    assert set(reads) == {
+        SQLRelation("orders", "public"), SQLRelation("customers", "public")
+    }
+    assert joins == [
+        (SQLRelation("orders", "public"), SQLRelation("customers", "public"))
+    ]
+
+
+def test_clickhouse_materialized_view_target_abstains_without_false_read():
+    with pytest.raises(ValueError, match="UNRESOLVED_CLICKHOUSE_MV_TARGET"):
+        sql_relations(
+            "CREATE MATERIALIZED VIEW mv TO target AS SELECT * FROM raw_events",
+            "clickhouse",
+        )
+    target, reads, joins = sql_relations(
+        "CREATE MATERIALIZED VIEW mv AS SELECT * FROM raw_events", "clickhouse"
+    )
+    assert target == SQLRelation("mv", None)
+    assert reads == [SQLRelation("raw_events", None)]
+    assert joins == []
+
+
+def test_sql_qualified_resolution_survives_duplicate_names(tmp_path, monkeypatch):
+    sql_graph(tmp_path, monkeypatch)
+    _, tables = read_artifact(tmp_path / "snapshot")
+    original = next(item for item in tables["nodes.jsonl"] if item.id == "order")
+    archive = original.model_copy(update={"id": "archive-order", "namespace": "archive"})
+    write_artifact(
+        tmp_path / "ambiguous-snapshot",
+        "catalog-snapshot",
+        {
+            "nodes.jsonl": [*tables["nodes.jsonl"], archive],
+            "edges.jsonl": tables["edges.jsonl"],
+            "evidence.jsonl": tables["evidence.jsonl"],
+            "runs.jsonl": tables["runs.jsonl"],
+        },
+        producer="synthetic",
+        source_run_ids=[item.id for item in tables["runs.jsonl"]],
+    )
+    observations = tmp_path / "qualified-observations"
+    observations.mkdir()
+    _line(
+        observations / "sql.jsonl",
+        {
+            "kind": "sql", "id": "qualified", "source_id": "site-a",
+            "dialect": "postgres",
+            "sql": "INSERT INTO public.orders SELECT * FROM public.customers",
+            "observed_at": datetime.now(UTC).isoformat(), "status": "executed",
+        },
+    )
+    target = tmp_path / "qualified-graph"
+    graph = build_graph(
+        tmp_path / "ambiguous-snapshot", observations, target, PlannerConfig(graph_dir=target)
+    )
+    assert {(edge["from_id"], edge["to_id"]) for edge in graph["lineage"]} == {
+        ("customer", "order")
+    }
+    assert not graph["diagnostics"]
 
 
 def test_pipeline_and_openlineage_input_mapping(tmp_path, monkeypatch):

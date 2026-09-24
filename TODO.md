@@ -84,6 +84,8 @@ Update this file when work starts, a fact changes, a decision is needed, a check
 - [x] Add SQLite signed-bundle receipts and source-level incremental publication. Replays leave receipt count unchanged; partial rescans preserve the last complete source graph and mark the snapshot partial; a later complete scan reconciles removals. CLI can rebuild from recorded bundles; mixed-source bundles are rejected. Evidence: 43 local tests passed, 3 service tests skipped without Docker; Ruff, mypy, builder wheel and policy check passed. Commit/CI pending.
 - [x] Incremental builder commit `16d0bce` pushed; [CI run 35976508859](https://github.com/Reza-Sh83/db-catalogue/actions/runs/35976508859) passed all jobs, including live source fixtures and both platform wheel checks.
 - [x] Map exact OpenLineage Job, Dataset and Column facet input/output and field edges; expose bounded field lineage paths in CLI/API, distinguish defined JobEvent paths from observed completed RunEvents, and refuse plans from field lineage. Evidence: 48 local tests passed, 3 live-source tests skipped without Docker; Ruff, mypy, planner wheel and policy checks passed. Facet precedence and private transformation-description omission are covered by synthetic fixtures. Commit/CI pending.
+- [x] OpenLineage facet commit `859a249` pushed; [CI run 35978051058](https://github.com/Reza-Sh83/db-catalogue/actions/runs/35978051058) passed all jobs, including Linux/Windows clean-wheel isolation and live source metadata tests.
+- [x] Expand conservative SQL observation parsing to read-only CTE/subquery sources, schema-qualified names, aliases, CTAS and materialized views without `TO`; reject nested writes and ClickHouse `TO` views until output semantics are modeled. Evidence: SQLGlot AST behavior inspected locally; 54 local tests passed, 3 service tests skipped without Docker; Ruff, mypy, planner wheel and policy checks passed. CI pending.
 - [ ] Add reproducible wheel build and command smoke test for Windows and Linux.
 
 ## 3. IR, validation and bundles
@@ -134,10 +136,10 @@ Update this file when work starts, a fact changes, a decision is needed, a check
 
 ## 9. Observed lineage
 
-- [ ] Implement SQLGlot parser wrapper and catalog-aware resolver for configured dialects.
+- [~] Implement SQLGlot parser wrapper and catalog-aware resolver for configured dialects. PostgreSQL/ClickHouse direct writes, read-only CTE/subquery sources, qualified names and direct alias joins pass synthetic tests; SQL-derived columns, ClickHouse `TO` materialized-view semantics and three-part names remain unresolved.
 - [ ] Distinguish defined view lineage, executed writes, observed joins and unresolved parse cases.
 - [ ] Import OpenLineage run/job/dataset/column facets with strict source mapping.
-- [ ] Test CTEs, aliases, stars, INSERT SELECT, CTAS, materialized views, unsupported SQL and Mongo pipelines.
+- [~] Test CTEs, aliases, stars, INSERT SELECT, CTAS, materialized views, unsupported SQL and Mongo pipelines. Synthetic CTE, nested-read, qualified-name, alias, CTAS, PostgreSQL/ClickHouse materialized-view and nested-write fixtures pass; richer dialect/column and live source cases remain open.
 - [ ] Prove no inferred relationship is mislabeled as lineage.
 - [~] Map OpenLineage RunEvent/JobEvent and lineage/column facets conservatively; test multi-input/multi-output ambiguity and unresolved dataset names. Explicit job, dataset and column facets now map exact object/field edges with official precedence and field-path API support; JobEvent paths are `defined`, completed RunEvent paths `observed`, and unsupported/missing mappings abstain. SQL-derived columns, job-to-job facets and complete real producer compatibility remain open.
 
