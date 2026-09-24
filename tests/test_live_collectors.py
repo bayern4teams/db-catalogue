@@ -57,6 +57,9 @@ def test_postgresql_16_catalog_and_read_only_role():
             "CREATE TABLE dbig_ci.orders (customer_id integer REFERENCES dbig_ci.customers(id))"
         )
         cursor.execute("CREATE VIEW dbig_ci.customer_view AS SELECT id FROM dbig_ci.customers")
+        cursor.execute("CREATE TABLE dbig_ci.events (id integer) PARTITION BY RANGE (id)")
+        cursor.execute("CREATE TABLE dbig_ci.events_p0 PARTITION OF dbig_ci.events "
+                       "FOR VALUES FROM (0) TO (10)")
         cursor.execute("CREATE ROLE dbig_reader LOGIN")
         cursor.execute("GRANT USAGE ON SCHEMA dbig_ci TO dbig_reader")
         cursor.execute("GRANT SELECT ON ALL TABLES IN SCHEMA dbig_ci TO dbig_reader")
@@ -72,12 +75,18 @@ def test_postgresql_16_catalog_and_read_only_role():
         "customers",
         "orders",
         "customer_view",
+        "events",
+        "events_p0",
     }
     assert any(item.kind == "foreign" for item in records["constraints.jsonl"])
     assert any(item.attributes.get("view_definition_sha256") for item in records["objects.jsonl"])
     customers = next(item for item in records["objects.jsonl"] if item.name == "customers")
     assert customers.attributes["row_count_estimate"] == 1.0
     assert customers.attributes["row_count_method"] == "pg_class.reltuples"
+    events = next(item for item in records["objects.jsonl"] if item.name == "events")
+    partition = next(item for item in records["objects.jsonl"] if item.name == "events_p0")
+    assert partition.parent_id == events.id
+    assert partition.attributes["is_partition"] is True
 
 
 def test_clickhouse_25_8_system_tables():

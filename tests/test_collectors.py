@@ -39,7 +39,7 @@ class PgCursor:
     def fetchall(self):
         self.index += 1
         if self.index == 1:
-            return [(42, "public", "orders", "r", 12.5)]
+            return [(42, "public", "orders", "r", 12.5, False, None)]
         if self.index == 2:
             return [(42, 1, "id", "integer", True)]
         return [(99, 42, 42, "p", [1], None)]
@@ -80,7 +80,7 @@ def test_postgres_view_definition_is_hashed_without_literals():
         def fetchall(self):
             self.index += 1
             return {
-                1: [(42, "public", "orders_view", "v", -1.0)],
+                1: [(42, "public", "orders_view", "v", -1.0, False, None)],
                 2: [(42, "SELECT * FROM orders WHERE token = 'canary-secret'")],
                 3: [(42, 1, "id", "integer", True)],
                 4: [],
@@ -94,6 +94,36 @@ def test_postgres_view_definition_is_hashed_without_literals():
     assert "row_count_estimate" not in attributes
     assert len(attributes["view_definition_sha256"]) == 64
     assert "canary-secret" not in str(records)
+
+
+def test_postgres_partitions_link_only_to_visible_parent():
+    class PartitionCursor(PgCursor):
+        def __init__(self, visible_parent):
+            super().__init__()
+            self.visible_parent = visible_parent
+
+        def fetchall(self):
+            self.index += 1
+            if self.index == 1:
+                rows = [(43, "public", "events_p0", "r", -1.0, True, 42)]
+                if self.visible_parent:
+                    rows.insert(0, (42, "public", "events", "p", -1.0, False, None))
+                return rows
+            return []
+
+    connection = PgConnection()
+    connection.fake_cursor = PartitionCursor(True)
+    records = discover_postgresql(connection, config(), Budget(3))
+    parent, child = records["objects.jsonl"]
+    assert child.parent_id == parent.id
+    assert child.attributes["is_partition"] is True
+    assert "row_count_estimate" not in parent.attributes
+
+    connection = PgConnection()
+    connection.fake_cursor = PartitionCursor(False)
+    records = discover_postgresql(connection, config(), Budget(3))
+    assert records["objects.jsonl"][0].parent_id is None
+    assert records["objects.jsonl"][0].attributes["is_partition"] is True
 
 
 class ChClient:

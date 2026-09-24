@@ -56,9 +56,12 @@ def discover_postgresql(
         budget.charge()
         # Only placeholder tokens are interpolated; schema names remain bound values.
         cursor.execute(
-            "SELECT c.oid, n.nspname, c.relname, c.relkind, c.reltuples "  # noqa: S608
+            "SELECT c.oid, n.nspname, c.relname, c.relkind, c.reltuples, "  # noqa: S608
+            "c.relispartition, i.inhparent "
             "FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n "
             "ON n.oid = c.relnamespace "
+            "LEFT JOIN pg_catalog.pg_inherits i ON i.inhrelid = c.oid "
+            "AND c.relispartition AND i.inhseqno = 1 AND NOT i.inhdetachpending "
             f"WHERE n.nspname IN ({placeholders}) AND c.relkind IN ('r','p','v','m','f') "
             "ORDER BY c.oid LIMIT %s",
             (*config.namespaces, config.max_objects + 1),
@@ -73,11 +76,14 @@ def discover_postgresql(
             "m": "materialized_view",
             "f": "foreign_table",
         }
-        for oid, schema, name, relkind, reltuples in rows:
+        visible_oids = {oid for oid, *_ in rows}
+        for oid, schema, name, relkind, reltuples, is_partition, parent_oid in rows:
             attributes: dict[str, str | int | float | bool | None] = {}
             if relkind in {"r", "m"} and reltuples is not None and reltuples >= 0:
                 attributes["row_count_estimate"] = float(reltuples)
                 attributes["row_count_method"] = "pg_class.reltuples"
+            if is_partition:
+                attributes["is_partition"] = True
             tables["objects.jsonl"].append(
                 Object(
                     id=stable_id(config.source_id, "object", str(oid)),
@@ -85,11 +91,14 @@ def discover_postgresql(
                     kind=kinds[relkind],
                     name=name,
                     namespace=schema,
+                    parent_id=stable_id(config.source_id, "object", str(parent_oid))
+                    if is_partition and parent_oid in visible_oids
+                    else None,
                     attributes=attributes,
                     **common,
                 )
             )
-        view_oids = [oid for oid, _, _, relkind, _ in rows if relkind in {"v", "m"}]
+        view_oids = [oid for oid, _, _, relkind, *_ in rows if relkind in {"v", "m"}]
         if view_oids:
             budget.charge()
             cursor.execute(
