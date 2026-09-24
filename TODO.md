@@ -80,6 +80,8 @@ Update this file when work starts, a fact changes, a decision is needed, a check
 - [ ] Set Ruff, type checker, pytest and coverage configuration with strict settings justified by code.
 - [x] Produce CycloneDX SBOM and repeatable license reports for all 113 lockfile components. `python scripts/supply_chain.py --refresh` fetched pinned PyPI release metadata and verified the sole missing declaration, `mypy-extensions==1.1.0`, against its tagged upstream LICENSE; `python scripts/supply_chain.py` reports zero unresolved declarations and rejects stale inventory. CI gate added; actual CI result pending. This is metadata inventory, not a legal review of every license term.
 - [x] User chose MIT for the repository and five dbig packages on 2026-09-23. Root and package LICENSE files and PEP 639 metadata are added; all five built wheels contain `License-Expression: MIT` and the license text. Local full suite: 39 passed, 3 service tests skipped without Docker; Ruff, mypy, repository policy, SBOM/license check, all-wheel build, and clean requester/planner wheel isolation passed. CI pending.
+- [x] MIT/SBOM increment `7f61168` pushed; [CI run 35975753471](https://github.com/Reza-Sh83/db-catalogue/actions/runs/35975753471) passed repository-policy, graph-index, application-quality including the supply-chain gate, source-integration, Linux/Windows wheel isolation and ci-success.
+- [x] Add SQLite signed-bundle receipts and source-level incremental publication. Replays leave receipt count unchanged; partial rescans preserve the last complete source graph and mark the snapshot partial; a later complete scan reconciles removals. CLI can rebuild from recorded bundles; mixed-source bundles are rejected. Evidence: 43 local tests passed, 3 service tests skipped without Docker; Ruff, mypy, builder wheel and policy check passed. Commit/CI pending.
 - [ ] Add reproducible wheel build and command smoke test for Windows and Linux.
 
 ## 3. IR, validation and bundles
@@ -157,7 +159,7 @@ Update this file when work starts, a fact changes, a decision is needed, a check
 
 ## 10. Central assembler and local LLM
 
-- [ ] Implement SQLite state, idempotent bundle receipts, incremental invalidation and partial-source semantics.
+- [~] Implement SQLite state, idempotent bundle receipts, incremental invalidation and partial-source semantics. Source-level receipts, replay handling and conservative fallback to the last complete bundle pass synthetic tests; field/profile-level cache invalidation, historical edge timestamps and retention remain open.
 - [~] Implement deterministic graph writer with stable sort, evidence integrity and validation. Referential checks were strengthened and six negative contract fixtures pass; deterministic serialization across repeated runs and further evidence integrity checks remain open.
 - [ ] Add bounded LangGraph reviewer for ambiguous candidates only: redaction, vLLM request, response validation and weak-evidence conversion; enable in v1 deployment.
 - [ ] Validate/redact model input and output; ensure timeout or server failure does not prevent graph publication.

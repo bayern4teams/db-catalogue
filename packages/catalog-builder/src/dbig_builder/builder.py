@@ -72,14 +72,21 @@ def _type_family(value: str) -> str:
     return normalized
 
 
-def assemble(bundle_paths: list[Path], output: Path, config: BuilderConfig) -> Manifest:
+def assemble(
+    bundle_paths: list[Path],
+    output: Path,
+    config: BuilderConfig,
+    *,
+    partial_source_receipts: dict[str, str] | None = None,
+) -> Manifest:
     if not bundle_paths:
         raise ValueError("at least one source bundle is required")
     sources: dict[str, Source] = {}
     nodes: dict[str, Record] = {}
     constraints: list[Constraint] = []
     runs: list[Record] = []
-    partial = False
+    partial_source_receipts = partial_source_receipts or {}
+    partial = bool(partial_source_receipts)
     for path in bundle_paths:
         manifest, records = _read_signed(path, config)
         bundle_sources = records["sources.jsonl"]
@@ -241,12 +248,20 @@ def assemble(bundle_paths: list[Path], output: Path, config: BuilderConfig) -> M
         Record.model_validate(
             {
                 "record_type": "run",
-                "id": stable_id("builder", "run", "|".join(sorted(record.id for record in runs))),
+                "id": stable_id(
+                    "builder",
+                    "run",
+                    "|".join(
+                        sorted(record.id for record in runs)
+                        + sorted(partial_source_receipts.values())
+                    ),
+                ),
                 "source_id": "builder",
                 "observed_at": utc_now(),
                 "collector_version": "dbig-builder/0.1.0",
                 "provenance": "assembler",
                 "review_status": review_status,
+                "partial_source_receipts": partial_source_receipts,
             }
         )
     )

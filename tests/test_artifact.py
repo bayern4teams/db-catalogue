@@ -78,6 +78,16 @@ def test_dangling_field_fails_before_publish(tmp_path):
     assert not (tmp_path / "bad").exists()
 
 
+def test_bundle_rejects_records_from_another_source(tmp_path):
+    bundle = records()
+    bundle["fields.jsonl"][0].source_id = "other-source"
+    with pytest.raises(ValueError, match="mixes source IDs"):
+        write_artifact(
+            tmp_path / "mixed", "collector-bundle", bundle,
+            producer="test", source_run_ids=["r"],
+        )
+
+
 def test_published_schema_accepts_synthetic_object():
     schema_path = Path(__file__).resolve().parents[1] / "schemas/ir-v1/object.schema.json"
     schema = json.loads(schema_path.read_text(encoding="utf-8"))

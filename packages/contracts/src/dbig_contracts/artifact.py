@@ -269,4 +269,11 @@ def read_artifact(
             and constraint.target_object_id not in object_ids
         ):
             raise ValueError(f"dangling constraint: {constraint.id}")
+    if manifest.content_type == "collector-bundle":
+        sources = result["sources.jsonl"]
+        if len(sources) != 1:
+            raise ValueError("collector bundle must have exactly one source")
+        source_id = sources[0].id
+        if any(record.source_id != source_id for table in result.values() for record in table):
+            raise ValueError("collector bundle mixes source IDs")
     return manifest, result

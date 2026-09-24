@@ -9,6 +9,7 @@ from dbig_contracts.models import Edge
 
 from .builder import assemble
 from .config import load_config
+from .state import assemble_incremental
 
 
 @click.group()
@@ -30,6 +31,20 @@ def main() -> None:
 @click.option("--out", type=click.Path(path_type=Path), required=True)
 def assemble_command(config_path: Path, bundles: tuple[Path, ...], out: Path) -> None:
     manifest = assemble(list(bundles), out, load_config(config_path))
+    click.echo(manifest.model_dump_json())
+
+
+@main.command("assemble-incremental")
+@click.option(
+    "--config", "config_path", type=click.Path(path_type=Path, exists=True), required=True
+)
+@click.option("--state", "state_path", type=click.Path(path_type=Path), required=True)
+@click.option("--bundle", "bundles", type=click.Path(path_type=Path, exists=True), multiple=True)
+@click.option("--out", type=click.Path(path_type=Path), required=True)
+def assemble_incremental_command(
+    config_path: Path, state_path: Path, bundles: tuple[Path, ...], out: Path
+) -> None:
+    manifest = assemble_incremental(list(bundles), state_path, out, load_config(config_path))
     click.echo(manifest.model_dump_json())
 
 
