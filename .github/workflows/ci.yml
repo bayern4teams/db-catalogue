@@ -69,6 +69,7 @@ jobs:
           uv run mypy packages
           uv run pytest
           uv run pip-audit
+          python scripts/supply_chain.py
 
   package-isolation:
     name: package-isolation-${{ matrix.os }}

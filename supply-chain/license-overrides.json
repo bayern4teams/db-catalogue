@@ -1,0 +1,7 @@
+{
+  "mypy-extensions==1.1.0": {
+    "declaration": "MIT",
+    "evidence": "upstream-tag-license",
+    "release_url": "https://github.com/python/mypy_extensions/blob/1.1.0/LICENSE"
+  }
+}

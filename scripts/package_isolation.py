@@ -6,6 +6,8 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import zipfile
+from email.parser import BytesParser
 from pathlib import Path
 
 
@@ -15,6 +17,15 @@ def main() -> None:
     uv = shutil.which("uv")
     if uv is None:
         raise RuntimeError("uv is required for the clean-wheel verification job")
+    for wheel_path in distribution.glob("dbig_*.whl"):
+        with zipfile.ZipFile(wheel_path) as wheel_file:
+            names = wheel_file.namelist()
+            metadata_name = next(name for name in names if name.endswith(".dist-info/METADATA"))
+            metadata = BytesParser().parsebytes(wheel_file.read(metadata_name))
+            if metadata["License-Expression"] != "MIT" or not any(
+                name.endswith(".dist-info/licenses/LICENSE") for name in names
+            ):
+                raise ValueError(f"missing MIT license metadata or text: {wheel_path.name}")
     contracts = next(distribution.glob("dbig_contracts-*.whl"))
     for name, module, command, other in (
         ("dbig_catalogue_requester", "dbig_requester", "dbig-requester", "dbig_planner"),

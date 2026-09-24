@@ -1,6 +1,7 @@
 [project]
 name = "dbig-catalogue-requester"
 version = "0.1.0"
+license = "MIT"
 requires-python = ">=3.12"
 dependencies = ["dbig-contracts==0.1.0", "click>=8.2,<9", "openai>=2,<3", "langfuse>=4,<5"]
 

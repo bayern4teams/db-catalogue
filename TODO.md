@@ -24,6 +24,7 @@ Update this file when work starts, a fact changes, a decision is needed, a check
 - [x] User decision on 2026-09-23: configure private vLLM interfaces now, retain synthetic answer/reviewer/privacy tests, and defer live GPU/model and Langfuse deployment tests until the user reports an accessible GPU host. Do not treat skipped live LLM tests as passed or select a model digest before benchmarking.
 - [x] Documentation decision commit `29b0169` pushed; [CI run 35912165912](https://github.com/Reza-Sh83/db-catalogue/actions/runs/35912165912) passed all jobs, including the three live source metadata fixtures.
 - [x] Strengthen snapshot referential validation for node types, field ownership, source IDs, evidence targets, edge field pairs and run references. Six negative publication fixtures plus builder tests pass; full local suite: 39 passed, 3 service tests skipped without Docker. Ruff and mypy passed. Commit and CI inspection follow.
+- [x] Snapshot validation commit `625e671` pushed; [CI run 35912590146](https://github.com/Reza-Sh83/db-catalogue/actions/runs/35912590146) passed repository policy, graph indexing, application quality, source integration, Linux/Windows wheel isolation and ci-success.
 - [x] Cross-source candidate increment `c785adb` pushed; [CI run 35911329411](https://github.com/Reza-Sh83/db-catalogue/actions/runs/35911329411) passed repository-policy, application-quality, graph-index, both clean-wheel jobs and ci-success. Live source integration was not yet in that run.
 - [x] Builder increment `e3d2f51` pushed; [CI run 35905976696](https://github.com/Reza-Sh83/db-catalogue/actions/runs/35905976696) passed repository-policy, graph-index, application-quality, and ci-success. Live vLLM and Langfuse deployment remain untested.
 
@@ -77,7 +78,8 @@ Update this file when work starts, a fact changes, a decision is needed, a check
 - [x] Verify the five intended `dbig-*` distribution names against PyPI JSON endpoints on 2026-09-23; all returned HTTP 404 (unoccupied at check time). Recheck before any publication.
 - [ ] Pin exact app dependencies with `uv.lock`; inspect all transitive licenses, vulnerabilities and platform wheels.
 - [ ] Set Ruff, type checker, pytest and coverage configuration with strict settings justified by code.
-- [ ] Produce SBOM and a repeatable license report from the lockfile.
+- [x] Produce CycloneDX SBOM and repeatable license reports for all 113 lockfile components. `python scripts/supply_chain.py --refresh` fetched pinned PyPI release metadata and verified the sole missing declaration, `mypy-extensions==1.1.0`, against its tagged upstream LICENSE; `python scripts/supply_chain.py` reports zero unresolved declarations and rejects stale inventory. CI gate added; actual CI result pending. This is metadata inventory, not a legal review of every license term.
+- [x] User chose MIT for the repository and five dbig packages on 2026-09-23. Root and package LICENSE files and PEP 639 metadata are added; all five built wheels contain `License-Expression: MIT` and the license text. Local full suite: 39 passed, 3 service tests skipped without Docker; Ruff, mypy, repository policy, SBOM/license check, all-wheel build, and clean requester/planner wheel isolation passed. CI pending.
 - [ ] Add reproducible wheel build and command smoke test for Windows and Linux.
 
 ## 3. IR, validation and bundles

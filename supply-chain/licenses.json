@@ -1,0 +1,537 @@
+{
+  "annotated-doc==0.0.5": {
+    "declaration": "MIT",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/annotated-doc/0.0.5/json"
+  },
+  "annotated-types==0.8.0": {
+    "declaration": "MIT",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/annotated-types/0.8.0/json"
+  },
+  "anyio==4.15.1": {
+    "declaration": "MIT",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/anyio/4.15.1/json"
+  },
+  "asn1crypto==1.5.1": {
+    "declaration": "MIT",
+    "evidence": "legacy-license-field",
+    "release_url": "https://pypi.org/pypi/asn1crypto/1.5.1/json"
+  },
+  "attrs==26.1.0": {
+    "declaration": "MIT",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/attrs/26.1.0/json"
+  },
+  "backoff==2.2.1": {
+    "declaration": "MIT",
+    "evidence": "legacy-license-field",
+    "release_url": "https://pypi.org/pypi/backoff/2.2.1/json"
+  },
+  "boolean-py==5.0": {
+    "declaration": "BSD-2-Clause",
+    "evidence": "legacy-license-field",
+    "release_url": "https://pypi.org/pypi/boolean-py/5.0/json"
+  },
+  "cachecontrol==0.14.4": {
+    "declaration": "Apache-2.0",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/cachecontrol/0.14.4/json"
+  },
+  "certifi==2026.7.22": {
+    "declaration": "MPL-2.0",
+    "evidence": "legacy-license-field",
+    "release_url": "https://pypi.org/pypi/certifi/2026.7.22/json"
+  },
+  "charset-normalizer==3.5.1": {
+    "declaration": "MIT",
+    "evidence": "legacy-license-field",
+    "release_url": "https://pypi.org/pypi/charset-normalizer/3.5.1/json"
+  },
+  "click==8.5.0": {
+    "declaration": "BSD-3-Clause",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/click/8.5.0/json"
+  },
+  "clickhouse-connect==0.15.1": {
+    "declaration": "Apache License 2.0",
+    "evidence": "legacy-license-field",
+    "release_url": "https://pypi.org/pypi/clickhouse-connect/0.15.1/json"
+  },
+  "colorama==0.4.6": {
+    "declaration": "License :: OSI Approved :: BSD License",
+    "evidence": "classifier-review",
+    "release_url": "https://pypi.org/pypi/colorama/0.4.6/json"
+  },
+  "cyclonedx-python-lib==11.12.0": {
+    "declaration": "Apache-2.0",
+    "evidence": "legacy-license-field",
+    "release_url": "https://pypi.org/pypi/cyclonedx-python-lib/11.12.0/json"
+  },
+  "defusedxml==0.7.1": {
+    "declaration": "PSFL",
+    "evidence": "legacy-license-field",
+    "release_url": "https://pypi.org/pypi/defusedxml/0.7.1/json"
+  },
+  "distro==1.9.0": {
+    "declaration": "Apache License, Version 2.0",
+    "evidence": "legacy-license-field",
+    "release_url": "https://pypi.org/pypi/distro/1.9.0/json"
+  },
+  "dnspython==2.8.0": {
+    "declaration": "ISC",
+    "evidence": "legacy-license-field",
+    "release_url": "https://pypi.org/pypi/dnspython/2.8.0/json"
+  },
+  "fastapi==0.141.1": {
+    "declaration": "MIT",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/fastapi/0.141.1/json"
+  },
+  "filelock==4.0.1": {
+    "declaration": "MIT",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/filelock/4.0.1/json"
+  },
+  "googleapis-common-protos==1.75.3": {
+    "declaration": "Apache-2.0",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/googleapis-common-protos/1.75.3/json"
+  },
+  "h11==0.16.0": {
+    "declaration": "MIT",
+    "evidence": "legacy-license-field",
+    "release_url": "https://pypi.org/pypi/h11/0.16.0/json"
+  },
+  "httpcore2==2.13.1": {
+    "declaration": "BSD-3-Clause",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/httpcore2/2.13.1/json"
+  },
+  "httpcore==1.0.9": {
+    "declaration": "BSD-3-Clause",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/httpcore/1.0.9/json"
+  },
+  "httpx2-jsfetch==1.0": {
+    "declaration": "BSD-3-Clause",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/httpx2-jsfetch/1.0/json"
+  },
+  "httpx2==2.13.1": {
+    "declaration": "BSD-3-Clause",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/httpx2/2.13.1/json"
+  },
+  "httpx==0.28.1": {
+    "declaration": "BSD-3-Clause",
+    "evidence": "legacy-license-field",
+    "release_url": "https://pypi.org/pypi/httpx/0.28.1/json"
+  },
+  "idna==3.20": {
+    "declaration": "BSD-3-Clause",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/idna/3.20/json"
+  },
+  "iniconfig==2.3.0": {
+    "declaration": "MIT",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/iniconfig/2.3.0/json"
+  },
+  "jiter==0.17.0": {
+    "declaration": "MIT",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/jiter/0.17.0/json"
+  },
+  "jsonpatch==1.33": {
+    "declaration": "Modified BSD License",
+    "evidence": "legacy-license-field",
+    "release_url": "https://pypi.org/pypi/jsonpatch/1.33/json"
+  },
+  "jsonpointer==3.1.1": {
+    "declaration": "Modified BSD License",
+    "evidence": "legacy-license-field",
+    "release_url": "https://pypi.org/pypi/jsonpointer/3.1.1/json"
+  },
+  "jsonschema-specifications==2025.9.1": {
+    "declaration": "MIT",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/jsonschema-specifications/2025.9.1/json"
+  },
+  "jsonschema==4.26.0": {
+    "declaration": "MIT",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/jsonschema/4.26.0/json"
+  },
+  "langchain-core==1.6.4": {
+    "declaration": "MIT",
+    "evidence": "legacy-license-field",
+    "release_url": "https://pypi.org/pypi/langchain-core/1.6.4/json"
+  },
+  "langchain-protocol==0.0.19": {
+    "declaration": "MIT",
+    "evidence": "legacy-license-field",
+    "release_url": "https://pypi.org/pypi/langchain-protocol/0.0.19/json"
+  },
+  "langfuse==4.15.4": {
+    "declaration": "MIT",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/langfuse/4.15.4/json"
+  },
+  "langgraph-checkpoint==4.2.0": {
+    "declaration": "MIT",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/langgraph-checkpoint/4.2.0/json"
+  },
+  "langgraph-prebuilt==1.1.0": {
+    "declaration": "MIT",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/langgraph-prebuilt/1.1.0/json"
+  },
+  "langgraph-sdk==0.4.5": {
+    "declaration": "MIT",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/langgraph-sdk/0.4.5/json"
+  },
+  "langgraph==1.2.12": {
+    "declaration": "MIT",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/langgraph/1.2.12/json"
+  },
+  "langsmith==0.14.0": {
+    "declaration": "MIT",
+    "evidence": "legacy-license-field",
+    "release_url": "https://pypi.org/pypi/langsmith/0.14.0/json"
+  },
+  "librt==0.15.0": {
+    "declaration": "MIT",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/librt/0.15.0/json"
+  },
+  "license-expression==30.4.4": {
+    "declaration": "Apache-2.0",
+    "evidence": "legacy-license-field",
+    "release_url": "https://pypi.org/pypi/license-expression/30.4.4/json"
+  },
+  "lz4==4.4.5": {
+    "declaration": "License :: OSI Approved :: BSD License",
+    "evidence": "classifier-review",
+    "release_url": "https://pypi.org/pypi/lz4/4.4.5/json"
+  },
+  "markdown-it-py==4.2.0": {
+    "declaration": "License :: OSI Approved :: MIT License",
+    "evidence": "classifier-review",
+    "release_url": "https://pypi.org/pypi/markdown-it-py/4.2.0/json"
+  },
+  "mdurl==0.1.2": {
+    "declaration": "License :: OSI Approved :: MIT License",
+    "evidence": "classifier-review",
+    "release_url": "https://pypi.org/pypi/mdurl/0.1.2/json"
+  },
+  "msgpack==1.2.2": {
+    "declaration": "Apache-2.0",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/msgpack/1.2.2/json"
+  },
+  "mypy-extensions==1.1.0": {
+    "declaration": "MIT",
+    "evidence": "upstream-tag-license",
+    "release_url": "https://github.com/python/mypy_extensions/blob/1.1.0/LICENSE"
+  },
+  "mypy==1.20.2": {
+    "declaration": "MIT",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/mypy/1.20.2/json"
+  },
+  "networkx==3.7": {
+    "declaration": "BSD-3-Clause",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/networkx/3.7/json"
+  },
+  "openai==2.54.0": {
+    "declaration": "Apache-2.0",
+    "evidence": "legacy-license-field",
+    "release_url": "https://pypi.org/pypi/openai/2.54.0/json"
+  },
+  "opentelemetry-api==1.44.0": {
+    "declaration": "Apache-2.0",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/opentelemetry-api/1.44.0/json"
+  },
+  "opentelemetry-exporter-otlp-proto-common==1.44.0": {
+    "declaration": "Apache-2.0",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/opentelemetry-exporter-otlp-proto-common/1.44.0/json"
+  },
+  "opentelemetry-exporter-otlp-proto-http==1.44.0": {
+    "declaration": "Apache-2.0",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/opentelemetry-exporter-otlp-proto-http/1.44.0/json"
+  },
+  "opentelemetry-proto==1.44.0": {
+    "declaration": "Apache-2.0",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/opentelemetry-proto/1.44.0/json"
+  },
+  "opentelemetry-sdk==1.44.0": {
+    "declaration": "Apache-2.0",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/opentelemetry-sdk/1.44.0/json"
+  },
+  "opentelemetry-semantic-conventions==0.65b0": {
+    "declaration": "Apache-2.0",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/opentelemetry-semantic-conventions/0.65b0/json"
+  },
+  "orjson==3.12.0": {
+    "declaration": "MPL-2.0 AND (Apache-2.0 OR MIT)",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/orjson/3.12.0/json"
+  },
+  "ormsgpack==1.12.2": {
+    "declaration": "Apache-2.0 OR MIT",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/ormsgpack/1.12.2/json"
+  },
+  "packageurl-python==0.17.6": {
+    "declaration": "MIT",
+    "evidence": "legacy-license-field",
+    "release_url": "https://pypi.org/pypi/packageurl-python/0.17.6/json"
+  },
+  "packaging==26.3": {
+    "declaration": "Apache-2.0 OR BSD-2-Clause",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/packaging/26.3/json"
+  },
+  "pathspec==1.1.1": {
+    "declaration": "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
+    "evidence": "classifier-review",
+    "release_url": "https://pypi.org/pypi/pathspec/1.1.1/json"
+  },
+  "pg8000==1.31.5": {
+    "declaration": "BSD 3-Clause License",
+    "evidence": "legacy-license-field",
+    "release_url": "https://pypi.org/pypi/pg8000/1.31.5/json"
+  },
+  "pip-api==0.0.35": {
+    "declaration": "License :: OSI Approved :: Apache Software License",
+    "evidence": "classifier-review",
+    "release_url": "https://pypi.org/pypi/pip-api/0.0.35/json"
+  },
+  "pip-audit==2.10.1": {
+    "declaration": "License :: OSI Approved :: Apache Software License",
+    "evidence": "classifier-review",
+    "release_url": "https://pypi.org/pypi/pip-audit/2.10.1/json"
+  },
+  "pip-requirements-parser==32.0.1": {
+    "declaration": "MIT",
+    "evidence": "legacy-license-field",
+    "release_url": "https://pypi.org/pypi/pip-requirements-parser/32.0.1/json"
+  },
+  "pip==26.2.1": {
+    "declaration": "MIT",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/pip/26.2.1/json"
+  },
+  "platformdirs==4.11.12": {
+    "declaration": "MIT",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/platformdirs/4.11.12/json"
+  },
+  "pluggy==1.6.0": {
+    "declaration": "MIT",
+    "evidence": "legacy-license-field",
+    "release_url": "https://pypi.org/pypi/pluggy/1.6.0/json"
+  },
+  "protobuf==7.36.2": {
+    "declaration": "3-Clause BSD License",
+    "evidence": "legacy-license-field",
+    "release_url": "https://pypi.org/pypi/protobuf/7.36.2/json"
+  },
+  "py-serializable==2.1.0": {
+    "declaration": "Apache-2.0",
+    "evidence": "legacy-license-field",
+    "release_url": "https://pypi.org/pypi/py-serializable/2.1.0/json"
+  },
+  "pydantic-core==2.46.5": {
+    "declaration": "MIT",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/pydantic-core/2.46.5/json"
+  },
+  "pydantic==2.13.5": {
+    "declaration": "MIT",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/pydantic/2.13.5/json"
+  },
+  "pygments==2.21.0": {
+    "declaration": "BSD-2-Clause",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/pygments/2.21.0/json"
+  },
+  "pymongo==4.18.1": {
+    "declaration": "Apache-2.0",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/pymongo/4.18.1/json"
+  },
+  "pyparsing==3.3.3": {
+    "declaration": "MIT",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/pyparsing/3.3.3/json"
+  },
+  "pytest==9.1.1": {
+    "declaration": "MIT",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/pytest/9.1.1/json"
+  },
+  "python-dateutil==2.9.0.post0": {
+    "declaration": "Dual License",
+    "evidence": "legacy-license-field",
+    "release_url": "https://pypi.org/pypi/python-dateutil/2.9.0.post0/json"
+  },
+  "pytz==2026.3.post1": {
+    "declaration": "MIT",
+    "evidence": "legacy-license-field",
+    "release_url": "https://pypi.org/pypi/pytz/2026.3.post1/json"
+  },
+  "pyyaml==6.0.3": {
+    "declaration": "MIT",
+    "evidence": "legacy-license-field",
+    "release_url": "https://pypi.org/pypi/pyyaml/6.0.3/json"
+  },
+  "rapidfuzz==3.14.6": {
+    "declaration": "MIT",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/rapidfuzz/3.14.6/json"
+  },
+  "referencing==0.37.0": {
+    "declaration": "MIT",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/referencing/0.37.0/json"
+  },
+  "requests-toolbelt==1.0.0": {
+    "declaration": "Apache 2.0",
+    "evidence": "legacy-license-field",
+    "release_url": "https://pypi.org/pypi/requests-toolbelt/1.0.0/json"
+  },
+  "requests==2.34.2": {
+    "declaration": "Apache-2.0",
+    "evidence": "legacy-license-field",
+    "release_url": "https://pypi.org/pypi/requests/2.34.2/json"
+  },
+  "rich==15.0.0": {
+    "declaration": "MIT",
+    "evidence": "legacy-license-field",
+    "release_url": "https://pypi.org/pypi/rich/15.0.0/json"
+  },
+  "rpds-py==2026.6.3": {
+    "declaration": "MIT",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/rpds-py/2026.6.3/json"
+  },
+  "ruff==0.13.3": {
+    "declaration": "License :: OSI Approved :: MIT License",
+    "evidence": "classifier-review",
+    "release_url": "https://pypi.org/pypi/ruff/0.13.3/json"
+  },
+  "scramp==1.4.17": {
+    "declaration": "MIT No Attribution",
+    "evidence": "legacy-license-field",
+    "release_url": "https://pypi.org/pypi/scramp/1.4.17/json"
+  },
+  "six==1.17.0": {
+    "declaration": "MIT",
+    "evidence": "legacy-license-field",
+    "release_url": "https://pypi.org/pypi/six/1.17.0/json"
+  },
+  "sniffio==1.3.1": {
+    "declaration": "MIT OR Apache-2.0",
+    "evidence": "legacy-license-field",
+    "release_url": "https://pypi.org/pypi/sniffio/1.3.1/json"
+  },
+  "sortedcontainers==2.4.0": {
+    "declaration": "Apache 2.0",
+    "evidence": "legacy-license-field",
+    "release_url": "https://pypi.org/pypi/sortedcontainers/2.4.0/json"
+  },
+  "sqlglot==28.10.1": {
+    "declaration": "MIT",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/sqlglot/28.10.1/json"
+  },
+  "starlette==1.7.0": {
+    "declaration": "BSD-3-Clause",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/starlette/1.7.0/json"
+  },
+  "tenacity==9.1.4": {
+    "declaration": "Apache 2.0",
+    "evidence": "legacy-license-field",
+    "release_url": "https://pypi.org/pypi/tenacity/9.1.4/json"
+  },
+  "tomli-w==1.2.0": {
+    "declaration": "License :: OSI Approved :: MIT License",
+    "evidence": "classifier-review",
+    "release_url": "https://pypi.org/pypi/tomli-w/1.2.0/json"
+  },
+  "tomli==2.4.1": {
+    "declaration": "MIT",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/tomli/2.4.1/json"
+  },
+  "tqdm==4.70.1": {
+    "declaration": "MPL-2.0 AND MIT",
+    "evidence": "legacy-license-field",
+    "release_url": "https://pypi.org/pypi/tqdm/4.70.1/json"
+  },
+  "truststore==0.10.4": {
+    "declaration": "MIT",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/truststore/0.10.4/json"
+  },
+  "typing-extensions==4.16.0": {
+    "declaration": "PSF-2.0",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/typing-extensions/4.16.0/json"
+  },
+  "typing-inspection==0.4.4": {
+    "declaration": "MIT",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/typing-inspection/0.4.4/json"
+  },
+  "urllib3==2.8.0": {
+    "declaration": "MIT",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/urllib3/2.8.0/json"
+  },
+  "uuid-utils==0.17.1": {
+    "declaration": "BSD-3-Clause",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/uuid-utils/0.17.1/json"
+  },
+  "uvicorn==0.53.0": {
+    "declaration": "BSD-3-Clause",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/uvicorn/0.53.0/json"
+  },
+  "websockets==16.1.1": {
+    "declaration": "BSD-3-Clause",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/websockets/16.1.1/json"
+  },
+  "wrapt==2.4.1": {
+    "declaration": "BSD-2-Clause",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/wrapt/2.4.1/json"
+  },
+  "xxhash==4.0.1": {
+    "declaration": "BSD-2-Clause",
+    "evidence": "legacy-license-field",
+    "release_url": "https://pypi.org/pypi/xxhash/4.0.1/json"
+  },
+  "zstandard==0.25.0": {
+    "declaration": "BSD-3-Clause",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/zstandard/0.25.0/json"
+  }
+}

@@ -9,10 +9,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 REQUIRED = (
     "README.md",
+    "LICENSE",
     "TECHNICAL_IMPLEMENTATION.md",
     "ARCHITECTURE_RESEARCH.md",
     "TODO.md",
     "AGENTS.md",
+    "supply-chain/licenses.json",
     "CLAUDE.md",
     ".env.example",
     ".githooks/pre-commit",
