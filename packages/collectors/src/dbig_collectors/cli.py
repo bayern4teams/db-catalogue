@@ -7,14 +7,29 @@ from pathlib import Path
 import click
 from dbig_contracts.artifact import read_artifact
 from dbig_contracts.scan import SignedScanRequest
-from dbig_contracts.security import secret_from_env
+from dbig_contracts.security import SecretReferenceError, secret_from_env
 
 from .config import load_config
 from .runtime import collect
 from .scan import accept_scan, process_next
 
 
-@click.group()
+class SecretAwareGroup(click.Group):
+    """Report a missing or blank secret reference as a command error, not a traceback.
+
+    Converting at the group covers every command in it, including ones added later. Only
+    `SecretReferenceError` is converted, so validation failures and programming errors keep their
+    full traceback.
+    """
+
+    def invoke(self, ctx: click.Context) -> object:
+        try:
+            return super().invoke(ctx)
+        except SecretReferenceError as error:
+            raise click.ClickException(str(error)) from error
+
+
+@click.group(cls=SecretAwareGroup)
 def main() -> None:
     pass
 
@@ -33,14 +48,9 @@ def collect_command(config_path: Path, out: Path) -> None:
 @click.argument("path", type=click.Path(path_type=Path, exists=True))
 @click.option("--key-env", required=True, help="Environment variable holding the signing key")
 def validate_bundle(path: Path, key_env: str) -> None:
-    try:
-        key = secret_from_env(key_env, purpose="collector bundle signature verification")
-    except ValueError as error:
-        # An operator typed this reference, so report it as a command error, not a traceback.
-        raise click.ClickException(str(error)) from error
-    manifest, _ = read_artifact(
-        path, signing_key=key.encode(), require_signature=True
-    )
+    # SecretAwareGroup converts a bad `--key-env` into a command error.
+    key = secret_from_env(key_env, purpose="collector bundle signature verification")
+    manifest, _ = read_artifact(path, signing_key=key.encode(), require_signature=True)
     click.echo(manifest.model_dump_json())
 
 

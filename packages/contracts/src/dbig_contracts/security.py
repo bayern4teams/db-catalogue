@@ -22,6 +22,15 @@ def private_base_url(value: str) -> str:
     return value.rstrip("/")
 
 
+class SecretReferenceError(ValueError):
+    """A secret environment reference is missing, blank, unset or empty.
+
+    Subclasses `ValueError` so existing callers and tests that expect a `ValueError` keep working,
+    while giving command line entry points a precise type to convert into a clean command error
+    without also swallowing validation failures or programming errors.
+    """
+
+
 def secret_from_env(reference: str | None, *, purpose: str) -> str:
     """Resolve a secret by environment-variable reference, failing closed.
 
@@ -32,10 +41,16 @@ def secret_from_env(reference: str | None, *, purpose: str) -> str:
     operator can fix it, and never contains the secret's value.
     """
     if reference is None or not reference.strip():
-        raise ValueError(f"{purpose} requires a non-empty environment variable reference")
+        raise SecretReferenceError(
+            f"{purpose} requires a non-empty environment variable reference"
+        )
     value = os.environ.get(reference)
     if value is None:
-        raise ValueError(f"{purpose} reads environment variable {reference}, which is not set")
+        raise SecretReferenceError(
+            f"{purpose} reads environment variable {reference}, which is not set"
+        )
     if not value.strip():
-        raise ValueError(f"environment variable {reference} for {purpose} is empty")
+        raise SecretReferenceError(
+            f"environment variable {reference} for {purpose} is empty"
+        )
     return value

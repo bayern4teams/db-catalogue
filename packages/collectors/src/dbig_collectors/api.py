@@ -1,10 +1,10 @@
 """Private collector HTTP adapter; all requests pass through local scan policy."""
 
 import hmac
-import os
 from pathlib import Path
 
 from dbig_contracts.scan import ScanReceipt, SignedScanRequest
+from dbig_contracts.security import secret_from_env
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 
@@ -13,9 +13,7 @@ from .scan import accept_scan, scan_status
 
 
 def create_app(config: SourceConfig, queue_path: Path) -> FastAPI:
-    token = os.getenv(config.http_token_env or "")
-    if token is None or not token.strip():
-        raise ValueError("collector HTTP token reference is required")
+    token = secret_from_env(config.http_token_env, purpose="collector HTTP bearer token")
     expected = "Bearer " + token
     app = FastAPI()
 

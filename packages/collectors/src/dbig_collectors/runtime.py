@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import ssl
 from collections import defaultdict
 from importlib.metadata import version
@@ -531,7 +530,9 @@ def collect(config: SourceConfig, destination: Path) -> None:
     )
     if not isinstance(connection, dict):
         raise ValueError("connection reference must contain a JSON object")
-    signing_key = os.environ[config.signing_key_env].encode("utf-8")
+    signing_key = secret_from_env(
+        config.signing_key_env, purpose="collector bundle signing"
+    ).encode("utf-8")
     if len(signing_key) < 32:
         raise ValueError("signing key must contain at least 32 bytes")
     budget = Budget(config.max_queries)

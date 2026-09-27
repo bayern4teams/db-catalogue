@@ -224,3 +224,154 @@ def test_validate_bundle_refuses_a_missing_path(tmp_path: Path) -> None:
         collector_main, ["validate-bundle", str(tmp_path / "absent"), "--key-env", "BUNDLE_KEY"]
     )
     assert result.exit_code != 0
+
+
+# --- secret reference errors at every CLI boundary ------------------------------------
+#
+# Each package's Click group converts `SecretReferenceError` into a command error, so a missing
+# or blank secret reference reports a named message instead of a traceback. Only that type is
+# converted: other failures keep their full traceback, which the last test here pins.
+
+
+def names_the_variable(result: Result, variable: str) -> bool:
+    return (
+        result.exit_code != 0
+        and variable in result.stderr
+        and not isinstance(result.exception, KeyError)
+    )
+
+
+def test_builder_assemble_reports_an_unset_signing_key_reference(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("BUNDLE_KEY", BUNDLE_KEY)
+    bundle = tmp_path / "bundle"
+    source_bundle(bundle)
+    config = tmp_path / "builder.toml"
+    config.write_text('[builder.signing_keys]\ntest = "ABSENT_BUILDER_KEY"\n', encoding="utf-8")
+    monkeypatch.delenv("ABSENT_BUILDER_KEY", raising=False)
+    result = CliRunner().invoke(
+        builder_main,
+        [
+            "assemble",
+            "--config",
+            str(config),
+            "--bundle",
+            str(bundle),
+            "--out",
+            str(tmp_path / "o"),
+        ],
+    )
+    assert names_the_variable(result, "ABSENT_BUILDER_KEY")
+    assert not (tmp_path / "o").exists(), "a refused assemble must publish no snapshot"
+
+
+def test_collector_collect_reports_an_unset_connection_reference(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    config = tmp_path / "collector.toml"
+    config.write_text(
+        "[source]\n"
+        'source_id = "site-a"\n'
+        'kind = "postgresql"\n'
+        'connection_env = "ABSENT_CONNECTION"\n'
+        'signing_key_env = "ABSENT_SIGNING_KEY"\n'
+        'signing_key_id = "test"\n'
+        'namespaces = ["public"]\n',
+        encoding="utf-8",
+    )
+    monkeypatch.delenv("ABSENT_CONNECTION", raising=False)
+    result = CliRunner().invoke(
+        collector_main,
+        ["collect", "--config", str(config), "--out", str(tmp_path / "bundle")],
+    )
+    assert names_the_variable(result, "ABSENT_CONNECTION")
+    assert not (tmp_path / "bundle").exists(), "a refused collect must publish no bundle"
+
+
+def test_collector_serve_reports_a_missing_http_token_reference(
+    tmp_path: Path,
+) -> None:
+    """`http_token_env` is optional in config, so serving without one must be refused."""
+    config = tmp_path / "collector.toml"
+    config.write_text(
+        "[source]\n"
+        'source_id = "site-a"\n'
+        'kind = "postgresql"\n'
+        'connection_env = "ABSENT_CONNECTION"\n'
+        'signing_key_env = "ABSENT_SIGNING_KEY"\n'
+        'signing_key_id = "test"\n'
+        'namespaces = ["public"]\n',
+        encoding="utf-8",
+    )
+    result = CliRunner().invoke(
+        collector_main,
+        [
+            "serve",
+            "--config",
+            str(config),
+            "--queue-db",
+            str(tmp_path / "queue.sqlite3"),
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "8099",
+        ],
+    )
+    assert result.exit_code != 0
+    assert "collector HTTP bearer token" in result.stderr
+    assert not isinstance(result.exception, KeyError)
+
+
+def test_planner_serve_reports_an_unset_api_token_reference(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from dbig_planner.cli import main as planner_main
+
+    config = tmp_path / "planner.toml"
+    config.write_text(
+        f'[planner]\ngraph_dir = "{tmp_path / "graph"}"\napi_key_env = "ABSENT_PLANNER_TOKEN"\n',
+        encoding="utf-8",
+    )
+    monkeypatch.delenv("ABSENT_PLANNER_TOKEN", raising=False)
+    result = CliRunner().invoke(
+        planner_main,
+        ["serve", "--config", str(config), "--host", "127.0.0.1", "--port", "8098"],
+    )
+    assert names_the_variable(result, "ABSENT_PLANNER_TOKEN")
+
+
+def test_requester_serve_reports_an_unset_api_token_reference(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from dbig_requester.cli import main as requester_main
+
+    config = tmp_path / "requester.toml"
+    config.write_text(
+        "[requester]\n"
+        f'snapshot_dir = "{tmp_path / "snapshot"}"\n'
+        f'state_dir = "{tmp_path / "state"}"\n'
+        'api_key_env = "ABSENT_REQUESTER_TOKEN"\n',
+        encoding="utf-8",
+    )
+    monkeypatch.delenv("ABSENT_REQUESTER_TOKEN", raising=False)
+    result = CliRunner().invoke(
+        requester_main,
+        ["serve", "--config", str(config), "--host", "127.0.0.1", "--port", "8097"],
+    )
+    assert names_the_variable(result, "ABSENT_REQUESTER_TOKEN")
+
+
+def test_a_non_secret_failure_is_not_converted_to_a_command_error(
+    artifacts: dict[str, Path],
+) -> None:
+    """The group converts only SecretReferenceError, so other faults keep their traceback.
+
+    `validate-graph` on a signed bundle fails with `signature key unavailable`, an ordinary
+    ValueError. Converting every ValueError would hide validation and programming errors behind
+    a tidy one-line message.
+    """
+    result = CliRunner().invoke(builder_main, ["validate-graph", str(artifacts["bundle"])])
+    assert result.exit_code != 0
+    assert isinstance(result.exception, ValueError)
+    assert not isinstance(result.exception, SystemExit)

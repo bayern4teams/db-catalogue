@@ -6,13 +6,29 @@ from pathlib import Path
 import click
 from dbig_contracts.artifact import read_artifact
 from dbig_contracts.models import Edge
+from dbig_contracts.security import SecretReferenceError
 
 from .builder import assemble
 from .config import load_config
 from .state import assemble_incremental
 
 
-@click.group()
+class SecretAwareGroup(click.Group):
+    """Report a missing or blank secret reference as a command error, not a traceback.
+
+    Converting at the group covers every command in it, including ones added later. Only
+    `SecretReferenceError` is converted, so validation failures and programming errors keep their
+    full traceback.
+    """
+
+    def invoke(self, ctx: click.Context) -> object:
+        try:
+            return super().invoke(ctx)
+        except SecretReferenceError as error:
+            raise click.ClickException(str(error)) from error
+
+
+@click.group(cls=SecretAwareGroup)
 def main() -> None:
     pass
 
