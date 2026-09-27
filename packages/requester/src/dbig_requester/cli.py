@@ -5,8 +5,8 @@ from ipaddress import ip_address
 from pathlib import Path
 
 import click
+from dbig_contracts.errors import OperatorError
 from dbig_contracts.scan import ScanRequest
-from dbig_contracts.security import SecretReferenceError
 
 from .answer import answer_question
 from .config import load_config
@@ -15,17 +15,18 @@ from .search import SearchRequest, index_snapshot, search
 
 
 class SecretAwareGroup(click.Group):
-    """Report a missing or blank secret reference as a command error, not a traceback.
+    """Report an operator-fixable failure as a command error, not a traceback.
 
     Converting at the group covers every command in it, including ones added later. Only
-    `SecretReferenceError` is converted, so validation failures and programming errors keep their
-    full traceback.
+    `OperatorError` is converted, which covers a missing secret reference, an unknown identifier
+    and state that has not been built yet. An ordinary `ValueError` keeps its full traceback, so
+    a validation failure or a genuine bug is never dressed up as something an operator can fix.
     """
 
     def invoke(self, ctx: click.Context) -> object:
         try:
             return super().invoke(ctx)
-        except SecretReferenceError as error:
+        except OperatorError as error:
             raise click.ClickException(str(error)) from error
 
 

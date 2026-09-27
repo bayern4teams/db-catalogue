@@ -4,6 +4,8 @@ import os
 from ipaddress import ip_address
 from urllib.parse import urlsplit
 
+from .errors import OperatorError
+
 
 def private_base_url(value: str) -> str:
     parsed = urlsplit(value)
@@ -22,10 +24,11 @@ def private_base_url(value: str) -> str:
     return value.rstrip("/")
 
 
-class SecretReferenceError(ValueError):
+class SecretReferenceError(OperatorError):
     """A secret environment reference is missing, blank, unset or empty.
 
-    Subclasses `ValueError` so existing callers and tests that expect a `ValueError` keep working,
+    Subclasses `OperatorError`, and so still `ValueError`, so existing callers and tests keep
+    working,
     while giving command line entry points a precise type to convert into a clean command error
     without also swallowing validation failures or programming errors.
     """

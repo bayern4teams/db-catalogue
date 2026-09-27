@@ -10,6 +10,7 @@ from itertools import islice
 from pathlib import Path
 
 import networkx as nx
+from dbig_contracts.errors import OperatorError
 from pydantic import BaseModel, ConfigDict, Field
 
 from .config import PlannerConfig
@@ -56,7 +57,15 @@ def find_paths(directory: Path, request: PathRequest, kind: str, config: Planner
             request.from_id in fields or request.to_id in fields
         ):
             raise ValueError("MIXED_LINEAGE_ENTITY_KINDS")
-        raise ValueError("UNKNOWN_OBJECT")
+        missing = ", ".join(
+            identifier
+            for identifier in (request.from_id, request.to_id)
+            if identifier not in objects
+        )
+        raise OperatorError(
+            f"UNKNOWN_OBJECT: no object named {missing} in this graph; check the identifier "
+            "or rebuild the graph from a current snapshot"
+        )
     if request.from_id == request.to_id:
         raise ValueError("SAME_OBJECT")
     max_hops = min(request.max_hops or config.max_hops, config.max_hops)

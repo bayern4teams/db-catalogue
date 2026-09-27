@@ -12,6 +12,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from dbig_contracts.artifact import read_artifact
+from dbig_contracts.errors import OperatorError
 from dbig_contracts.models import Edge, Field, Object
 from pydantic import BaseModel, ConfigDict
 from pydantic import Field as PydanticField
@@ -109,7 +110,15 @@ def index_snapshot(snapshot: Path, state: Path) -> str:
 
 
 def search(state: Path, request: SearchRequest) -> dict:
-    with closing(sqlite3.connect(_database(state))) as connection:
+    database = _database(state)
+    if not database.is_file():
+        # Searching before indexing is an ordinary first-run mistake. Without this the sqlite
+        # driver reports "unable to open database file" as a traceback, which tells the operator
+        # neither which path was tried nor what to do about it.
+        raise OperatorError(
+            f"no search index at {database}; run `dbig-requester index` against the snapshot first"
+        )
+    with closing(sqlite3.connect(database)) as connection:
         connection.row_factory = sqlite3.Row
         metadata = dict(connection.execute("SELECT key,value FROM meta"))
         snapshot = Path(metadata["snapshot"])

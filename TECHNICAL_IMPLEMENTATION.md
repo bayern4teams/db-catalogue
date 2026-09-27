@@ -257,6 +257,27 @@ Exit codes: 0 complete success; 2 invalid invocation/config; 3 security/integrit
 
 Snapshot node rows validate strictly. `nodes.jsonl` carries exactly three record types, so it validates against the discriminated union `dbig_contracts.models.SnapshotNode` (`Source | Object | Field`, discriminated on `record_type`) rather than the permissive base `Record`, and `schemas/ir-v1/node.schema.json` publishes that contract as a `oneOf` with a `record_type` discriminator. `dbig_contracts.artifact.validate_row` is the single gate both the write and read paths use, so an unknown `record_type` or a row missing its own type's required fields is refused on publication and on read. `runs.jsonl` deliberately keeps no strict model and stays a base `Record`. The earlier `invalid snapshot node type` check in the referential pass was removed because the union makes it unreachable.
 
+### 12a. Operator errors at the command surface (settled 2026-09-27)
+
+`dbig_contracts.errors.OperatorError` is the one exception type each package's Click group
+converts into a clean command error. It means a failure the person running the command can fix
+from the message alone: a missing secret reference, an unknown identifier, state that has not
+been built yet. `SecretReferenceError` subclasses it, so the single conversion added earlier for
+secrets now covers the whole class. Catching a bare `ValueError` stays rejected, because it
+would dress a pydantic validation failure or a genuine bug as something an operator can fix; a
+test pins that `validate-graph`'s ordinary `signature key unavailable` failure keeps its full
+traceback, which is what keeps the distinction honest.
+
+Two defects were found by adding command coverage rather than by review. `join-paths` and
+`lineage-paths` raised `ValueError("UNKNOWN_OBJECT")`, which reached the operator as a traceback
+naming neither the identifier nor the remedy; and `search` before `index` raised the sqlite
+driver's "unable to open database file". Both now name the cause and the next step.
+
+The HTTP surface follows the private-network decision: the collector, planner and requester
+`serve` commands each refuse a non-loopback bind address and refuse a hostname outright rather
+than resolving it, since a name could resolve off-host. That behaviour already existed and had
+no test; it now has coverage for each command across several non-loopback addresses.
+
 ## 13. Security and operations
 
 Secret references resolve through one function, `dbig_contracts.security.secret_from_env`. Components never read a credential directly: validated configuration holds the *name* of an environment variable, and this resolver refuses a missing or blank reference, an unset variable, and a variable set to whitespace, so a wrong reference can never degrade into an unsigned bundle, an unverified scan request, or an unauthenticated API. The raised `ValueError` names the variable and the purpose so an operator can fix it, and never contains the secret's value; the resolved value is returned byte-for-byte because signing keys are byte-sensitive. Every secret call site uses it: builder config and reviewer, collector runtime, scan intake and `validate-bundle`, requester answer, scan dispatch and API, and planner API. The resolver raises `SecretReferenceError`, which subclasses `ValueError` so existing callers keep working. Each package's Click group is a `SecretAwareGroup` that converts only that type into a command error, so any command in any of the four CLIs reports a named message rather than a traceback when a secret reference is missing, blank, unset or empty. Only that type is converted: an ordinary `ValueError`, such as `validate-graph`'s `signature key unavailable`, keeps its full traceback, so validation and programming errors are not hidden behind a tidy message. The converter is duplicated once per package rather than shared, because §17 forbids the packages importing each other and `dbig_contracts` must not depend on Click.
