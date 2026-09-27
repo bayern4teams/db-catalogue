@@ -238,6 +238,15 @@ Update this file when work starts, a fact changes, a decision is needed, a check
 
 ## 13. Verification record
 
+### CI runs for the 2026-09-27 decision and work slice
+
+- [x] [Run 36316574311](https://github.com/bayern4teams/db-catalogue/actions/runs/36316574311) on `709e1cf`, the seven recorded product decisions: success on all jobs.
+- [x] [Run 36317451085](https://github.com/bayern4teams/db-catalogue/actions/runs/36317451085) on `dde1109`, the identity and canonical encoding contract: **failed** on `source-integration`, caused by the three new rename tests sharing a namespace with the tests above them and exhausting the MongoDB query budget. Recorded here rather than elsewhere because a failed run is evidence too.
+- [x] [Run 36317801344](https://github.com/bayern4teams/db-catalogue/actions/runs/36317801344) on `8c80f14`, golden artifacts plus the namespace fix: success on all jobs including `source-integration`, which is the first run in which the three rename tests actually executed against `postgres:16.15`, `clickhouse-server:25.8.33.6` and `mongo:7.0.41` and passed.
+- [x] [Run 36318409086](https://github.com/bayern4teams/db-catalogue/actions/runs/36318409086) on `05833ae`, CLI command coverage and the two defect fixes: success on all jobs.
+- [x] [Run 36318604476](https://github.com/bayern4teams/db-catalogue/actions/runs/36318604476) on `dea1205`, the threat model: success on all jobs. All four approved work items are now committed, pushed and confirmed by an actual run.
+
+
 - [x] Hook path installed (`git config --local --get core.hooksPath` -> `.githooks`); `python scripts/graph_sync.py --check-tools` found all tools.
 - [x] Manual three-tool graph refresh passed outside filesystem sandbox on 2026-09-23. Graphify 114 nodes/125 edges, Graft check OK, CBM 152 nodes/206 edges. CBM CLI cannot create its coordination endpoint inside the restricted sandbox; actual local hooks/CI run with normal local permissions.
 - [x] `python scripts/ci_check.py`, `python -m compileall -q scripts`, and `git diff --check` passed locally.
