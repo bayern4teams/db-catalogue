@@ -126,6 +126,44 @@ class Edge(Record):
     confidence: float | None = None
 
 
+class Profile(Record):
+    """A bounded statistical description of one field, carrying its own provenance.
+
+    Every measure is optional, because a source may expose some and not others, and a missing
+    measure must stay distinguishable from a measured zero. `method` names where the numbers came
+    from so a reader can judge them: a planner statistic is an estimate that may be stale, and a
+    sample is bounded and possibly biased. No raw value ever appears here.
+    """
+
+    record_type: Literal["profile"] = "profile"
+    field_id: str = PydanticField(min_length=1)
+    object_id: str = PydanticField(min_length=1)
+    # How these numbers were obtained. Source statistics read no user data at all, which is why
+    # they are allowed under the metadata-only default; a sample reads data and is opt-in.
+    method: Literal["source_statistic", "sample"]
+    # Freshness matters for a planner statistic: unchanged DDL does not mean unchanged data, and
+    # a statistic is only as good as the last analyze.
+    stats_updated_at: datetime | None = None
+    sample_count: int | None = PydanticField(default=None, ge=0)
+    null_fraction: float | None = PydanticField(default=None, ge=0.0, le=1.0)
+    # Absolute estimated distinct values. A source that reports a ratio is converted here, and
+    # `distinct_is_ratio_derived` records that the absolute number came from a row-count estimate
+    # and inherits its error.
+    distinct_estimate: float | None = PydanticField(default=None, ge=0.0)
+    distinct_is_ratio_derived: bool = False
+    # Distinct values per row, in [0, 1]. A value near 1 is the uniqueness cue that makes a field
+    # a plausible parent key in reference inference.
+    uniqueness: float | None = PydanticField(default=None, ge=0.0, le=1.0)
+    average_width_bytes: int | None = PydanticField(default=None, ge=0)
+    # Set when policy excludes this field from value-based comparison.
+    value_comparison_excluded: bool = False
+
+    @field_validator("stats_updated_at")
+    @classmethod
+    def aware_stats_time(cls, value: datetime | None) -> datetime | None:
+        return Record.aware_time(value) if value is not None else None
+
+
 class Diagnostic(Record):
     """A machine-readable reason the collector could not carry something into the bundle.
 

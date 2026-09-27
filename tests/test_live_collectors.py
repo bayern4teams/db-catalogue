@@ -87,6 +87,15 @@ def test_postgresql_16_catalog_and_read_only_role():
     partition = next(item for item in records["objects.jsonl"] if item.name == "events_p0")
     assert partition.parent_id == events.id
     assert partition.attributes["is_partition"] is True
+    # The fixture ANALYZEs customers, so the planner has statistics for it. This is the only
+    # place profiling is checked against a real server rather than a fake cursor.
+    customer_fields = {
+        item.id for item in records["fields.jsonl"] if item.object_id == customers.id
+    }
+    profiles = [item for item in records["profiles.jsonl"] if item.field_id in customer_fields]
+    assert profiles, "pg_stats must yield a profile for an analyzed table"
+    assert profiles[0].method == "source_statistic"
+    assert profiles[0].uniqueness == 1.0, "a single-row primary key is fully unique"
 
 
 def test_clickhouse_25_8_system_tables():

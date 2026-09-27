@@ -22,7 +22,16 @@ from pathlib import Path
 from dbig_contracts import artifact as artifact_module
 from dbig_contracts.artifact import write_artifact
 from dbig_contracts.ids import stable_id
-from dbig_contracts.models import Diagnostic, Edge, Evidence, Field, Object, Record, Source
+from dbig_contracts.models import (
+    Diagnostic,
+    Edge,
+    Evidence,
+    Field,
+    Object,
+    Profile,
+    Record,
+    Source,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 GOLDEN = ROOT / "tests" / "golden" / "ir-v1"
@@ -70,6 +79,20 @@ def bundle_tables() -> dict[str, list[Record]]:
         "sources.jsonl": [source],
         "objects.jsonl": [customers],
         "fields.jsonl": [identifier],
+        "profiles.jsonl": [
+            Profile(
+                id=stable_id(SOURCE_ID, "profile", f"{identifier.id}:source_statistic"),
+                field_id=identifier.id,
+                object_id=customers.id,
+                method="source_statistic",
+                null_fraction=0.0,
+                distinct_estimate=100.0,
+                distinct_is_ratio_derived=True,
+                uniqueness=1.0,
+                average_width_bytes=4,
+                **common,
+            )
+        ],
         "diagnostics.jsonl": [
             Diagnostic(
                 id=stable_id(SOURCE_ID, "diagnostic", "public:legacy_view"),

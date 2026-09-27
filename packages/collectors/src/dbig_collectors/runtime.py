@@ -13,7 +13,7 @@ from uuid import uuid4
 
 from dbig_contracts.artifact import write_artifact
 from dbig_contracts.ids import stable_id
-from dbig_contracts.models import Field, Object, Record, Source, utc_now
+from dbig_contracts.models import Field, Object, Profile, Record, Source, utc_now
 from dbig_contracts.security import secret_from_env
 
 from .config import SourceConfig
@@ -37,6 +37,107 @@ def _common(config: SourceConfig) -> dict[str, Any]:
         "collector_version": version("dbig-collectors"),
         "provenance": "source-catalog",
     }
+
+
+def _profile_postgresql(
+    cursor: Any,
+    config: SourceConfig,
+    budget: Budget,
+    tables: dict[str, list[Record]],
+    object_rows: list[Any],
+    field_rows: list[Any],
+    common: dict[str, Any],
+) -> None:
+    """Profile fields from planner statistics, reading no user data.
+
+    `pg_stats` exposes what the planner already computed, so this stays inside the metadata-only
+    default: no row is read and no value is sampled. `most_common_vals` and histogram bounds are
+    deliberately not selected, because those columns contain real values.
+
+    The catalogue keys a field by `oid:attnum` while `pg_stats` keys by schema, table and column
+    name, so the two are joined here on the names already discovered.
+    """
+    identity = {oid: (schema, name) for oid, schema, name, *_ in object_rows}
+    by_name: dict[tuple[str, str, str], tuple[str, str]] = {}
+    for oid, attnum, name, *_ in field_rows:
+        if oid not in identity:
+            continue
+        schema, table = identity[oid]
+        native = f"{oid}:{attnum}"
+        by_name[(schema, table, name)] = (
+            stable_id(config.source_id, "field", native),
+            stable_id(config.source_id, "object", str(oid)),
+        )
+    if not by_name:
+        return
+    placeholders = ",".join(["%s"] * len(config.namespaces))
+    budget.charge()
+    # Only placeholder tokens are interpolated; schema names remain bound values.
+    cursor.execute(
+        "SELECT s.schemaname, s.tablename, s.attname, s.null_frac, s.n_distinct, "  # noqa: S608
+        "s.avg_width, a.last_analyze, a.last_autoanalyze, c.reltuples "
+        "FROM pg_catalog.pg_stats s "
+        "JOIN pg_catalog.pg_class c ON c.relname = s.tablename "
+        "JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace "
+        "AND n.nspname = s.schemaname "
+        "LEFT JOIN pg_catalog.pg_stat_all_tables a ON a.relid = c.oid "
+        f"WHERE s.schemaname IN ({placeholders}) ORDER BY s.schemaname, s.tablename, s.attname "
+        "LIMIT %s",
+        (*config.namespaces, config.max_fields + 1),
+    )
+    stat_rows = cursor.fetchall()
+    if len(stat_rows) > config.max_fields:
+        raise RuntimeError("BUDGET_EXHAUSTED")
+    for schema, table, column, null_frac, n_distinct, width, analyzed, auto, reltuples in stat_rows:
+        target = by_name.get((schema, table, column))
+        if target is None:
+            continue
+        field_id, object_id = target
+        distinct, ratio_derived, uniqueness = _distinct_from_pg(n_distinct, reltuples)
+        tables["profiles.jsonl"].append(
+            Profile(
+                id=stable_id(config.source_id, "profile", f"{field_id}:source_statistic"),
+                field_id=field_id,
+                object_id=object_id,
+                method="source_statistic",
+                stats_updated_at=_latest(analyzed, auto),
+                null_fraction=min(max(float(null_frac), 0.0), 1.0)
+                if null_frac is not None
+                else None,
+                distinct_estimate=distinct,
+                distinct_is_ratio_derived=ratio_derived,
+                uniqueness=uniqueness,
+                average_width_bytes=int(width) if width is not None and width >= 0 else None,
+                **common,
+            )
+        )
+
+
+def _distinct_from_pg(
+    n_distinct: float | None, reltuples: float | None
+) -> tuple[float | None, bool, float | None]:
+    """Interpret `pg_stats.n_distinct`, whose sign changes its meaning.
+
+    A positive value is an absolute estimated count. A negative value is the negative of the
+    distinct-to-row ratio, which PostgreSQL uses when distinctness scales with table size. Zero
+    means unknown. Reading a negative value as a count would report a nonsense field, so the two
+    cases are separated here and the ratio-derived case is flagged, since converting it to an
+    absolute count multiplies in the row-count estimate's own error.
+    """
+    if n_distinct is None or n_distinct == 0:
+        return None, False, None
+    if n_distinct > 0:
+        rows = float(reltuples) if reltuples is not None and reltuples > 0 else None
+        uniqueness = min(n_distinct / rows, 1.0) if rows else None
+        return float(n_distinct), False, uniqueness
+    ratio = min(-float(n_distinct), 1.0)
+    rows = float(reltuples) if reltuples is not None and reltuples > 0 else None
+    return (ratio * rows if rows else None), rows is not None, ratio
+
+
+def _latest(*values: Any) -> Any:
+    present = [value for value in values if value is not None]
+    return max(present) if present else None
 
 
 def discover_postgresql(
@@ -144,6 +245,7 @@ def discover_postgresql(
                         **common,
                     )
                 )
+            _profile_postgresql(cursor, config, budget, tables, rows, field_rows, common)
             budget.charge()
             cursor.execute(
                 "SELECT oid, conrelid, confrelid, contype, conkey, confkey "

@@ -24,6 +24,7 @@ from .models import (
     FileEntry,
     Manifest,
     Object,
+    Profile,
     Record,
     Signature,
     SnapshotNode,
@@ -49,6 +50,7 @@ MODELS: dict[str, type[Record]] = {
     "edges.jsonl": Edge,
     "evidence.jsonl": Evidence,
     "diagnostics.jsonl": Diagnostic,
+    "profiles.jsonl": Profile,
 }
 # `nodes.jsonl` carries three record types, so it validates against the discriminated union
 # rather than one model. `runs.jsonl` intentionally has no entry and stays a base `Record`.

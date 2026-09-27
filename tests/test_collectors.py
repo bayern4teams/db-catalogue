@@ -31,20 +31,34 @@ def config(kind: str = "postgresql") -> SourceConfig:
 
 
 class PgCursor:
+    """A fake that answers by which catalog it was asked about, not by call order.
+
+    An index-based fake silently mis-answers as soon as a query is added between two others,
+    which is exactly what happened when statistics profiling was introduced.
+    """
+
+    objects = [(42, "public", "orders", "r", 12.5, False, None)]
+    fields = [(42, 1, "id", "integer", True)]
+    constraints = [(99, 42, 42, "p", [1], None)]
+    # schemaname, tablename, attname, null_frac, n_distinct, avg_width, analyze, auto, reltuples
+    stats = [("public", "orders", "id", 0.25, -1.0, 4, None, None, 12.5)]
+
     def __init__(self):
         self.calls = []
-        self.index = 0
+        self.last = ""
 
     def execute(self, query, params=()):
         self.calls.append((query, params))
+        self.last = query
 
     def fetchall(self):
-        self.index += 1
-        if self.index == 1:
-            return [(42, "public", "orders", "r", 12.5, False, None)]
-        if self.index == 2:
-            return [(42, 1, "id", "integer", True)]
-        return [(99, 42, 42, "p", [1], None)]
+        if "pg_stats" in self.last:
+            return self.stats
+        if "pg_constraint" in self.last:
+            return self.constraints
+        if "pg_attribute" in self.last:
+            return self.fields
+        return self.objects
 
     def close(self):
         pass
@@ -67,7 +81,7 @@ class PgConnection:
 
 def test_postgres_catalog_only_and_stable_ids():
     connection = PgConnection()
-    records = discover_postgresql(connection, config(), Budget(3))
+    records = discover_postgresql(connection, config(), Budget(4))
     assert connection.rolled_back
     assert connection.fake_cursor.calls[0][0] == "SET TRANSACTION READ ONLY"
     assert records["fields.jsonl"][0].object_id == records["objects.jsonl"][0].id
@@ -79,18 +93,19 @@ def test_postgres_catalog_only_and_stable_ids():
 
 def test_postgres_view_definition_is_hashed_without_literals():
     class ViewCursor(PgCursor):
+        objects = [(42, "public", "orders_view", "v", -1.0, False, None)]
+        definitions = [(42, "SELECT * FROM orders WHERE token = 'canary-secret'")]
+        constraints = []
+        stats = []
+
         def fetchall(self):
-            self.index += 1
-            return {
-                1: [(42, "public", "orders_view", "v", -1.0, False, None)],
-                2: [(42, "SELECT * FROM orders WHERE token = 'canary-secret'")],
-                3: [(42, 1, "id", "integer", True)],
-                4: [],
-            }[self.index]
+            if "pg_get_viewdef" in self.last:
+                return self.definitions
+            return super().fetchall()
 
     connection = PgConnection()
     connection.fake_cursor = ViewCursor()
-    records = discover_postgresql(connection, config(), Budget(4))
+    records = discover_postgresql(connection, config(), Budget(5))
     attributes = records["objects.jsonl"][0].attributes
     assert attributes["view_definition_available"] is True
     assert "row_count_estimate" not in attributes
@@ -100,22 +115,24 @@ def test_postgres_view_definition_is_hashed_without_literals():
 
 def test_postgres_partitions_link_only_to_visible_parent():
     class PartitionCursor(PgCursor):
+        fields = []
+        constraints = []
+        stats = []
+
         def __init__(self, visible_parent):
             super().__init__()
             self.visible_parent = visible_parent
 
-        def fetchall(self):
-            self.index += 1
-            if self.index == 1:
-                rows = [(43, "public", "events_p0", "r", -1.0, True, 42)]
-                if self.visible_parent:
-                    rows.insert(0, (42, "public", "events", "p", -1.0, False, None))
-                return rows
-            return []
+        @property
+        def objects(self):
+            rows = [(43, "public", "events_p0", "r", -1.0, True, 42)]
+            if self.visible_parent:
+                rows.insert(0, (42, "public", "events", "p", -1.0, False, None))
+            return rows
 
     connection = PgConnection()
     connection.fake_cursor = PartitionCursor(True)
-    records = discover_postgresql(connection, config(), Budget(3))
+    records = discover_postgresql(connection, config(), Budget(4))
     parent, child = records["objects.jsonl"]
     assert child.parent_id == parent.id
     assert child.attributes["is_partition"] is True
@@ -123,7 +140,7 @@ def test_postgres_partitions_link_only_to_visible_parent():
 
     connection = PgConnection()
     connection.fake_cursor = PartitionCursor(False)
-    records = discover_postgresql(connection, config(), Budget(3))
+    records = discover_postgresql(connection, config(), Budget(4))
     assert records["objects.jsonl"][0].parent_id is None
     assert records["objects.jsonl"][0].attributes["is_partition"] is True
 
@@ -420,3 +437,107 @@ def test_an_unidentifiable_object_never_reaches_a_published_bundle(tmp_path, mon
     assert manifest.completeness == "partial", "a run that dropped an object is not complete"
     _, published = read_artifact(tmp_path / "bundle")
     assert published["objects.jsonl"] == []
+
+
+# --- statistics-based profiling ---------------------------------------------------------
+#
+# §20 says to use database statistics first. `pg_stats` exposes what the planner already
+# computed, so a profile costs one catalog query and reads no user data, which keeps it inside
+# the metadata-only default. `most_common_vals` and histogram bounds are never selected.
+
+
+def test_postgres_profiles_fields_from_planner_statistics():
+    records = discover_postgresql(PgConnection(), config(), Budget(4))
+    profile = records["profiles.jsonl"][0]
+    field = records["fields.jsonl"][0]
+    assert profile.field_id == field.id
+    assert profile.object_id == field.object_id
+    assert profile.method == "source_statistic"
+    assert profile.null_fraction == 0.25
+    assert profile.average_width_bytes == 4
+
+
+def test_a_negative_n_distinct_is_read_as_a_ratio_not_a_count():
+    """PostgreSQL stores -1.0 to mean "distinct scales with row count", i.e. fully unique.
+    Reading the sign literally would publish a distinct count of minus one."""
+    records = discover_postgresql(PgConnection(), config(), Budget(4))
+    profile = records["profiles.jsonl"][0]
+    assert profile.uniqueness == 1.0, "-1.0 means one distinct value per row"
+    assert profile.distinct_estimate == 12.5, "converted using the row estimate"
+    assert profile.distinct_is_ratio_derived is True, (
+        "the absolute count inherits the row estimate's error and must say so"
+    )
+
+
+def test_a_positive_n_distinct_is_an_absolute_count():
+    class Positive(PgCursor):
+        stats = [("public", "orders", "id", 0.0, 5.0, 4, None, None, 20.0)]
+
+    connection = PgConnection()
+    connection.fake_cursor = Positive()
+    profile = discover_postgresql(connection, config(), Budget(4))["profiles.jsonl"][0]
+    assert profile.distinct_estimate == 5.0
+    assert profile.distinct_is_ratio_derived is False
+    assert profile.uniqueness == 0.25
+
+
+def test_an_unknown_n_distinct_reports_nothing_rather_than_zero():
+    """PostgreSQL uses 0 for "unknown". Publishing that as zero distinct values would be a
+    measurement that was never taken."""
+
+    class Unknown(PgCursor):
+        stats = [("public", "orders", "id", None, 0.0, None, None, None, 12.5)]
+
+    connection = PgConnection()
+    connection.fake_cursor = Unknown()
+    profile = discover_postgresql(connection, config(), Budget(4))["profiles.jsonl"][0]
+    assert profile.distinct_estimate is None
+    assert profile.uniqueness is None
+    assert profile.null_fraction is None
+    assert profile.average_width_bytes is None
+
+
+def test_statistics_for_a_field_outside_the_scan_are_ignored():
+    class Extra(PgCursor):
+        stats = [
+            ("public", "orders", "id", 0.1, 3.0, 4, None, None, 12.5),
+            ("public", "not_scanned", "secret_column", 0.0, 1.0, 8, None, None, 5.0),
+        ]
+
+    connection = PgConnection()
+    connection.fake_cursor = Extra()
+    records = discover_postgresql(connection, config(), Budget(4))
+    assert len(records["profiles.jsonl"]) == 1
+    assert "secret_column" not in str(records)
+
+
+def test_profiling_never_selects_a_column_that_holds_values():
+    """`pg_stats` also exposes most_common_vals and histogram_bounds, which are real data."""
+    connection = PgConnection()
+    discover_postgresql(connection, config(), Budget(4))
+    statistics_query = next(
+        query for query, _ in connection.fake_cursor.calls if "pg_stats" in query
+    )
+    for forbidden in ("most_common_vals", "histogram_bounds", "most_common_elems"):
+        assert forbidden not in statistics_query
+
+
+def test_a_profile_reaches_a_published_bundle(tmp_path):
+    data = discover_postgresql(PgConnection(), config(), Budget(4))
+    data["sources.jsonl"] = [
+        Source(
+            id="site-a",
+            kind="postgresql",
+            name="site-a",
+            source_id="site-a",
+            observed_at=datetime.now(UTC),
+            collector_version="test",
+            provenance="synthetic",
+        )
+    ]
+    write_artifact(
+        tmp_path / "bundle", "collector-bundle", data, producer="test", source_run_ids=["run-a"]
+    )
+    _, published = read_artifact(tmp_path / "bundle")
+    assert published["profiles.jsonl"], "profiles.jsonl was always empty before this"
+    assert published["profiles.jsonl"][0].record_type == "profile"

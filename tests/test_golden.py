@@ -34,6 +34,7 @@ SCHEMA_FOR_FILE = {
     "fields.jsonl": "field",
     "constraints.jsonl": "constraint",
     "diagnostics.jsonl": "diagnostic",
+    "profiles.jsonl": "profile",
     "edges.jsonl": "edge",
     "evidence.jsonl": "evidence",
     "nodes.jsonl": "node",

@@ -13,6 +13,7 @@ from dbig_contracts.models import (
     Field,
     Manifest,
     Object,
+    Profile,
     SnapshotNode,
     Source,
 )
@@ -27,6 +28,7 @@ MODELS = {
     "field": Field,
     "constraint": Constraint,
     "diagnostic": Diagnostic,
+    "profile": Profile,
     "evidence": Evidence,
     "edge": Edge,
     "manifest": Manifest,
