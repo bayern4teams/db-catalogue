@@ -36,6 +36,22 @@ CONNECTION = json.dumps(
 )
 
 
+# Fixture DDL and DML. NAMESPACE is a constant in this file, not input, and nothing the
+# application ships builds SQL this way: the collectors bind every value and interpolate only
+# placeholder tokens. Kept as constants so the statements read as data, not as query building.
+SEED_STATEMENTS = (
+    f"DROP SCHEMA IF EXISTS {NAMESPACE} CASCADE",
+    f"CREATE SCHEMA {NAMESPACE}",
+    f"CREATE TABLE {NAMESPACE}.customers (id integer PRIMARY KEY)",  # noqa: S608
+    f"INSERT INTO {NAMESPACE}.customers VALUES (1), (2), (3)",  # noqa: S608
+    f"CREATE TABLE {NAMESPACE}.orders (id integer PRIMARY KEY, "  # noqa: S608
+    f"customer_id integer REFERENCES {NAMESPACE}.customers(id))",
+    f"INSERT INTO {NAMESPACE}.orders VALUES (1, 1), (2, 1), (3, 2)",  # noqa: S608
+    f"ANALYZE {NAMESPACE}.customers",
+    f"ANALYZE {NAMESPACE}.orders",
+)
+
+
 def _run(command: list[str], env: dict[str, str]) -> subprocess.CompletedProcess[str]:
     executable = SCRIPTS / command[0]
     if not executable.exists():
@@ -62,23 +78,8 @@ def _seed() -> None:
             time.sleep(2)
     try:
         cursor = connection.cursor()
-        cursor.execute(f"DROP SCHEMA IF EXISTS {NAMESPACE} CASCADE")
-        cursor.execute(f"CREATE SCHEMA {NAMESPACE}")
-        # NAMESPACE is a constant in this file, not input, and this is fixture DDL rather
-        # than anything the application builds. The collectors never construct SQL this way.
-        cursor.execute(  # noqa: S608
-            f"CREATE TABLE {NAMESPACE}.customers (id integer PRIMARY KEY)"
-        )
-        cursor.execute(f"INSERT INTO {NAMESPACE}.customers VALUES (1), (2), (3)")  # noqa: S608
-        cursor.execute(  # noqa: S608
-            f"CREATE TABLE {NAMESPACE}.orders (id integer PRIMARY KEY, "
-            f"customer_id integer REFERENCES {NAMESPACE}.customers(id))"
-        )
-        cursor.execute(  # noqa: S608
-            f"INSERT INTO {NAMESPACE}.orders VALUES (1, 1), (2, 1), (3, 2)"
-        )
-        cursor.execute(f"ANALYZE {NAMESPACE}.customers")
-        cursor.execute(f"ANALYZE {NAMESPACE}.orders")
+        for statement in SEED_STATEMENTS:
+            cursor.execute(statement)
         connection.commit()
     finally:
         connection.close()
