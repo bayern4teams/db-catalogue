@@ -155,13 +155,12 @@ def test_join_paths_and_lineage_paths_are_different_questions(planner_graph):
     graph, ids = planner_graph
     joins = CliRunner().invoke(
         planner_main,
-        ["join-paths", "--graph", str(graph), "--from", ids["orders"], "--to", ids["customers"],
-         "--json"],
+        ["join-paths", "--graph", str(graph), "--from", ids["orders"], "--to", ids["customers"]],
     )
     lineage = CliRunner().invoke(
         planner_main,
         ["lineage-paths", "--graph", str(graph), "--from", ids["orders"],
-         "--to", ids["customers"], "--json"],
+         "--to", ids["customers"]],
     )
     assert joins.exit_code == 0, joins.output
     assert lineage.exit_code == 0, lineage.output
@@ -175,7 +174,7 @@ def test_lineage_paths_emits_parsable_json(planner_graph):
     result = CliRunner().invoke(
         planner_main,
         ["lineage-paths", "--graph", str(graph), "--from", ids["orders"],
-         "--to", ids["customers"], "--json"],
+         "--to", ids["customers"]],
     )
     assert isinstance(json.loads(result.output)["paths"], list)
 

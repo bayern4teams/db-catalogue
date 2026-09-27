@@ -67,8 +67,7 @@ def _paths(graph: Path, from_id: str, to_id: str, kind: str) -> None:
 @click.option("--graph", type=click.Path(path_type=Path, exists=True), required=True)
 @click.option("--from", "from_id", required=True)
 @click.option("--to", "to_id", required=True)
-@click.option("--json", "json_output", is_flag=True)
-def lineage_paths(graph: Path, from_id: str, to_id: str, json_output: bool) -> None:
+def lineage_paths(graph: Path, from_id: str, to_id: str) -> None:
     _paths(graph, from_id, to_id, "lineage")
 
 
@@ -76,16 +75,14 @@ def lineage_paths(graph: Path, from_id: str, to_id: str, json_output: bool) -> N
 @click.option("--graph", type=click.Path(path_type=Path, exists=True), required=True)
 @click.option("--from", "from_id", required=True)
 @click.option("--to", "to_id", required=True)
-@click.option("--json", "json_output", is_flag=True)
-def join_paths(graph: Path, from_id: str, to_id: str, json_output: bool) -> None:
+def join_paths(graph: Path, from_id: str, to_id: str) -> None:
     _paths(graph, from_id, to_id, "join")
 
 
 @main.command("plan")
 @click.option("--graph", type=click.Path(path_type=Path, exists=True), required=True)
 @click.option("--path-id", required=True)
-@click.option("--json", "json_output", is_flag=True)
-def plan(graph: Path, path_id: str, json_output: bool) -> None:
+def plan(graph: Path, path_id: str) -> None:
     result = render_plan(graph, PlanRequest(path_id=path_id), PlannerConfig(graph_dir=graph))
     click.echo(json.dumps(result, sort_keys=True))
 

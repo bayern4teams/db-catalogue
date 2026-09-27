@@ -163,7 +163,7 @@ def test_planner_api_auth_and_cli(tmp_path, monkeypatch):
             == 200
         )
     result = CliRunner().invoke(
-        main, ["plan", "--graph", str(config.graph_dir), "--path-id", path_id, "--json"]
+        main, ["plan", "--graph", str(config.graph_dir), "--path-id", path_id]
     )
     assert result.exit_code == 0
     assert json.loads(result.output)["path_id"] == path_id
@@ -638,7 +638,10 @@ def test_openlineage_job_facet_maps_exact_field_lineage(tmp_path, monkeypatch):
     assert field_paths["paths"][0]["field_ids"] == ["loose-fk", "order-fk"]
     assert field_paths["paths"][0]["status"] == "observed"
     assert "CANARY_PRIVATE_SQL" not in (target / "graph.json").read_text(encoding="utf-8")
-    with pytest.raises(ValueError, match="STALE_OR_NON_JOIN_PATH"):
+    # A lineage path has no plan to render, which the message now says outright. The old
+    # STALE_OR_NON_JOIN_PATH collapsed two different causes, a stale path and a category
+    # error, into one code that told the operator neither which applied nor what to do.
+    with pytest.raises(ValueError, match="NON_JOIN_PATH: .* is a lineage path"):
         render_plan(target, PlanRequest(path_id=field_paths["paths"][0]["path_id"]),
                     PlannerConfig(graph_dir=target))
     monkeypatch.setenv("PLANNER_TOKEN", "synthetic-private-token")
