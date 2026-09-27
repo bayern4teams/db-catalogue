@@ -284,7 +284,7 @@ Secret references resolve through one function, `dbig_contracts.security.secret_
 
 Use read-only accounts, TLS verification, per-query timeouts, connection pooling limits, process separation by source, and explicit allowlists. Bundle receiver enforces size limits, path traversal rejection, digest verification and trusted transport; optional signatures become mandatory if transfer is not otherwise authenticated. Require workload identity or equivalent secret delivery in production. Scrub logs and crash reports. Keep source-side raw sample in RAM only. Retention schedules apply to manifests and profiler tokens. Provide key rotation and rerun semantics. Run each collector on a schedule agreed with source owners; source load metrics and budgets are visible in diagnostics.
 
-Threat tests: malicious bundle path/JSON, oversized record, duplicate ID, HMAC mismatch, prompt injection in comments/SQL, model hallucinated IDs, timeout, collector privilege failure, and stale manifest replay. The LLM prompt treats source metadata as data, never instructions.
+[THREAT_MODEL.md](THREAT_MODEL.md) records the trust boundaries, the nine modelled threats and their controls, and the known gaps. Each mitigation there names the test that holds it, a mitigation without a test is listed as a gap rather than as a control, and `test_the_threat_model_cites_only_tests_that_exist` fails if a cited test is renamed or removed. Threat tests: malicious bundle path/JSON, oversized record, duplicate ID, HMAC mismatch, prompt injection in comments/SQL, model hallucinated IDs, timeout, collector privilege failure, and stale manifest replay. The LLM prompt treats source metadata as data, never instructions.
 
 ## 14. Test and acceptance plan
 

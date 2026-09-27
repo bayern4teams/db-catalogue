@@ -31,6 +31,7 @@ flowchart LR
 ## Project documents
 
 - [TECHNICAL_IMPLEMENTATION.md](TECHNICAL_IMPLEMENTATION.md): binding implementation contract, module ownership, algorithms, data formats, gates, and acceptance criteria.
+- [THREAT_MODEL.md](THREAT_MODEL.md): trust boundaries, the modelled threats and their controls, and the known gaps. Each mitigation names the test that holds it.
 - [TODO.md](TODO.md): live, ordered implementation ledger with verification and decision gates.
 - [ARCHITECTURE_RESEARCH.md](ARCHITECTURE_RESEARCH.md): 30-section research record and upstream source links.
 - [AGENTS.md](AGENTS.md) and [CLAUDE.md](CLAUDE.md): working rules for coding agents. `AGENTS.md` is the canonical policy.

@@ -9,6 +9,7 @@ silently installs whatever uv is latest and makes that security gate irreproduci
 from __future__ import annotations
 
 import importlib.util
+import re
 import sys
 from pathlib import Path
 from types import ModuleType
@@ -405,3 +406,33 @@ def test_every_mismatched_graph_tool_is_reported_together(
     message = str(failure.value)
     for name in GRAPH_TOOLS:
         assert name in message
+
+
+# --- the threat model cites real tests --------------------------------------------------
+#
+# THREAT_MODEL.md claims a named test holds each mitigation. That claim is worth exactly as
+# much as its accuracy, and a renamed or deleted test would quietly turn a control into
+# fiction. This checks the document against the suite that actually exists.
+
+
+def _cited_test_names() -> set[str]:
+    document = (ROOT / "THREAT_MODEL.md").read_text(encoding="utf-8")
+    return set(re.findall(r"`(test_[a-z0-9_]+)`", document))
+
+
+def _defined_test_names() -> set[str]:
+    defined: set[str] = set()
+    for path in sorted((ROOT / "tests").glob("test_*.py")):
+        source = path.read_text(encoding="utf-8")
+        defined.update(re.findall(r"^def (test_[a-z0-9_]+)", source, flags=re.MULTILINE))
+    return defined
+
+
+def test_the_threat_model_cites_only_tests_that_exist() -> None:
+    cited = _cited_test_names()
+    assert cited, "the threat model must name the tests behind its mitigations"
+    missing = sorted(cited - _defined_test_names())
+    assert not missing, (
+        "THREAT_MODEL.md names tests that no longer exist, so those mitigations are "
+        f"unevidenced: {missing}"
+    )
