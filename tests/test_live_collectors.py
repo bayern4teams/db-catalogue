@@ -17,7 +17,7 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-def _config(kind: str) -> SourceConfig:
+def _config(kind: str, namespace: str = "dbig_ci") -> SourceConfig:
     return SourceConfig.model_validate(
         {
             "source_id": "ci-source",
@@ -25,7 +25,7 @@ def _config(kind: str) -> SourceConfig:
             "connection_env": "UNUSED_CONNECTION",
             "signing_key_env": "UNUSED_SIGNING_KEY",
             "signing_key_id": "ci",
-            "namespaces": ["dbig_ci"],
+            "namespaces": [namespace],
         }
     )
 
@@ -141,8 +141,10 @@ def test_mongodb_7_collection_validator_and_index():
 # from a source-native identifier rather than a name. These tests are that claim's evidence:
 # the official documentation for each engine is unreachable from the build environment, and a
 # rename performed against the real server is stronger proof than a citation would be. Each
-# test creates and drops its own objects so it cannot disturb the exact-name assertions above,
-# in either execution order.
+# test uses its own namespace, `dbig_rename`, and drops what it creates. The first CI run of
+# these tests failed because they shared `dbig_ci`: the collectors charge a query budget per
+# database plus per collection, so leftover objects from the tests above made the budget depend
+# on execution order. An isolated namespace removes that coupling entirely.
 
 
 def test_postgresql_object_and_field_ids_survive_a_rename():
@@ -153,19 +155,21 @@ def test_postgresql_object_and_field_ids_survive_a_rename():
     )
     try:
         cursor = admin.cursor()
-        cursor.execute("CREATE SCHEMA IF NOT EXISTS dbig_ci")
-        cursor.execute("CREATE TABLE dbig_ci.rename_me (before_rename integer)")
+        cursor.execute("CREATE SCHEMA IF NOT EXISTS dbig_rename")
+        cursor.execute("CREATE TABLE dbig_rename.rename_me (before_rename integer)")
         admin.commit()
-        before = discover_postgresql(admin, _config("postgresql"), Budget(4))
-        cursor.execute("ALTER TABLE dbig_ci.rename_me RENAME TO renamed")
-        cursor.execute("ALTER TABLE dbig_ci.renamed RENAME COLUMN before_rename TO after_rename")
+        before = discover_postgresql(admin, _config("postgresql", "dbig_rename"), Budget(6))
+        cursor.execute("ALTER TABLE dbig_rename.rename_me RENAME TO renamed")
+        cursor.execute(
+            "ALTER TABLE dbig_rename.renamed RENAME COLUMN before_rename TO after_rename"
+        )
         admin.commit()
-        after = discover_postgresql(admin, _config("postgresql"), Budget(4))
+        after = discover_postgresql(admin, _config("postgresql", "dbig_rename"), Budget(6))
     finally:
         try:
             cursor = admin.cursor()
-            cursor.execute("DROP TABLE IF EXISTS dbig_ci.renamed")
-            cursor.execute("DROP TABLE IF EXISTS dbig_ci.rename_me")
+            cursor.execute("DROP TABLE IF EXISTS dbig_rename.renamed")
+            cursor.execute("DROP TABLE IF EXISTS dbig_rename.rename_me")
             admin.commit()
         finally:
             admin.close()
@@ -187,17 +191,17 @@ def test_clickhouse_object_id_survives_a_rename():
 
     client = _retry(lambda: clickhouse_connect.get_client(host="127.0.0.1", port=8123))
     try:
-        client.command("CREATE DATABASE IF NOT EXISTS dbig_ci ENGINE=Atomic")
+        client.command("CREATE DATABASE IF NOT EXISTS dbig_rename ENGINE=Atomic")
         client.command(
-            "CREATE TABLE dbig_ci.rename_me (id UInt64) ENGINE=MergeTree ORDER BY id"
+            "CREATE TABLE dbig_rename.rename_me (id UInt64) ENGINE=MergeTree ORDER BY id"
         )
-        before = discover_clickhouse(client, _config("clickhouse"), Budget(2))
-        client.command("RENAME TABLE dbig_ci.rename_me TO dbig_ci.renamed")
-        after = discover_clickhouse(client, _config("clickhouse"), Budget(2))
+        before = discover_clickhouse(client, _config("clickhouse", "dbig_rename"), Budget(4))
+        client.command("RENAME TABLE dbig_rename.rename_me TO dbig_rename.renamed")
+        after = discover_clickhouse(client, _config("clickhouse", "dbig_rename"), Budget(4))
     finally:
         try:
-            client.command("DROP TABLE IF EXISTS dbig_ci.renamed")
-            client.command("DROP TABLE IF EXISTS dbig_ci.rename_me")
+            client.command("DROP TABLE IF EXISTS dbig_rename.renamed")
+            client.command("DROP TABLE IF EXISTS dbig_rename.rename_me")
         finally:
             client.close()
 
@@ -213,14 +217,14 @@ def test_mongodb_collection_id_survives_a_rename():
     client = MongoClient("mongodb://127.0.0.1:27017", serverSelectionTimeoutMS=2000)
     _retry(lambda: client.admin.command("ping"))
     try:
-        client.dbig_ci.create_collection("rename_me")
-        before = discover_mongodb(client, _config("mongodb"), Budget(3))
-        client.dbig_ci.rename_me.rename("renamed")
-        after = discover_mongodb(client, _config("mongodb"), Budget(3))
+        client.dbig_rename.create_collection("rename_me")
+        before = discover_mongodb(client, _config("mongodb", "dbig_rename"), Budget(6))
+        client.dbig_rename.rename_me.rename("renamed")
+        after = discover_mongodb(client, _config("mongodb", "dbig_rename"), Budget(6))
     finally:
         try:
-            client.dbig_ci.drop_collection("renamed")
-            client.dbig_ci.drop_collection("rename_me")
+            client.dbig_rename.drop_collection("renamed")
+            client.dbig_rename.drop_collection("rename_me")
         finally:
             client.close()
 

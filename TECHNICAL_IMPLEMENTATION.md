@@ -165,6 +165,18 @@ NFD spelling of the same word produce different bytes; they are different identi
 source, and folding them would merge objects the source keeps apart. Floats use Python's
 shortest round-tripping representation.
 
+**The contract is pinned by a committed artifact, not only by tests.** Every other artifact test
+writes and reads inside one process, so it can only prove this version agrees with itself. The
+requester and planner install as separate wheels and are expected in the field to be older than
+the snapshot they read, so `tests/golden/ir-v1/` holds a collector bundle and a catalog snapshot
+produced once and committed, and `tests/test_golden.py` reads them back on every run: signature
+verification, the published JSON Schemas, manifest digests, a byte-identical read-and-rewrite,
+tolerance of an added unknown field, and refusal of a hand-edited row.
+`scripts/make_golden.py` regenerates them from a frozen clock, so a regeneration with no
+contract change produces no diff and any diff is the signal to review. Adding a manifest field
+with a container default is caught there mechanically, which is how the rule below is enforced
+rather than merely written down.
+
 **Migration policy.** A reader refuses an unknown major version and accepts additive minor
 fields. One rule follows from the signature construction and is easy to get wrong: the signature
 is taken over the manifest with `None` fields excluded, so **a new optional manifest field must
