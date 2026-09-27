@@ -68,7 +68,9 @@ def test_postgresql_16_catalog_and_read_only_role():
         admin.close()
     reader = dbapi.connect(host="127.0.0.1", port=5432, user="dbig_reader", database="postgres")
     try:
-        records = discover_postgresql(reader, _config("postgresql"), Budget(4))
+        # Six, not four: statistics profiling added a fifth charged query. This test is
+        # skipped locally, so only CI can catch a budget that no longer fits.
+        records = discover_postgresql(reader, _config("postgresql"), Budget(6))
     finally:
         reader.close()
     assert {item.name for item in records["objects.jsonl"]} == {

@@ -541,3 +541,57 @@ def test_a_profile_reaches_a_published_bundle(tmp_path):
     _, published = read_artifact(tmp_path / "bundle")
     assert published["profiles.jsonl"], "profiles.jsonl was always empty before this"
     assert published["profiles.jsonl"][0].record_type == "profile"
+
+
+# --- query budget cost is a declared contract -------------------------------------------
+#
+# A scan's query count is part of its contract: operators size `max_queries` from it, and the
+# live CI tests hard-code a budget. Adding a query silently broke both, twice in one day, and
+# both times only the live tests caught it, because they are the only ones that run a real
+# server. These assertions pin the cost using the fakes, so drift fails locally instead.
+
+
+def test_postgresql_scan_costs_the_declared_number_of_queries():
+    """Four for a table-only scope: objects, fields, statistics, constraints."""
+    budget = Budget(50)
+    discover_postgresql(PgConnection(), config(), budget)
+    assert budget.used == 4, (
+        "If this changed deliberately, raise the budgets in tests/test_live_collectors.py too."
+    )
+
+
+def test_a_view_in_scope_adds_one_charged_query():
+    """The view-definition query is charged only when a view exists, which is why the live CI
+    scope, which has a view, costs five rather than four."""
+
+    class WithView(PgCursor):
+        objects = [
+            (42, "public", "orders", "r", 12.5, False, None),
+            (43, "public", "orders_view", "v", -1.0, False, None),
+        ]
+        definitions = [(43, "SELECT * FROM orders")]
+
+        def fetchall(self):
+            if "pg_get_viewdef" in self.last:
+                return self.definitions
+            return super().fetchall()
+
+    connection = PgConnection()
+    connection.fake_cursor = WithView()
+    budget = Budget(50)
+    discover_postgresql(connection, config(), budget)
+    assert budget.used == 5
+
+
+def test_clickhouse_scan_costs_the_declared_number_of_queries():
+    budget = Budget(50)
+    discover_clickhouse(ChClient(), config("clickhouse"), budget)
+    assert budget.used == 2, "a ClickHouse scan charges: system.tables, then columns"
+
+
+def test_mongodb_scan_cost_grows_per_collection_not_per_scan():
+    """Mongo is the case that caught us: the cost depends on how many collections exist, so a
+    fixed budget silently becomes too small when a namespace gains one."""
+    budget = Budget(50)
+    discover_mongodb(MongoClient(), config("mongodb"), budget)
+    assert budget.used == 3, "one per database plus two per collection, for one collection"
