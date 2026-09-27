@@ -12,7 +12,7 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, TypeAdapter
 from pydantic import Field as PydanticField
 
 from .models import (
@@ -25,6 +25,7 @@ from .models import (
     Object,
     Record,
     Signature,
+    SnapshotNode,
     Source,
     utc_now,
 )
@@ -44,10 +45,19 @@ MODELS: dict[str, type[Record]] = {
     "objects.jsonl": Object,
     "fields.jsonl": Field,
     "constraints.jsonl": Constraint,
-    "nodes.jsonl": Record,
     "edges.jsonl": Edge,
     "evidence.jsonl": Evidence,
 }
+# `nodes.jsonl` carries three record types, so it validates against the discriminated union
+# rather than one model. `runs.jsonl` intentionally has no entry and stays a base `Record`.
+NODE_ADAPTER: TypeAdapter[Source | Object | Field] = TypeAdapter(SnapshotNode)
+
+
+def validate_row(name: str, data: Any) -> Record:
+    """Validate one artifact row against the strictest model that file's contract allows."""
+    if name == "nodes.jsonl":
+        return NODE_ADAPTER.validate_python(data)
+    return MODELS.get(name, Record).model_validate(data)
 
 
 class ArtifactLimits(BaseModel):
@@ -151,7 +161,7 @@ def write_artifact(
                     data = (
                         record.model_dump(mode="json") if isinstance(record, BaseModel) else record
                     )
-                    model = MODELS.get(name, Record).model_validate(data)
+                    model = validate_row(name, data)
                     line = canonical(model) + b"\n"
                     stream.write(line)
                     digest.update(line)
@@ -231,7 +241,7 @@ def read_artifact(
         for line in raw.splitlines():
             if len(line) > limits.max_record_bytes:
                 raise ValueError("oversized artifact record")
-            record = MODELS.get(entry.path, Record).model_validate(_parse(line))
+            record = validate_row(entry.path, _parse(line))
             if record.id in all_ids:
                 raise ValueError(f"duplicate record ID: {record.id}")
             all_ids.add(record.id)
@@ -252,8 +262,7 @@ def read_artifact(
     )
     if manifest.content_type == "catalog-snapshot":
         for node in nodes.values():
-            if node.record_type not in {"source", "object", "field"}:
-                raise ValueError(f"invalid snapshot node type: {node.id}")
+            # `record_type` is already constrained to source/object/field by NODE_ADAPTER.
             if node.record_type == "field":
                 field = Field.model_validate(node.model_dump())
                 owner = nodes.get(field.object_id)

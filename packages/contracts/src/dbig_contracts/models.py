@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, field_validator
 from pydantic import Field as PydanticField
@@ -67,6 +67,14 @@ class Field(Record):
     attributes: dict[str, str | int | float | bool | None] = PydanticField(default_factory=dict)
     tags: list[str] = PydanticField(default_factory=list)
     capabilities: list[str] = PydanticField(default_factory=list)
+
+
+# A snapshot node row is exactly one of the three source-derived record types the assembler
+# carries into `nodes.jsonl`. Validating against this union instead of the permissive base
+# `Record` refuses an unknown `record_type` and enforces each type's own required fields.
+SnapshotNode = Annotated[
+    Source | Object | Field, PydanticField(discriminator="record_type")
+]
 
 
 class Constraint(Record):
