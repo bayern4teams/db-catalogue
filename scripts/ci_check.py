@@ -101,6 +101,45 @@ def _check_uv_pins() -> None:
         )
 
 
+def _graph_tool_pins() -> dict[str, dict[str, str]]:
+    settings = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    pins = settings.get("tool", {}).get("dbig", {}).get("graph-tools", {})
+    if not pins:
+        raise SystemExit(
+            "pyproject.toml must declare [tool.dbig.graph-tools] so the graph tool versions CI "
+            "installs cannot drift from the versions scripts/graph_sync.py enforces"
+        )
+    return pins
+
+
+def _check_graph_tool_pins() -> None:
+    """Keep every workflow installing exactly the pinned graph tool versions."""
+    workflows = sorted((ROOT / ".github" / "workflows").glob("*.yml"))
+    texts = {path: path.read_text(encoding="utf-8") for path in workflows}
+    for name, pin in _graph_tool_pins().items():
+        version = str(pin["version"])
+        distribution = str(pin["distribution"])
+        separator = "@" if str(pin["ecosystem"]) == "npm" else "=="
+        pattern = re.compile(
+            re.escape(distribution) + re.escape(separator) + r"(?P<version>[^\s'\"]+)"
+        )
+        seen = 0
+        for path, text in texts.items():
+            for match in pattern.finditer(text):
+                seen += 1
+                if match.group("version") != version:
+                    raise SystemExit(
+                        f"{path.relative_to(ROOT)} installs {distribution}{separator}"
+                        f"{match.group('version')}, but pyproject.toml [tool.dbig.graph-tools] "
+                        f"pins {name} at {version}"
+                    )
+        if seen == 0:
+            raise SystemExit(
+                f"No workflow installs the pinned graph tool {distribution}; the graph-index job "
+                "would run against whatever version the runner happens to provide"
+            )
+
+
 def main() -> None:
     missing = [name for name in REQUIRED if not (ROOT / name).is_file()]
     if missing:
@@ -150,6 +189,7 @@ def main() -> None:
         raise SystemExit("A deployable Python package requires uv.lock")
 
     _check_uv_pins()
+    _check_graph_tool_pins()
 
     subprocess.run(("git", "diff", "--check"), cwd=ROOT, check=True)
     subprocess.run(("git", "diff", "--cached", "--check"), cwd=ROOT, check=True)
