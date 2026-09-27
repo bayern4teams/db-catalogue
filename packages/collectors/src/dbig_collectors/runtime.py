@@ -314,6 +314,7 @@ def discover_clickhouse(
         if len(rows) > config.max_objects:
             raise RuntimeError("BUDGET_EXHAUSTED")
         identities: dict[str, str] = {}
+        row_counts: dict[str, int] = {}
         for (
             name,
             uuid,
@@ -339,6 +340,8 @@ def discover_clickhouse(
                 )
                 continue
             identities[name] = uuid
+            if total_rows is not None:
+                row_counts[name] = int(total_rows)
             attributes: dict[str, str | int | float | bool | None] = {
                 "engine": engine,
                 "is_view": engine in {"View", "MaterializedView", "LiveView"},
@@ -379,22 +382,27 @@ def discover_clickhouse(
                 )
             )
         budget.charge()
+        # `data_uncompressed_bytes` rides along on the query that is already made, so profiling
+        # ClickHouse costs no additional read. ClickHouse keeps no per-column null or distinct
+        # statistics by default, so average width is honestly all this yields.
         columns = client.query(
-            "SELECT table,name,type,position FROM system.columns "
+            "SELECT table,name,type,position,data_uncompressed_bytes FROM system.columns "
             "WHERE database = {db:String} ORDER BY table,position LIMIT {lim:UInt64}",
             parameters={"db": database, "lim": config.max_fields + 1},
             settings={"max_execution_time": config.read_timeout_seconds},
         ).result_set
         if len(columns) > config.max_fields:
             raise RuntimeError("BUDGET_EXHAUSTED")
-        for table, name, data_type, position in columns:
+        for table, name, data_type, position, uncompressed in columns:
             if table not in identities:
                 continue
             native = f"{identities[table]}:{position}"
+            field_id = stable_id(config.source_id, "field", native)
+            object_id = stable_id(config.source_id, "object", identities[table])
             tables["fields.jsonl"].append(
                 Field(
-                    id=stable_id(config.source_id, "field", native),
-                    object_id=stable_id(config.source_id, "object", identities[table]),
+                    id=field_id,
+                    object_id=object_id,
                     native_id=native,
                     name=name,
                     data_type=data_type,
@@ -402,7 +410,35 @@ def discover_clickhouse(
                     **common,
                 )
             )
+            width = _average_width(uncompressed, row_counts.get(table))
+            if width is not None:
+                tables["profiles.jsonl"].append(
+                    Profile(
+                        id=stable_id(
+                            config.source_id, "profile", f"{field_id}:source_statistic"
+                        ),
+                        field_id=field_id,
+                        object_id=object_id,
+                        method="source_statistic",
+                        average_width_bytes=width,
+                        **common,
+                    )
+                )
     return tables
+
+
+def _average_width(uncompressed: Any, rows: int | None) -> int | None:
+    """Average uncompressed bytes per row for one ClickHouse column.
+
+    Returns nothing rather than zero when the table is empty or the size is unavailable, because
+    a width of zero is a measurement and "no rows to measure" is not. ClickHouse keeps no
+    per-column null or distinct statistics by default, so this is the only field-level number
+    available without reading data.
+    """
+    if uncompressed is None or not rows or rows <= 0:
+        return None
+    width = int(uncompressed) // rows
+    return width if width >= 0 else None
 
 
 def _mongo_paths(
@@ -599,6 +635,25 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
                         **common,
                     )
                 )
+                if sample_count:
+                    # MongoDB exposes no per-field statistics, so a profile here can only come
+                    # from the sample that was already taken and paid for. Absence is the only
+                    # measure a type-only sample yields: no value was read, so nothing about
+                    # distinctness is known and none is claimed.
+                    field_id = stable_id(config.source_id, "field", field_native)
+                    tables["profiles.jsonl"].append(
+                        Profile(
+                            id=stable_id(config.source_id, "profile", f"{field_id}:sample"),
+                            field_id=field_id,
+                            object_id=object_id,
+                            method="sample",
+                            sample_count=sample_count,
+                            null_fraction=max(
+                                0.0, min(1.0, 1.0 - present_counts[path] / sample_count)
+                            ),
+                            **common,
+                        )
+                    )
             if info.get("type", "collection") == "collection" and budget.used < budget.max_queries:
                 budget.charge()
                 try:

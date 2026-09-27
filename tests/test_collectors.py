@@ -146,12 +146,18 @@ def test_postgres_partitions_link_only_to_visible_parent():
 
 
 class ChClient:
+    """Fake ClickHouse. The columns row carries `data_uncompressed_bytes` last, which is what
+    the width profile is derived from."""
+
+    tables_row = ("orders", "uuid-42", "MergeTree", "toYYYYMM(day)", "id", "id", [], [], 0)
+    columns_rows = [("orders", "id", "UInt64", 1, 0)]
+
     def query(self, statement, **kwargs):
+        outer = self
+
         class Result:
             result_set = (
-                [("orders", "uuid-42", "MergeTree", "toYYYYMM(day)", "id", "id", [], [], 0)]
-                if "system.tables" in statement
-                else [("orders", "id", "UInt64", 1)]
+                [outer.tables_row] if "system.tables" in statement else outer.columns_rows
             )
 
         return Result()
@@ -168,11 +174,7 @@ def test_clickhouse_uses_uuid_identity():
 
 def test_clickhouse_omits_unavailable_count():
     class UnknownCount(ChClient):
-        def query(self, statement, **kwargs):
-            result = super().query(statement, **kwargs)
-            if "system.tables" in statement:
-                result.result_set = [(*result.result_set[0][:-1], None)]
-            return result
+        tables_row = (*ChClient.tables_row[:-1], None)
 
     records = discover_clickhouse(UnknownCount(), config("clickhouse"), Budget(2))
     assert "row_count_estimate" not in records["objects.jsonl"][0].attributes
@@ -358,12 +360,11 @@ def test_clickhouse_drops_a_table_with_no_uuid_and_says_so():
     """A non-Atomic database engine reports the all-zeros UUID, which is not an identity."""
 
     class Ordinary(ChClient):
-        def query(self, statement, **kwargs):
-            result = super().query(statement, **kwargs)
-            if "system.tables" in statement:
-                row = result.result_set[0]
-                result.result_set = [(row[0], "00000000-0000-0000-0000-000000000000", *row[2:])]
-            return result
+        tables_row = (
+            ChClient.tables_row[0],
+            "00000000-0000-0000-0000-000000000000",
+            *ChClient.tables_row[2:],
+        )
 
     records = discover_clickhouse(Ordinary(), config("clickhouse"), Budget(2))
     assert records["objects.jsonl"] == [], "an unidentifiable table must not be catalogued"
@@ -374,12 +375,7 @@ def test_clickhouse_drops_a_table_with_no_uuid_and_says_so():
 
 def test_clickhouse_drops_a_table_with_an_empty_uuid():
     class NoIdentity(ChClient):
-        def query(self, statement, **kwargs):
-            result = super().query(statement, **kwargs)
-            if "system.tables" in statement:
-                row = result.result_set[0]
-                result.result_set = [(row[0], "", *row[2:])]
-            return result
+        tables_row = (ChClient.tables_row[0], "", *ChClient.tables_row[2:])
 
     records = discover_clickhouse(NoIdentity(), config("clickhouse"), Budget(2))
     assert records["objects.jsonl"] == []
@@ -406,12 +402,11 @@ def test_mongo_drops_a_collection_with_no_uuid_and_says_so():
 def test_an_unidentifiable_object_never_reaches_a_published_bundle(tmp_path, monkeypatch):
     """End to end: the drop reaches the bundle as a counted diagnostic, not as an object."""
     class Ordinary(ChClient):
-        def query(self, statement, **kwargs):
-            result = super().query(statement, **kwargs)
-            if "system.tables" in statement:
-                row = result.result_set[0]
-                result.result_set = [(row[0], "00000000-0000-0000-0000-000000000000", *row[2:])]
-            return result
+        tables_row = (
+            ChClient.tables_row[0],
+            "00000000-0000-0000-0000-000000000000",
+            *ChClient.tables_row[2:],
+        )
 
     data = discover_clickhouse(Ordinary(), config("clickhouse"), Budget(2))
     data["sources.jsonl"] = [
@@ -595,3 +590,102 @@ def test_mongodb_scan_cost_grows_per_collection_not_per_scan():
     budget = Budget(50)
     discover_mongodb(MongoClient(), config("mongodb"), budget)
     assert budget.used == 3, "one per database plus two per collection, for one collection"
+
+
+# --- ClickHouse and MongoDB profiling ---------------------------------------------------
+#
+# Neither engine offers what PostgreSQL does. ClickHouse keeps no per-column null or distinct
+# statistics by default, so average width is honestly all that is available without reading
+# data. MongoDB exposes no per-field statistics at all, so its only profile comes from the
+# sample that was already taken. Both are emitted with the method that produced them, and
+# neither claims a measure it did not take.
+
+
+def test_clickhouse_profiles_average_width_without_an_extra_query():
+    class Populated(ChClient):
+        tables_row = (*ChClient.tables_row[:-1], 4)
+        columns_rows = [("orders", "id", "UInt64", 1, 32)]
+
+    budget = Budget(50)
+    records = discover_clickhouse(Populated(), config("clickhouse"), budget)
+    assert budget.used == 2, "profiling must ride on the query already made"
+    profile = records["profiles.jsonl"][0]
+    assert profile.method == "source_statistic"
+    assert profile.field_id == records["fields.jsonl"][0].id
+    assert profile.null_fraction is None, "ClickHouse reports no null statistics"
+    assert profile.distinct_estimate is None, "nor any distinct statistics"
+
+
+def test_clickhouse_reports_no_width_for_an_empty_table():
+    """Zero rows means nothing to measure, which is not the same as a width of zero."""
+
+    class Empty(ChClient):
+        tables_row = (*ChClient.tables_row[:-1], 0)
+        columns_rows = [("orders", "id", "UInt64", 1, 0)]
+
+    records = discover_clickhouse(Empty(), config("clickhouse"), Budget(50))
+    assert records["profiles.jsonl"] == []
+
+
+def test_clickhouse_divides_size_by_rows():
+    class Sized(ChClient):
+        tables_row = (*ChClient.tables_row[:-1], 10)
+        columns_rows = [("orders", "id", "UInt64", 1, 80)]
+
+    records = discover_clickhouse(Sized(), config("clickhouse"), Budget(50))
+    assert records["profiles.jsonl"][0].average_width_bytes == 8
+
+
+def test_mongo_emits_no_profile_without_a_sample():
+    """Metadata-only is the default, and it yields no basis for any field measure."""
+    records = discover_mongodb(MongoClient(), config("mongodb"), Budget(50))
+    assert records["profiles.jsonl"] == []
+
+
+def test_mongo_sample_profile_reports_absence_and_its_denominator():
+    """A type-only sample reads no values, so absence is the only thing it can measure."""
+
+    class Cursor:
+        def limit(self, count):
+            return self
+
+        def max_time_ms(self, timeout):
+            return self
+
+        def __iter__(self):
+            return iter([{"_id": 1, "sometimes": 2}, {"_id": 2}])
+
+        def close(self):
+            pass
+
+    class Db(MongoDb):
+        def list_collections(self):
+            return [{"name": "orders", "info": {"uuid": "uuid-42"}}]
+
+        def find(self, filter):
+            return Cursor()
+
+        def list_indexes(self):
+            return []
+
+    class Client:
+        def __getitem__(self, database):
+            return Db()
+
+    cfg = SourceConfig.model_validate(
+        {
+            **config("mongodb").model_dump(),
+            "sample_rows": 2,
+        }
+    )
+    records = discover_mongodb(Client(), cfg, Budget(50))
+    profiles = {profile.field_id: profile for profile in records["profiles.jsonl"]}
+    assert profiles, "sampling must produce profiles"
+    by_name = {field.name: field.id for field in records["fields.jsonl"]}
+    always = profiles[by_name["_id"]]
+    sometimes = profiles[by_name["sometimes"]]
+    assert always.method == "sample"
+    assert always.sample_count == 2
+    assert always.null_fraction == 0.0, "_id is present in both sampled documents"
+    assert sometimes.null_fraction == 0.5, "present in one of two sampled documents"
+    assert sometimes.distinct_estimate is None, "no value was read, so distinctness is unknown"
