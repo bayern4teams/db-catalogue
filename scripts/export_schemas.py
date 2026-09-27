@@ -7,6 +7,7 @@ from pathlib import Path
 
 from dbig_contracts.models import (
     Constraint,
+    Diagnostic,
     Edge,
     Evidence,
     Field,
@@ -25,6 +26,7 @@ MODELS = {
     "object": Object,
     "field": Field,
     "constraint": Constraint,
+    "diagnostic": Diagnostic,
     "evidence": Evidence,
     "edge": Edge,
     "manifest": Manifest,

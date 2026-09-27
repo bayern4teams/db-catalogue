@@ -118,6 +118,62 @@ Object kinds: database, schema, table, view, materialized view, ClickHouse dicti
 
 Evidence records are immutable and typed: catalog key, uniqueness/index, compatible type, name similarity, value containment/overlap, join observation, query-plan observation, SQL AST mapping, OpenLineage facet, LLM suggestion, and counterevidence. Preserve metrics and denominators; never publish an uncalibrated similarity as a probability. `confidence` remains null until calibrated on labeled data. Every relationship cites at least one non-LLM evidence record; lineage cites execution/definition metadata and parse resolution.
 
+### 6a. Identity, rename, canonical encoding and migration (settled 2026-09-27)
+
+**Identity.** `stable_id(source_id, kind, native_id)` hashes those three parts and prefixes the
+kind, so an ID is reproducible from source facts and never from a display name. Each connector
+supplies a source-native identifier: PostgreSQL uses `pg_class.oid` for an object and
+`oid:attnum` for a field; ClickHouse uses the table UUID and `uuid:position`; MongoDB uses the
+`listCollections` `info.uuid` and `uuid:path`. All three are assigned by the server and are
+independent of the name, which is what makes a rename survivable.
+
+**An object with no native identity is not catalogued.** ClickHouse reports the all-zeros UUID
+for a table on a non-Atomic database engine, and a MongoDB view has no `info.uuid`. In both
+cases the collector emits an `IDENTITY_UNAVAILABLE` diagnostic and drops the object and its
+fields, rather than minting a name-derived ID. User decision on 2026-09-27: keep dropping and
+make it loud. A catalogue entry whose identity cannot survive a rename would attach history and
+edges to something that silently becomes a different object, which is the opposite of the
+precision-over-recall rule. The cost is explicit: those objects never appear.
+
+The drop is now visible without reading `diagnostics.jsonl`. The manifest carries
+`diagnostics`, a count per diagnostic code, derived by the writer from the validated rows so a
+producer cannot under-report, and checked by the reader against the actual rows so a manifest
+cannot disagree with its own file. Any diagnostic already makes a bundle `partial`.
+`diagnostics.jsonl` validates against a strict `Diagnostic` model whose `code` is required and
+constrained, because per-code counts can only total the row count if every row has exactly one
+well-formed code. Snapshots carry no diagnostics file and so report no summary at all, which is
+different from reporting an empty one.
+
+**Rename semantics.** Where native identity exists, a rename keeps the ID and changes `name`;
+the object is the same object and its history and edges follow it. Where native identity does
+not exist the object was never catalogued, so the delete-plus-add case does not arise in
+practice. This is verified rather than asserted: the engines' own documentation is unreachable
+from the build environment, so `tests/test_live_collectors.py` renames a real table, column and
+collection on the pinned `postgres:16.15`, `clickhouse-server:25.8.33.6` and `mongo:7.0.41`
+service containers and asserts the ID is unchanged while the name changed. Those tests run only
+in CI, under `DBIG_RUN_INTEGRATION=1`; they are skipped locally and their result is claimed only
+from an actual run.
+
+**Canonical encoding.** `canonical()` emits UTF-8 JSON with sorted keys, no inserted whitespace,
+`NaN` and infinities refused, and `None` fields omitted. Three properties were measured rather
+than assumed. A round trip through JSON reproduces the bytes exactly. Input key order does not
+affect the output. A timestamp must be UTC: the same instant written at a different offset
+serialises differently, so a non-UTC offset is refused at validation with a message naming the
+cause, rather than normalised, because a normalised record would fail its signature check later
+and report the wrong cause. Unicode names are deliberately **not** normalised, so an NFC and an
+NFD spelling of the same word produce different bytes; they are different identifiers in the
+source, and folding them would merge objects the source keeps apart. Floats use Python's
+shortest round-tripping representation.
+
+**Migration policy.** A reader refuses an unknown major version and accepts additive minor
+fields. One rule follows from the signature construction and is easy to get wrong: the signature
+is taken over the manifest with `None` fields excluded, so **a new optional manifest field must
+default to `None`, never to an empty container.** A field defaulting to `{}` would change the
+signed bytes of every manifest, including those written before the field existed, and silently
+invalidate their signatures. `diagnostics` therefore defaults to `None`, absent means unreported
+rather than zero, and a bundle from a producer that predates the field still verifies. A
+compatibility test signs an older-shaped manifest and reads it back to hold that guarantee.
+
 ## 7. Collector implementation
 
 Common protocol: `discover(config, budget) -> DiscoveryResult`, `profile(object, budget) -> ProfileResult`, `observe_lineage(config, budget) -> ObservationResult`, `emit_bundle(result, destination) -> Manifest`. Budget accounting covers queries, wall time, rows, bytes and source-specific concurrency. Cancel on expiry, emit partial diagnostics, and respect source read-only transactions where supported. No unrestricted `SELECT *` on large tables.

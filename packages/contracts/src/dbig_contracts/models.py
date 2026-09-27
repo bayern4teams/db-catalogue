@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, field_validator
@@ -35,6 +35,12 @@ class Record(BaseModel):
     def aware_time(cls, value: datetime) -> datetime:
         if value.tzinfo is None or value.utcoffset() is None:
             raise ValueError("timestamp must include a timezone")
+        if value.utcoffset() != timedelta(0):
+            # Canonical bytes are the unit of digests, signatures and diffs, and the same
+            # instant written at a different offset serialises differently. Refusing a non-UTC
+            # offset keeps one instant to one encoding. Normalising instead would accept such a
+            # record and then fail its signature check, which reports the wrong cause.
+            raise ValueError("timestamp must be UTC so one instant has one canonical encoding")
         return value
 
 
@@ -120,6 +126,19 @@ class Edge(Record):
     confidence: float | None = None
 
 
+class Diagnostic(Record):
+    """A machine-readable reason the collector could not carry something into the bundle.
+
+    `code` is required and constrained so a bundle's diagnostic summary is well defined: the
+    per-code counts in the manifest can only add up to the row count if every row has exactly one
+    stable code. `message` stays free text for an operator and is never required to parse.
+    """
+
+    record_type: Literal["diagnostic"] = "diagnostic"
+    code: str = PydanticField(min_length=1, max_length=64, pattern=r"^[A-Z][A-Z0-9_]*$")
+    message: str | None = None
+
+
 class FileEntry(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -147,7 +166,20 @@ class Manifest(BaseModel):
     completeness: Literal["complete", "partial"]
     files: list[FileEntry]
     classification: str = "metadata"
+    # Counts of `diagnostics.jsonl` rows by code, so a reader sees what a run could not carry
+    # without parsing the file. The writer derives it and a reader verifies it against the actual
+    # rows, so it cannot disagree with them. It defaults to `None` rather than `{}` because
+    # `_unsigned` excludes `None`: an absent summary keeps an older producer's signature valid,
+    # and a reader that finds none treats the summary as unreported rather than as zero.
+    diagnostics: dict[str, int] | None = None
     signature: Signature | None = None
+
+    @field_validator("diagnostics")
+    @classmethod
+    def sane_counts(cls, value: dict[str, int] | None) -> dict[str, int] | None:
+        if value is not None and any(count < 0 for count in value.values()):
+            raise ValueError("diagnostic counts cannot be negative")
+        return value
 
     @field_validator("ir_version")
     @classmethod

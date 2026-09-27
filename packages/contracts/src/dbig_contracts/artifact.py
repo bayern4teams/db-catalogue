@@ -17,6 +17,7 @@ from pydantic import Field as PydanticField
 
 from .models import (
     Constraint,
+    Diagnostic,
     Edge,
     Evidence,
     Field,
@@ -47,6 +48,7 @@ MODELS: dict[str, type[Record]] = {
     "constraints.jsonl": Constraint,
     "edges.jsonl": Edge,
     "evidence.jsonl": Evidence,
+    "diagnostics.jsonl": Diagnostic,
 }
 # `nodes.jsonl` carries three record types, so it validates against the discriminated union
 # rather than one model. `runs.jsonl` intentionally has no entry and stays a base `Record`.
@@ -95,6 +97,16 @@ def _parse(data: bytes) -> Any:
             ValueError(f"invalid JSON constant: {value}")
         ),
     )
+
+
+def _diagnostic_counts(records: Sequence[Record | dict[str, Any]]) -> dict[str, int]:
+    """Count diagnostics by code, in sorted order so the manifest bytes stay deterministic."""
+    counts: dict[str, int] = {}
+    for record in records:
+        data = record.model_dump(mode="json") if isinstance(record, BaseModel) else record
+        code = validate_row("diagnostics.jsonl", data).model_dump()["code"]
+        counts[code] = counts.get(code, 0) + 1
+    return dict(sorted(counts.items()))
 
 
 def _unsigned(manifest: Manifest) -> bytes:
@@ -172,18 +184,21 @@ def write_artifact(
                 FileEntry(path=name, bytes=size, sha256=digest.hexdigest(), count=len(records))
             )
         now = utc_now()
-        manifest = Manifest.model_validate(
-            {
-                "ir_version": "1.0",
-                "content_type": content_type,
-                "producer": producer,
-                "source_run_ids": source_run_ids,
-                "created_at": now,
-                "as_of": now,
-                "completeness": completeness,
-                "files": entries,
-            }
-        )
+        fields: dict[str, Any] = {
+            "ir_version": "1.0",
+            "content_type": content_type,
+            "producer": producer,
+            "source_run_ids": source_run_ids,
+            "created_at": now,
+            "as_of": now,
+            "completeness": completeness,
+            "files": entries,
+        }
+        if "diagnostics.jsonl" in expected:
+            # Derived here rather than passed in, so a producer cannot under-report what it
+            # dropped. Snapshots carry no diagnostics file and so report no summary at all.
+            fields["diagnostics"] = _diagnostic_counts(tables.get("diagnostics.jsonl", ()))
+        manifest = Manifest.model_validate(fields)
         if signing_key is not None:
             manifest.signature = Signature(
                 key_id=key_id or "",
@@ -249,6 +264,14 @@ def read_artifact(
         if len(records) != entry.count:
             raise ValueError(f"record count mismatch: {entry.path}")
         result[entry.path] = records
+    if manifest.diagnostics is not None:
+        # An older producer reports no summary at all, which stays readable; one that does report
+        # must report the truth, so a manifest cannot hide objects a run dropped. The counts are
+        # inside the signed bytes, so this catches an unsigned producer's error rather than a
+        # tampered signed bundle, which fails verification first.
+        actual = _diagnostic_counts(result.get("diagnostics.jsonl", []))
+        if manifest.diagnostics != actual:
+            raise ValueError("manifest diagnostic summary disagrees with diagnostics.jsonl")
     nodes = {record.id: record for record in result.get("nodes.jsonl", [])}
     node_ids = set(nodes)
     evidence_ids = {record.id for record in result.get("evidence.jsonl", [])}

@@ -1,5 +1,6 @@
 import sys
 import types
+from datetime import UTC, datetime
 from pathlib import Path
 
 from click.testing import CliRunner
@@ -12,7 +13,8 @@ from dbig_collectors.runtime import (
     discover_mongodb,
     discover_postgresql,
 )
-from dbig_contracts.artifact import read_artifact
+from dbig_contracts.artifact import read_artifact, write_artifact
+from dbig_contracts.models import Source
 
 
 def config(kind: str = "postgresql") -> SourceConfig:
@@ -326,3 +328,95 @@ def test_collect_signed_bundle_contains_no_secret(tmp_path, monkeypatch):
     assert manifest.completeness == "complete"
     assert len(tables["constraints.jsonl"]) == 1
     assert all(b"canary-secret" not in path.read_bytes() for path in destination.iterdir())
+
+
+# --- objects with no source-native identity ---------------------------------------------
+#
+# A catalogue entry whose identity cannot survive a rename would corrupt history and edges, so
+# the collectors drop such an object and record why. User decision on 2026-09-27: keep dropping,
+# but make it loud. These tests cover both drop sites, which had none before.
+
+
+def test_clickhouse_drops_a_table_with_no_uuid_and_says_so():
+    """A non-Atomic database engine reports the all-zeros UUID, which is not an identity."""
+
+    class Ordinary(ChClient):
+        def query(self, statement, **kwargs):
+            result = super().query(statement, **kwargs)
+            if "system.tables" in statement:
+                row = result.result_set[0]
+                result.result_set = [(row[0], "00000000-0000-0000-0000-000000000000", *row[2:])]
+            return result
+
+    records = discover_clickhouse(Ordinary(), config("clickhouse"), Budget(2))
+    assert records["objects.jsonl"] == [], "an unidentifiable table must not be catalogued"
+    assert records["fields.jsonl"] == [], "nor may its fields be, since they would dangle"
+    codes = [record.code for record in records["diagnostics.jsonl"]]
+    assert codes == ["IDENTITY_UNAVAILABLE"]
+
+
+def test_clickhouse_drops_a_table_with_an_empty_uuid():
+    class NoIdentity(ChClient):
+        def query(self, statement, **kwargs):
+            result = super().query(statement, **kwargs)
+            if "system.tables" in statement:
+                row = result.result_set[0]
+                result.result_set = [(row[0], "", *row[2:])]
+            return result
+
+    records = discover_clickhouse(NoIdentity(), config("clickhouse"), Budget(2))
+    assert records["objects.jsonl"] == []
+    assert [record.code for record in records["diagnostics.jsonl"]] == ["IDENTITY_UNAVAILABLE"]
+
+
+def test_mongo_drops_a_collection_with_no_uuid_and_says_so():
+    """A MongoDB view has no `info.uuid`, so it has no rename-stable identity."""
+
+    class ViewDb(MongoDb):
+        def list_collections(self):
+            return [{"name": "orders_view", "type": "view", "info": {}}]
+
+    class ViewClient:
+        def __getitem__(self, database):
+            return ViewDb()
+
+    records = discover_mongodb(ViewClient(), config("mongodb"), Budget(3))
+    assert records["objects.jsonl"] == []
+    assert records["fields.jsonl"] == []
+    assert [record.code for record in records["diagnostics.jsonl"]] == ["IDENTITY_UNAVAILABLE"]
+
+
+def test_an_unidentifiable_object_never_reaches_a_published_bundle(tmp_path, monkeypatch):
+    """End to end: the drop reaches the bundle as a counted diagnostic, not as an object."""
+    class Ordinary(ChClient):
+        def query(self, statement, **kwargs):
+            result = super().query(statement, **kwargs)
+            if "system.tables" in statement:
+                row = result.result_set[0]
+                result.result_set = [(row[0], "00000000-0000-0000-0000-000000000000", *row[2:])]
+            return result
+
+    data = discover_clickhouse(Ordinary(), config("clickhouse"), Budget(2))
+    data["sources.jsonl"] = [
+        Source(
+            id="site-a",
+            kind="clickhouse",
+            name="site-a",
+            source_id="site-a",
+            observed_at=datetime.now(UTC),
+            collector_version="test",
+            provenance="synthetic",
+        )
+    ]
+    manifest = write_artifact(
+        tmp_path / "bundle",
+        "collector-bundle",
+        data,
+        producer="test",
+        source_run_ids=["run-a"],
+        completeness="partial",
+    )
+    assert manifest.diagnostics == {"IDENTITY_UNAVAILABLE": 1}
+    assert manifest.completeness == "partial", "a run that dropped an object is not complete"
+    _, published = read_artifact(tmp_path / "bundle")
+    assert published["objects.jsonl"] == []
