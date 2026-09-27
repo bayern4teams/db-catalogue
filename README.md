@@ -56,10 +56,11 @@ The selected LLM stack is vLLM for private GPU serving, LangGraph for the builde
 ## Developer setup
 
 1. Install Python 3.12+, Git, [Graphify](https://github.com/Graphify-Labs/graphify), [Graft](https://github.com/trailhq/Graft), and [Codebase Memory MCP](https://github.com/DeusData/codebase-memory-mcp). The supported local graph versions used when creating this repository were Graphify 0.9.65, Graft 0.18.0, and Codebase Memory MCP 0.11.0.
-2. Clone the repository and run `python scripts/install_hooks.py` from its root. Git does not propagate local hook configuration through a clone.
-3. Copy `.env.example` to `.env` and fill local values. `.env` is ignored by Git. Source credentials must be supplied through the approved secret store or process environment, never committed.
-4. Run `python scripts/graph_sync.py --check-tools` to verify graph commands are on `PATH`.
-5. Before implementation, read `TECHNICAL_IMPLEMENTATION.md` and keep `TODO.md` open and updated after each meaningful change.
+2. Install [uv](https://github.com/astral-sh/uv) **0.10.0 or later**. `pyproject.toml` declares `[tool.uv] required-version = ">=0.10.0"`, so an older uv refuses to run in this workspace. The floor exists because `scripts/supply_chain.py` exports the CycloneDX SBOM with `uv export --format cyclonedx1.5`, a preview format that uv 0.9.0 and earlier reject. CI installs one exact pinned uv version, and `python scripts/ci_check.py` fails if any workflow leaves `astral-sh/setup-uv` unpinned or pins a uv below that floor.
+3. Clone the repository and run `python scripts/install_hooks.py` from its root. Git does not propagate local hook configuration through a clone.
+4. Copy `.env.example` to `.env` and fill local values. `.env` is ignored by Git. Source credentials must be supplied through the approved secret store or process environment, never committed.
+5. Run `python scripts/graph_sync.py --check-tools` to verify graph commands are on `PATH`.
+6. Before implementation, read `TECHNICAL_IMPLEMENTATION.md` and keep `TODO.md` open and updated after each meaningful change.
 
 ## Commit and CI policy
 
