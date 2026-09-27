@@ -219,12 +219,15 @@ Ponytail is a coding-agent methodology, not a runtime dependency. On every meani
 
 1. Resolved: generated developer graphs are local/CI caches and are never committed.
 2. Resolved: make the first commit and use `https://github.com/Reza-Sh83/db-catalogue.git` as `origin`.
-3. Exact GPU model/VRAM and RAM; model size and latency remain provisional.
-4. Safe source sample/byte/time budgets and per-source authorization.
-5. Bundle transfer, signatures, retention and shared tokenization-key mechanism.
-6. Target versions and compatibility matrix for PostgreSQL, ClickHouse and MongoDB.
-7. Source of observed SQL/job metadata and its privacy policy.
-8. Labeled evaluation corpus and acceptance thresholds.
+3. **Open:** exact GPU model/VRAM and RAM; model size and latency remain provisional.
+4. Resolved 2026-09-27: source read budgets and value classification. Metadata-only stays the default; sampling, query history and cross-source token comparison are opt-in per source under mandatory row, byte and time budgets with a sensitive-field denylist.
+5. Resolved 2026-09-27: bundle transfer and tokenization key. A per-run HMAC key reaches authorized collectors by environment reference, the manifest records only its `key_id`, bundles move as signed files on a filesystem or object store, and tokens exist only in assembler memory inside one run boundary.
+6. Resolved 2026-09-27: the supported version matrix is exactly the server versions the CI integration fixtures run. Untested versions are unsupported rather than assumed working.
+7. **Open:** source of observed SQL/job metadata and its privacy policy. Until it is chosen, executed lineage stays unavailable and no edge may claim it.
+8. Resolved 2026-09-27 as a method, not as numbers: a labeled synthetic corpus plus an evaluation command reports precision-recall and calibration. Thresholds stay unset and the engine keeps abstaining with `confidence = null` until the user approves measured values.
+9. Resolved 2026-09-27: consumer scope. The independent requester and planner are the only machine consumers of a published snapshot, and their CLIs plus optional HTTP services are the product surface. No third-party catalog mapping is owed in v1, and `openlineage.jsonl` stays an optional export.
+10. Resolved 2026-09-27: object-rename semantics. Use a source-native stable identifier where one exists, emit a rename hint where none does, and treat an unverified rename as delete plus add.
+11. Resolved 2026-09-27: HTTP exposure. The adapters target a trusted private network with a loopback bind default and a bearer token from a secret reference; public exposure is documented as unsupported rather than partially hardened.
 
 These are tracked in TODO.md. Work that does not depend on them may proceed; behavior-changing assumptions must be surfaced to the user, including in the middle of a task.
 
@@ -237,6 +240,10 @@ The collector also publishes `row_count_estimate` and `row_count_method` object 
 PostgreSQL partition membership uses [`pg_class.relispartition`](https://www.postgresql.org/docs/16/catalog-pg-class.html) and its direct parent from [`pg_inherits`](https://www.postgresql.org/docs/16/catalog-pg-inherits.html). The collector labels a visible partition with `is_partition` and sets `parent_id` only when the parent is also in the authorized scan result. Pending detachments and out-of-scope parents do not create a parent link. It does not export partition bound expressions or mistake ordinary inheritance for declarative partitioning.
 
 Artifact publication validates each object parent against another object in the same source and rejects missing, cross-source or cyclic parent references before the manifest can be published.
+
+On 2026-09-27 the user decided items 4, 5, 6, 8, 9, 10 and 11 above, and the conservative 2026-09-23 profile stands unchanged where they overlap. Three of those decisions widen no behaviour and only make an existing default binding: metadata-only collection, per-run keyed tokens and the private-network HTTP posture are what the code already does, and they are now a contract rather than a starting point. Four of them add scope. The supported version matrix may name only versions an integration fixture actually exercised, so a version the fixtures do not run is reported as unsupported instead of untested. Rename handling gains a source-native identity path: PostgreSQL `pg_class.oid` and a ClickHouse table UUID prove that a renamed object is the same object, MongoDB offers no such identifier, so a collection rename yields a hint from structural similarity and, while unverified, a delete plus an add rather than a silent merge. Calibration gains an instrument before it gains numbers: a labeled synthetic corpus of declared-FK positives, deliberately hard negatives, ambiguous names and sparse low-cardinality fields, plus an evaluation command reporting precision-recall and calibration, with no threshold and no published probability until the user approves measured values. The consumer decision bounds what compatibility means: because the requester and planner are the only machine readers, golden-bundle and compatibility tests exist for an internal reason, namely that an independently installed older consumer must behave predictably against a newer snapshot, and not to satisfy an external product's schema.
+
+Two decisions remain open and are not implied by these. The GPU host and model identity stay unmeasured, so live vLLM and Langfuse behaviour is still untested by user decision. The source of observed SQL and job metadata is still unchosen, which is why executed lineage remains unavailable; defined lineage from view definitions is unaffected, and no edge asserts execution without that evidence.
 
 The first live metadata compatibility matrix was established by CI run 35911699728: PostgreSQL 16.15 (catalog read through a role granted schema usage and table SELECT), ClickHouse 25.8.33.6 (`system.tables` and `system.columns`), and MongoDB 7.0.41 (`listCollections` and indexes). The three tests passed with synthetic schemas. CI fixture services did not test verified TLS or production authentication. Only these exact tested versions have empirical metadata compatibility evidence; this is not a claim that adjacent versions or secure production connections have passed.
 
