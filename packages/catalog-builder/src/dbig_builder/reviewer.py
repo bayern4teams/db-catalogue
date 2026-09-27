@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 from datetime import UTC, datetime
 from typing import Any, Literal, TypedDict
 
 from dbig_contracts.ids import stable_id
 from dbig_contracts.models import Edge, Evidence, Object, Record
+from dbig_contracts.security import secret_from_env
 from langgraph.graph import END, START, StateGraph
 from openai import OpenAI
 from pydantic import BaseModel, ConfigDict, Field
@@ -48,8 +48,12 @@ def _trace(config: ReviewConfig, candidate_count: int) -> Any:
         return None
     from langfuse import Langfuse
 
-    public = os.environ[config.langfuse_public_key_env or ""]
-    secret = os.environ[config.langfuse_secret_key_env or ""]
+    public = secret_from_env(
+        config.langfuse_public_key_env, purpose="Langfuse public key"
+    )
+    secret = secret_from_env(
+        config.langfuse_secret_key_env, purpose="Langfuse secret key"
+    )
     return Langfuse(
         public_key=public,
         secret_key=secret,
@@ -87,7 +91,7 @@ def review_candidates(
     try:
         model_client = client or OpenAI(
             base_url=config.base_url,
-            api_key=os.environ[config.api_key_env],
+            api_key=secret_from_env(config.api_key_env, purpose="private model API key"),
             timeout=config.timeout_seconds,
             max_retries=0,
         )

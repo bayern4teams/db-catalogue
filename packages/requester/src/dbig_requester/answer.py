@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import re
 from pathlib import Path
 from typing import Any
 
+from dbig_contracts.security import secret_from_env
 from openai import OpenAI
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -29,8 +29,12 @@ def _trace(config: AnswerConfig, retrieval_count: int) -> Any:
     from langfuse import Langfuse
 
     client = Langfuse(
-        public_key=os.environ[config.langfuse_public_key_env or ""],
-        secret_key=os.environ[config.langfuse_secret_key_env or ""],
+        public_key=secret_from_env(
+            config.langfuse_public_key_env, purpose="Langfuse public key"
+        ),
+        secret_key=secret_from_env(
+            config.langfuse_secret_key_env, purpose="Langfuse secret key"
+        ),
         base_url=config.langfuse_url,
         timeout=config.timeout_seconds,
         flush_at=1,
@@ -77,7 +81,7 @@ def answer_question(
     try:
         model_client = client or OpenAI(
             base_url=config.base_url,
-            api_key=os.environ[config.api_key_env],
+            api_key=secret_from_env(config.api_key_env, purpose="private model API key"),
             timeout=config.timeout_seconds,
             max_retries=0,
         )

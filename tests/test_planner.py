@@ -176,10 +176,10 @@ def test_planner_api_requires_secret_at_startup_and_uses_configured_body_limit(
         graph_dir=tmp_path / "graph", api_key_env="PLANNER_TOKEN", max_request_bytes=16
     )
     monkeypatch.delenv("PLANNER_TOKEN", raising=False)
-    with pytest.raises(ValueError, match="API key environment reference required"):
+    with pytest.raises(ValueError, match="PLANNER_TOKEN, which is not set"):
         create_app(config)
     monkeypatch.setenv("PLANNER_TOKEN", " ")
-    with pytest.raises(ValueError, match="API key environment reference required"):
+    with pytest.raises(ValueError, match="PLANNER_TOKEN for planner API bearer token is empty"):
         create_app(config)
     monkeypatch.setenv("PLANNER_TOKEN", "synthetic-private-token")
     with TestClient(create_app(config)) as client:

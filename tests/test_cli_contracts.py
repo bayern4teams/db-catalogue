@@ -194,6 +194,31 @@ def test_validate_bundle_fails_closed_when_the_key_env_is_unset(
     assert failed_without_publishing(result)
 
 
+def test_validate_bundle_reports_an_unset_key_env_as_a_command_error(
+    artifacts: dict[str, Path], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An operator typed this reference, so they get a named message, not a traceback."""
+    monkeypatch.delenv("ABSENT_KEY_ENV", raising=False)
+    result = CliRunner().invoke(
+        collector_main, ["validate-bundle", str(artifacts["bundle"]), "--key-env", "ABSENT_KEY_ENV"]
+    )
+    assert failed_without_publishing(result)
+    assert "ABSENT_KEY_ENV, which is not set" in result.stderr
+    assert not isinstance(result.exception, KeyError)
+
+
+def test_validate_bundle_reports_a_blank_key_env_as_a_command_error(
+    artifacts: dict[str, Path], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A variable set to whitespace must be refused rather than used as a signing key."""
+    monkeypatch.setenv("BLANK_KEY_ENV", "   ")
+    result = CliRunner().invoke(
+        collector_main, ["validate-bundle", str(artifacts["bundle"]), "--key-env", "BLANK_KEY_ENV"]
+    )
+    assert failed_without_publishing(result)
+    assert "BLANK_KEY_ENV" in result.stderr and "is empty" in result.stderr
+
+
 def test_validate_bundle_refuses_a_missing_path(tmp_path: Path) -> None:
     result = CliRunner().invoke(
         collector_main, ["validate-bundle", str(tmp_path / "absent"), "--key-env", "BUNDLE_KEY"]

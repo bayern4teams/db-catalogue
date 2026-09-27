@@ -15,6 +15,7 @@ from uuid import uuid4
 from dbig_contracts.artifact import write_artifact
 from dbig_contracts.ids import stable_id
 from dbig_contracts.models import Field, Object, Record, Source, utc_now
+from dbig_contracts.security import secret_from_env
 
 from .config import SourceConfig
 
@@ -525,7 +526,9 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
 
 def collect(config: SourceConfig, destination: Path) -> None:
     """Create a signed bundle; never accept connection values on the CLI."""
-    connection = json.loads(os.environ[config.connection_env])
+    connection = json.loads(
+        secret_from_env(config.connection_env, purpose="source connection settings")
+    )
     if not isinstance(connection, dict):
         raise ValueError("connection reference must contain a JSON object")
     signing_key = os.environ[config.signing_key_env].encode("utf-8")

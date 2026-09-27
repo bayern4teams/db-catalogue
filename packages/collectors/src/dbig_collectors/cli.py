@@ -1,13 +1,13 @@
 """Collector site command line."""
 
 import json
-import os
 from ipaddress import ip_address
 from pathlib import Path
 
 import click
 from dbig_contracts.artifact import read_artifact
 from dbig_contracts.scan import SignedScanRequest
+from dbig_contracts.security import secret_from_env
 
 from .config import load_config
 from .runtime import collect
@@ -33,8 +33,13 @@ def collect_command(config_path: Path, out: Path) -> None:
 @click.argument("path", type=click.Path(path_type=Path, exists=True))
 @click.option("--key-env", required=True, help="Environment variable holding the signing key")
 def validate_bundle(path: Path, key_env: str) -> None:
+    try:
+        key = secret_from_env(key_env, purpose="collector bundle signature verification")
+    except ValueError as error:
+        # An operator typed this reference, so report it as a command error, not a traceback.
+        raise click.ClickException(str(error)) from error
     manifest, _ = read_artifact(
-        path, signing_key=os.environ[key_env].encode(), require_signature=True
+        path, signing_key=key.encode(), require_signature=True
     )
     click.echo(manifest.model_dump_json())
 

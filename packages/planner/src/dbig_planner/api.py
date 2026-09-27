@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import hmac
-import os
 import time
 from collections import deque
 from threading import Lock
 
+from dbig_contracts.security import secret_from_env
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 
@@ -17,9 +17,7 @@ from .plans import PlanRequest, render_plan
 
 
 def create_app(config: PlannerConfig) -> FastAPI:
-    token = os.getenv(config.api_key_env or "")
-    if token is None or not token.strip():
-        raise ValueError("planner API key environment reference required")
+    token = secret_from_env(config.api_key_env, purpose="planner API bearer token")
     expected = "Bearer " + token
     app = FastAPI(title="DBIG lineage planner", docs_url=None, redoc_url=None)
     timestamps: deque[float] = deque()
