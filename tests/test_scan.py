@@ -102,6 +102,28 @@ def test_collector_http_auth_and_signature(tmp_path, monkeypatch):
         )
 
 
+def test_collector_http_requires_secret_at_startup_and_enforces_body_limit(
+    tmp_path, monkeypatch
+):
+    config = SourceConfig.model_validate(
+        {**site_config().model_dump(), "max_request_bytes": 16}
+    )
+    monkeypatch.delenv("SITE_TOKEN", raising=False)
+    with pytest.raises(ValueError, match="HTTP token reference is required"):
+        collector_app(config, tmp_path / "queue.sqlite3")
+    monkeypatch.setenv("SITE_TOKEN", " ")
+    with pytest.raises(ValueError, match="HTTP token reference is required"):
+        collector_app(config, tmp_path / "queue.sqlite3")
+    monkeypatch.setenv("SITE_TOKEN", "synthetic-bearer")
+    with TestClient(collector_app(config, tmp_path / "queue.sqlite3")) as client:
+        response = client.post(
+            "/v1/collector/scan-requests",
+            json={"request": "larger than sixteen bytes"},
+            headers={"Authorization": "Bearer synthetic-bearer"},
+        )
+        assert response.status_code == 413
+
+
 def test_private_http_dispatch_uses_signed_body(tmp_path, monkeypatch):
     monkeypatch.setenv("DBIG_SIGNING_KEY", KEY)
     monkeypatch.setenv("SITE_TOKEN", "synthetic-bearer")

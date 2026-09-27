@@ -30,6 +30,7 @@ class SourceConfig(BaseModel):
     history_access: bool = False
     authorized_requesters: list[str] = Field(default_factory=list)
     http_token_env: str | None = None
+    max_request_bytes: int = Field(default=65_536, ge=1)
     max_queued_scans: int = Field(default=20, ge=1)
     max_request_ttl_seconds: int = Field(default=3600, ge=1)
 

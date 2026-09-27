@@ -13,30 +13,30 @@ from .scan import accept_scan, scan_status
 
 
 def create_app(config: SourceConfig, queue_path: Path) -> FastAPI:
-    if config.http_token_env is None:
+    token = os.getenv(config.http_token_env or "")
+    if token is None or not token.strip():
         raise ValueError("collector HTTP token reference is required")
+    expected = "Bearer " + token
     app = FastAPI()
 
     @app.middleware("http")
     async def request_size(request: Request, call_next):
-        expected = "Bearer " + os.environ[config.http_token_env or ""]
         supplied = request.headers.get("authorization")
         if supplied is None or not hmac.compare_digest(supplied, expected):
             return JSONResponse({"error": {"code": "UNAUTHORIZED"}}, status_code=401)
         if request.method == "POST":
             length = request.headers.get("content-length")
-            if length is None or not length.isdecimal() or int(length) > 65_536:
+            if length is None or not length.isdecimal() or int(length) > config.max_request_bytes:
                 return JSONResponse({"error": {"code": "PAYLOAD_TOO_LARGE"}}, status_code=413)
             body = bytearray()
             async for chunk in request.stream():
                 body.extend(chunk)
-                if len(body) > 65_536:
+                if len(body) > config.max_request_bytes:
                     return JSONResponse({"error": {"code": "PAYLOAD_TOO_LARGE"}}, status_code=413)
             request._body = bytes(body)
         return await call_next(request)
 
     def authorize(value: str | None) -> None:
-        expected = "Bearer " + os.environ[config.http_token_env or ""]
         if value is None or not hmac.compare_digest(value, expected):
             raise HTTPException(status_code=401, detail={"code": "UNAUTHORIZED"})
 
