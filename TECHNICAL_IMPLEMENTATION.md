@@ -250,6 +250,36 @@ Containment never promotes an edge. It is cited by the `REFERENCE_CANDIDATE` edg
 neither its status nor its `confidence`, which stays null. Promotion needs the calibration that
 §15 requires and that does not exist yet.
 
+### 8b. Which pairs become candidates (widened 2026-09-28)
+
+Evidence is worthless on a pair that never gets compared, and the original blocking admitted very
+few. A child field had to end in `_id`, and a parent had to carry a declared single-column unique
+constraint, so a column called `owner_ref` or a genuinely unique key on a table that never declared
+one could not become a candidate however well its values contained.
+
+Three rules now decide admission, each deliberately narrow:
+
+1. **Suffix rule.** A child whose name ends in `_uuid`, `_code`, `_num`, `_ref`, `_key`, `_id`,
+   `_fk` or `_no` announces itself as a reference, so the stem is matched fuzzily against the
+   parent object's singularised name at the configured threshold. The longest suffix wins, and a
+   name that is nothing but a suffix is not stripped to an empty stem that would match everything.
+2. **Exact bare-name rule.** A child with no such suffix announces nothing, so only an exact match
+   against the singularised parent object name counts. This catches a column called `customer`
+   pointing at `customers` while refusing `custom`, which any fuzzy threshold would have accepted.
+   Fuzzy matching here would trade precision away for a flood of coincidental spellings.
+3. **Measured uniqueness.** A parent field whose profile reports uniqueness at or above
+   `MEASURED_UNIQUE` (0.99) may be a key with nothing declared. The evidence kind is
+   `measured_uniqueness`, never `catalog_key`: a measurement and a catalog assertion are different
+   claims and must not be read as the same strength. The threshold is pinned by a test, because a
+   number that decides which relationships get proposed is a contract rather than a tunable.
+
+A child measured entirely null is not compared at all. It references nothing, so name evidence for
+it would describe a relationship with nothing behind it. Sparse is not empty: an optional foreign
+key is mostly null by design and is still compared.
+
+The `name_similarity` evidence records which rule admitted the pair in `blocking_rule`, so a reader
+can tell a fuzzy suffix match from an exact bare-name match without re-deriving it.
+
 ## 9. Lineage and query history
 
 Inputs are observed SQL text/normalized fingerprints with provenance and times, view definitions, job/run records, and OpenLineage events. A view definition is *defined* transformation lineage, distinguished from an executed job. SQLGlot parses PostgreSQL/ClickHouse dialects; our resolver qualifies tables/columns against a snapshot, handles aliases/CTEs/stars where resolvable, and records unresolved expressions. Capture `INSERT ... SELECT`, `CREATE TABLE AS`, materialized view definitions, configured transformation jobs, and reads/writes. Column lineage is emitted only when expressions map to known fields; otherwise table-level edge plus diagnostic. SQL text stored only under policy after literal/comment redaction; default artifact stores fingerprint, parser version and redacted snippet.

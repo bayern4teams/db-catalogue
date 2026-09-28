@@ -16,6 +16,7 @@ from dbig_contracts.models import (
     Field,
     Manifest,
     Object,
+    Profile,
     Record,
     Source,
     ValueTokens,
@@ -65,6 +66,43 @@ def _evidence(
 
 
 MIN_TOKEN_SUPPORT = 4
+# Suffixes that conventionally mark a field as pointing somewhere else. Only `_id` was recognised
+# before, so a column called `owner_ref` or `account_code` could not become a candidate at all,
+# however perfectly its values contained. Order matters: the longest match wins, so `_uuid` is
+# tried before `_id` would strip only two characters off it.
+REFERENCE_SUFFIXES = ("_uuid", "_code", "_num", "_ref", "_key", "_id", "_fk", "_no")
+# A field measured this unique is treated as a possible parent key even with no declared
+# constraint, which is how a table that never declared a primary key can still be referenced.
+MEASURED_UNIQUE = 0.99
+
+
+def _measure(profiles: list[Profile] | None, name: str) -> float | None:
+    """First reported value for one measure across a field's profiles.
+
+    A field can have a planner statistic and a sample, measuring different things. Reading per
+    measure rather than per profile means a statistic that knows uniqueness is not shadowed by a
+    sample that does not.
+    """
+    for profile in profiles or []:
+        value = profile.model_dump().get(name)
+        if value is not None:
+            return float(value)
+    return None
+
+
+def _reference_stem(name: str) -> tuple[str, bool]:
+    """Return the part of a field name that should match a parent, and whether a suffix marked it.
+
+    With a suffix the name announces itself as a reference, so a fuzzy match against the parent
+    object's name is justified. Without one it announces nothing, and fuzzy matching every field
+    against every unique key would trade precision away for recall; the caller requires an exact
+    match in that case instead.
+    """
+    folded = name.casefold()
+    for suffix in REFERENCE_SUFFIXES:
+        if folded.endswith(suffix) and len(folded) > len(suffix):
+            return folded[: -len(suffix)], True
+    return folded, False
 
 
 def _containment(
@@ -146,6 +184,7 @@ def assemble(
     nodes: dict[str, Record] = {}
     constraints: list[Constraint] = []
     token_sets: dict[str, ValueTokens] = {}
+    field_profiles: dict[str, list[Profile]] = {}
     runs: list[Record] = []
     partial_source_receipts = partial_source_receipts or {}
     partial = bool(partial_source_receipts)
@@ -165,6 +204,12 @@ def assemble(
                     raise ValueError("duplicate node ID across bundles")
                 nodes[record.id] = record
         constraints.extend(Constraint.model_validate(item) for item in records["constraints.jsonl"])
+        for item in records.get("profiles.jsonl", []):
+            measured = Profile.model_validate(item.model_dump())
+            # A field can carry more than one profile, a planner statistic and a sample, which
+            # measure different things. They are kept together and read per measure, so a
+            # statistic that knows uniqueness is not shadowed by a sample that does not.
+            field_profiles.setdefault(measured.field_id, []).append(measured)
         for item in records.get("tokens.jsonl", []):
             # Held in memory for this assembly only. Nothing derived from a token reaches the
             # snapshot except the aggregate metrics on a containment evidence record.
@@ -255,38 +300,85 @@ def assemble(
                 }
             )
             declared_pairs.add((owner, target))
-    for child in fields.values():
-        if not child.name.casefold().endswith("_id"):
+    # A field measured unique can be a parent key even with nothing declared, which is how a
+    # table that never declared a primary key can still be referenced. Recorded separately so the
+    # evidence says which it was: a catalog assertion and a measurement are not the same claim.
+    declared_unique = {parent.id for parent in unique_fields}
+    for candidate_parent in fields.values():
+        if candidate_parent.id in declared_unique:
             continue
+        if (_measure(field_profiles.get(candidate_parent.id), "uniqueness") or 0.0) >= (
+            MEASURED_UNIQUE
+        ):
+            unique_fields.append(candidate_parent)
+    for child in fields.values():
         child_object = objects.get(child.object_id)
         if child_object is None:
             continue
-        stem = child.name.casefold()[:-3]
+        # A field with no values cannot reference anything, so comparing it would produce name
+        # evidence for a relationship that has nothing behind it.
+        if _measure(field_profiles.get(child.id), "null_fraction") == 1.0:
+            continue
+        stem, suffixed = _reference_stem(child.name)
         candidates = []
         for parent in unique_fields:
             parent_object = objects.get(parent.object_id)
             if (
                 parent_object is None
+                or parent.id == child.id
                 or parent.object_id == child.object_id
                 or (child.object_id, parent.object_id) in declared_pairs
                 or _type_family(child.data_type) != _type_family(parent.data_type)
             ):
                 continue
-            name_score = round(ratio(stem, parent_object.name.casefold().rstrip("s")))
-            if name_score >= config.name_similarity_threshold:
-                candidates.append((name_score, parent))
+            target = parent_object.name.casefold().rstrip("s")
+            if suffixed:
+                # The name announces itself as a reference, so a fuzzy match is justified.
+                name_score = round(ratio(stem, target))
+                if name_score < config.name_similarity_threshold:
+                    continue
+            else:
+                # It announces nothing. Fuzzy-matching every field against every unique key would
+                # trade precision away, so only an exact match after singularisation counts, which
+                # is what catches a column called `customer` pointing at `customers`.
+                if stem != target:
+                    continue
+                name_score = 100
+            candidates.append((name_score, parent))
         for score, parent in sorted(candidates, key=lambda item: (-item[0], item[1].id))[
             : config.top_k_per_field
         ]:
             lexical = _evidence(
-                child, "name_similarity", parent.id, f"name:{parent.id}", {"ratio_percent": score}
+                child,
+                "name_similarity",
+                parent.id,
+                f"name:{parent.id}",
+                # Which blocking rule admitted the pair, so a reader can tell a fuzzy suffix match
+                # from an exact bare-name match without re-deriving it.
+                {"ratio_percent": score, "blocking_rule": "suffix" if suffixed else "exact_name"},
             )
             typed = _evidence(child, "compatible_type", parent.id, f"type:{parent.id}")
-            key = _evidence(parent, "catalog_key", child.id, f"unique:{child.id}")
+            if parent.id in declared_unique:
+                key = _evidence(parent, "catalog_key", child.id, f"unique:{child.id}")
+                key_claim = "declared unique key"
+            else:
+                # A measurement, not a catalog assertion. Kept as a separate evidence kind so the
+                # two are never read as the same strength of claim.
+                key = _evidence(
+                    parent,
+                    "measured_uniqueness",
+                    child.id,
+                    f"measured-unique:{child.id}",
+                    {
+                        "uniqueness": _measure(field_profiles.get(parent.id), "uniqueness"),
+                        "threshold": MEASURED_UNIQUE,
+                    },
+                )
+                key_claim = "uniqueness measured from source statistics, not declared"
             for item in (lexical, typed, key):
                 evidence[item.id] = item
             cited = [lexical.id, typed.id, key.id]
-            explanation = "name, compatible type, and declared unique key"
+            explanation = f"name, compatible type, and {key_claim}"
             containment = _containment(
                 child, token_sets.get(child.id), token_sets.get(parent.id)
             )
