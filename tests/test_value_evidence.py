@@ -22,7 +22,7 @@ import pytest
 from dbig_builder.builder import MIN_TOKEN_SUPPORT, assemble
 from dbig_builder.config import BuilderConfig
 from dbig_collectors.config import SourceConfig
-from dbig_collectors.runtime import Budget, discover_postgresql
+from dbig_collectors.runtime import Budget, discover_mongodb, discover_postgresql
 from dbig_contracts.artifact import read_artifact, write_artifact
 from dbig_contracts.ids import stable_id
 from dbig_contracts.models import Field, Object, Source, ValueTokens
@@ -466,3 +466,152 @@ def test_a_snapshot_without_tokens_still_assembles(tmp_path, monkeypatch):
     assert any(
         edge.model_dump()["kind"] == "REFERENCE_CANDIDATE" for edge in data["edges.jsonl"]
     )
+
+
+# --- MongoDB tokens, and the cross-engine case ------------------------------------------
+#
+# PostgreSQL tokens alone cannot reach the case the design is really about: a MongoDB identifier
+# held as a string pointing at a relational integer key, with no schema anywhere saying so. That
+# needs both engines producing comparable tokens, which means the same keying and the same
+# normalisation on both sides.
+
+
+def _mongo_config(**overrides) -> SourceConfig:
+    defaults = {
+        "source_id": "site-b",
+        "kind": "mongodb",
+        "connection_env": "DBIG_CONNECTION",
+        "signing_key_env": "DBIG_SIGNING_KEY",
+        "signing_key_id": "test",
+        "namespaces": ["shop"],
+        "sample_rows": 10,
+        "value_token_key_env": "DBIG_TOKENISER",  # noqa: S106 - environment variable name
+        "value_token_key_id": "run-1",
+    }
+    return SourceConfig.model_validate({**defaults, **overrides})
+
+
+def _mongo_client(documents):
+    class Cursor:
+        def limit(self, count):
+            return self
+
+        def max_time_ms(self, timeout):
+            return self
+
+        def __iter__(self):
+            return iter(documents)
+
+        def close(self):
+            pass
+
+    class Db:
+        def list_collections(self):
+            return [{"name": "orders", "info": {"uuid": "uuid-77"}}]
+
+        def __getitem__(self, name):
+            return self
+
+        def list_indexes(self):
+            return []
+
+        def find(self, filter):
+            return Cursor()
+
+        def estimated_document_count(self, **kwargs):
+            return len(documents)
+
+    class Client:
+        def __getitem__(self, database):
+            return Db()
+
+    return Client()
+
+
+def test_mongo_emits_no_tokens_without_a_key(monkeypatch):
+    records = discover_mongodb(
+        _mongo_client([{"_id": 1, "customer_id": "7"}]),
+        _mongo_config(value_token_key_env=None, value_token_key_id=None),
+        Budget(50),
+    )
+    assert records["tokens.jsonl"] == []
+
+
+def test_mongo_emits_no_tokens_without_a_sample(monkeypatch):
+    monkeypatch.setenv("DBIG_TOKENISER", SYNTHETIC_MATERIAL)
+    records = discover_mongodb(
+        _mongo_client([{"_id": 1, "customer_id": "7"}]),
+        _mongo_config(sample_rows=0),
+        Budget(50),
+    )
+    assert records["tokens.jsonl"] == []
+
+
+def test_mongo_tokens_are_keyed_and_bounded(monkeypatch):
+    monkeypatch.setenv("DBIG_TOKENISER", SYNTHETIC_MATERIAL)
+    documents = [{"_id": index, "customer_id": str(index)} for index in range(1, 6)]
+    records = discover_mongodb(_mongo_client(documents), _mongo_config(), Budget(50))
+    by_field = {entry.field_id: entry for entry in records["tokens.jsonl"]}
+    assert by_field, "a sampled MongoDB collection with a key must produce tokens"
+    entry = next(iter(by_field.values()))
+    assert entry.key_id == "run-1"
+    assert entry.sample_method == "first_documents_limit:10"
+    assert entry.observed_count == 5
+    assert entry.distinct_count == 5
+
+
+def test_a_mongo_string_identifier_and_a_relational_integer_key_agree(monkeypatch):
+    """The cross-engine case, end to end at the token level. MongoDB holds "1", "2", "3" as
+    strings; PostgreSQL holds 1, 2, 3 as integers. Nothing in either catalog links them, and
+    their token sets must still match exactly, or containment could never find the reference."""
+    monkeypatch.setenv("DBIG_TOKENISER", SYNTHETIC_MATERIAL)
+    relational = discover_postgresql(PgConnection(), _tokenising(), Budget(50))
+    documents = [{"customer_id": str(value)} for value in (1, 2, 3)]
+    document_side = discover_mongodb(_mongo_client(documents), _mongo_config(), Budget(50))
+    relational_tokens = set(relational["tokens.jsonl"][0].tokens)
+    mongo_tokens = set(document_side["tokens.jsonl"][0].tokens)
+    assert relational_tokens == mongo_tokens
+
+
+def test_a_mongo_token_set_under_another_key_does_not_match(monkeypatch):
+    """The same guarantee as on the relational side: outside its run a token is meaningless."""
+    monkeypatch.setenv("DBIG_TOKENISER", SYNTHETIC_MATERIAL)
+    documents = [{"customer_id": str(value)} for value in (1, 2, 3)]
+    first = discover_mongodb(_mongo_client(documents), _mongo_config(), Budget(50))
+    monkeypatch.setenv("DBIG_TOKENISER", OTHER_MATERIAL)
+    second = discover_mongodb(_mongo_client(documents), _mongo_config(), Budget(50))
+    assert set(first["tokens.jsonl"][0].tokens).isdisjoint(second["tokens.jsonl"][0].tokens)
+
+
+def test_no_raw_mongo_value_reaches_the_bundle(tmp_path, monkeypatch):
+    monkeypatch.setenv("DBIG_TOKENISER", SYNTHETIC_MATERIAL)
+    documents = [{"customer_id": "canary-document-value"}, {"customer_id": "another-canary"}]
+    data = discover_mongodb(_mongo_client(documents), _mongo_config(), Budget(50))
+    data["sources.jsonl"] = [_source("site-b")]
+    write_artifact(
+        tmp_path / "bundle", "collector-bundle", data, producer="test", source_run_ids=["run-b"]
+    )
+    for path in sorted((tmp_path / "bundle").iterdir()):
+        content = path.read_text(encoding="utf-8", errors="replace")
+        assert "canary" not in content, f"a raw document value leaked into {path.name}"
+
+
+def test_mongo_array_elements_are_tokenised_at_their_path(monkeypatch):
+    """Array members are their own path in the catalogue, so their values belong to that path."""
+    monkeypatch.setenv("DBIG_TOKENISER", SYNTHETIC_MATERIAL)
+    documents = [{"tags": ["a", "b"]}, {"tags": ["c"]}]
+    records = discover_mongodb(_mongo_client(documents), _mongo_config(), Budget(50))
+    fields = {field.name: field.id for field in records["fields.jsonl"]}
+    by_field = {entry.field_id: entry for entry in records["tokens.jsonl"]}
+    assert "tags[]" in fields
+    entry = by_field[fields["tags[]"]]
+    assert entry.observed_count == 3, "three array members across two documents"
+    assert entry.distinct_count == 3
+
+
+def test_a_short_mongo_token_key_is_refused(monkeypatch):
+    monkeypatch.setenv("DBIG_TOKENISER", "too-short")
+    with pytest.raises(ValueError, match="at least 32 bytes"):
+        discover_mongodb(
+            _mongo_client([{"customer_id": "1"}]), _mongo_config(), Budget(50)
+        )

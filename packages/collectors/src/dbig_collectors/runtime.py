@@ -103,14 +103,30 @@ def _value_tokens(
     a containment metric divides by. `truncated` says the token set is a subset, which makes any
     containment computed from it a lower bound rather than a measurement.
     """
-    digests: dict[str, None] = {}
+    digests: set[str] = set()
     observed = 0
     for value in values:
         text = _token_text(value)
         if text is None:
             continue
         observed += 1
-        digests[hmac.new(key, text.encode("utf-8"), hashlib.sha256).hexdigest()] = None
+        digests.add(_digest(text, key))
+    return _capped_tokens(digests, observed, limit)
+
+
+def _digest(text: str, key: bytes) -> str:
+    return hmac.new(key, text.encode("utf-8"), hashlib.sha256).hexdigest()
+
+
+def _capped_tokens(
+    digests: set[str], observed: int, limit: int
+) -> tuple[list[str], int, int, bool]:
+    """Apply the token cap, keeping the denominators describing the sample rather than the cap.
+
+    Shared by both connectors so `distinct_count` means the same thing on either side of a
+    containment comparison. Sorted, so the file's bytes and therefore its digest do not depend on
+    the order values happened to be read in.
+    """
     distinct = len(digests)
     kept = sorted(digests)[:limit]
     return kept, observed, distinct, distinct > len(kept)
@@ -600,7 +616,15 @@ def _mongo_paths(
     array_limit: int,
     found: dict[str, set[str]],
     present: set[str],
+    tokens: dict[str, set[str]] | None = None,
+    observed: dict[str, int] | None = None,
+    token_key: bytes | None = None,
 ) -> None:
+    """Walk a sampled document for paths and types, and optionally key its scalar values.
+
+    When tokenising, each scalar is keyed where it is met and only the digest is kept, so no
+    buffer of raw source values ever exists, not even for the duration of one document.
+    """
     if depth > limit:
         return
     for key, value in document.items():
@@ -608,15 +632,37 @@ def _mongo_paths(
         present.add(path)
         found[path].add(type(value).__name__)
         if isinstance(value, dict):
-            _mongo_paths(value, path, depth + 1, limit, array_limit, found, present)
+            _mongo_paths(
+                value, path, depth + 1, limit, array_limit, found, present,
+                tokens, observed, token_key,
+            )
         elif isinstance(value, list):
             for element in value[:array_limit]:
                 found[path + "[]"].add(type(element).__name__)
                 present.add(path + "[]")
                 if isinstance(element, dict):
                     _mongo_paths(
-                        element, path + "[]", depth + 1, limit, array_limit, found, present
+                        element, path + "[]", depth + 1, limit, array_limit, found, present,
+                        tokens, observed, token_key,
                     )
+                elif token_key is not None and tokens is not None and observed is not None:
+                    _record_token(path + "[]", element, tokens, observed, token_key)
+        elif token_key is not None and tokens is not None and observed is not None:
+            _record_token(path, value, tokens, observed, token_key)
+
+
+def _record_token(
+    path: str,
+    value: Any,
+    tokens: dict[str, set[str]],
+    observed: dict[str, int],
+    token_key: bytes,
+) -> None:
+    text = _token_text(value)
+    if text is None:
+        return
+    observed[path] = observed.get(path, 0) + 1
+    tokens.setdefault(path, set()).add(_digest(text, token_key))
 
 
 def _mongo_schema_paths(
@@ -721,6 +767,18 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
                         origins[field_name].add("index")
             sample_count = 0
             present_counts: dict[str, int] = defaultdict(int)
+            # Tokenising needs a key as well as a sample, and is off unless both are configured.
+            token_key = (
+                secret_from_env(
+                    config.value_token_key_env, purpose="cross-source value tokenisation"
+                ).encode("utf-8")
+                if config.value_token_key_env
+                else None
+            )
+            if token_key is not None and len(token_key) < 32:
+                raise ValueError("value token key must contain at least 32 bytes")
+            path_tokens: dict[str, set[str]] = {}
+            path_observed: dict[str, int] = {}
             if (
                 config.sample_rows
                 and sampled_rows_total < config.sample_rows
@@ -761,6 +819,9 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
                             config.max_array_elements,
                             paths,
                             present,
+                            path_tokens,
+                            path_observed,
+                            token_key,
                         )
                         for path in present:
                             present_counts[path] += 1
@@ -805,6 +866,38 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
                             **common,
                         )
                     )
+                    if token_key is not None and path in path_tokens:
+                        # The case the whole design exists for: a MongoDB identifier compared
+                        # against a relational key. Same keying and same normalisation as the
+                        # relational side, so the two token sets are comparable.
+                        #
+                        # The `token_key is not None` test is deliberate belt and braces, not a
+                        # load-bearing branch: `_mongo_paths` is given no key when tokenising is
+                        # off, so `path_tokens` is empty anyway. Mutation testing confirmed that
+                        # removing this test alone changes no behaviour. It stays because it also
+                        # keeps an empty `key_id` from ever reaching `ValueTokens`, which requires
+                        # a non-empty one.
+                        digests, observed, distinct, truncated = _capped_tokens(
+                            path_tokens[path],
+                            path_observed.get(path, 0),
+                            config.max_value_tokens,
+                        )
+                        if digests:
+                            tables["tokens.jsonl"].append(
+                                ValueTokens(
+                                    id=stable_id(config.source_id, "tokens", field_id),
+                                    field_id=field_id,
+                                    object_id=object_id,
+                                    key_id=config.value_token_key_id or "",
+                                    sample_count=sample_count,
+                                    sample_method=f"first_documents_limit:{config.sample_rows}",
+                                    observed_count=observed,
+                                    distinct_count=distinct,
+                                    truncated=truncated,
+                                    tokens=digests,
+                                    **common,
+                                )
+                            )
             if info.get("type", "collection") == "collection" and budget.used < budget.max_queries:
                 budget.charge()
                 try:
