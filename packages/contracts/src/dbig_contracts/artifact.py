@@ -29,6 +29,7 @@ from .models import (
     Signature,
     SnapshotNode,
     Source,
+    ValueTokens,
     utc_now,
 )
 
@@ -40,6 +41,7 @@ COLLECTOR_FILES = (
     "profiles.jsonl",
     "observations.jsonl",
     "diagnostics.jsonl",
+    "tokens.jsonl",
 )
 SNAPSHOT_FILES = ("nodes.jsonl", "edges.jsonl", "evidence.jsonl", "runs.jsonl")
 MODELS: dict[str, type[Record]] = {
@@ -51,6 +53,7 @@ MODELS: dict[str, type[Record]] = {
     "evidence.jsonl": Evidence,
     "diagnostics.jsonl": Diagnostic,
     "profiles.jsonl": Profile,
+    "tokens.jsonl": ValueTokens,
 }
 # `nodes.jsonl` carries three record types, so it validates against the discriminated union
 # rather than one model. `runs.jsonl` intentionally has no entry and stays a base `Record`.

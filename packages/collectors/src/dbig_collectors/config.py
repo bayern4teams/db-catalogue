@@ -7,7 +7,7 @@ import tomllib
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class SourceConfig(BaseModel):
@@ -28,11 +28,27 @@ class SourceConfig(BaseModel):
     max_array_elements: int = Field(default=16, ge=1, le=256)
     max_path_depth: int = Field(default=4, ge=1)
     history_access: bool = False
+    # Cross-source value comparison. Off unless a key reference is given *and* sampling is on,
+    # because a token can only be computed from a value that was read. The key is per run, so
+    # tokens are comparable within one assembly and meaningless outside it.
+    value_token_key_env: str | None = Field(default=None, pattern=r"^[A-Z][A-Z0-9_]*$")
+    value_token_key_id: str | None = None
+    max_value_tokens: int = Field(default=256, ge=1, le=4096)
     authorized_requesters: list[str] = Field(default_factory=list)
     http_token_env: str | None = None
     max_request_bytes: int = Field(default=65_536, ge=1)
     max_queued_scans: int = Field(default=20, ge=1)
     max_request_ttl_seconds: int = Field(default=3600, ge=1)
+
+    @model_validator(mode="after")
+    def token_key_needs_an_id(self) -> SourceConfig:
+        if bool(self.value_token_key_env) != bool(self.value_token_key_id):
+            raise ValueError(
+                "value tokenisation needs both value_token_key_env and value_token_key_id: "
+                "a key with no ID cannot be matched against another source, and an ID with no "
+                "key would claim a comparison that was never computed"
+            )
+        return self
 
     @field_validator("namespaces")
     @classmethod

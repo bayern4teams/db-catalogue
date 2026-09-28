@@ -18,6 +18,7 @@ from dbig_contracts.models import (
     Object,
     Record,
     Source,
+    ValueTokens,
     utc_now,
 )
 from rapidfuzz.fuzz import ratio
@@ -63,6 +64,66 @@ def _evidence(
     )
 
 
+MIN_TOKEN_SUPPORT = 4
+
+
+def _containment(
+    child: Field,
+    child_tokens: ValueTokens | None,
+    parent_tokens: ValueTokens | None,
+) -> Evidence | None:
+    """Measure how much of a child's sampled values appear among a candidate parent key's.
+
+    Containment, not similarity: a reference means the child's values are drawn from the parent's
+    key, so the question is one-directional and the denominator is the child's distinct count.
+    Overlap is reported too, because a high containment on a tiny child sample against a huge
+    parent is weak, and the two numbers together show that.
+
+    Abstains, returning nothing, in four cases rather than reporting a number that means nothing:
+    either side has no tokens, the two were keyed under different key IDs and so are not
+    comparable at all, the two were normalised differently, or either side's distinct count is
+    below the minimum support. §15's rule applies: no `confidence` is produced here, only a
+    measurement with its denominators, and the strength tier stays whatever the deterministic
+    rules already chose.
+    """
+    if child_tokens is None or parent_tokens is None:
+        return None
+    if child_tokens.key_id != parent_tokens.key_id:
+        # Tokens keyed under different run keys are unrelated byte strings. Comparing them would
+        # always report zero overlap, which reads as a counterexample rather than as ignorance.
+        return None
+    if child_tokens.normalization != parent_tokens.normalization:
+        return None
+    if min(child_tokens.distinct_count, parent_tokens.distinct_count) < MIN_TOKEN_SUPPORT:
+        return None
+    child_set, parent_set = set(child_tokens.tokens), set(parent_tokens.tokens)
+    if not child_set:
+        return None
+    shared = len(child_set & parent_set)
+    union = len(child_set | parent_set)
+    return _evidence(
+        child,
+        "value_containment",
+        parent_tokens.field_id,
+        f"containment:{parent_tokens.field_id}",
+        {
+            "contained_fraction": round(shared / len(child_set), 6),
+            "shared_tokens": shared,
+            "child_distinct_sampled": len(child_set),
+            "parent_distinct_sampled": len(parent_set),
+            "jaccard": round(shared / union, 6) if union else None,
+            "child_sample_count": child_tokens.sample_count,
+            "parent_sample_count": parent_tokens.sample_count,
+            "child_sample_method": child_tokens.sample_method,
+            "parent_sample_method": parent_tokens.sample_method,
+            # A capped token set makes containment a lower bound, not a measurement.
+            "lower_bound_only": child_tokens.truncated or parent_tokens.truncated,
+            "key_id": child_tokens.key_id,
+            "minimum_support": MIN_TOKEN_SUPPORT,
+        },
+    )
+
+
 def _type_family(value: str) -> str:
     normalized = value.casefold().split("(", 1)[0]
     if normalized in {"integer", "bigint", "smallint", "int", "int64", "uint64", "int32"}:
@@ -84,6 +145,7 @@ def assemble(
     sources: dict[str, Source] = {}
     nodes: dict[str, Record] = {}
     constraints: list[Constraint] = []
+    token_sets: dict[str, ValueTokens] = {}
     runs: list[Record] = []
     partial_source_receipts = partial_source_receipts or {}
     partial = bool(partial_source_receipts)
@@ -103,6 +165,11 @@ def assemble(
                     raise ValueError("duplicate node ID across bundles")
                 nodes[record.id] = record
         constraints.extend(Constraint.model_validate(item) for item in records["constraints.jsonl"])
+        for item in records.get("tokens.jsonl", []):
+            # Held in memory for this assembly only. Nothing derived from a token reaches the
+            # snapshot except the aggregate metrics on a containment evidence record.
+            entry = ValueTokens.model_validate(item.model_dump())
+            token_sets[entry.field_id] = entry
         digest = hashlib.sha256(canonical(manifest)).hexdigest()
         runs.append(
             Record.model_validate(
@@ -218,6 +285,15 @@ def assemble(
             key = _evidence(parent, "catalog_key", child.id, f"unique:{child.id}")
             for item in (lexical, typed, key):
                 evidence[item.id] = item
+            cited = [lexical.id, typed.id, key.id]
+            explanation = "name, compatible type, and declared unique key"
+            containment = _containment(
+                child, token_sets.get(child.id), token_sets.get(parent.id)
+            )
+            if containment is not None:
+                evidence[containment.id] = containment
+                cited.append(containment.id)
+                explanation = f"{explanation}; {containment.explanation}"
             edge_id = stable_id(child.source_id, "edge", f"{child.id}:{parent.id}")
             edges[edge_id] = Edge.model_validate(
                 {
@@ -226,9 +302,9 @@ def assemble(
                     "from_id": child.object_id,
                     "to_id": parent.object_id,
                     "status": "tentative",
-                    "evidence_ids": [lexical.id, typed.id, key.id],
+                    "evidence_ids": cited,
                     "field_pairs": [[child.id, parent.id]],
-                    "explanation": "name, compatible type, and declared unique key",
+                    "explanation": explanation,
                     "confidence": None,
                     **_base(child),
                 }

@@ -206,6 +206,50 @@ Raw sample values exist only in collector memory and, for allowed cross-source c
 
 Initial candidate blocking: compare only permitted source pairs; require compatible value domains or explicit manual relationship hint; then generate top-K per field by normalized lexical similarity plus key/uniqueness cues. Compute evidence on blocked pairs, not all 1,000² pairs. Support composite keys by ordered tuple comparison only when component mapping is justified. Direction asks whether child values are contained in a candidate unique parent key, plus null/duplication rates, join evidence and counterexamples. Abstain when sample support or uniqueness is insufficient. Cross-source matches are `REFERENCE_CANDIDATE` unless observed joins or stronger evidence warrants an approved status tier.
 
+### 8a. Cross-source value evidence as implemented (2026-09-27)
+
+Tokens are opt-in twice over: a collector produces them only when sampling is configured *and* a
+`value_token_key_env` reference with a matching `value_token_key_id` is given. A key without an ID
+is refused, because an ID is what makes two sides comparable, and an ID without a key would claim
+a comparison that was never computed.
+
+A token is `HMAC-SHA256(run key, normalised text)`. Keyed, not hashed: an unkeyed digest of a
+low-entropy value such as a small integer or a country code is recovered by trying every
+candidate. `exact_text` normalisation does not fold case or trim, because §8 requires case, locale
+and leading zeros preserved; it does mean integer `123` and string `"123"` agree, which is the
+cross-source case that matters most, a MongoDB string identifier pointing at a relational integer
+key. Booleans, bytes and structured values are counted as unusable rather than coerced, since no
+normalisation for them would be agreed by two different engines.
+
+Tokens ride in their own `tokens.jsonl` inside the bundle, so an operator can see from the
+manifest whether a bundle carries them at all and a deployment can choose not to transport that
+file. A bundle is a controlled transfer; the published graph is not, and no token crosses into a
+snapshot.
+
+PostgreSQL sampling is one bounded read per table, with the discovered columns named explicitly
+rather than `SELECT *`, and the row limit bound rather than interpolated. The sample is the first
+rows the server returns, which is biased, and `sample_method` records exactly that. §20 rules out
+the alternatives that would look fairer: `ORDER BY random()` and unbounded scans are the reads
+that hurt a production source, and `TABLESAMPLE` plus `LIMIT` guarantees neither a cheap nor an
+unbiased fixed-size sample.
+
+The assembler measures **containment**, not similarity: a reference means the child's values are
+drawn from the parent's key, so the question is one-directional and the denominator is the child's
+distinct count. Jaccard overlap is reported alongside it, because a high containment on a tiny
+child sample against a huge parent is weak and the two numbers together show that. The evidence
+carries both metrics, both sample counts, both sample methods, the key ID, the minimum support,
+and `lower_bound_only` when either token set was capped.
+
+It **abstains** rather than reporting a meaningless number in four cases: either side has no
+tokens, the two were keyed under different key IDs, the two were normalised differently, or either
+distinct count is below `MIN_TOKEN_SUPPORT`. The different-key case matters most: those tokens are
+unrelated byte strings, so their zero overlap would read as a counterexample rather than as
+ignorance.
+
+Containment never promotes an edge. It is cited by the `REFERENCE_CANDIDATE` edge and changes
+neither its status nor its `confidence`, which stays null. Promotion needs the calibration that
+§15 requires and that does not exist yet.
+
 ## 9. Lineage and query history
 
 Inputs are observed SQL text/normalized fingerprints with provenance and times, view definitions, job/run records, and OpenLineage events. A view definition is *defined* transformation lineage, distinguished from an executed job. SQLGlot parses PostgreSQL/ClickHouse dialects; our resolver qualifies tables/columns against a snapshot, handles aliases/CTEs/stars where resolvable, and records unresolved expressions. Capture `INSERT ... SELECT`, `CREATE TABLE AS`, materialized view definitions, configured transformation jobs, and reads/writes. Column lineage is emitted only when expressions map to known fields; otherwise table-level edge plus diagnostic. SQL text stored only under policy after literal/comment redaction; default artifact stores fingerprint, parser version and redacted snippet.

@@ -42,6 +42,8 @@ class PgCursor:
     constraints = [(99, 42, 42, "p", [1], None)]
     # schemaname, tablename, attname, null_frac, n_distinct, avg_width, analyze, auto, reltuples
     stats = [("public", "orders", "id", 0.25, -1.0, 4, None, None, 12.5)]
+    # Rows returned by the bounded value sample, one tuple per row in discovered-column order.
+    sample = [(1,), (2,), (3,)]
 
     def __init__(self):
         self.calls = []
@@ -58,6 +60,10 @@ class PgCursor:
             return self.constraints
         if "pg_attribute" in self.last:
             return self.fields
+        # The value sample is the only statement that selects quoted user columns rather than a
+        # catalog relation, so it is recognised by that rather than by call order.
+        if self.last.startswith('SELECT "'):
+            return self.sample
         return self.objects
 
     def close(self):

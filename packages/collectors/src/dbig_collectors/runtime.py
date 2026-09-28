@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
+import re
 import ssl
 from collections import defaultdict
+from decimal import Decimal
 from importlib.metadata import version
 from pathlib import Path
 from typing import Any
@@ -13,7 +16,15 @@ from uuid import uuid4
 
 from dbig_contracts.artifact import write_artifact
 from dbig_contracts.ids import stable_id
-from dbig_contracts.models import Field, Object, Profile, Record, Source, utc_now
+from dbig_contracts.models import (
+    Field,
+    Object,
+    Profile,
+    Record,
+    Source,
+    ValueTokens,
+    utc_now,
+)
 from dbig_contracts.security import secret_from_env
 
 from .config import SourceConfig
@@ -37,6 +48,145 @@ def _common(config: SourceConfig) -> dict[str, Any]:
         "collector_version": version("dbig-collectors"),
         "provenance": "source-catalog",
     }
+
+
+IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_$]*$")
+
+
+def _quoted(name: str) -> str:
+    """Quote a catalog identifier, refusing anything that is not one.
+
+    The names come from the server's own catalog rather than from a caller, so this is a
+    belt-and-braces check: a name that cannot be an identifier means something is wrong with the
+    read, and reading on would build SQL from an unexpected string.
+    """
+    if not IDENTIFIER.match(name):
+        raise ValueError(f"refusing to build SQL for unexpected identifier: {name!r}")
+    return f'"{name}"'
+
+
+def _token_text(value: Any) -> str | None:
+    """Normalise one sampled value to the text that gets keyed, or nothing if it cannot be.
+
+    `exact_text` normalisation deliberately does not fold case or trim: §8 requires case, locale
+    and leading zeros to be preserved, because "01" and "1" are different keys in some systems
+    and the same in others, and guessing which would invent matches. It does mean an integer 123
+    and the string "123" produce the same token, which is the cross-source case that matters most:
+    a MongoDB string identifier pointing at a relational integer key.
+
+    Booleans, bytes and structured values return nothing. They are counted as unusable rather
+    than coerced, because there is no normalisation for them that two different engines would
+    agree on.
+    """
+    if value is None or isinstance(value, bool | bytes | bytearray | dict | list):
+        return None
+    if isinstance(value, int):
+        return str(value)
+    if isinstance(value, str):
+        return value
+    if isinstance(value, float | Decimal):
+        # Canonical decimal text, so 1.0 and 1 agree and float repr noise does not leak in.
+        as_decimal = Decimal(str(value)).normalize()
+        return format(as_decimal, "f")
+    return None
+
+
+def _value_tokens(
+    values: list[Any],
+    *,
+    key: bytes,
+    limit: int,
+) -> tuple[list[str], int, int, bool]:
+    """Key the distinct usable values, capped, returning the honest denominators.
+
+    `observed` and `distinct` describe the sample, not the cap, because they are the denominators
+    a containment metric divides by. `truncated` says the token set is a subset, which makes any
+    containment computed from it a lower bound rather than a measurement.
+    """
+    digests: dict[str, None] = {}
+    observed = 0
+    for value in values:
+        text = _token_text(value)
+        if text is None:
+            continue
+        observed += 1
+        digests[hmac.new(key, text.encode("utf-8"), hashlib.sha256).hexdigest()] = None
+    distinct = len(digests)
+    kept = sorted(digests)[:limit]
+    return kept, observed, distinct, distinct > len(kept)
+
+
+def _tokenize_postgresql(
+    cursor: Any,
+    config: SourceConfig,
+    budget: Budget,
+    tables: dict[str, list[Record]],
+    object_rows: list[Any],
+    field_rows: list[Any],
+    common: dict[str, Any],
+) -> None:
+    """Sample bounded rows per table and publish keyed tokens for their values.
+
+    Off unless sampling is configured *and* a token key reference is given, because a token can
+    only come from a value that was read and reading values is not the default. One bounded read
+    per table, with the discovered columns named explicitly rather than `SELECT *`, so the read
+    is predictable and the byte cost is bounded by the row limit.
+
+    The sample is the first rows the server returns, which is biased, and `sample_method` says so.
+    §20 rules out the alternatives that would look fairer: `ORDER BY random()` and unbounded
+    scans are exactly the reads that hurt a production source, and `TABLESAMPLE` plus `LIMIT`
+    guarantees neither a cheap nor an unbiased fixed-size sample.
+
+    Raw values never leave this function. Only keyed digests and counts are published.
+    """
+    if config.sample_rows <= 0 or not config.value_token_key_env:
+        return
+    key = secret_from_env(
+        config.value_token_key_env, purpose="cross-source value tokenisation"
+    ).encode("utf-8")
+    if len(key) < 32:
+        raise ValueError("value token key must contain at least 32 bytes")
+    key_id = config.value_token_key_id or ""
+    identity = {oid: (schema, name) for oid, schema, name, kind, *_ in object_rows if kind in "rmp"}
+    columns: dict[int, list[tuple[int, str]]] = defaultdict(list)
+    for oid, attnum, name, *_ in field_rows:
+        if oid in identity:
+            columns[oid].append((attnum, name))
+    for oid, entries in sorted(columns.items()):
+        schema, table = identity[oid]
+        names = [name for _, name in sorted(entries)]
+        budget.charge()
+        selected = ",".join(_quoted(name) for name in names)
+        cursor.execute(
+            # Identifiers are quoted from the server's own catalog and validated by `_quoted`;
+            # the row limit is bound. No caller input reaches this statement.
+            f"SELECT {selected} FROM {_quoted(schema)}.{_quoted(table)} "  # noqa: S608
+            "LIMIT %s",
+            (config.sample_rows,),
+        )
+        rows = cursor.fetchall()
+        for position, (attnum, _) in enumerate(sorted(entries)):
+            field_id = stable_id(config.source_id, "field", f"{oid}:{attnum}")
+            digests, observed, distinct, truncated = _value_tokens(
+                [row[position] for row in rows], key=key, limit=config.max_value_tokens
+            )
+            if not digests:
+                continue
+            tables["tokens.jsonl"].append(
+                ValueTokens(
+                    id=stable_id(config.source_id, "tokens", field_id),
+                    field_id=field_id,
+                    object_id=stable_id(config.source_id, "object", str(oid)),
+                    key_id=key_id,
+                    sample_count=len(rows),
+                    sample_method=f"first_rows_limit:{config.sample_rows}",
+                    observed_count=observed,
+                    distinct_count=distinct,
+                    truncated=truncated,
+                    tokens=digests,
+                    **common,
+                )
+            )
 
 
 def _profile_postgresql(
@@ -246,6 +396,7 @@ def discover_postgresql(
                     )
                 )
             _profile_postgresql(cursor, config, budget, tables, rows, field_rows, common)
+            _tokenize_postgresql(cursor, config, budget, tables, rows, field_rows, common)
             budget.charge()
             cursor.execute(
                 "SELECT oid, conrelid, confrelid, contype, conkey, confkey "

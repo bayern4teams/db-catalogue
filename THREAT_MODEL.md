@@ -120,12 +120,22 @@ values. Cross-source comparison uses HMAC tokens under a per-run key, held only 
 memory inside one run boundary and never published as durable graph fields. View definitions and
 ClickHouse key expressions are published as SHA-256 digests, not text.
 
+Cross-source comparison is implemented as of 2026-09-27 and is off unless sampling *and* a
+run-key reference are both configured. Tokens are `HMAC-SHA256` under a per-run key, ride in their
+own bundle file so a deployment can decline to transport them, and never cross into a snapshot:
+only aggregate containment metrics do.
+
 *Tests:* `test_mongo_metadata_only_never_samples`, `test_mongo_validator_and_type_only_sample`,
-`test_postgres_view_definition_is_hashed_without_literals`.
+`test_postgres_view_definition_is_hashed_without_literals`, `test_no_raw_value_reaches_the_bundle`,
+`test_tokens_never_reach_the_snapshot`,
+`test_the_same_value_under_a_different_key_gives_a_different_token`,
+`test_no_tokens_without_sampling`, `test_no_tokens_without_a_key`,
+`test_values_with_no_agreed_normalisation_are_skipped`.
 
 *Residual risk, accepted:* a plain hash of a low-cardinality value is guessable, which is why
-tokens are keyed and never persisted. Python cannot guarantee memory zeroization, so deployment
-isolation and short retention remain part of the control.
+tokens are keyed; replacing the HMAC with a bare digest is caught by
+`test_a_token_is_the_keyed_digest_of_the_normalised_text`. Python cannot guarantee memory
+zeroization, so deployment isolation and short retention remain part of the control.
 
 ### T8 — A rename or a partial scan corrupts identity or deletes real objects
 

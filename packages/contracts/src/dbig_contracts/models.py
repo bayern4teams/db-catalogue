@@ -164,6 +164,54 @@ class Profile(Record):
         return Record.aware_time(value) if value is not None else None
 
 
+class ValueTokens(Record):
+    """Keyed one-way tokens for one field's sampled values, for cross-source comparison only.
+
+    A plain hash is not enough: low-entropy values such as small integers or country codes are
+    trivially recovered from an unkeyed digest by trying every candidate. The tokens here are
+    HMAC-SHA256 under a key that exists for one run, so they are comparable within that run and
+    meaningless outside it, and the key itself never enters the artifact.
+
+    Tokens live in a bundle because a bundle is a controlled transfer, not the published graph.
+    They are their own file so an operator can see from the manifest whether a bundle carries
+    them at all, and so a deployment can choose not to transport it. Nothing derived from them
+    reaches a snapshot except aggregate metrics.
+    """
+
+    record_type: Literal["value_tokens"] = "value_tokens"
+    field_id: str = PydanticField(min_length=1)
+    object_id: str = PydanticField(min_length=1)
+    algorithm: Literal["hmac-sha256"] = "hmac-sha256"
+    # Identifies the run key. Two token sets are comparable only when this matches, so the
+    # assembler refuses to compare across different key IDs rather than reporting a meaningless
+    # zero overlap.
+    key_id: str = PydanticField(min_length=1)
+    # How a value was turned into bytes before keying. Recorded because a comparison between two
+    # differently normalised sides is not a comparison at all.
+    normalization: Literal["exact_text"] = "exact_text"
+    # Rows or documents examined, and how they were chosen, so a reader can judge the sample.
+    sample_count: int = PydanticField(ge=0)
+    sample_method: str = PydanticField(min_length=1)
+    # Non-null values seen, and how many were distinct, both before any cap was applied. These
+    # are the denominators for containment, so they must describe the sample and not the cap.
+    observed_count: int = PydanticField(ge=0)
+    distinct_count: int = PydanticField(ge=0)
+    # True when `tokens` holds fewer than `distinct_count` entries, which makes containment a
+    # lower bound rather than a measurement.
+    truncated: bool = False
+    tokens: list[str] = PydanticField(default_factory=list)
+
+    @field_validator("tokens")
+    @classmethod
+    def sorted_hex_digests(cls, value: list[str]) -> list[str]:
+        if any(len(item) != 64 or not all(c in "0123456789abcdef" for c in item) for item in value):
+            raise ValueError("a value token must be a lowercase sha256 hex digest")
+        if len(set(value)) != len(value):
+            raise ValueError("value tokens must be distinct")
+        # Sorted so the file's bytes, and therefore its digest, do not depend on scan order.
+        return sorted(value)
+
+
 class Diagnostic(Record):
     """A machine-readable reason the collector could not carry something into the bundle.
 

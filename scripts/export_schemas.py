@@ -16,6 +16,7 @@ from dbig_contracts.models import (
     Profile,
     SnapshotNode,
     Source,
+    ValueTokens,
 )
 from dbig_contracts.scan import ScanReceipt, ScanRequest, SignedScanRequest
 from jsonschema import Draft202012Validator
@@ -29,6 +30,7 @@ MODELS = {
     "constraint": Constraint,
     "diagnostic": Diagnostic,
     "profile": Profile,
+    "value_tokens": ValueTokens,
     "evidence": Evidence,
     "edge": Edge,
     "manifest": Manifest,
