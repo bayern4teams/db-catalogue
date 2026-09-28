@@ -105,6 +105,106 @@ def _reference_stem(name: str) -> tuple[str, bool]:
     return folded, False
 
 
+def _composite_candidates(
+    composite_keys: list[tuple[str, list[Field]]],
+    objects: dict[str, Object],
+    by_object_name: dict[str, dict[str, Field]],
+    declared_pairs: set[tuple[str, str]],
+    evidence: dict[str, Evidence],
+    edges: dict[str, Edge],
+) -> None:
+    """Propose candidates against declared multi-column keys.
+
+    Declared foreign keys already carry multi-column `field_pairs`, but candidate generation was
+    single-field only, so a two-column natural key could never be proposed at all.
+
+    Precision-first, in three ways. Every component must match, because a partial tuple is not a
+    reference to a tuple key: matching two of three columns says nothing about the third. At least
+    one component must be named for the parent, as `<singular parent>_<component>`, because two
+    unrelated tables that merely both have `id` and `name` columns would otherwise look like a
+    reference. And the components keep the source's declared order, since a tuple compared out of
+    order is a different tuple.
+
+    No value evidence is attached. §8 requires ordered tuple comparison for composite keys, and
+    per-field tokens cannot provide it: knowing each column's values overlap separately says
+    nothing about whether the *combinations* do. Claiming containment from per-field tokens here
+    would be the kind of invented measurement the rest of this design refuses.
+    """
+    for parent_object_id, members in composite_keys:
+        parent_object = objects.get(parent_object_id)
+        if parent_object is None:
+            continue
+        singular = parent_object.name.casefold().rstrip("s")
+        for child_object_id, child_fields in by_object_name.items():
+            if child_object_id == parent_object_id:
+                continue
+            if (child_object_id, parent_object_id) in declared_pairs:
+                continue
+            child_object = objects.get(child_object_id)
+            if child_object is None:
+                continue
+            folded = {name.casefold(): field for name, field in child_fields.items()}
+            matched: list[Field] = []
+            pairs: list[list[str]] = []
+            named_for_parent = 0
+            for member in members:
+                component = member.name.casefold()
+                prefixed = folded.get(f"{singular}_{component}")
+                match = prefixed or folded.get(component)
+                if match is None or _type_family(match.data_type) != _type_family(
+                    member.data_type
+                ):
+                    pairs = []
+                    break
+                if prefixed is not None:
+                    named_for_parent += 1
+                matched.append(match)
+                pairs.append([match.id, member.id])
+            if not pairs or named_for_parent == 0:
+                continue
+            anchor = matched[0]
+            components = _evidence(
+                anchor,
+                "composite_name_match",
+                members[0].id,
+                f"composite:{parent_object_id}",
+                {
+                    "component_count": len(members),
+                    "components_named_for_parent": named_for_parent,
+                    "tuple_containment_measured": False,
+                },
+            )
+            key = _evidence(
+                members[0],
+                "catalog_key",
+                anchor.id,
+                f"composite-unique:{child_object_id}",
+                {"component_count": len(members)},
+            )
+            for item in (components, key):
+                evidence[item.id] = item
+            edge_id = stable_id(
+                anchor.source_id, "edge", f"composite:{child_object_id}:{parent_object_id}"
+            )
+            edges[edge_id] = Edge.model_validate(
+                {
+                    "id": edge_id,
+                    "kind": "REFERENCE_CANDIDATE",
+                    "from_id": child_object_id,
+                    "to_id": parent_object_id,
+                    "status": "tentative",
+                    "evidence_ids": [components.id, key.id],
+                    "field_pairs": pairs,
+                    "explanation": (
+                        "every component of a declared composite key matched by name, with no "
+                        "tuple value comparison available"
+                    ),
+                    "confidence": None,
+                    **_base(anchor),
+                }
+            )
+
+
 def _containment(
     child: Field,
     child_tokens: ValueTokens | None,
@@ -248,6 +348,9 @@ def assemble(
     evidence: dict[str, Evidence] = {}
     edges: dict[str, Edge] = {}
     unique_fields: list[Field] = []
+    # Declared multi-column keys, in declared order. A tuple's components are only meaningful
+    # together and in sequence, so the order the source declared is preserved throughout.
+    composite_keys: list[tuple[str, list[Field]]] = []
     declared_pairs: set[tuple[str, str]] = set()
     for constraint in constraints:
         kind = constraint.kind
@@ -261,6 +364,14 @@ def assemble(
             unique_field = by_object_name.get(owner, {}).get(constraint.field_names[0])
             if unique_field:
                 unique_fields.append(unique_field)
+        elif kind in {"primary", "unique"} and len(ordinals) > 1:
+            members = [by_object.get(owner, {}).get(ordinal) for ordinal in ordinals]
+            if all(members):
+                composite_keys.append((owner, [member for member in members if member]))
+        elif kind in {"primary", "unique"} and len(constraint.field_names) > 1:
+            named = [by_object_name.get(owner, {}).get(name) for name in constraint.field_names]
+            if all(named):
+                composite_keys.append((owner, [member for member in named if member]))
         if kind != "foreign":
             continue
         target = constraint.target_object_id
@@ -401,6 +512,9 @@ def assemble(
                     **_base(child),
                 }
             )
+    _composite_candidates(
+        composite_keys, objects, by_object_name, declared_pairs, evidence, edges
+    )
     review_status = "REVIEW_DISABLED"
     if config.review is not None:
         suggestions, review_status = review_candidates(
