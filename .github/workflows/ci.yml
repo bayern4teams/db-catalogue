@@ -128,8 +128,10 @@ jobs:
         run: |
           certs="$RUNNER_TEMP/certs"
           mkdir "$RUNNER_TEMP/certs-ch" "$RUNNER_TEMP/certs-mongo"
-          cp "$certs/server.crt" "$certs/server.key" "$RUNNER_TEMP/certs-ch/"
-          cp "$certs/server.pem" "$certs/ca.crt" "$RUNNER_TEMP/certs-mongo/"
+          # sudo: the PostgreSQL step already gave server.key to uid 70 with mode 600, so the
+          # runner user can no longer read it. Running as root locally hid this; CI did not.
+          sudo cp "$certs/server.crt" "$certs/server.key" "$RUNNER_TEMP/certs-ch/"
+          sudo cp "$certs/server.pem" "$certs/ca.crt" "$RUNNER_TEMP/certs-mongo/"
           printf '%s\n' '<clickhouse>' '  <https_port>8443</https_port>' '  <openSSL><server>' \
             '    <certificateFile>/certs/server.crt</certificateFile>' \
             '    <privateKeyFile>/certs/server.key</privateKeyFile>' \
