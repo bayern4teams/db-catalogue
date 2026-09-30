@@ -18,7 +18,15 @@ class SourceConfig(BaseModel):
     signing_key_env: str = Field(pattern=r"^[A-Z][A-Z0-9_]*$")
     signing_key_id: str = Field(min_length=1)
     namespaces: list[str] = Field(min_length=1)
-    tls: Literal[True] = True
+    # Verified TLS is the default and the only option for any host other than loopback. `false`
+    # is accepted only when every host in the connection reference is a loopback IP literal,
+    # checked at connect time because the host lives in the secret, not in this file.
+    tls: bool = True
+    # A PEM file of CA certificates, for servers whose certificates come from a private CA. Passed
+    # explicitly to every driver, because they otherwise find trust roots differently: the
+    # PostgreSQL and ClickHouse drivers use the operating system store, and PyMongo's handling of
+    # `SSL_CERT_FILE` differs by platform. Unset means the operating system store.
+    tls_ca_file: Path | None = None
     max_queries: int = Field(default=50, ge=1)
     max_objects: int = Field(default=1000, ge=1)
     max_fields: int = Field(default=10000, ge=1)
@@ -50,6 +58,15 @@ class SourceConfig(BaseModel):
             )
         return self
 
+    @model_validator(mode="after")
+    def ca_file_needs_tls(self) -> SourceConfig:
+        if self.tls_ca_file is not None:
+            if not self.tls:
+                raise ValueError("tls_ca_file has no effect with tls = false")
+            if not self.tls_ca_file.is_file():
+                raise ValueError(f"tls_ca_file is not a readable file: {self.tls_ca_file}")
+        return self
+
     @field_validator("namespaces")
     @classmethod
     def nonempty_namespaces(cls, value: list[str]) -> list[str]:
@@ -70,6 +87,7 @@ def load_config(path: Path) -> SourceConfig:
         "signing_key_env",
         "signing_key_id",
         "http_token_env",
+        "tls_ca_file",
     }
     for key in SourceConfig.model_fields:
         env = os.getenv("DBIG_" + key.upper())

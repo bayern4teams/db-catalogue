@@ -167,10 +167,44 @@ enforces a configured request body limit.
 *Explicitly out of scope:* rate limiting per caller, authorization scopes, audit logging and
 TLS termination. Public exposure is unsupported, not partially hardened.
 
+### T10 — Source metadata or credentials cross a network in plaintext, or to an impostor
+
+`collect` connects with verified TLS by default for all three engines: chain and hostname
+verification through each driver, with `tls_ca_file` passed explicitly to pg8000, ClickHouse
+Connect and PyMongo for servers whose certificates come from a private CA. `tls = false` exists
+for local development only and is refused unless every host in the connection reference is a
+loopback IP literal; `localhost` is refused because it is whatever the resolver says, a MongoDB
+URI is refused if any replica-set member is remote, and `mongodb+srv://` is refused outright.
+Every bundle records `transport` on its source (`tls-verified` or `plaintext-loopback`), and the
+catalogue page shows it per source. A certificate that fails verification ends the run with one
+line naming the fix, and never repeats connection details.
+
+*Tests:* `tests/test_collector_tls.py` (driver options per engine, loopback refusal before any
+connection, private CA reaching every driver, the failure message; 16 of 16 mutations caught);
+`tests/test_live_tls.py` against real PostgreSQL 16.15, ClickHouse 25.8.33.6 and MongoDB 7.0.41:
+verified TLS through `tls_ca_file` alone with `SSL_CERT_FILE` removed, refusal of a certificate
+from an untrusted CA on every engine, and the plaintext loopback opt-out.
+
+### T11 — A hostile database name executes in the catalogue page
+
+Every object, column, constraint and diagnostic name on the page comes from a database. The
+renderer escapes all text including quotes, derives anchors from stable IDs rather than names,
+loads nothing from anywhere, and ships a content security policy of `default-src 'none'` whose
+only script source is the SHA-256 of its one static filter script. Value tokens are never
+rendered. A bundle is shown only if its signature verifies and its run is one the snapshot was
+assembled from.
+
+*Tests:* `tests/test_render.py` (hostile names in element and attribute context, the pinned
+policy, no external loads, no tokens, bundle linkage; 9 of 9 mutations caught). Checked once in
+headless Chromium on 2026-09-30: the planted `<script>` did not run, no console error, zero
+network requests, and the filter works under the policy. That browser check is not in CI.
+
 ## Known gaps
 
 1. ClickHouse server-side read limits are specified but not asserted against a live server.
-2. Driver exceptions are only spot-checked for credential leakage.
+2. Driver exceptions are only spot-checked for credential leakage. A certificate verification
+   failure is now converted to a fixed operator message; every other driver failure (refused
+   connection, bad password, timeout) still surfaces as the driver's traceback.
 3. Live vLLM and Langfuse behaviour, including masking, is untested by user decision.
 4. No test yet binds a real loopback port and serves an HTTP request end to end; the app and the
    bind refusal are tested separately.

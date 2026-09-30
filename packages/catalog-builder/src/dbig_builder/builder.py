@@ -43,6 +43,15 @@ def _read_signed(path: Path, config: BuilderConfig) -> tuple[Manifest, dict[str,
     return manifest, records
 
 
+def bundle_run_id(source_id: str, manifest: Manifest) -> str:
+    """The snapshot run ID a bundle contributes, derived from its exact manifest bytes.
+
+    Public because the catalogue renderer uses it to prove a bundle is one this snapshot was
+    assembled from, rather than a newer or older collection of the same source.
+    """
+    return stable_id(source_id, "run", hashlib.sha256(canonical(manifest)).hexdigest())
+
+
 def _base(record: Record) -> dict[str, Any]:
     return {
         "source_id": record.source_id,
@@ -330,7 +339,7 @@ def assemble(
             Record.model_validate(
                 {
                     "record_type": "run",
-                    "id": stable_id(source.id, "run", digest),
+                    "id": bundle_run_id(source.id, manifest),
                     "source_id": source.id,
                     "observed_at": manifest.as_of,
                     "collector_version": manifest.producer,

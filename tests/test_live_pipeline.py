@@ -1,9 +1,9 @@
 """The whole pipeline on real source data, starting from the real `collect` command.
 
 `tests/test_end_to_end.py` proves the chain from a synthetic bundle onward. It has to, because
-`collect` needs a database. This file closes the remaining gap: it runs `dbig-collectors collect`
-against a live PostgreSQL over verified TLS and feeds that genuine bundle through assemble,
-index, search and the planner.
+`collect` needs a database. This file closes the remaining gap: it runs the collector's
+`dbig collect` against a live PostgreSQL over verified TLS and feeds that genuine bundle
+through assemble, index, search and the planner.
 
 The TLS part is the reason this could not exist before. `collect` connects with
 `ssl.create_default_context()` and the CI fixtures were plaintext, so its connection path was
@@ -55,7 +55,12 @@ SEED_STATEMENTS = (
 def _run(command: list[str], env: dict[str, str]) -> subprocess.CompletedProcess[str]:
     executable = SCRIPTS / command[0]
     if not executable.exists():
-        pytest.skip(f"{command[0]} console script is not installed")
+        # A failure, never a skip. This file used to skip here, and it named the collector's
+        # command `dbig-collectors`, which is the distribution, not the script (`dbig`). Every
+        # test below therefore skipped in CI while the job reported success, and the chain was
+        # claimed as verified when it had never run. Opting in with DBIG_RUN_INTEGRATION=1 means
+        # the scripts must be there.
+        pytest.fail(f"{command[0]} console script is not installed")
     return subprocess.run(  # noqa: S603 - fixed argv, no shell
         [str(executable), *command[1:]], capture_output=True, text=True, env=env, timeout=240
     )
@@ -119,12 +124,12 @@ def collected(tmp_path_factory) -> dict:
 
     steps: dict[str, subprocess.CompletedProcess[str]] = {}
     steps["collect"] = _run(
-        ["dbig-collectors", "collect", "--config", str(root / "source.toml"),
+        ["dbig", "collect", "--config", str(root / "source.toml"),
          "--out", str(root / "bundle")],
         env,
     )
     steps["validate-bundle"] = _run(
-        ["dbig-collectors", "validate-bundle", str(root / "bundle"),
+        ["dbig", "validate-bundle", str(root / "bundle"),
          "--key-env", "DBIG_SIGNING_KEY"],
         env,
     )
@@ -139,6 +144,12 @@ def collected(tmp_path_factory) -> dict:
     steps["search"] = _run(
         ["dbig-requester", "search", "--config", str(root / "requester.toml"),
          "--query", "orders"],
+        env,
+    )
+    steps["render"] = _run(
+        ["dbig-builder", "render", "--snapshot", str(root / "snapshot"),
+         "--bundle", str(root / "bundle"), "--config", str(root / "builder.toml"),
+         "--out", str(root / "catalog.html")],
         env,
     )
     observations = root / "observations"
@@ -217,3 +228,15 @@ def test_real_statistics_became_profiles(collected):
 def test_search_finds_the_real_objects(collected):
     payload = json.loads(collected["steps"]["search"].stdout)
     assert any(row["name"] == "orders" for row in payload["results"])
+
+
+def test_the_readable_catalogue_describes_the_real_schema(collected):
+    """The page an operator actually reads, built from what the real server reported: its
+    tables, its declared key and foreign key, and the statistics ANALYZE produced."""
+    page = (collected["root"] / "catalog.html").read_text(encoding="utf-8")
+    for expected in (
+        f"{NAMESPACE}.customers", f"{NAMESPACE}.orders", "customer_id",
+        "PK", "DECLARES_FK", "source_statistic", "Completeness: <b>complete</b>",
+    ):
+        assert expected in page, expected
+    assert CONNECTION not in page and SIGNING_KEY not in page

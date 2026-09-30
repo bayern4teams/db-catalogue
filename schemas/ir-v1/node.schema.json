@@ -316,6 +316,22 @@
           "minLength": 1,
           "title": "Source Id",
           "type": "string"
+        },
+        "transport": {
+          "anyOf": [
+            {
+              "enum": [
+                "tls-verified",
+                "plaintext-loopback"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Transport"
         }
       },
       "required": [

@@ -10,6 +10,7 @@ from dbig_contracts.models import Edge
 
 from .builder import assemble
 from .config import load_config
+from .render import render_catalog
 from .state import assemble_incremental
 
 
@@ -93,3 +94,31 @@ def explain_edge(edge_id: str, graph: Path) -> None:
             sort_keys=True,
         )
     )
+
+
+@main.command("render")
+@click.option(
+    "--snapshot", type=click.Path(path_type=Path, exists=True, file_okay=False), required=True
+)
+@click.option(
+    "--bundle",
+    "bundles",
+    type=click.Path(path_type=Path, exists=True, file_okay=False),
+    multiple=True,
+    help="A collector bundle the snapshot was assembled from; adds statistics, keys and "
+    "diagnostics. Repeat for each source.",
+)
+@click.option(
+    "--config",
+    "config_path",
+    type=click.Path(path_type=Path, exists=True, dir_okay=False),
+    help="Builder configuration whose signing keys verify the bundles.",
+)
+@click.option("--out", type=click.Path(path_type=Path, dir_okay=False), required=True)
+def render_command(
+    snapshot: Path, bundles: tuple[Path, ...], config_path: Path | None, out: Path
+) -> None:
+    """Write the catalogue as one self-contained HTML page."""
+    config = load_config(config_path) if config_path else None
+    counts = render_catalog(snapshot, list(bundles), out, config)
+    click.echo(json.dumps({"out": str(out), **counts}, sort_keys=True))

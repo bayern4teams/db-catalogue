@@ -48,6 +48,9 @@ class Source(Record):
     record_type: Literal["source"] = "source"
     kind: Literal["postgresql", "clickhouse", "mongodb"]
     name: str
+    # How the collector reached the source. Optional and additive: a bundle from an older
+    # collector has none, and `None` is excluded from canonical bytes so its signature still holds.
+    transport: Literal["tls-verified", "plaintext-loopback"] | None = None
 
 
 class Object(Record):

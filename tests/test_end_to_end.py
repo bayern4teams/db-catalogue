@@ -33,7 +33,9 @@ SCRIPTS = Path(sys.executable).parent
 def _run(command: list[str], env: dict[str, str]) -> subprocess.CompletedProcess[str]:
     executable = SCRIPTS / command[0]
     if not executable.exists():
-        pytest.skip(f"{command[0]} console script is not installed in this environment")
+        # A failure, not a skip: a skip here once hid a misnamed command in the live pipeline
+        # test, whose whole chain then "passed" in CI without running.
+        pytest.fail(f"{command[0]} console script is not installed in this environment")
     return subprocess.run(  # noqa: S603 - fixed argv, no shell, paths from tmp_path
         [str(executable), *command[1:]], capture_output=True, text=True, env=env, timeout=180
     )
@@ -90,6 +92,12 @@ def pipeline(tmp_path: Path) -> dict:
          "--query", "orders"],
         env,
     )
+    steps["render"] = _run(
+        ["dbig-builder", "render", "--snapshot", str(tmp_path / "snapshot"),
+         "--bundle", str(tmp_path / "bundle"), "--config", str(tmp_path / "builder.toml"),
+         "--out", str(tmp_path / "catalog.html")],
+        env,
+    )
     steps["build"] = _run(
         ["dbig-planner", "build", "--snapshot", str(tmp_path / "snapshot"),
          "--observations", str(observations), "--out", str(tmp_path / "graph")],
@@ -128,6 +136,13 @@ def test_the_pipeline_publishes_a_verifiable_snapshot(pipeline):
     assert manifest.content_type == "catalog-snapshot"
     assert manifest.completeness == "complete"
     assert data["nodes.jsonl"] and data["edges.jsonl"]
+
+
+def test_the_pipeline_renders_a_readable_catalogue(pipeline):
+    counts = json.loads(pipeline["steps"]["render"].stdout)
+    page = (pipeline["root"] / "catalog.html").read_text(encoding="utf-8")
+    assert counts["objects"] >= 3
+    assert "customers" in page and "DECLARES_FK" in page
 
 
 def test_search_returns_the_catalogued_objects(pipeline):

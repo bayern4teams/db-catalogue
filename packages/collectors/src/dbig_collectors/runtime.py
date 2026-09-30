@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import ipaddress
 import json
 import re
 import ssl
@@ -15,6 +16,7 @@ from typing import Any
 from uuid import uuid4
 
 from dbig_contracts.artifact import write_artifact
+from dbig_contracts.errors import OperatorError
 from dbig_contracts.ids import stable_id
 from dbig_contracts.models import (
     Field,
@@ -924,8 +926,71 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
     return tables
 
 
+def _require_loopback(hosts: list[str]) -> None:
+    """Refuse plaintext unless every host is a loopback IP literal.
+
+    An IP literal, not a name: `localhost` is whatever the resolver says it is, and the point of
+    the rule is that nothing crosses a network unencrypted. The same rule already governs plain
+    HTTP to a private model endpoint.
+    """
+    for host in hosts or [""]:
+        try:
+            loopback = ipaddress.ip_address(host.strip("[]")).is_loopback
+        except ValueError:
+            loopback = False
+        if not loopback:
+            raise OperatorError(
+                f"tls = false is allowed only for loopback IP literals such as 127.0.0.1 or ::1, "
+                f"not {host or 'an unspecified host'!r}; enable TLS on the server instead"
+            )
+
+
+def _certificate_failure(error: BaseException, config: SourceConfig) -> OperatorError | None:
+    """Recognise a certificate that did not verify anywhere in an exception chain.
+
+    The most likely first-run failure against servers with a private CA, and each driver reports
+    it differently: pg8000 raises the `ssl` error itself, ClickHouse Connect wraps it, and
+    PyMongo only carries its text. The message names the fix and repeats only the verifier's own
+    reason, never connection details, which may include credentials.
+    """
+    current: BaseException | None = error
+    seen: set[int] = set()
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        if isinstance(current, ssl.SSLCertVerificationError) or (
+            "CERTIFICATE_VERIFY_FAILED" in str(current)
+        ):
+            reason = getattr(current, "verify_message", None) or "certificate verify failed"
+            hint = (
+                "tls_ca_file is set, so check that it is the CA that issued this server's "
+                "certificate"
+                if config.tls_ca_file is not None
+                else "if the server's certificate comes from a private CA, set tls_ca_file to "
+                "that CA's PEM file"
+            )
+            return OperatorError(
+                f"{config.kind} source {config.source_id!r}: the server's TLS certificate did "
+                f"not verify ({reason}); {hint}, and that the host in the connection matches "
+                "the certificate"
+            )
+        current = current.__cause__ or current.__context__
+    return None
+
+
 def collect(config: SourceConfig, destination: Path) -> None:
     """Create a signed bundle; never accept connection values on the CLI."""
+    try:
+        _collect(config, destination)
+    except OperatorError:
+        raise
+    except Exception as error:
+        converted = _certificate_failure(error, config)
+        if converted is not None:
+            raise converted from error
+        raise
+
+
+def _collect(config: SourceConfig, destination: Path) -> None:
     connection = json.loads(
         secret_from_env(config.connection_env, purpose="source connection settings")
     )
@@ -937,6 +1002,7 @@ def collect(config: SourceConfig, destination: Path) -> None:
     if len(signing_key) < 32:
         raise ValueError("signing key must contain at least 32 bytes")
     budget = Budget(config.max_queries)
+    ca_file = str(config.tls_ca_file) if config.tls_ca_file is not None else None
     if config.kind == "postgresql":
         from pg8000 import dbapi
 
@@ -945,8 +1011,12 @@ def collect(config: SourceConfig, destination: Path) -> None:
             for key in ("host", "port", "database", "user", "password")
             if key in connection
         }
+        if not config.tls:
+            _require_loopback([str(connection.get("host", ""))])
         client = dbapi.connect(
-            **allowed, ssl_context=ssl.create_default_context(), timeout=config.read_timeout_seconds
+            **allowed,
+            ssl_context=ssl.create_default_context(cafile=ca_file) if config.tls else None,
+            timeout=config.read_timeout_seconds,
         )
         try:
             data = discover_postgresql(client, config, budget)
@@ -960,18 +1030,36 @@ def collect(config: SourceConfig, destination: Path) -> None:
             for key in ("host", "port", "username", "password")
             if key in connection
         }
-        client = clickhouse_connect.get_client(**allowed, secure=True)
+        if not config.tls:
+            _require_loopback([str(connection.get("host", ""))])
+        tls_options: dict[str, Any] = {"secure": config.tls}
+        if config.tls:
+            tls_options["verify"] = True
+            if ca_file is not None:
+                tls_options["ca_cert"] = ca_file
+        client = clickhouse_connect.get_client(**allowed, **tls_options)
         try:
             data = discover_clickhouse(client, config, budget)
         finally:
             client.close()
     else:
-        from pymongo import MongoClient
+        from pymongo import MongoClient, uri_parser
 
         if set(connection) != {"uri"}:
             raise ValueError("MongoDB connection needs only uri")
+        mongo_options: dict[str, Any] = {"tls": config.tls}
+        if config.tls:
+            if ca_file is not None:
+                mongo_options["tlsCAFile"] = ca_file
+        else:
+            parsed = uri_parser.parse_uri(connection["uri"], connect_timeout=None)
+            if connection["uri"].startswith("mongodb+srv://"):
+                raise OperatorError("tls = false cannot be used with a mongodb+srv:// URI")
+            _require_loopback([host for host, _ in parsed["nodelist"]])
         client = MongoClient(
-            connection["uri"], tls=True, serverSelectionTimeoutMS=config.read_timeout_seconds * 1000
+            connection["uri"],
+            serverSelectionTimeoutMS=config.read_timeout_seconds * 1000,
+            **mongo_options,
         )
         try:
             data = discover_mongodb(client, config, budget)
@@ -979,7 +1067,15 @@ def collect(config: SourceConfig, destination: Path) -> None:
             client.close()
     common = _common(config)
     data["sources.jsonl"] = [
-        Source(id=config.source_id, kind=config.kind, name=config.source_id, **common)
+        Source(
+            id=config.source_id,
+            kind=config.kind,
+            name=config.source_id,
+            # How the metadata travelled, so a plaintext loopback collection is visible in every
+            # artifact downstream rather than only in the config that produced it.
+            transport="tls-verified" if config.tls else "plaintext-loopback",
+            **common,
+        )
     ]
     write_artifact(
         destination,

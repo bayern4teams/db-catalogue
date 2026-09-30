@@ -198,6 +198,29 @@ MongoDB: list databases/collections, indexes, validator JSON Schema, collection 
 
 Collector errors become codes such as `PERMISSION_DENIED`, `TIMEOUT`, `UNSUPPORTED_VERSION`, `PARSE_UNRESOLVED`, `BUDGET_EXHAUSTED`, `PARTIAL_SCAN`; never silently substitute empty results for unavailable metadata.
 
+### 7a. Transport security and the readable catalogue (settled 2026-09-30)
+
+User decision on 2026-09-30: the user's databases are on other servers on their network, so
+their runs use verified TLS; a loopback-only opt-out is allowed for local development. Source
+config therefore has `tls` (default `true`) and `tls_ca_file` (a PEM of CA certificates, unset
+means the operating system store, refused when `tls = false` or when the file is missing). The
+CA file is passed explicitly because, verified from the installed driver source, the drivers
+find trust roots differently: pg8000 uses `ssl.create_default_context()`, ClickHouse Connect
+0.15.1 takes `ca_cert=` and otherwise uses the OS store, and PyMongo 4.18.1 takes `tlsCAFile`
+and handles `SSL_CERT_FILE` differently on Windows. `tls = false` requires every host to be a
+loopback IP literal, the same rule as plain HTTP to a private model endpoint. The bundle's
+`Source.transport` records which applied; it is an optional additive field, absent from older
+bundles and excluded from canonical bytes when absent.
+
+`dbig-builder render --snapshot S [--bundle B ...] --config C --out catalog.html` writes one
+self-contained HTML page. By user decision it reads the snapshot plus the bundles it was built
+from rather than extending the snapshot contract: statistics, keys, indexes and diagnostics
+stay in bundles, so the requester and planner contracts are unchanged. A bundle is accepted only
+if its signature verifies with the builder's keys and `bundle_run_id` (the same derivation the
+assembler uses) is among the snapshot's runs. A source with no bundle is rendered from the
+snapshot with a visible notice. Output is deterministic for the same inputs and written
+atomically.
+
 ## 8. Profiling and cross-source value evidence
 
 Per field, compute bounded null/non-null counts, approximate or exact distinct count with method label, min/max for allowed types, length histogram, top-frequency sketches only if safe, and type/nullability distribution. Use source statistics where trustworthy, annotate freshness. Sample selection and size are recorded. Sensitive fields can be metadata-only. Value normalization is type-aware; preserve case/locale policy, leading zeros, time zone, binary encoding, and null distinction. Candidate pair comparison requires compatible normalized types and direction checks.
