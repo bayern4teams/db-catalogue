@@ -64,6 +64,70 @@ def _sql_read(item: dict, dialect: str, rows: int) -> str:
     return sql
 
 
+def _sql_join(
+    run: list[str], links: list[dict], objects: dict, fields: dict, dialect: str, rows: int
+) -> str:
+    """One read-only SELECT joining consecutive objects of one SQL source, AST-checked."""
+    query = exp.select(exp.Star()).from_(_table(objects[run[0]], "t0"))
+    for index, (right, edge) in enumerate(zip(run[1:], links, strict=True), start=1):
+        pairs = _pairs(edge, fields, run[index - 1], right)
+        conditions = [
+            exp.EQ(
+                this=exp.column(left_field, table=f"t{index - 1}", quoted=True),
+                expression=exp.column(right_field, table=f"t{index}", quoted=True),
+            )
+            for left_field, right_field in pairs
+        ]
+        predicate = conditions[0] if len(conditions) == 1 else exp.and_(*conditions)
+        query = query.join(_table(objects[right], f"t{index}"), on=predicate)
+    sql = query.limit(rows).sql(dialect=dialect)
+    parsed = parse_one(sql, read=dialect)
+    if not isinstance(parsed, exp.Select) or {
+        table.name for table in parsed.find_all(exp.Table)
+    } != {objects[node]["name"] for node in run}:
+        raise ValueError("UNSAFE_PLAN_AST")
+    return sql
+
+
+def _mongo_pipeline(
+    run: list[str], links: list[dict], objects: dict, fields: dict, rows: int
+) -> list[dict]:
+    """A `$lookup` chain over consecutive collections of one MongoDB source."""
+    _mongo_name(objects[run[0]]["name"])
+    pipeline: list[dict] = []
+    for index, (right, edge) in enumerate(zip(run[1:], links, strict=True), start=1):
+        pairs = _pairs(edge, fields, run[index - 1], right)
+        if len(pairs) != 1:
+            raise ValueError("MONGO_COMPOSITE_LOOKUP_UNSUPPORTED")
+        pipeline.append(
+            {
+                "$lookup": {
+                    "from": _mongo_name(objects[right]["name"]),
+                    "localField": _mongo_name(pairs[0][0]),
+                    "foreignField": _mongo_name(pairs[0][1]),
+                    "as": f"joined_{index}",
+                }
+            }
+        )
+    pipeline.append({"$limit": rows})
+    return pipeline
+
+
+def _runs(nodes: list[str], source_ids: list[str]) -> list[tuple[int, int]]:
+    """Maximal stretches of consecutive path objects in one source, as [start, end) indexes.
+
+    Only consecutive: a path that leaves a source and comes back is two reads, because the
+    objects in between belong to another system and cannot be joined inside either.
+    """
+    runs: list[tuple[int, int]] = []
+    start = 0
+    for index in range(1, len(nodes) + 1):
+        if index == len(nodes) or source_ids[index] != source_ids[start]:
+            runs.append((start, index))
+            start = index
+    return runs
+
+
 def render_plan(directory: Path, request: PlanRequest, config: PlannerConfig) -> dict:
     graph = load_graph(directory)
     path = load_path(directory, request.path_id)
@@ -102,32 +166,36 @@ def render_plan(directory: Path, request: PlanRequest, config: PlannerConfig) ->
     warnings: list[str] = []
     unresolved: list[str] = []
     if len(set(source_ids)) > 1:
-        for node, kind in zip(nodes, kinds, strict=True):
-            item = objects[node]
+        # Consecutive objects in one source become one read that joins them there, so a path
+        # through three PostgreSQL tables is one query, not three reads joined later. Only the
+        # hops that cross sources are left as logical joins for a staging target to perform.
+        runs = _runs(nodes, source_ids)
+        for start, end in runs:
+            run, run_links = nodes[start:end], links[start : end - 1]
+            kind = kinds[start]
+            step: dict = {
+                "kind": "source_read",
+                "source_id": source_ids[start],
+                "object_ids": run,
+            }
+            if len(run) == 1:
+                step["object_id"] = run[0]
             if kind == "mongodb":
-                steps.append(
-                    {
-                        "kind": "source_read",
-                        "source_id": item["source_id"],
-                        "object_id": node,
-                        "collection": _mongo_name(item["name"]),
-                        "pipeline": [{"$limit": rows}],
-                    }
-                )
+                step["collection"] = _mongo_name(objects[run[0]]["name"])
+                step["pipeline"] = _mongo_pipeline(run, run_links, objects, fields, rows)
             elif kind in dialects:
-                steps.append(
-                    {
-                        "kind": "source_read",
-                        "source_id": item["source_id"],
-                        "object_id": node,
-                        "dialect": dialects[kind],
-                        "sql": _sql_read(item, dialects[kind], rows),
-                        "parameters": [],
-                    }
+                step["dialect"] = dialects[kind]
+                step["sql"] = (
+                    _sql_read(objects[run[0]], dialects[kind], rows)
+                    if len(run) == 1
+                    else _sql_join(run, run_links, objects, fields, dialects[kind], rows)
                 )
+                step["parameters"] = []
             else:
                 raise ValueError("UNSUPPORTED_SOURCE_KIND")
-        for left, right, edge in zip(nodes, nodes[1:], links, strict=False):
+            steps.append(step)
+        for (_, end), (next_start, _) in zip(runs, runs[1:], strict=False):
+            left, right, edge = nodes[end - 1], nodes[next_start], links[end - 1]
             _pairs(edge, fields, left, right)
             steps.append(
                 {
@@ -141,59 +209,23 @@ def render_plan(directory: Path, request: PlanRequest, config: PlannerConfig) ->
         unresolved = ["approved_staging_or_federated_target", "final_cross_source_join"]
         status = "unresolved"
     elif kinds[0] == "mongodb":
-        first = objects[nodes[0]]
-        _mongo_name(first["name"])
-        pipeline: list[dict] = []
-        for index, (right, edge) in enumerate(zip(nodes[1:], links, strict=True), start=1):
-            pairs = _pairs(edge, fields, nodes[index - 1], right)
-            if len(pairs) != 1:
-                raise ValueError("MONGO_COMPOSITE_LOOKUP_UNSUPPORTED")
-            pipeline.append(
-                {
-                    "$lookup": {
-                        "from": _mongo_name(objects[right]["name"]),
-                        "localField": _mongo_name(pairs[0][0]),
-                        "foreignField": _mongo_name(pairs[0][1]),
-                        "as": f"joined_{index}",
-                    }
-                }
-            )
-        pipeline.append({"$limit": rows})
         steps.append(
             {
                 "kind": "mongo_aggregation",
                 "source_id": source_ids[0],
-                "collection": first["name"],
-                "pipeline": pipeline,
+                "collection": objects[nodes[0]]["name"],
+                "pipeline": _mongo_pipeline(nodes, links, objects, fields, rows),
             }
         )
         status = "review_required" if path["status"] == "tentative" else "ready_for_review"
     elif kinds[0] in dialects:
         dialect = dialects[kinds[0]]
-        query = exp.select(exp.Star()).from_(_table(objects[nodes[0]], "t0"))
-        for index, (right, edge) in enumerate(zip(nodes[1:], links, strict=True), start=1):
-            pairs = _pairs(edge, fields, nodes[index - 1], right)
-            conditions = [
-                exp.EQ(
-                    this=exp.column(left_field, table=f"t{index - 1}", quoted=True),
-                    expression=exp.column(right_field, table=f"t{index}", quoted=True),
-                )
-                for left_field, right_field in pairs
-            ]
-            predicate = conditions[0] if len(conditions) == 1 else exp.and_(*conditions)
-            query = query.join(_table(objects[right], f"t{index}"), on=predicate)
-        sql = query.limit(rows).sql(dialect=dialect)
-        parsed = parse_one(sql, read=dialect)
-        if not isinstance(parsed, exp.Select) or {
-            table.name for table in parsed.find_all(exp.Table)
-        } != {objects[node]["name"] for node in nodes}:
-            raise ValueError("UNSAFE_PLAN_AST")
         steps.append(
             {
                 "kind": "sql_read",
                 "source_id": source_ids[0],
                 "dialect": dialect,
-                "sql": sql,
+                "sql": _sql_join(nodes, links, objects, fields, dialect, rows),
                 "parameters": [],
             }
         )

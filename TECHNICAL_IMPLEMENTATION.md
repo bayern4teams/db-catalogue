@@ -221,6 +221,29 @@ assembler uses) is among the snapshot's runs. A source with no bundle is rendere
 snapshot with a visible notice. Output is deterministic for the same inputs and written
 atomically.
 
+### 7b. Comments, search and plans on real catalogues (settled 2026-09-30)
+
+User decisions on 2026-09-30, after running the requester and planner on a real
+three-database snapshot:
+
+- **Comments.** `Object.description` and `Field.description` carry the owner-written comment,
+  optional and additive (absent from canonical bytes when `None`). PostgreSQL reads
+  `obj_description`/`col_description` and ClickHouse `system.tables.comment`/
+  `system.columns.comment` (verified on 25.8.33.6), both inside queries already made, so the
+  query budget is unchanged. MongoDB has no comments. Control characters are removed and text
+  over 1,000 characters is cut with an ellipsis. Shown on the page, searchable, and given to
+  `ask`; `include_comments = false` turns collection off.
+- **Search.** The index holds each entry's name, its owning table and schema, and its comment.
+  Terms match as prefixes and results are ranked by bm25 with weights 10/4/1 over those three.
+  `match = "all"` (default, the CLI and API) requires every term; `match = "any"` (used by
+  `ask`) drops common words and ranks by any term. `ask` no longer falls back to unfiltered
+  entries when nothing matches; it returns `NO_CATALOGUE_MATCH` without calling the model.
+- **Plans.** A cross-source path is split into runs of consecutive objects in one source; each
+  run is one read (a joined SELECT or a `$lookup` pipeline), and `logical_join` steps remain
+  only between runs. A path that leaves a source and returns is separate reads.
+- **Limits.** Reaching `max_queries`, `max_objects` or `max_fields` keeps stopping with no
+  bundle and an operator message.
+
 ## 8. Profiling and cross-source value evidence
 
 Per field, compute bounded null/non-null counts, approximate or exact distinct count with method label, min/max for allowed types, length histogram, top-frequency sketches only if safe, and type/nullability distribution. Use source statistics where trustworthy, annotate freshness. Sample selection and size are recorded. Sensitive fields can be metadata-only. Value normalization is type-aware; preserve case/locale policy, leading zeros, time zone, binary encoding, and null distinction. Candidate pair comparison requires compatible normalized types and direction checks.

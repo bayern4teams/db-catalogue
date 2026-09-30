@@ -7,12 +7,17 @@ anything that could not be catalogued and why. Nothing is written to your databa
 values leave the collector, and nothing is sent anywhere except to the databases you configure
 and, if you enable it, your own vLLM.
 
-The flow is three commands per run:
+The flow is three commands per run, then as many questions as you like:
 
 ```
-dbig collect          one signed bundle per database     (reads catalog metadata)
-dbig-builder assemble one snapshot from all bundles      (infers relationships)
-dbig-builder render   one HTML page                      (what you open)
+dbig collect            one signed bundle per database     (reads catalog metadata)
+dbig-builder assemble   one snapshot from all bundles      (infers relationships)
+dbig-builder render     one HTML page                      (what you open)
+
+dbig-requester search   find tables and columns by name, table or comment
+dbig-planner join-paths how to get from one table to another, across databases
+dbig-planner plan       the read-only query for a path (never executed for you)
+dbig-requester ask      a question in plain language, answered by your own vLLM
 ```
 
 ## What has been verified, and what has not
@@ -172,8 +177,56 @@ You can catalogue fewer than three databases: collect only those, and pass only 
 - **Statistics** come from the database's own planner statistics, with the time they were last
   analyzed; they are estimates and can be stale.
 - Each source shows how it was reached: `tls-verified`, or `plaintext-loopback` in warning colour.
+- Table and column **comments** appear under each table and in a Description column. Turn them
+  off per source with `include_comments = false`.
 
-## 7. Optional: measure value overlap across databases
+## 7. Search, join paths and query plans
+
+Point the requester at the run's snapshot, build its search index once per run, then search:
+
+```bash
+printf '[requester]\nsnapshot_dir = "%s"\nstate_dir = "%s"\napi_key_env = "REQUESTER_TOKEN"\n' \
+  "$out/snapshot" "$out/requester" > "$out/requester.toml"
+dbig-requester index  --config "$out/requester.toml"
+dbig-requester search --config "$out/requester.toml" --query customer
+dbig-requester search --config "$out/requester.toml" --query "where is the customer email" --match any
+```
+
+- A word matches as a prefix: `customer` finds `customers`, `customer_id` and every column of
+  the `customers` table. Entries whose own name matches come first.
+- By default every word must match. `--match any` ranks entries by how well they match any
+  meaningful word, which is what you want for a question in plain language.
+- Comments count: a column is found by what its comment says.
+- Narrow with `--source-id`, `--kind table|view|collection|field`, `--data-type`, `--limit`.
+
+Each result has an `id` such as `object:e970e074...`. Paths are asked between two object IDs:
+
+```bash
+mkdir -p "$out/observations"
+dbig-planner build --snapshot "$out/snapshot" --observations "$out/observations" --out "$out/graph"
+dbig-planner join-paths --graph "$out/graph" --from "object:<from-id>" --to "object:<to-id>"
+dbig-planner plan --graph "$out/graph" --path-id "<path_id from the join-paths answer>"
+```
+
+What the planner gives back:
+
+- **Multi-hop in one database**: `refunds -> orders -> customers` in PostgreSQL becomes one
+  `SELECT ... JOIN ... JOIN ...` with status `ready_for_review` (`review_required` when a hop
+  is an inferred candidate rather than a declared foreign key). Identifiers are quoted, the
+  statement is checked to be a single read, and it carries a row limit.
+- **Across databases**: `tickets` (MongoDB) -> `customers` -> `orders` -> `refunds`
+  (PostgreSQL) becomes one read per database, with consecutive tables in the same database
+  joined in that one read, plus a `logical_join` step naming the keys that connect them. The
+  status is `unresolved` because moving rows between databases needs a staging area or a
+  federated engine you choose; the planner does not pick one for you.
+- Nothing is ever executed by the planner. You review a plan and run it yourself.
+
+`lineage-paths` answers "where did this data come from", which needs a record of what actually
+ran: SQL logs or pipeline events placed as JSON lines in the `observations` directory. With the
+directory empty, lineage paths are empty; relationships between tables still come from
+`join-paths`. The observation format is in `TECHNICAL_IMPLEMENTATION.md`.
+
+## 8. Optional: measure value overlap across databases
 
 Name matching alone proposes candidates; measured overlap tells you whether a child column's
 values really appear in the parent key. It needs sampling, which reads rows, so it is off by
@@ -195,7 +248,7 @@ Use the same key and ID for every source in a run and a new key for each run. On
 leave the collector; the key never enters any file, and digests from different runs cannot be
 compared.
 
-## 8. Optional: review by your own vLLM
+## 9. Optional: your own vLLM, for review and for questions
 
 Start vLLM bound to loopback with an API key. `--host` defaults to all interfaces, so set it:
 
@@ -214,7 +267,21 @@ set to the exact name vLLM serves and `model_digest` to the revision you pinned.
   recorded as weak evidence and never change a declared fact;
 - if vLLM is down, slow or answers badly, the catalogue is still published, marked `partial`.
 
-## 9. Troubleshooting
+To ask questions in plain language, add a `[requester.answer]` table to the requester file
+(see `examples/local/requester-with-vllm.toml`), then:
+
+```bash
+dbig-requester ask --config "$out/requester.toml" --question "Which column holds the customer's email?"
+```
+
+The requester finds the most relevant catalogue entries for the question (up to
+`retrieval_limit`) and gives the model their names, types, table and comments. The answer must
+cite only those entries, and is refused if it cites anything else or claims lineage. If nothing
+in the catalogue matches the question, you get `NO_CATALOGUE_MATCH` and the model is not asked.
+Comments are free text written by your database owners and are given to the model by your
+choice; the model is told to treat them as data, not instructions.
+
+## 10. Troubleshooting
 
 | Message | Meaning and fix |
 |---|---|
@@ -224,6 +291,9 @@ set to the exact name vLLM serves and `model_digest` to the revision you pinned.
 | `Setting max_execution_time is unknown or readonly` | The ClickHouse account has `readonly = 1`; use `readonly = 2`. |
 | `signature key unavailable` / `invalid artifact signature` | `DBIG_SIGNING_KEY` differs between `collect` and `assemble`; use one key per run. |
 | `bundle ... was not assembled into this snapshot` | Pass `render` the same bundles you passed `assemble`. |
+| `no search index at ...` | Run `dbig-requester index` for this run first. |
+| `STALE_INDEX` | The snapshot changed after indexing; run `dbig-requester index` again. |
+| `STALE_PATH` | The path came from another graph; run `join-paths` again against this one. |
 
 Other connection failures (wrong password, unreachable host) currently appear as the driver's
 own error message with a traceback.

@@ -40,6 +40,19 @@
       "title": "Data Type",
       "type": "string"
     },
+    "description": {
+      "anyOf": [
+        {
+          "maxLength": 1000,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Description"
+    },
     "id": {
       "maxLength": 256,
       "minLength": 1,

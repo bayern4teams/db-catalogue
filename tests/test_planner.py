@@ -313,6 +313,23 @@ def test_mongo_and_cross_source_plans(tmp_path):
     )
     assert mongo_plan["steps"][0]["pipeline"][0]["$lookup"]["foreignField"] == "_id"
 
+    # Consecutive objects in one source are one read that joins them there. orders (pg) ->
+    # users (mongo) -> details (mongo) is one PostgreSQL read, one MongoDB pipeline with a
+    # $lookup, and a single logical join where the path crosses sources.
+    through = find_paths(
+        config.graph_dir, PathRequest(from_id="orders", to_id="details"), "join", config
+    )
+    merged = render_plan(
+        config.graph_dir, PlanRequest(path_id=through["paths"][0]["path_id"]), config
+    )
+    assert [step["kind"] for step in merged["steps"]] == [
+        "source_read", "source_read", "logical_join",
+    ]
+    assert merged["steps"][1]["object_ids"] == ["users", "details"]
+    assert merged["steps"][1]["pipeline"][0]["$lookup"]["from"] == "details"
+    assert merged["steps"][2]["left_object_id"] == "orders"
+    assert merged["steps"][2]["right_object_id"] == "users"
+
 
 def test_sql_parser_rejects_unsafe_and_unmapped(tmp_path, monkeypatch):
     config, _ = sql_graph(tmp_path, monkeypatch)
@@ -818,3 +835,13 @@ def test_catalog_identifiers_are_quoted_and_mongo_operators_refused():
     assert [table.name for table in parsed.find_all(exp.Table)] == [malicious]
     with pytest.raises(ValueError, match="UNSAFE_MONGO_IDENTIFIER"):
         _mongo_name("$where")
+
+
+def test_same_source_runs_join_in_one_query_and_never_across_a_gap():
+    """Runs are consecutive only: a path that leaves a source and returns is two reads."""
+    from dbig_planner.plans import _runs
+
+    assert _runs(["a", "b", "c", "d"], ["pg", "mongo", "mongo", "mongo"]) == [(0, 1), (1, 4)]
+    assert _runs(["a", "b", "c"], ["pg", "mongo", "pg"]) == [(0, 1), (1, 2), (2, 3)]
+    assert _runs(["a", "b"], ["pg", "pg"]) == [(0, 2)]
+    assert _runs(["a"], ["pg"]) == [(0, 1)]

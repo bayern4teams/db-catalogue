@@ -36,6 +36,9 @@ class SourceConfig(BaseModel):
     max_array_elements: int = Field(default=16, ge=1, le=256)
     max_path_depth: int = Field(default=4, ge=1)
     history_access: bool = False
+    # Table and column comments written by the database's owners. They are catalog metadata, not
+    # row data, and cost no extra query. On by default by user decision on 2026-09-30.
+    include_comments: bool = True
     # Cross-source value comparison. Off unless a key reference is given *and* sampling is on,
     # because a token can only be computed from a value that was read. The key is per run, so
     # tokens are comparable within one assembly and meaningless outside it.

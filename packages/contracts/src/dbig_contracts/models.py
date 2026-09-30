@@ -9,6 +9,8 @@ from pydantic import BaseModel, ConfigDict, field_validator
 from pydantic import Field as PydanticField
 
 IR_VERSION = "1.0"
+# Longest source comment carried; a longer one is cut by the collector and says so.
+DESCRIPTION_MAX_LENGTH = 1000
 
 
 class Record(BaseModel):
@@ -63,6 +65,10 @@ class Object(Record):
     attributes: dict[str, str | int | float | bool | None] = PydanticField(default_factory=dict)
     tags: list[str] = PydanticField(default_factory=list)
     capabilities: list[str] = PydanticField(default_factory=list)
+    # The comment a database owner wrote on the object. Free text from the source, so untrusted:
+    # escaped wherever it is shown and marked as data wherever a model sees it. Optional and
+    # additive; `None` is excluded from canonical bytes, so older artifacts keep their digests.
+    description: str | None = PydanticField(default=None, max_length=DESCRIPTION_MAX_LENGTH)
 
 
 class Field(Record):
@@ -76,6 +82,8 @@ class Field(Record):
     attributes: dict[str, str | int | float | bool | None] = PydanticField(default_factory=dict)
     tags: list[str] = PydanticField(default_factory=list)
     capabilities: list[str] = PydanticField(default_factory=list)
+    # The column's comment; see `Object.description`.
+    description: str | None = PydanticField(default=None, max_length=DESCRIPTION_MAX_LENGTH)
 
 
 # A snapshot node row is exactly one of the three source-derived record types the assembler

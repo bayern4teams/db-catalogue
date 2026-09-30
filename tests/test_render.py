@@ -45,6 +45,7 @@ def _bundle(path: Path, *, completeness: str = "complete", when: datetime | None
     common = _common(when or datetime(2026, 9, 1, tzinfo=UTC))
     customers = Object(
         id="o-customers", native_id="1", kind="table", name="customers", namespace="public",
+        description=f"Everyone who has bought something.\n{HOSTILE}",
         attributes={"row_count_estimate": 12000.0, "row_count_method": "pg_class.reltuples"},
         **common,
     )
@@ -63,7 +64,8 @@ def _bundle(path: Path, *, completeness: str = "complete", when: datetime | None
         Field(id="f-cid", object_id=customers.id, native_id="1:1", name="id",
               data_type="integer", nullable=False, ordinal=1, **common),
         Field(id="f-email", object_id=customers.id, native_id="1:2", name="email",
-              data_type="text", nullable=True, ordinal=2, **common),
+              data_type="text", nullable=True, ordinal=2, description="Contact address",
+              **common),
         Field(id="f-oid", object_id=orders.id, native_id="2:1", name="id",
               data_type="integer", nullable=False, ordinal=1, **common),
         Field(id="f-ocust", object_id=orders.id, native_id="2:2", name="customer_id",
@@ -385,3 +387,11 @@ def test_model_suggestions_are_shown_on_the_candidate_they_review(built, config,
     page = _render({"bundle": built["bundle"], "snapshot": tmp_path / "reviewed"}, config,
                    tmp_path / "c.html")
     assert "<b>supports</b>: names and types agree" in page
+
+
+def test_comments_are_shown_escaped_and_searchable(built, config, tmp_path):
+    page = _render(built, config, tmp_path / "c.html")
+    assert "<p class='description'>Everyone who has bought something.\n&lt;script&gt;" in page
+    assert "<td class='description'>Contact address</td>" in page
+    card = re.search(r"data-search='([^']*customers[^']*)'", page)
+    assert card is not None and "contact address" in card.group(1)

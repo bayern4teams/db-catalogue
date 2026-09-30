@@ -20,6 +20,7 @@ from dbig_contracts.artifact import write_artifact
 from dbig_contracts.errors import OperatorError
 from dbig_contracts.ids import stable_id
 from dbig_contracts.models import (
+    DESCRIPTION_MAX_LENGTH,
     Field,
     Object,
     Profile,
@@ -53,6 +54,26 @@ class Budget:
         if self.used >= self.max_queries:
             raise BudgetExhausted
         self.used += 1
+
+
+def _description(value: Any, config: SourceConfig) -> str | None:
+    """A source comment made safe to carry: no control characters, bounded, empty is absent.
+
+    Newlines and tabs are kept because comments are often written as paragraphs. Anything longer
+    than the contract allows is cut and ends with an ellipsis, so a reader can tell.
+    """
+    if not config.include_comments or value is None:
+        return None
+    text = "".join(
+        character
+        for character in str(value)
+        if character in "\n\t" or (character.isprintable() and character != "\x7f")
+    ).strip()
+    if not text:
+        return None
+    if len(text) > DESCRIPTION_MAX_LENGTH:
+        text = text[: DESCRIPTION_MAX_LENGTH - 1].rstrip() + "\u2026"
+    return text
 
 
 def _common(config: SourceConfig) -> dict[str, Any]:
@@ -338,7 +359,7 @@ def discover_postgresql(
         # Only placeholder tokens are interpolated; schema names remain bound values.
         cursor.execute(
             "SELECT c.oid, n.nspname, c.relname, c.relkind, c.reltuples, "  # noqa: S608
-            "c.relispartition, i.inhparent "
+            "c.relispartition, i.inhparent, pg_catalog.obj_description(c.oid, 'pg_class') "
             "FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n "
             "ON n.oid = c.relnamespace "
             "LEFT JOIN pg_catalog.pg_inherits i ON i.inhrelid = c.oid "
@@ -358,7 +379,7 @@ def discover_postgresql(
             "f": "foreign_table",
         }
         visible_oids = {oid for oid, *_ in rows}
-        for oid, schema, name, relkind, reltuples, is_partition, parent_oid in rows:
+        for oid, schema, name, relkind, reltuples, is_partition, parent_oid, comment in rows:
             attributes: dict[str, str | int | float | bool | None] = {}
             if relkind in {"r", "m"} and reltuples is not None and reltuples >= 0:
                 attributes["row_count_estimate"] = float(reltuples)
@@ -376,6 +397,7 @@ def discover_postgresql(
                     if is_partition and parent_oid in visible_oids
                     else None,
                     attributes=attributes,
+                    description=_description(comment, config),
                     **common,
                 )
             )
@@ -402,7 +424,8 @@ def discover_postgresql(
             budget.charge()
             cursor.execute(
                 "SELECT a.attrelid, a.attnum, a.attname, "
-                "pg_catalog.format_type(a.atttypid,a.atttypmod), a.attnotnull "
+                "pg_catalog.format_type(a.atttypid,a.atttypmod), a.attnotnull, "
+                "pg_catalog.col_description(a.attrelid, a.attnum) "
                 "FROM pg_catalog.pg_attribute a WHERE a.attrelid = ANY(%s) "
                 "AND a.attnum > 0 AND NOT a.attisdropped "
                 "ORDER BY a.attrelid,a.attnum LIMIT %s",
@@ -411,7 +434,7 @@ def discover_postgresql(
             field_rows = cursor.fetchall()
             if len(field_rows) > config.max_fields:
                 raise BudgetExhausted
-            for oid, attnum, name, data_type, not_null in field_rows:
+            for oid, attnum, name, data_type, not_null, comment in field_rows:
                 native = f"{oid}:{attnum}"
                 tables["fields.jsonl"].append(
                     Field(
@@ -422,6 +445,7 @@ def discover_postgresql(
                         data_type=data_type,
                         nullable=not not_null,
                         ordinal=attnum,
+                        description=_description(comment, config),
                         **common,
                     )
                 )
@@ -486,7 +510,7 @@ def discover_clickhouse(
         budget.charge()
         rows = client.query(
             "SELECT name, toString(uuid), engine, partition_key, sorting_key, "
-            "primary_key, dependencies_database, dependencies_table, total_rows "
+            "primary_key, dependencies_database, dependencies_table, total_rows, comment "
             "FROM system.tables "
             "WHERE database = {db:String} ORDER BY name LIMIT {lim:UInt64}",
             parameters={"db": database, "lim": config.max_objects + 1},
@@ -506,6 +530,7 @@ def discover_clickhouse(
             dependency_dbs,
             dependency_tables,
             total_rows,
+            comment,
         ) in rows:
             if not uuid or uuid == "00000000-0000-0000-0000-000000000000":
                 tables["diagnostics.jsonl"].append(
@@ -559,6 +584,7 @@ def discover_clickhouse(
                     name=name,
                     namespace=database,
                     attributes=attributes,
+                    description=_description(comment, config),
                     **common,
                 )
             )
@@ -567,14 +593,14 @@ def discover_clickhouse(
         # ClickHouse costs no additional read. ClickHouse keeps no per-column null or distinct
         # statistics by default, so average width is honestly all this yields.
         columns = client.query(
-            "SELECT table,name,type,position,data_uncompressed_bytes FROM system.columns "
+            "SELECT table,name,type,position,data_uncompressed_bytes,comment FROM system.columns "
             "WHERE database = {db:String} ORDER BY table,position LIMIT {lim:UInt64}",
             parameters={"db": database, "lim": config.max_fields + 1},
             settings={"max_execution_time": config.read_timeout_seconds},
         ).result_set
         if len(columns) > config.max_fields:
             raise BudgetExhausted
-        for table, name, data_type, position, uncompressed in columns:
+        for table, name, data_type, position, uncompressed, comment in columns:
             if table not in identities:
                 continue
             native = f"{identities[table]}:{position}"
@@ -588,6 +614,7 @@ def discover_clickhouse(
                     name=name,
                     data_type=data_type,
                     ordinal=position,
+                    description=_description(comment, config),
                     **common,
                 )
             )

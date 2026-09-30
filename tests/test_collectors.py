@@ -17,7 +17,7 @@ from dbig_contracts.artifact import read_artifact, write_artifact
 from dbig_contracts.models import Source
 
 
-def config(kind: str = "postgresql") -> SourceConfig:
+def config(kind: str = "postgresql", **overrides) -> SourceConfig:
     return SourceConfig.model_validate(
         {
             "source_id": "site-a",
@@ -26,6 +26,7 @@ def config(kind: str = "postgresql") -> SourceConfig:
             "signing_key_env": "DBIG_SIGNING_KEY",
             "signing_key_id": "test",
             "namespaces": ["public"],
+            **overrides,
         }
     )
 
@@ -37,8 +38,8 @@ class PgCursor:
     which is exactly what happened when statistics profiling was introduced.
     """
 
-    objects = [(42, "public", "orders", "r", 12.5, False, None)]
-    fields = [(42, 1, "id", "integer", True)]
+    objects = [(42, "public", "orders", "r", 12.5, False, None, None)]
+    fields = [(42, 1, "id", "integer", True, None)]
     constraints = [(99, 42, 42, "p", [1], None)]
     # schemaname, tablename, attname, null_frac, n_distinct, avg_width, analyze, auto, reltuples
     stats = [("public", "orders", "id", 0.25, -1.0, 4, None, None, 12.5)]
@@ -99,7 +100,7 @@ def test_postgres_catalog_only_and_stable_ids():
 
 def test_postgres_view_definition_is_hashed_without_literals():
     class ViewCursor(PgCursor):
-        objects = [(42, "public", "orders_view", "v", -1.0, False, None)]
+        objects = [(42, "public", "orders_view", "v", -1.0, False, None, None)]
         definitions = [(42, "SELECT * FROM orders WHERE token = 'canary-secret'")]
         constraints = []
         stats = []
@@ -131,9 +132,9 @@ def test_postgres_partitions_link_only_to_visible_parent():
 
         @property
         def objects(self):
-            rows = [(43, "public", "events_p0", "r", -1.0, True, 42)]
+            rows = [(43, "public", "events_p0", "r", -1.0, True, 42, None)]
             if self.visible_parent:
-                rows.insert(0, (42, "public", "events", "p", -1.0, False, None))
+                rows.insert(0, (42, "public", "events", "p", -1.0, False, None, None))
             return rows
 
     connection = PgConnection()
@@ -152,11 +153,13 @@ def test_postgres_partitions_link_only_to_visible_parent():
 
 
 class ChClient:
-    """Fake ClickHouse. The columns row carries `data_uncompressed_bytes` last, which is what
-    the width profile is derived from."""
+    """Fake ClickHouse. The columns row carries `data_uncompressed_bytes` then `comment`; the
+    tables row ends with `total_rows` then `comment`. ClickHouse reports no comment as ""."""
 
-    tables_row = ("orders", "uuid-42", "MergeTree", "toYYYYMM(day)", "id", "id", [], [], 0)
-    columns_rows = [("orders", "id", "UInt64", 1, 0)]
+    tables_row = (
+        "orders", "uuid-42", "MergeTree", "toYYYYMM(day)", "id", "id", [], [], 0, ""
+    )
+    columns_rows = [("orders", "id", "UInt64", 1, 0, "")]
 
     def query(self, statement, **kwargs):
         outer = self
@@ -180,7 +183,7 @@ def test_clickhouse_uses_uuid_identity():
 
 def test_clickhouse_omits_unavailable_count():
     class UnknownCount(ChClient):
-        tables_row = (*ChClient.tables_row[:-1], None)
+        tables_row = (*ChClient.tables_row[:-2], None, "")
 
     records = discover_clickhouse(UnknownCount(), config("clickhouse"), Budget(2))
     assert "row_count_estimate" not in records["objects.jsonl"][0].attributes
@@ -567,8 +570,8 @@ def test_a_view_in_scope_adds_one_charged_query():
 
     class WithView(PgCursor):
         objects = [
-            (42, "public", "orders", "r", 12.5, False, None),
-            (43, "public", "orders_view", "v", -1.0, False, None),
+            (42, "public", "orders", "r", 12.5, False, None, None),
+            (43, "public", "orders_view", "v", -1.0, False, None, None),
         ]
         definitions = [(43, "SELECT * FROM orders")]
 
@@ -609,8 +612,8 @@ def test_mongodb_scan_cost_grows_per_collection_not_per_scan():
 
 def test_clickhouse_profiles_average_width_without_an_extra_query():
     class Populated(ChClient):
-        tables_row = (*ChClient.tables_row[:-1], 4)
-        columns_rows = [("orders", "id", "UInt64", 1, 32)]
+        tables_row = (*ChClient.tables_row[:-2], 4, "")
+        columns_rows = [("orders", "id", "UInt64", 1, 32, "")]
 
     budget = Budget(50)
     records = discover_clickhouse(Populated(), config("clickhouse"), budget)
@@ -626,8 +629,8 @@ def test_clickhouse_reports_no_width_for_an_empty_table():
     """Zero rows means nothing to measure, which is not the same as a width of zero."""
 
     class Empty(ChClient):
-        tables_row = (*ChClient.tables_row[:-1], 0)
-        columns_rows = [("orders", "id", "UInt64", 1, 0)]
+        tables_row = (*ChClient.tables_row[:-2], 0, "")
+        columns_rows = [("orders", "id", "UInt64", 1, 0, "")]
 
     records = discover_clickhouse(Empty(), config("clickhouse"), Budget(50))
     assert records["profiles.jsonl"] == []
@@ -638,8 +641,8 @@ def test_clickhouse_reports_no_width_when_sizes_are_not_tracked():
     although it has rows. That is "not tracked", and the page showed it as a width of 0."""
 
     class Compact(ChClient):
-        tables_row = (*ChClient.tables_row[:-1], 1000)
-        columns_rows = [("orders", "id", "UInt64", 1, 0)]
+        tables_row = (*ChClient.tables_row[:-2], 1000, "")
+        columns_rows = [("orders", "id", "UInt64", 1, 0, "")]
 
     records = discover_clickhouse(Compact(), config("clickhouse"), Budget(50))
     assert records["profiles.jsonl"] == []
@@ -647,8 +650,8 @@ def test_clickhouse_reports_no_width_when_sizes_are_not_tracked():
 
 def test_clickhouse_divides_size_by_rows():
     class Sized(ChClient):
-        tables_row = (*ChClient.tables_row[:-1], 10)
-        columns_rows = [("orders", "id", "UInt64", 1, 80)]
+        tables_row = (*ChClient.tables_row[:-2], 10, "")
+        columns_rows = [("orders", "id", "UInt64", 1, 80, "")]
 
     records = discover_clickhouse(Sized(), config("clickhouse"), Budget(50))
     assert records["profiles.jsonl"][0].average_width_bytes == 8
@@ -707,3 +710,54 @@ def test_mongo_sample_profile_reports_absence_and_its_denominator():
     assert always.null_fraction == 0.0, "_id is present in both sampled documents"
     assert sometimes.null_fraction == 0.5, "present in one of two sampled documents"
     assert sometimes.distinct_estimate is None, "no value was read, so distinctness is unknown"
+
+
+# --- comments written by the database's owners ----------------------------------------------
+
+
+def test_postgres_comments_ride_on_the_existing_catalog_queries():
+    class Commented(PgCursor):
+        objects = [(42, "public", "orders", "r", 12.5, False, None, "One row per order")]
+        fields = [(42, 1, "id", "integer", True, "Order number\nassigned at checkout")]
+
+    connection = PgConnection()
+    connection.fake_cursor = Commented()
+    budget = Budget(50)
+    records = discover_postgresql(connection, config("postgresql"), budget)
+    assert records["objects.jsonl"][0].description == "One row per order"
+    assert records["fields.jsonl"][0].description == "Order number\nassigned at checkout"
+    assert budget.used == 4, "comments must cost no additional query"
+
+
+def test_clickhouse_comments_are_carried_and_empty_means_none():
+    class Commented(ChClient):
+        tables_row = (*ChClient.tables_row[:-1], "Web page views")
+        columns_rows = [("orders", "id", "UInt64", 1, 0, ""), ("orders", "url", "String", 2, 0,
+                                                               "Visited URL")]
+
+    records = discover_clickhouse(Commented(), config("clickhouse"), Budget(50))
+    assert records["objects.jsonl"][0].description == "Web page views"
+    assert [field.description for field in records["fields.jsonl"]] == [None, "Visited URL"]
+
+
+def test_comments_can_be_switched_off():
+    class Commented(PgCursor):
+        objects = [(42, "public", "orders", "r", 12.5, False, None, "One row per order")]
+
+    connection = PgConnection()
+    connection.fake_cursor = Commented()
+    records = discover_postgresql(
+        connection, config("postgresql", include_comments=False), Budget(50)
+    )
+    assert records["objects.jsonl"][0].description is None
+
+
+def test_a_comment_is_cleaned_and_bounded():
+    from dbig_collectors.runtime import _description
+    from dbig_contracts.models import DESCRIPTION_MAX_LENGTH
+
+    source = config("postgresql")
+    assert _description("  a\x00b\x1b[31mc\x7f\td  ", source) == "ab[31mc\td"
+    assert _description("   ", source) is None
+    long = _description("x" * (DESCRIPTION_MAX_LENGTH + 50), source)
+    assert long is not None and len(long) == DESCRIPTION_MAX_LENGTH and long.endswith("…")

@@ -76,6 +76,7 @@ def create_app(config: RequesterConfig) -> FastAPI:
         max_age_seconds: int | None = None,
         limit: int = 20,
         offset: int = 0,
+        match: Literal["all", "any"] = "all",
         authorization: str | None = Header(default=None),
     ):
         authorize(authorization)
@@ -93,6 +94,7 @@ def create_app(config: RequesterConfig) -> FastAPI:
                     max_age_seconds=max_age_seconds,
                     limit=limit,
                     offset=offset,
+                    match=match,
                 ),
             )
         except ValueError as error:
