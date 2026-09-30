@@ -1,0 +1,119 @@
+{
+  "additionalProperties": true,
+  "description": "Keyed one-way tokens for one field's sampled values, for cross-source comparison only.\n\nA plain hash is not enough: low-entropy values such as small integers or country codes are\ntrivially recovered from an unkeyed digest by trying every candidate. The tokens here are\nHMAC-SHA256 under a key that exists for one run, so they are comparable within that run and\nmeaningless outside it, and the key itself never enters the artifact.\n\nTokens live in a bundle because a bundle is a controlled transfer, not the published graph.\nThey are their own file so an operator can see from the manifest whether a bundle carries\nthem at all, and so a deployment can choose not to transport it. Nothing derived from them\nreaches a snapshot except aggregate metrics.",
+  "properties": {
+    "algorithm": {
+      "const": "hmac-sha256",
+      "default": "hmac-sha256",
+      "title": "Algorithm",
+      "type": "string"
+    },
+    "collector_version": {
+      "minLength": 1,
+      "title": "Collector Version",
+      "type": "string"
+    },
+    "distinct_count": {
+      "minimum": 0,
+      "title": "Distinct Count",
+      "type": "integer"
+    },
+    "field_id": {
+      "minLength": 1,
+      "title": "Field Id",
+      "type": "string"
+    },
+    "id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Id",
+      "type": "string"
+    },
+    "ir_version": {
+      "default": "1.0",
+      "title": "Ir Version",
+      "type": "string"
+    },
+    "key_id": {
+      "minLength": 1,
+      "title": "Key Id",
+      "type": "string"
+    },
+    "normalization": {
+      "const": "exact_text",
+      "default": "exact_text",
+      "title": "Normalization",
+      "type": "string"
+    },
+    "object_id": {
+      "minLength": 1,
+      "title": "Object Id",
+      "type": "string"
+    },
+    "observed_at": {
+      "format": "date-time",
+      "title": "Observed At",
+      "type": "string"
+    },
+    "observed_count": {
+      "minimum": 0,
+      "title": "Observed Count",
+      "type": "integer"
+    },
+    "provenance": {
+      "minLength": 1,
+      "title": "Provenance",
+      "type": "string"
+    },
+    "record_type": {
+      "const": "value_tokens",
+      "default": "value_tokens",
+      "title": "Record Type",
+      "type": "string"
+    },
+    "sample_count": {
+      "minimum": 0,
+      "title": "Sample Count",
+      "type": "integer"
+    },
+    "sample_method": {
+      "minLength": 1,
+      "title": "Sample Method",
+      "type": "string"
+    },
+    "source_id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Source Id",
+      "type": "string"
+    },
+    "tokens": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Tokens",
+      "type": "array"
+    },
+    "truncated": {
+      "default": false,
+      "title": "Truncated",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "id",
+    "source_id",
+    "observed_at",
+    "collector_version",
+    "provenance",
+    "field_id",
+    "object_id",
+    "key_id",
+    "sample_count",
+    "sample_method",
+    "observed_count",
+    "distinct_count"
+  ],
+  "title": "ValueTokens",
+  "type": "object"
+}

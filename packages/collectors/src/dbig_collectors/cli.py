@@ -1,20 +1,37 @@
 """Collector site command line."""
 
 import json
-import os
 from ipaddress import ip_address
 from pathlib import Path
 
 import click
 from dbig_contracts.artifact import read_artifact
+from dbig_contracts.errors import OperatorError
 from dbig_contracts.scan import SignedScanRequest
+from dbig_contracts.security import secret_from_env
 
 from .config import load_config
 from .runtime import collect
 from .scan import accept_scan, process_next
 
 
-@click.group()
+class SecretAwareGroup(click.Group):
+    """Report an operator-fixable failure as a command error, not a traceback.
+
+    Converting at the group covers every command in it, including ones added later. Only
+    `OperatorError` is converted, which covers a missing secret reference, an unknown identifier
+    and state that has not been built yet. An ordinary `ValueError` keeps its full traceback, so
+    a validation failure or a genuine bug is never dressed up as something an operator can fix.
+    """
+
+    def invoke(self, ctx: click.Context) -> object:
+        try:
+            return super().invoke(ctx)
+        except OperatorError as error:
+            raise click.ClickException(str(error)) from error
+
+
+@click.group(cls=SecretAwareGroup)
 def main() -> None:
     pass
 
@@ -33,9 +50,9 @@ def collect_command(config_path: Path, out: Path) -> None:
 @click.argument("path", type=click.Path(path_type=Path, exists=True))
 @click.option("--key-env", required=True, help="Environment variable holding the signing key")
 def validate_bundle(path: Path, key_env: str) -> None:
-    manifest, _ = read_artifact(
-        path, signing_key=os.environ[key_env].encode(), require_signature=True
-    )
+    # SecretAwareGroup converts a bad `--key-env` into a command error.
+    key = secret_from_env(key_env, purpose="collector bundle signature verification")
+    manifest, _ = read_artifact(path, signing_key=key.encode(), require_signature=True)
     click.echo(manifest.model_dump_json())
 
 

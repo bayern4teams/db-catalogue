@@ -31,6 +31,7 @@ flowchart LR
 ## Project documents
 
 - [TECHNICAL_IMPLEMENTATION.md](TECHNICAL_IMPLEMENTATION.md): binding implementation contract, module ownership, algorithms, data formats, gates, and acceptance criteria.
+- [THREAT_MODEL.md](THREAT_MODEL.md): trust boundaries, the modelled threats and their controls, and the known gaps. Each mitigation names the test that holds it.
 - [TODO.md](TODO.md): live, ordered implementation ledger with verification and decision gates.
 - [ARCHITECTURE_RESEARCH.md](ARCHITECTURE_RESEARCH.md): 30-section research record and upstream source links.
 - [AGENTS.md](AGENTS.md) and [CLAUDE.md](CLAUDE.md): working rules for coding agents. `AGENTS.md` is the canonical policy.
@@ -53,13 +54,21 @@ Create a planner graph with `dbig-planner build --snapshot <snapshot-dir> --obse
 
 The selected LLM stack is vLLM for private GPU serving, LangGraph for the builder's fixed review workflow, and self-hosted Langfuse for metadata-only visibility. The requester also calls the private vLLM endpoint for grounded catalogue questions. The planner is deterministic and makes no LLM call. Top-level LangChain and LangGraph Swarm remain deferred. The exact GPU, model revision, service versions and telemetry infrastructure must be validated before deployment.
 
+## Run it against your databases
+
+[docs/LOCAL_RUN.md](docs/LOCAL_RUN.md) takes you from a fresh clone to a readable HTML catalogue
+of your PostgreSQL, ClickHouse and MongoDB databases: read-only accounts, TLS with a company CA,
+the three commands, how to read the page, and optional review by your own vLLM. Example
+configurations are in [examples/local](examples/local).
+
 ## Developer setup
 
-1. Install Python 3.12+, Git, [Graphify](https://github.com/Graphify-Labs/graphify), [Graft](https://github.com/trailhq/Graft), and [Codebase Memory MCP](https://github.com/DeusData/codebase-memory-mcp). The supported local graph versions used when creating this repository were Graphify 0.9.65, Graft 0.18.0, and Codebase Memory MCP 0.11.0.
-2. Clone the repository and run `python scripts/install_hooks.py` from its root. Git does not propagate local hook configuration through a clone.
-3. Copy `.env.example` to `.env` and fill local values. `.env` is ignored by Git. Source credentials must be supplied through the approved secret store or process environment, never committed.
-4. Run `python scripts/graph_sync.py --check-tools` to verify graph commands are on `PATH`.
-5. Before implementation, read `TECHNICAL_IMPLEMENTATION.md` and keep `TODO.md` open and updated after each meaningful change.
+1. Install Python 3.12+, Git, [Graphify](https://github.com/Graphify-Labs/graphify), [Graft](https://github.com/trailhq/Graft), and [Codebase Memory MCP](https://github.com/DeusData/codebase-memory-mcp) at the **exact pinned versions**: Graphify 0.9.65, Graft 0.18.0, Codebase Memory MCP 0.11.0. These are declared once in `pyproject.toml` under `[tool.dbig.graph-tools]`; `scripts/graph_sync.py` refuses to index with any other version and names the install command to run, and `python scripts/ci_check.py` refuses a workflow that installs a different one. Install with `python -m pip install graphifyy==0.9.65 codebase-memory-mcp==0.11.0` and `npm install --global @nanonets/graft@0.18.0` (the `graphify` command ships in the `graphifyy` distribution).
+2. Install [uv](https://github.com/astral-sh/uv) **0.10.0 or later**. `pyproject.toml` declares `[tool.uv] required-version = ">=0.10.0"`, so an older uv refuses to run in this workspace. The floor exists because `scripts/supply_chain.py` exports the CycloneDX SBOM with `uv export --format cyclonedx1.5`, a preview format that uv 0.9.0 and earlier reject. CI installs one exact pinned uv version, and `python scripts/ci_check.py` fails if any workflow leaves `astral-sh/setup-uv` unpinned or pins a uv below that floor.
+3. Clone the repository and run `python scripts/install_hooks.py` from its root. Git does not propagate local hook configuration through a clone.
+4. Copy `.env.example` to `.env` and fill local values. `.env` is ignored by Git. Source credentials must be supplied through the approved secret store or process environment, never committed.
+5. Run `python scripts/graph_sync.py --check-tools` to verify graph commands are on `PATH`.
+6. Before implementation, read `TECHNICAL_IMPLEMENTATION.md` and keep `TODO.md` open and updated after each meaningful change.
 
 ## Commit and CI policy
 

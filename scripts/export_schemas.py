@@ -5,9 +5,22 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from dbig_contracts.models import Constraint, Edge, Evidence, Field, Manifest, Object, Source
+from dbig_contracts.models import (
+    Constraint,
+    Diagnostic,
+    Edge,
+    Evidence,
+    Field,
+    Manifest,
+    Object,
+    Profile,
+    SnapshotNode,
+    Source,
+    ValueTokens,
+)
 from dbig_contracts.scan import ScanReceipt, ScanRequest, SignedScanRequest
 from jsonschema import Draft202012Validator
+from pydantic import TypeAdapter
 
 ROOT = Path(__file__).resolve().parents[1]
 MODELS = {
@@ -15,6 +28,9 @@ MODELS = {
     "object": Object,
     "field": Field,
     "constraint": Constraint,
+    "diagnostic": Diagnostic,
+    "profile": Profile,
+    "value_tokens": ValueTokens,
     "evidence": Evidence,
     "edge": Edge,
     "manifest": Manifest,
@@ -27,8 +43,11 @@ MODELS = {
 def main() -> None:
     destination = ROOT / "schemas" / "ir-v1"
     destination.mkdir(parents=True, exist_ok=True)
-    for name, model in MODELS.items():
-        schema = model.model_json_schema()
+    schemas = {name: model.model_json_schema() for name, model in MODELS.items()}
+    # A snapshot node row is a discriminated union, not a single model, so it is exported from a
+    # TypeAdapter rather than from MODELS.
+    schemas["node"] = TypeAdapter(SnapshotNode).json_schema()
+    for name, schema in schemas.items():
         Draft202012Validator.check_schema(schema)
         path = destination / f"{name}.schema.json"
         path.write_text(

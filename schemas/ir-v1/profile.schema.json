@@ -1,0 +1,164 @@
+{
+  "additionalProperties": true,
+  "description": "A bounded statistical description of one field, carrying its own provenance.\n\nEvery measure is optional, because a source may expose some and not others, and a missing\nmeasure must stay distinguishable from a measured zero. `method` names where the numbers came\nfrom so a reader can judge them: a planner statistic is an estimate that may be stale, and a\nsample is bounded and possibly biased. No raw value ever appears here.",
+  "properties": {
+    "average_width_bytes": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Average Width Bytes"
+    },
+    "collector_version": {
+      "minLength": 1,
+      "title": "Collector Version",
+      "type": "string"
+    },
+    "distinct_estimate": {
+      "anyOf": [
+        {
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Distinct Estimate"
+    },
+    "distinct_is_ratio_derived": {
+      "default": false,
+      "title": "Distinct Is Ratio Derived",
+      "type": "boolean"
+    },
+    "field_id": {
+      "minLength": 1,
+      "title": "Field Id",
+      "type": "string"
+    },
+    "id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Id",
+      "type": "string"
+    },
+    "ir_version": {
+      "default": "1.0",
+      "title": "Ir Version",
+      "type": "string"
+    },
+    "method": {
+      "enum": [
+        "source_statistic",
+        "sample"
+      ],
+      "title": "Method",
+      "type": "string"
+    },
+    "null_fraction": {
+      "anyOf": [
+        {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Null Fraction"
+    },
+    "object_id": {
+      "minLength": 1,
+      "title": "Object Id",
+      "type": "string"
+    },
+    "observed_at": {
+      "format": "date-time",
+      "title": "Observed At",
+      "type": "string"
+    },
+    "provenance": {
+      "minLength": 1,
+      "title": "Provenance",
+      "type": "string"
+    },
+    "record_type": {
+      "const": "profile",
+      "default": "profile",
+      "title": "Record Type",
+      "type": "string"
+    },
+    "sample_count": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Sample Count"
+    },
+    "source_id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Source Id",
+      "type": "string"
+    },
+    "stats_updated_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Stats Updated At"
+    },
+    "uniqueness": {
+      "anyOf": [
+        {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Uniqueness"
+    },
+    "value_comparison_excluded": {
+      "default": false,
+      "title": "Value Comparison Excluded",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "id",
+    "source_id",
+    "observed_at",
+    "collector_version",
+    "provenance",
+    "field_id",
+    "object_id",
+    "method"
+  ],
+  "title": "Profile",
+  "type": "object"
+}

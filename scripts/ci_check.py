@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import subprocess
+import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -20,6 +21,123 @@ REQUIRED = (
     ".githooks/pre-commit",
     ".githooks/post-commit",
 )
+
+
+SETUP_UV_STEP = re.compile(r"^(?P<indent>\s*)-\s+uses:\s*astral-sh/setup-uv@\S+")
+STEP_VERSION = re.compile(r"^\s*version:\s*['\"]?(?P<version>[^'\"\s#]+)", re.MULTILINE)
+EXACT_VERSION = re.compile(r"^\d+\.\d+\.\d+$")
+FLOOR_SPECIFIER = re.compile(r"^>=(?P<floor>\d+\.\d+\.\d+)$")
+
+
+def _parts(version: str) -> tuple[int, ...]:
+    return tuple(int(piece) for piece in version.split("."))
+
+
+def _uv_floor() -> str:
+    """Return the `>=X.Y.Z` floor that uv itself enforces on every invocation."""
+    settings = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    required = settings.get("tool", {}).get("uv", {}).get("required-version")
+    if not isinstance(required, str):
+        raise SystemExit(
+            "pyproject.toml must declare [tool.uv] required-version so every uv invocation "
+            "fails closed on a uv too old for the supply-chain SBOM export"
+        )
+    match = FLOOR_SPECIFIER.match(required.strip())
+    if match is None:
+        raise SystemExit(
+            "[tool.uv] required-version must be an exact '>=X.Y.Z' floor that scripts and "
+            f"workflows can compare against; found {required!r}"
+        )
+    return match.group("floor")
+
+
+def _setup_uv_pins(text: str) -> list[str | None]:
+    """Return the pinned `version:` of every setup-uv step, or None when a step omits one."""
+    lines = text.splitlines()
+    pins: list[str | None] = []
+    for number, line in enumerate(lines):
+        step = SETUP_UV_STEP.match(line)
+        if step is None:
+            continue
+        depth = len(step.group("indent"))
+        body = []
+        for following in lines[number + 1 :]:
+            if following.strip() and len(following) - len(following.lstrip()) <= depth:
+                break
+            body.append(following)
+        found = STEP_VERSION.search("\n".join(body))
+        pins.append(found.group("version") if found else None)
+    return pins
+
+
+def _check_uv_pins() -> None:
+    """Keep the CI uv pin explicit, reproducible and at or above the enforced floor."""
+    floor = _uv_floor()
+    workflows = sorted((ROOT / ".github" / "workflows").glob("*.yml"))
+    pinned: dict[str, str] = {}
+    for workflow in workflows:
+        pins = _setup_uv_pins(workflow.read_text(encoding="utf-8"))
+        for index, pin in enumerate(pins, start=1):
+            where = f"{workflow.relative_to(ROOT)} setup-uv step {index}"
+            if pin is None:
+                raise SystemExit(
+                    f"{where} must pin an explicit uv 'version:'; an unpinned setup-uv installs "
+                    "whatever uv is latest, so the SBOM and license gate is not reproducible"
+                )
+            if not EXACT_VERSION.match(pin):
+                raise SystemExit(f"{where} must pin an exact uv X.Y.Z version, not {pin!r}")
+            if _parts(pin) < _parts(floor):
+                raise SystemExit(
+                    f"{where} pins uv {pin}, below the [tool.uv] required-version floor {floor}"
+                )
+            pinned[where] = pin
+    if not pinned:
+        raise SystemExit("No setup-uv step found; the uv pin guard would silently pass")
+    distinct = sorted(set(pinned.values()))
+    if len(distinct) != 1:
+        raise SystemExit(
+            "All workflows must install the same uv version so every gate sees one resolver; "
+            f"found {', '.join(distinct)}"
+        )
+
+
+def _graph_tool_pins() -> dict[str, dict[str, str]]:
+    settings = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    pins = settings.get("tool", {}).get("dbig", {}).get("graph-tools", {})
+    if not pins:
+        raise SystemExit(
+            "pyproject.toml must declare [tool.dbig.graph-tools] so the graph tool versions CI "
+            "installs cannot drift from the versions scripts/graph_sync.py enforces"
+        )
+    return pins
+
+
+def _check_graph_tool_pins() -> None:
+    """Keep every workflow installing exactly the pinned graph tool versions."""
+    workflows = sorted((ROOT / ".github" / "workflows").glob("*.yml"))
+    texts = {path: path.read_text(encoding="utf-8") for path in workflows}
+    for name, pin in _graph_tool_pins().items():
+        version = str(pin["version"])
+        distribution = str(pin["distribution"])
+        separator = "@" if str(pin["ecosystem"]) == "npm" else "=="
+        pattern = re.compile(
+            re.escape(distribution) + re.escape(separator) + r"(?P<version>[^\s'\"]+)"
+        )
+        seen = 0
+        for path, text in texts.items():
+            for match in pattern.finditer(text):
+                seen += 1
+                if match.group("version") != version:
+                    raise SystemExit(
+                        f"{path.relative_to(ROOT)} installs {distribution}{separator}"
+                        f"{match.group('version')}, but pyproject.toml [tool.dbig.graph-tools] "
+                        f"pins {name} at {version}"
+                    )
+        if seen == 0:
+            raise SystemExit(
+                f"No workflow installs the pinned graph tool {distribution}; the graph-index job "
+                "would run against whatever version the runner happens to provide"
+            )
 
 
 def main() -> None:
@@ -69,6 +187,9 @@ def main() -> None:
         )
     if (ROOT / "pyproject.toml").exists() and not (ROOT / "uv.lock").is_file():
         raise SystemExit("A deployable Python package requires uv.lock")
+
+    _check_uv_pins()
+    _check_graph_tool_pins()
 
     subprocess.run(("git", "diff", "--check"), cwd=ROOT, check=True)
     subprocess.run(("git", "diff", "--cached", "--check"), cwd=ROOT, check=True)

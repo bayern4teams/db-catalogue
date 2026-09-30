@@ -16,8 +16,10 @@ from dbig_contracts.models import (
     Field,
     Manifest,
     Object,
+    Profile,
     Record,
     Source,
+    ValueTokens,
     utc_now,
 )
 from rapidfuzz.fuzz import ratio
@@ -39,6 +41,15 @@ def _read_signed(path: Path, config: BuilderConfig) -> tuple[Manifest, dict[str,
     if manifest.content_type != "collector-bundle":
         raise ValueError("expected collector bundle")
     return manifest, records
+
+
+def bundle_run_id(source_id: str, manifest: Manifest) -> str:
+    """The snapshot run ID a bundle contributes, derived from its exact manifest bytes.
+
+    Public because the catalogue renderer uses it to prove a bundle is one this snapshot was
+    assembled from, rather than a newer or older collection of the same source.
+    """
+    return stable_id(source_id, "run", hashlib.sha256(canonical(manifest)).hexdigest())
 
 
 def _base(record: Record) -> dict[str, Any]:
@@ -63,6 +74,213 @@ def _evidence(
     )
 
 
+MIN_TOKEN_SUPPORT = 4
+# Suffixes that conventionally mark a field as pointing somewhere else. Only `_id` was recognised
+# before, so a column called `owner_ref` or `account_code` could not become a candidate at all,
+# however perfectly its values contained. Order matters: the longest match wins, so `_uuid` is
+# tried before `_id` would strip only two characters off it.
+REFERENCE_SUFFIXES = ("_uuid", "_code", "_num", "_ref", "_key", "_id", "_fk", "_no")
+# A field measured this unique is treated as a possible parent key even with no declared
+# constraint, which is how a table that never declared a primary key can still be referenced.
+MEASURED_UNIQUE = 0.99
+
+
+def _measure(profiles: list[Profile] | None, name: str) -> float | None:
+    """First reported value for one measure across a field's profiles.
+
+    A field can have a planner statistic and a sample, measuring different things. Reading per
+    measure rather than per profile means a statistic that knows uniqueness is not shadowed by a
+    sample that does not.
+    """
+    for profile in profiles or []:
+        value = profile.model_dump().get(name)
+        if value is not None:
+            return float(value)
+    return None
+
+
+def _reference_stem(name: str) -> tuple[str, bool]:
+    """Return the part of a field name that should match a parent, and whether a suffix marked it.
+
+    With a suffix the name announces itself as a reference, so a fuzzy match against the parent
+    object's name is justified. Without one it announces nothing, and fuzzy matching every field
+    against every unique key would trade precision away for recall; the caller requires an exact
+    match in that case instead.
+    """
+    folded = name.casefold()
+    for suffix in REFERENCE_SUFFIXES:
+        if folded.endswith(suffix) and len(folded) > len(suffix):
+            return folded[: -len(suffix)], True
+    return folded, False
+
+
+def _composite_candidates(
+    composite_keys: list[tuple[str, list[Field]]],
+    objects: dict[str, Object],
+    by_object_name: dict[str, dict[str, Field]],
+    declared_pairs: set[tuple[str, str]],
+    field_profiles: dict[str, list[Profile]],
+    evidence: dict[str, Evidence],
+    edges: dict[str, Edge],
+) -> None:
+    """Propose candidates against declared multi-column keys.
+
+    Declared foreign keys already carry multi-column `field_pairs`, but candidate generation was
+    single-field only, so a two-column natural key could never be proposed at all.
+
+    Precision-first, in three ways. Every component must match, because a partial tuple is not a
+    reference to a tuple key: matching two of three columns says nothing about the third. At least
+    one component must be named for the parent, as `<singular parent>_<component>`, because two
+    unrelated tables that merely both have `id` and `name` columns would otherwise look like a
+    reference. And the components keep the source's declared order, since a tuple compared out of
+    order is a different tuple.
+
+    No value evidence is attached. §8 requires ordered tuple comparison for composite keys, and
+    per-field tokens cannot provide it: knowing each column's values overlap separately says
+    nothing about whether the *combinations* do. Claiming containment from per-field tokens here
+    would be the kind of invented measurement the rest of this design refuses.
+
+    Identifiers include which key matched, so a parent with two composite keys that one child
+    matches both of yields two candidates rather than one silently overwriting the other.
+    """
+    for parent_object_id, members in composite_keys:
+        key_ref = ":".join(member.id for member in members)
+        parent_object = objects.get(parent_object_id)
+        if parent_object is None:
+            continue
+        singular = parent_object.name.casefold().rstrip("s")
+        for child_object_id, child_fields in by_object_name.items():
+            if child_object_id == parent_object_id:
+                continue
+            if (child_object_id, parent_object_id) in declared_pairs:
+                continue
+            child_object = objects.get(child_object_id)
+            if child_object is None:
+                continue
+            folded = {name.casefold(): field for name, field in child_fields.items()}
+            matched: list[Field] = []
+            pairs: list[list[str]] = []
+            named_for_parent = 0
+            for member in members:
+                component = member.name.casefold()
+                prefixed = folded.get(f"{singular}_{component}")
+                match = prefixed or folded.get(component)
+                # One child field cannot stand for two components, and a field with no values
+                # cannot reference anything, the same rule the single-field path applies.
+                if (
+                    match is None
+                    or match in matched
+                    or _type_family(match.data_type) != _type_family(member.data_type)
+                    or _measure(field_profiles.get(match.id), "null_fraction") == 1.0
+                ):
+                    pairs = []
+                    break
+                if prefixed is not None:
+                    named_for_parent += 1
+                matched.append(match)
+                pairs.append([match.id, member.id])
+            if not pairs or named_for_parent == 0:
+                continue
+            anchor = matched[0]
+            components = _evidence(
+                anchor,
+                "composite_name_match",
+                members[0].id,
+                f"composite:{key_ref}",
+                {
+                    "component_count": len(members),
+                    "components_named_for_parent": named_for_parent,
+                    "tuple_containment_measured": False,
+                },
+            )
+            key = _evidence(
+                members[0],
+                "catalog_key",
+                anchor.id,
+                f"composite-unique:{child_object_id}:{key_ref}",
+                {"component_count": len(members)},
+            )
+            for item in (components, key):
+                evidence[item.id] = item
+            edge_id = stable_id(
+                anchor.source_id, "edge", f"composite:{child_object_id}:{key_ref}"
+            )
+            edges[edge_id] = Edge.model_validate(
+                {
+                    "id": edge_id,
+                    "kind": "REFERENCE_CANDIDATE",
+                    "from_id": child_object_id,
+                    "to_id": parent_object_id,
+                    "status": "tentative",
+                    "evidence_ids": [components.id, key.id],
+                    "field_pairs": pairs,
+                    "explanation": (
+                        "every component of a declared composite key matched by name, with no "
+                        "tuple value comparison available"
+                    ),
+                    "confidence": None,
+                    **_base(anchor),
+                }
+            )
+
+
+def _containment(
+    child: Field,
+    child_tokens: ValueTokens | None,
+    parent_tokens: ValueTokens | None,
+) -> Evidence | None:
+    """Measure how much of a child's sampled values appear among a candidate parent key's.
+
+    Containment, not similarity: a reference means the child's values are drawn from the parent's
+    key, so the question is one-directional and the denominator is the child's distinct count.
+    Overlap is reported too, because a high containment on a tiny child sample against a huge
+    parent is weak, and the two numbers together show that.
+
+    Abstains, returning nothing, in four cases rather than reporting a number that means nothing:
+    either side has no tokens, the two were keyed under different key IDs and so are not
+    comparable at all, the two were normalised differently, or either side's distinct count is
+    below the minimum support. §15's rule applies: no `confidence` is produced here, only a
+    measurement with its denominators, and the strength tier stays whatever the deterministic
+    rules already chose.
+    """
+    if child_tokens is None or parent_tokens is None:
+        return None
+    if child_tokens.key_id != parent_tokens.key_id:
+        # Tokens keyed under different run keys are unrelated byte strings. Comparing them would
+        # always report zero overlap, which reads as a counterexample rather than as ignorance.
+        return None
+    if child_tokens.normalization != parent_tokens.normalization:
+        return None
+    if min(child_tokens.distinct_count, parent_tokens.distinct_count) < MIN_TOKEN_SUPPORT:
+        return None
+    child_set, parent_set = set(child_tokens.tokens), set(parent_tokens.tokens)
+    if not child_set:
+        return None
+    shared = len(child_set & parent_set)
+    union = len(child_set | parent_set)
+    return _evidence(
+        child,
+        "value_containment",
+        parent_tokens.field_id,
+        f"containment:{parent_tokens.field_id}",
+        {
+            "contained_fraction": round(shared / len(child_set), 6),
+            "shared_tokens": shared,
+            "child_distinct_sampled": len(child_set),
+            "parent_distinct_sampled": len(parent_set),
+            "jaccard": round(shared / union, 6) if union else None,
+            "child_sample_count": child_tokens.sample_count,
+            "parent_sample_count": parent_tokens.sample_count,
+            "child_sample_method": child_tokens.sample_method,
+            "parent_sample_method": parent_tokens.sample_method,
+            # A capped token set makes containment a lower bound, not a measurement.
+            "lower_bound_only": child_tokens.truncated or parent_tokens.truncated,
+            "key_id": child_tokens.key_id,
+            "minimum_support": MIN_TOKEN_SUPPORT,
+        },
+    )
+
+
 def _type_family(value: str) -> str:
     normalized = value.casefold().split("(", 1)[0]
     if normalized in {"integer", "bigint", "smallint", "int", "int64", "uint64", "int32"}:
@@ -84,9 +302,16 @@ def assemble(
     sources: dict[str, Source] = {}
     nodes: dict[str, Record] = {}
     constraints: list[Constraint] = []
+    token_sets: dict[str, ValueTokens] = {}
+    field_profiles: dict[str, list[Profile]] = {}
     runs: list[Record] = []
     partial_source_receipts = partial_source_receipts or {}
     partial = bool(partial_source_receipts)
+    # Why the snapshot is partial, recorded on the builder run so a reader is told the cause
+    # rather than only the fact. Several causes produce no collector diagnostic at all.
+    partial_reasons: set[str] = {
+        f"PREVIOUS_COMPLETE_BUNDLE_USED {source}" for source in partial_source_receipts
+    }
     for path in bundle_paths:
         manifest, records = _read_signed(path, config)
         bundle_sources = records["sources.jsonl"]
@@ -96,19 +321,32 @@ def assemble(
         if source.id in sources:
             raise ValueError("ambiguous source identity")
         sources[source.id] = source
-        partial |= manifest.completeness == "partial"
+        if manifest.completeness == "partial":
+            partial = True
+            partial_reasons.add(f"SOURCE_BUNDLE_PARTIAL {source.id}")
         for table in ("sources.jsonl", "objects.jsonl", "fields.jsonl"):
             for record in records[table]:
                 if record.id in nodes:
                     raise ValueError("duplicate node ID across bundles")
                 nodes[record.id] = record
         constraints.extend(Constraint.model_validate(item) for item in records["constraints.jsonl"])
+        for item in records.get("profiles.jsonl", []):
+            measured = Profile.model_validate(item.model_dump())
+            # A field can carry more than one profile, a planner statistic and a sample, which
+            # measure different things. They are kept together and read per measure, so a
+            # statistic that knows uniqueness is not shadowed by a sample that does not.
+            field_profiles.setdefault(measured.field_id, []).append(measured)
+        for item in records.get("tokens.jsonl", []):
+            # Held in memory for this assembly only. Nothing derived from a token reaches the
+            # snapshot except the aggregate metrics on a containment evidence record.
+            entry = ValueTokens.model_validate(item.model_dump())
+            token_sets[entry.field_id] = entry
         digest = hashlib.sha256(canonical(manifest)).hexdigest()
         runs.append(
             Record.model_validate(
                 {
                     "record_type": "run",
-                    "id": stable_id(source.id, "run", digest),
+                    "id": bundle_run_id(source.id, manifest),
                     "source_id": source.id,
                     "observed_at": manifest.as_of,
                     "collector_version": manifest.producer,
@@ -136,6 +374,9 @@ def assemble(
     evidence: dict[str, Evidence] = {}
     edges: dict[str, Edge] = {}
     unique_fields: list[Field] = []
+    # Declared multi-column keys, in declared order. A tuple's components are only meaningful
+    # together and in sequence, so the order the source declared is preserved throughout.
+    composite_keys: list[tuple[str, list[Field]]] = []
     declared_pairs: set[tuple[str, str]] = set()
     for constraint in constraints:
         kind = constraint.kind
@@ -149,6 +390,14 @@ def assemble(
             unique_field = by_object_name.get(owner, {}).get(constraint.field_names[0])
             if unique_field:
                 unique_fields.append(unique_field)
+        elif kind in {"primary", "unique"} and len(ordinals) > 1:
+            members = [by_object.get(owner, {}).get(ordinal) for ordinal in ordinals]
+            if all(members):
+                composite_keys.append((owner, [member for member in members if member]))
+        elif kind in {"primary", "unique"} and len(constraint.field_names) > 1:
+            named = [by_object_name.get(owner, {}).get(name) for name in constraint.field_names]
+            if all(named):
+                composite_keys.append((owner, [member for member in named if member]))
         if kind != "foreign":
             continue
         target = constraint.target_object_id
@@ -160,6 +409,7 @@ def assemble(
             or len(ordinals) != len(target_ordinals)
         ):
             partial = True
+            partial_reasons.add("FOREIGN_KEY_TARGET_OUTSIDE_SNAPSHOT")
             continue
         pairs = []
         for left, right in zip(ordinals, target_ordinals, strict=True):
@@ -167,6 +417,7 @@ def assemble(
             parent = by_object.get(target, {}).get(right)
             if child is None or parent is None:
                 partial = True
+                partial_reasons.add("FOREIGN_KEY_TARGET_OUTSIDE_SNAPSHOT")
                 break
             pairs.append([child.id, parent.id])
         else:
@@ -188,36 +439,92 @@ def assemble(
                 }
             )
             declared_pairs.add((owner, target))
-    for child in fields.values():
-        if not child.name.casefold().endswith("_id"):
+    # A field measured unique can be a parent key even with nothing declared, which is how a
+    # table that never declared a primary key can still be referenced. Recorded separately so the
+    # evidence says which it was: a catalog assertion and a measurement are not the same claim.
+    declared_unique = {parent.id for parent in unique_fields}
+    for candidate_parent in fields.values():
+        if candidate_parent.id in declared_unique:
             continue
+        if (_measure(field_profiles.get(candidate_parent.id), "uniqueness") or 0.0) >= (
+            MEASURED_UNIQUE
+        ):
+            unique_fields.append(candidate_parent)
+    for child in fields.values():
         child_object = objects.get(child.object_id)
         if child_object is None:
             continue
-        stem = child.name.casefold()[:-3]
+        # A field with no values cannot reference anything, so comparing it would produce name
+        # evidence for a relationship that has nothing behind it.
+        if _measure(field_profiles.get(child.id), "null_fraction") == 1.0:
+            continue
+        stem, suffixed = _reference_stem(child.name)
         candidates = []
         for parent in unique_fields:
             parent_object = objects.get(parent.object_id)
             if (
                 parent_object is None
+                or parent.id == child.id
                 or parent.object_id == child.object_id
                 or (child.object_id, parent.object_id) in declared_pairs
                 or _type_family(child.data_type) != _type_family(parent.data_type)
             ):
                 continue
-            name_score = round(ratio(stem, parent_object.name.casefold().rstrip("s")))
-            if name_score >= config.name_similarity_threshold:
-                candidates.append((name_score, parent))
+            target = parent_object.name.casefold().rstrip("s")
+            if suffixed:
+                # The name announces itself as a reference, so a fuzzy match is justified.
+                name_score = round(ratio(stem, target))
+                if name_score < config.name_similarity_threshold:
+                    continue
+            else:
+                # It announces nothing. Fuzzy-matching every field against every unique key would
+                # trade precision away, so only an exact match after singularisation counts, which
+                # is what catches a column called `customer` pointing at `customers`.
+                if stem != target:
+                    continue
+                name_score = 100
+            candidates.append((name_score, parent))
         for score, parent in sorted(candidates, key=lambda item: (-item[0], item[1].id))[
             : config.top_k_per_field
         ]:
             lexical = _evidence(
-                child, "name_similarity", parent.id, f"name:{parent.id}", {"ratio_percent": score}
+                child,
+                "name_similarity",
+                parent.id,
+                f"name:{parent.id}",
+                # Which blocking rule admitted the pair, so a reader can tell a fuzzy suffix match
+                # from an exact bare-name match without re-deriving it.
+                {"ratio_percent": score, "blocking_rule": "suffix" if suffixed else "exact_name"},
             )
             typed = _evidence(child, "compatible_type", parent.id, f"type:{parent.id}")
-            key = _evidence(parent, "catalog_key", child.id, f"unique:{child.id}")
+            if parent.id in declared_unique:
+                key = _evidence(parent, "catalog_key", child.id, f"unique:{child.id}")
+                key_claim = "declared unique key"
+            else:
+                # A measurement, not a catalog assertion. Kept as a separate evidence kind so the
+                # two are never read as the same strength of claim.
+                key = _evidence(
+                    parent,
+                    "measured_uniqueness",
+                    child.id,
+                    f"measured-unique:{child.id}",
+                    {
+                        "uniqueness": _measure(field_profiles.get(parent.id), "uniqueness"),
+                        "threshold": MEASURED_UNIQUE,
+                    },
+                )
+                key_claim = "uniqueness measured from source statistics, not declared"
             for item in (lexical, typed, key):
                 evidence[item.id] = item
+            cited = [lexical.id, typed.id, key.id]
+            explanation = f"name, compatible type, and {key_claim}"
+            containment = _containment(
+                child, token_sets.get(child.id), token_sets.get(parent.id)
+            )
+            if containment is not None:
+                evidence[containment.id] = containment
+                cited.append(containment.id)
+                explanation = f"{explanation}; {containment.explanation}"
             edge_id = stable_id(child.source_id, "edge", f"{child.id}:{parent.id}")
             edges[edge_id] = Edge.model_validate(
                 {
@@ -226,13 +533,16 @@ def assemble(
                     "from_id": child.object_id,
                     "to_id": parent.object_id,
                     "status": "tentative",
-                    "evidence_ids": [lexical.id, typed.id, key.id],
+                    "evidence_ids": cited,
                     "field_pairs": [[child.id, parent.id]],
-                    "explanation": "name, compatible type, and declared unique key",
+                    "explanation": explanation,
                     "confidence": None,
                     **_base(child),
                 }
             )
+    _composite_candidates(
+        composite_keys, objects, by_object_name, declared_pairs, field_profiles, evidence, edges
+    )
     review_status = "REVIEW_DISABLED"
     if config.review is not None:
         suggestions, review_status = review_candidates(
@@ -243,7 +553,9 @@ def assemble(
         )
         for suggestion in suggestions:
             evidence[suggestion.id] = suggestion
-        partial |= review_status == "MODEL_UNAVAILABLE_OR_INVALID"
+        if review_status == "MODEL_UNAVAILABLE_OR_INVALID":
+            partial = True
+            partial_reasons.add("MODEL_REVIEW_FAILED")
     runs.append(
         Record.model_validate(
             {
@@ -262,6 +574,8 @@ def assemble(
                 "provenance": "assembler",
                 "review_status": review_status,
                 "partial_source_receipts": partial_source_receipts,
+                # Only when partial, so a complete snapshot's bytes are unchanged.
+                **({"partial_reasons": sorted(partial_reasons)} if partial_reasons else {}),
             }
         )
     )

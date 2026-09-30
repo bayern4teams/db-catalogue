@@ -7,9 +7,33 @@ dependencies = []
 
 [tool.uv]
 package = false
+# `uv export --format cyclonedx1.5`, required by scripts/supply_chain.py, first ships in uv
+# 0.10.0; 0.9.0 and earlier reject the format during argument parsing, before uv reads this
+# floor. uv still fails closed here for lock, sync and run, and scripts/ci_check.py keeps the
+# workflow uv pin at or above it.
+required-version = ">=0.10.0"
 
 [tool.uv.workspace]
 members = ["packages/*"]
+
+# Pinned developer graph tools. scripts/graph_sync.py refuses to index with any other version,
+# and scripts/ci_check.py refuses a workflow that installs anything but these exact pins, so a
+# developer and CI can never build the three graphs from different tool versions. The `graphify`
+# command ships in the `graphifyy` distribution, hence the separate `distribution` field.
+[tool.dbig.graph-tools.graphify]
+version = "0.9.65"
+distribution = "graphifyy"
+ecosystem = "pypi"
+
+[tool.dbig.graph-tools.graft]
+version = "0.18.0"
+distribution = "@nanonets/graft"
+ecosystem = "npm"
+
+[tool.dbig.graph-tools.codebase-memory-mcp]
+version = "0.11.0"
+distribution = "codebase-memory-mcp"
+ecosystem = "pypi"
 
 [dependency-groups]
 dev = [

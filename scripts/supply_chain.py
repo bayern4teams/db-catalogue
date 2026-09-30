@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import shutil
 import subprocess
 import tomllib
 from concurrent.futures import ThreadPoolExecutor
@@ -55,12 +56,46 @@ def _release_metadata(component: dict[str, object]) -> tuple[str, dict[str, obje
     }
 
 
+def _uv_requirement() -> str:
+    """Return the `[tool.uv] required-version` floor this repository pins itself to."""
+    settings = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    return str(settings["tool"]["uv"]["required-version"])
+
+
+def _uv_executable() -> str:
+    """Resolve uv on PATH so the gate never runs a partially qualified executable."""
+    found = shutil.which("uv")
+    if found is None:
+        raise SystemExit(
+            "uv was not found on PATH; this repository requires uv "
+            f"{_uv_requirement()} to export the CycloneDX SBOM"
+        )
+    return found
+
+
+def _uv_version(executable: str) -> str:
+    result = subprocess.run(  # noqa: S603
+        [executable, "--version"], cwd=ROOT, capture_output=True, text=True
+    )
+    return result.stdout.strip() or result.stderr.strip() or "unknown"
+
+
 def _export_sbom(path: Path) -> list[dict[str, object]]:
+    executable = _uv_executable()
     command = [
-        "uv", "export", "--locked", "--all-packages", "--all-extras", "--all-groups",
+        executable, "export", "--locked", "--all-packages", "--all-extras", "--all-groups",
         "--format", "cyclonedx1.5", "--output-file", str(path), "--quiet",
     ]
-    subprocess.run(command, cwd=ROOT, capture_output=True, check=True)  # noqa: S603
+    result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)  # noqa: S603
+    if result.returncode != 0:
+        # `cyclonedx1.5` is a preview format that older uv releases reject during argument
+        # parsing, before uv consults `[tool.uv] required-version`. Report uv's own message plus
+        # the running and required versions so the cause is never an opaque traceback.
+        raise SystemExit(
+            f"`uv export` failed (exit {result.returncode}) using {_uv_version(executable)}; this "
+            f"repository requires uv {_uv_requirement()} for CycloneDX SBOM export. "
+            f"uv reported:\n{result.stderr.strip() or result.stdout.strip() or '(no output)'}"
+        )
     sbom = json.loads(path.read_text(encoding="utf-8"))
     if sbom.get("bomFormat") != "CycloneDX" or sbom.get("specVersion") != "1.5":
         raise ValueError("unexpected SBOM format")

@@ -1,10 +1,9 @@
 """Assembler policy and key references."""
 
-import os
 import tomllib
 from pathlib import Path
 
-from dbig_contracts.security import private_base_url
+from dbig_contracts.security import private_base_url, secret_from_env
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
@@ -46,7 +45,9 @@ class BuilderConfig(BaseModel):
 
     def key(self, key_id: str) -> bytes:
         env_name = self.signing_keys[key_id]
-        value = os.environ[env_name].encode("utf-8")
+        value = secret_from_env(
+            env_name, purpose="collector bundle signature verification"
+        ).encode("utf-8")
         if len(value) < 32:
             raise ValueError("bundle signing key too short")
         return value

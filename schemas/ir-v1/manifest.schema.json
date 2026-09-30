@@ -91,6 +91,21 @@
       "title": "Created At",
       "type": "string"
     },
+    "diagnostics": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Diagnostics"
+    },
     "files": {
       "items": {
         "$ref": "#/$defs/FileEntry"

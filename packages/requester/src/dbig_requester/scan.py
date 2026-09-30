@@ -12,6 +12,7 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from dbig_contracts.artifact import canonical
 from dbig_contracts.scan import ScanReceipt, ScanRequest, sign_scan
+from dbig_contracts.security import secret_from_env
 
 from .config import ScanConfig
 
@@ -59,7 +60,9 @@ def dispatch_scan(
         raise ValueError("UNAUTHORIZED_CAPABILITY")
     if request.expires_at <= datetime.now(UTC):
         raise ValueError("EXPIRED_REQUEST")
-    key = os.environ[config.signing_key_env].encode("utf-8")
+    key = secret_from_env(
+        config.signing_key_env, purpose="scan request signing"
+    ).encode("utf-8")
     envelope = sign_scan(request, config.key_id, key)
     payload = canonical(envelope)
     previous = scan_status(state, request.id)
@@ -94,7 +97,9 @@ def dispatch_scan(
         base = config.collector_urls.get(request.source_id)
         if base is None or config.http_token_env is None:
             raise ValueError("collector HTTP route is not configured")
-        token = os.environ[config.http_token_env]
+        token = secret_from_env(
+            config.http_token_env, purpose="collector HTTP bearer token"
+        )
         message = Request(  # noqa: S310 - URL is validated as a private HTTP(S) address
             base + "/v1/collector/scan-requests",
             data=payload,

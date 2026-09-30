@@ -6,6 +6,7 @@ import hashlib
 import json
 from pathlib import Path
 
+from dbig_contracts.errors import OperatorError
 from pydantic import BaseModel, ConfigDict, Field
 from sqlglot import exp, parse_one
 
@@ -66,8 +67,19 @@ def _sql_read(item: dict, dialect: str, rows: int) -> str:
 def render_plan(directory: Path, request: PlanRequest, config: PlannerConfig) -> dict:
     graph = load_graph(directory)
     path = load_path(directory, request.path_id)
-    if path["snapshot_digest"] != graph["snapshot_digest"] or path["kind"] != "join":
-        raise ValueError("STALE_OR_NON_JOIN_PATH")
+    if path["snapshot_digest"] != graph["snapshot_digest"]:
+        # Two distinct causes reached the operator as one opaque code. A stale path is a
+        # rebuild; a lineage path is a category error no rebuild will fix.
+        raise OperatorError(
+            f"STALE_PATH: path {request.path_id} was produced from a different snapshot than "
+            "this graph; re-run the path query against the current graph"
+        )
+    if path["kind"] != "join":
+        raise OperatorError(
+            f"NON_JOIN_PATH: path {request.path_id} is a {path['kind']} path, and only a join "
+            "path can be rendered as a query plan. Observed lineage records what already "
+            "happened; it is not something to execute"
+        )
     objects, fields = graph["objects"], graph["fields"]
     edges = {item["id"]: item for item in graph["references"]}
     nodes = path["object_ids"]

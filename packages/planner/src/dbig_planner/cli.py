@@ -5,6 +5,7 @@ from ipaddress import ip_address
 from pathlib import Path
 
 import click
+from dbig_contracts.errors import OperatorError
 
 from .config import PlannerConfig, load_config
 from .graph import build_graph
@@ -13,7 +14,23 @@ from .paths import PathRequest, find_paths
 from .plans import PlanRequest, render_plan
 
 
-@click.group()
+class SecretAwareGroup(click.Group):
+    """Report an operator-fixable failure as a command error, not a traceback.
+
+    Converting at the group covers every command in it, including ones added later. Only
+    `OperatorError` is converted, which covers a missing secret reference, an unknown identifier
+    and state that has not been built yet. An ordinary `ValueError` keeps its full traceback, so
+    a validation failure or a genuine bug is never dressed up as something an operator can fix.
+    """
+
+    def invoke(self, ctx: click.Context) -> object:
+        try:
+            return super().invoke(ctx)
+        except OperatorError as error:
+            raise click.ClickException(str(error)) from error
+
+
+@click.group(cls=SecretAwareGroup)
 def main() -> None:
     pass
 
@@ -50,8 +67,7 @@ def _paths(graph: Path, from_id: str, to_id: str, kind: str) -> None:
 @click.option("--graph", type=click.Path(path_type=Path, exists=True), required=True)
 @click.option("--from", "from_id", required=True)
 @click.option("--to", "to_id", required=True)
-@click.option("--json", "json_output", is_flag=True)
-def lineage_paths(graph: Path, from_id: str, to_id: str, json_output: bool) -> None:
+def lineage_paths(graph: Path, from_id: str, to_id: str) -> None:
     _paths(graph, from_id, to_id, "lineage")
 
 
@@ -59,16 +75,14 @@ def lineage_paths(graph: Path, from_id: str, to_id: str, json_output: bool) -> N
 @click.option("--graph", type=click.Path(path_type=Path, exists=True), required=True)
 @click.option("--from", "from_id", required=True)
 @click.option("--to", "to_id", required=True)
-@click.option("--json", "json_output", is_flag=True)
-def join_paths(graph: Path, from_id: str, to_id: str, json_output: bool) -> None:
+def join_paths(graph: Path, from_id: str, to_id: str) -> None:
     _paths(graph, from_id, to_id, "join")
 
 
 @main.command("plan")
 @click.option("--graph", type=click.Path(path_type=Path, exists=True), required=True)
 @click.option("--path-id", required=True)
-@click.option("--json", "json_output", is_flag=True)
-def plan(graph: Path, path_id: str, json_output: bool) -> None:
+def plan(graph: Path, path_id: str) -> None:
     result = render_plan(graph, PlanRequest(path_id=path_id), PlannerConfig(graph_dir=graph))
     click.echo(json.dumps(result, sort_keys=True))
 

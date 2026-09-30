@@ -109,10 +109,12 @@ def test_collector_http_requires_secret_at_startup_and_enforces_body_limit(
         {**site_config().model_dump(), "max_request_bytes": 16}
     )
     monkeypatch.delenv("SITE_TOKEN", raising=False)
-    with pytest.raises(ValueError, match="HTTP token reference is required"):
+    with pytest.raises(ValueError, match="SITE_TOKEN, which is not set"):
         collector_app(config, tmp_path / "queue.sqlite3")
     monkeypatch.setenv("SITE_TOKEN", " ")
-    with pytest.raises(ValueError, match="HTTP token reference is required"):
+    with pytest.raises(
+        ValueError, match="SITE_TOKEN for collector HTTP bearer token is empty"
+    ):
         collector_app(config, tmp_path / "queue.sqlite3")
     monkeypatch.setenv("SITE_TOKEN", "synthetic-bearer")
     with TestClient(collector_app(config, tmp_path / "queue.sqlite3")) as client:

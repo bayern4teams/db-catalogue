@@ -17,7 +17,7 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-def _config(kind: str) -> SourceConfig:
+def _config(kind: str, namespace: str = "dbig_ci") -> SourceConfig:
     return SourceConfig.model_validate(
         {
             "source_id": "ci-source",
@@ -25,7 +25,7 @@ def _config(kind: str) -> SourceConfig:
             "connection_env": "UNUSED_CONNECTION",
             "signing_key_env": "UNUSED_SIGNING_KEY",
             "signing_key_id": "ci",
-            "namespaces": ["dbig_ci"],
+            "namespaces": [namespace],
         }
     )
 
@@ -68,7 +68,9 @@ def test_postgresql_16_catalog_and_read_only_role():
         admin.close()
     reader = dbapi.connect(host="127.0.0.1", port=5432, user="dbig_reader", database="postgres")
     try:
-        records = discover_postgresql(reader, _config("postgresql"), Budget(4))
+        # Six, not four: statistics profiling added a fifth charged query. This test is
+        # skipped locally, so only CI can catch a budget that no longer fits.
+        records = discover_postgresql(reader, _config("postgresql"), Budget(6))
     finally:
         reader.close()
     assert {item.name for item in records["objects.jsonl"]} == {
@@ -87,6 +89,15 @@ def test_postgresql_16_catalog_and_read_only_role():
     partition = next(item for item in records["objects.jsonl"] if item.name == "events_p0")
     assert partition.parent_id == events.id
     assert partition.attributes["is_partition"] is True
+    # The fixture ANALYZEs customers, so the planner has statistics for it. This is the only
+    # place profiling is checked against a real server rather than a fake cursor.
+    customer_fields = {
+        item.id for item in records["fields.jsonl"] if item.object_id == customers.id
+    }
+    profiles = [item for item in records["profiles.jsonl"] if item.field_id in customer_fields]
+    assert profiles, "pg_stats must yield a profile for an analyzed table"
+    assert profiles[0].method == "source_statistic"
+    assert profiles[0].uniqueness == 1.0, "a single-row primary key is fully unique"
 
 
 def test_clickhouse_25_8_system_tables():
@@ -133,3 +144,102 @@ def test_mongodb_7_collection_validator_and_index():
         item.kind == "unique" and item.field_names == ["customer_id"]
         for item in records["constraints.jsonl"]
     )
+
+
+# --- rename stability -------------------------------------------------------------------
+#
+# The identity contract claims a renamed object keeps its catalogue ID because the ID derives
+# from a source-native identifier rather than a name. These tests are that claim's evidence:
+# the official documentation for each engine is unreachable from the build environment, and a
+# rename performed against the real server is stronger proof than a citation would be. Each
+# test uses its own namespace, `dbig_rename`, and drops what it creates. The first CI run of
+# these tests failed because they shared `dbig_ci`: the collectors charge a query budget per
+# database plus per collection, so leftover objects from the tests above made the budget depend
+# on execution order. An isolated namespace removes that coupling entirely.
+
+
+def test_postgresql_object_and_field_ids_survive_a_rename():
+    from pg8000 import dbapi
+
+    admin = _retry(
+        lambda: dbapi.connect(host="127.0.0.1", port=5432, user="postgres", database="postgres")
+    )
+    try:
+        cursor = admin.cursor()
+        cursor.execute("CREATE SCHEMA IF NOT EXISTS dbig_rename")
+        cursor.execute("CREATE TABLE dbig_rename.rename_me (before_rename integer)")
+        admin.commit()
+        before = discover_postgresql(admin, _config("postgresql", "dbig_rename"), Budget(6))
+        cursor.execute("ALTER TABLE dbig_rename.rename_me RENAME TO renamed")
+        cursor.execute(
+            "ALTER TABLE dbig_rename.renamed RENAME COLUMN before_rename TO after_rename"
+        )
+        admin.commit()
+        after = discover_postgresql(admin, _config("postgresql", "dbig_rename"), Budget(6))
+    finally:
+        try:
+            cursor = admin.cursor()
+            cursor.execute("DROP TABLE IF EXISTS dbig_rename.renamed")
+            cursor.execute("DROP TABLE IF EXISTS dbig_rename.rename_me")
+            admin.commit()
+        finally:
+            admin.close()
+
+    original = next(item for item in before["objects.jsonl"] if item.name == "rename_me")
+    renamed = next(item for item in after["objects.jsonl"] if item.name == "renamed")
+    assert renamed.id == original.id, "pg_class.oid must carry identity through a table rename"
+    assert renamed.native_id == original.native_id
+    assert not any(item.name == "rename_me" for item in after["objects.jsonl"])
+
+    original_field = next(item for item in before["fields.jsonl"] if item.name == "before_rename")
+    renamed_field = next(item for item in after["fields.jsonl"] if item.name == "after_rename")
+    assert renamed_field.id == original_field.id, "attnum must carry identity through a rename"
+    assert renamed_field.object_id == renamed.id
+
+
+def test_clickhouse_object_id_survives_a_rename():
+    import clickhouse_connect
+
+    client = _retry(lambda: clickhouse_connect.get_client(host="127.0.0.1", port=8123))
+    try:
+        client.command("CREATE DATABASE IF NOT EXISTS dbig_rename ENGINE=Atomic")
+        client.command(
+            "CREATE TABLE dbig_rename.rename_me (id UInt64) ENGINE=MergeTree ORDER BY id"
+        )
+        before = discover_clickhouse(client, _config("clickhouse", "dbig_rename"), Budget(4))
+        client.command("RENAME TABLE dbig_rename.rename_me TO dbig_rename.renamed")
+        after = discover_clickhouse(client, _config("clickhouse", "dbig_rename"), Budget(4))
+    finally:
+        try:
+            client.command("DROP TABLE IF EXISTS dbig_rename.renamed")
+            client.command("DROP TABLE IF EXISTS dbig_rename.rename_me")
+        finally:
+            client.close()
+
+    original = next(item for item in before["objects.jsonl"] if item.name == "rename_me")
+    renamed = next(item for item in after["objects.jsonl"] if item.name == "renamed")
+    assert renamed.id == original.id, "an Atomic database's table UUID must survive RENAME TABLE"
+    assert renamed.native_id == original.native_id
+
+
+def test_mongodb_collection_id_survives_a_rename():
+    from pymongo import MongoClient
+
+    client = MongoClient("mongodb://127.0.0.1:27017", serverSelectionTimeoutMS=2000)
+    _retry(lambda: client.admin.command("ping"))
+    try:
+        client.dbig_rename.create_collection("rename_me")
+        before = discover_mongodb(client, _config("mongodb", "dbig_rename"), Budget(6))
+        client.dbig_rename.rename_me.rename("renamed")
+        after = discover_mongodb(client, _config("mongodb", "dbig_rename"), Budget(6))
+    finally:
+        try:
+            client.dbig_rename.drop_collection("renamed")
+            client.dbig_rename.drop_collection("rename_me")
+        finally:
+            client.close()
+
+    original = next(item for item in before["objects.jsonl"] if item.name == "rename_me")
+    renamed = next(item for item in after["objects.jsonl"] if item.name == "renamed")
+    assert renamed.id == original.id, "a collection UUID must survive renameCollection"
+    assert renamed.native_id == original.native_id

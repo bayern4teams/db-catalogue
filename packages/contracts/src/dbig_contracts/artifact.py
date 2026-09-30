@@ -12,20 +12,24 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, TypeAdapter
 from pydantic import Field as PydanticField
 
 from .models import (
     Constraint,
+    Diagnostic,
     Edge,
     Evidence,
     Field,
     FileEntry,
     Manifest,
     Object,
+    Profile,
     Record,
     Signature,
+    SnapshotNode,
     Source,
+    ValueTokens,
     utc_now,
 )
 
@@ -37,6 +41,7 @@ COLLECTOR_FILES = (
     "profiles.jsonl",
     "observations.jsonl",
     "diagnostics.jsonl",
+    "tokens.jsonl",
 )
 SNAPSHOT_FILES = ("nodes.jsonl", "edges.jsonl", "evidence.jsonl", "runs.jsonl")
 MODELS: dict[str, type[Record]] = {
@@ -44,10 +49,22 @@ MODELS: dict[str, type[Record]] = {
     "objects.jsonl": Object,
     "fields.jsonl": Field,
     "constraints.jsonl": Constraint,
-    "nodes.jsonl": Record,
     "edges.jsonl": Edge,
     "evidence.jsonl": Evidence,
+    "diagnostics.jsonl": Diagnostic,
+    "profiles.jsonl": Profile,
+    "tokens.jsonl": ValueTokens,
 }
+# `nodes.jsonl` carries three record types, so it validates against the discriminated union
+# rather than one model. `runs.jsonl` intentionally has no entry and stays a base `Record`.
+NODE_ADAPTER: TypeAdapter[Source | Object | Field] = TypeAdapter(SnapshotNode)
+
+
+def validate_row(name: str, data: Any) -> Record:
+    """Validate one artifact row against the strictest model that file's contract allows."""
+    if name == "nodes.jsonl":
+        return NODE_ADAPTER.validate_python(data)
+    return MODELS.get(name, Record).model_validate(data)
 
 
 class ArtifactLimits(BaseModel):
@@ -85,6 +102,16 @@ def _parse(data: bytes) -> Any:
             ValueError(f"invalid JSON constant: {value}")
         ),
     )
+
+
+def _diagnostic_counts(records: Sequence[Record | dict[str, Any]]) -> dict[str, int]:
+    """Count diagnostics by code, in sorted order so the manifest bytes stay deterministic."""
+    counts: dict[str, int] = {}
+    for record in records:
+        data = record.model_dump(mode="json") if isinstance(record, BaseModel) else record
+        code = validate_row("diagnostics.jsonl", data).model_dump()["code"]
+        counts[code] = counts.get(code, 0) + 1
+    return dict(sorted(counts.items()))
 
 
 def _unsigned(manifest: Manifest) -> bytes:
@@ -151,7 +178,7 @@ def write_artifact(
                     data = (
                         record.model_dump(mode="json") if isinstance(record, BaseModel) else record
                     )
-                    model = MODELS.get(name, Record).model_validate(data)
+                    model = validate_row(name, data)
                     line = canonical(model) + b"\n"
                     stream.write(line)
                     digest.update(line)
@@ -162,18 +189,21 @@ def write_artifact(
                 FileEntry(path=name, bytes=size, sha256=digest.hexdigest(), count=len(records))
             )
         now = utc_now()
-        manifest = Manifest.model_validate(
-            {
-                "ir_version": "1.0",
-                "content_type": content_type,
-                "producer": producer,
-                "source_run_ids": source_run_ids,
-                "created_at": now,
-                "as_of": now,
-                "completeness": completeness,
-                "files": entries,
-            }
-        )
+        fields: dict[str, Any] = {
+            "ir_version": "1.0",
+            "content_type": content_type,
+            "producer": producer,
+            "source_run_ids": source_run_ids,
+            "created_at": now,
+            "as_of": now,
+            "completeness": completeness,
+            "files": entries,
+        }
+        if "diagnostics.jsonl" in expected:
+            # Derived here rather than passed in, so a producer cannot under-report what it
+            # dropped. Snapshots carry no diagnostics file and so report no summary at all.
+            fields["diagnostics"] = _diagnostic_counts(tables.get("diagnostics.jsonl", ()))
+        manifest = Manifest.model_validate(fields)
         if signing_key is not None:
             manifest.signature = Signature(
                 key_id=key_id or "",
@@ -231,7 +261,7 @@ def read_artifact(
         for line in raw.splitlines():
             if len(line) > limits.max_record_bytes:
                 raise ValueError("oversized artifact record")
-            record = MODELS.get(entry.path, Record).model_validate(_parse(line))
+            record = validate_row(entry.path, _parse(line))
             if record.id in all_ids:
                 raise ValueError(f"duplicate record ID: {record.id}")
             all_ids.add(record.id)
@@ -239,6 +269,14 @@ def read_artifact(
         if len(records) != entry.count:
             raise ValueError(f"record count mismatch: {entry.path}")
         result[entry.path] = records
+    if manifest.diagnostics is not None:
+        # An older producer reports no summary at all, which stays readable; one that does report
+        # must report the truth, so a manifest cannot hide objects a run dropped. The counts are
+        # inside the signed bytes, so this catches an unsigned producer's error rather than a
+        # tampered signed bundle, which fails verification first.
+        actual = _diagnostic_counts(result.get("diagnostics.jsonl", []))
+        if manifest.diagnostics != actual:
+            raise ValueError("manifest diagnostic summary disagrees with diagnostics.jsonl")
     nodes = {record.id: record for record in result.get("nodes.jsonl", [])}
     node_ids = set(nodes)
     evidence_ids = {record.id for record in result.get("evidence.jsonl", [])}
@@ -252,8 +290,7 @@ def read_artifact(
     )
     if manifest.content_type == "catalog-snapshot":
         for node in nodes.values():
-            if node.record_type not in {"source", "object", "field"}:
-                raise ValueError(f"invalid snapshot node type: {node.id}")
+            # `record_type` is already constrained to source/object/field by NODE_ADAPTER.
             if node.record_type == "field":
                 field = Field.model_validate(node.model_dump())
                 owner = nodes.get(field.object_id)

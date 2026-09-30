@@ -1,25 +1,89 @@
-"""Refresh the three developer code graphs; fail closed on missing tools/errors."""
+"""Refresh the three developer code graphs; fail closed on missing/mismatched tools or errors."""
 
 from __future__ import annotations
 
 import argparse
 import os
+import re
 import shutil
 import subprocess
 import sys
 import time
+import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 TOOLS = ("graphify", "graft", "codebase-memory-mcp")
+VERSION_IN_OUTPUT = re.compile(r"(?<![\w.])(\d+\.\d+\.\d+)(?![\w.])")
+
+
+def executable(name: str) -> str:
+    """Resolve a tool command, accounting for npm's Windows shim."""
+    return "graft.cmd" if os.name == "nt" and name == "graft" else name
+
+
+def pinned_tools() -> dict[str, dict[str, str]]:
+    """Read the single source of truth for graph tool versions."""
+    settings = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    pins = settings.get("tool", {}).get("dbig", {}).get("graph-tools", {})
+    missing = [name for name in TOOLS if name not in pins]
+    if missing:
+        raise SystemExit(
+            "pyproject.toml [tool.dbig.graph-tools] must pin every graph tool; missing: "
+            + ", ".join(missing)
+        )
+    return pins
+
+
+def reported_version(name: str) -> str:
+    """Return the X.Y.Z a tool reports, ignoring any upgrade notice it prints alongside."""
+    result = subprocess.run(  # noqa: S603
+        (shutil.which(executable(name)) or executable(name), "--version"),
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise SystemExit(
+            f"{name} --version failed (exit {result.returncode}): "
+            f"{result.stderr.strip() or result.stdout.strip() or '(no output)'}"
+        )
+    found = VERSION_IN_OUTPUT.search(result.stdout) or VERSION_IN_OUTPUT.search(result.stderr)
+    if found is None:
+        raise SystemExit(f"could not read a version from `{name} --version`")
+    return found.group(1)
+
+
+def check_versions() -> None:
+    """Refuse to index unless every graph tool is exactly the pinned version."""
+    pins = pinned_tools()
+    wrong = []
+    for name in TOOLS:
+        expected = str(pins[name]["version"])
+        actual = reported_version(name)
+        if actual != expected:
+            ecosystem = str(pins[name]["ecosystem"])
+            distribution = str(pins[name]["distribution"])
+            install = (
+                f"npm install --global {distribution}@{expected}"
+                if ecosystem == "npm"
+                else f"python -m pip install {distribution}=={expected}"
+            )
+            wrong.append(f"{name} is {actual}, expected {expected} (install with: {install})")
+    if wrong:
+        raise SystemExit(
+            "Graph tool versions do not match the pins in pyproject.toml "
+            "[tool.dbig.graph-tools]; a differently versioned tool would produce a graph that "
+            "CI cannot reproduce:\n  " + "\n  ".join(wrong)
+        )
 
 
 def run(*args: str) -> None:
     print("+", *args, flush=True)
-    executable = args[0]
-    if os.name == "nt" and executable == "graft":
-        executable = shutil.which("graft.cmd") or executable
-    subprocess.run((executable, *args[1:]), cwd=ROOT, check=True)  # noqa: S603
+    command = executable(args[0])
+    if os.name == "nt" and args[0] == "graft":
+        command = shutil.which("graft.cmd") or command
+    subprocess.run((command, *args[1:]), cwd=ROOT, check=True)  # noqa: S603
 
 
 def refresh_codebase_memory() -> None:
@@ -76,16 +140,13 @@ def main() -> int:
     parser.add_argument("--pre-commit", action="store_true")
     args = parser.parse_args()
 
-    missing = [
-        name
-        for name in TOOLS
-        if shutil.which("graft.cmd" if os.name == "nt" and name == "graft" else name) is None
-    ]
+    missing = [name for name in TOOLS if shutil.which(executable(name)) is None]
     if missing:
         print("Required graph tools missing: " + ", ".join(missing), file=sys.stderr)
         return 1
+    check_versions()
     if args.check_tools:
-        print("All three graph tools are available.")
+        print("All three graph tools are available at their pinned versions.")
         return 0
 
     if args.pre_commit:

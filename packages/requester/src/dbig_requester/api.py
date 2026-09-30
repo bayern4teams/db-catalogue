@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import hmac
-import os
 import time
 from collections import deque
 from threading import Lock
 from typing import Literal
 
 from dbig_contracts.scan import ScanRequest
+from dbig_contracts.security import secret_from_env
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
@@ -30,9 +30,7 @@ class ScanBody(BaseModel):
 
 
 def create_app(config: RequesterConfig) -> FastAPI:
-    token = os.getenv(config.api_key_env)
-    if token is None or not token.strip():
-        raise ValueError("requester API key environment reference required")
+    token = secret_from_env(config.api_key_env, purpose="requester API bearer token")
     expected = "Bearer " + token
     app = FastAPI()
     timestamps: deque[float] = deque()

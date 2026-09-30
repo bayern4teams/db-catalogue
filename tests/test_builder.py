@@ -329,3 +329,36 @@ def test_incremental_cli_rebuilds_from_receipts_without_new_bundle(tmp_path, mon
     )
     assert second.exit_code == 0, second.output
     assert len(read_artifact(tmp_path / "second")[1]["nodes.jsonl"]) == 7
+
+
+def test_a_foreign_key_to_an_uncatalogued_object_is_a_recorded_reason(tmp_path, monkeypatch):
+    """A foreign key whose target column was not catalogued makes the snapshot partial without
+    any collector diagnostic, so the builder must say so itself. (A missing target *object* is
+    refused earlier, by the bundle reader.)"""
+    monkeypatch.setenv("BUNDLE_KEY", "synthetic-key-12345678901234567890")
+    common = {"source_id": "site-a", "observed_at": datetime.now(UTC),
+              "collector_version": "synthetic", "provenance": "synthetic"}
+    orders = Object(id="order", native_id="2", kind="table", name="orders", **common)
+    customers = Object(id="customer", native_id="1", kind="table", name="customers", **common)
+    write_artifact(
+        tmp_path / "bundle", "collector-bundle",
+        {
+            "sources.jsonl": [Source(id="site-a", kind="postgresql", name="site-a", **common)],
+            "objects.jsonl": [customers, orders],
+            "fields.jsonl": [Field(id="order-fk", object_id="order", native_id="2:1",
+                                   name="customer_id", data_type="integer", ordinal=1, **common)],
+            "constraints.jsonl": [Record.model_validate({
+                "record_type": "constraint", "id": "fk", "native_id": "fk", "kind": "foreign",
+                "object_id": "order", "target_object_id": "customer",
+                "field_ordinals": [1], "target_field_ordinals": [9], **common,
+            })],
+        },
+        producer="synthetic", source_run_ids=["r"],
+        signing_key=b"synthetic-key-12345678901234567890", key_id="test",
+    )
+    manifest = assemble([tmp_path / "bundle"], tmp_path / "snapshot",
+                        BuilderConfig(signing_keys={"test": "BUNDLE_KEY"}))
+    assert manifest.completeness == "partial"
+    _, data = read_artifact(tmp_path / "snapshot")
+    builder_run = next(r.model_dump() for r in data["runs.jsonl"] if r.source_id == "builder")
+    assert builder_run["partial_reasons"] == ["FOREIGN_KEY_TARGET_OUTSIDE_SNAPSHOT"]

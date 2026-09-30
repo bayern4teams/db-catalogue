@@ -118,6 +118,74 @@ Object kinds: database, schema, table, view, materialized view, ClickHouse dicti
 
 Evidence records are immutable and typed: catalog key, uniqueness/index, compatible type, name similarity, value containment/overlap, join observation, query-plan observation, SQL AST mapping, OpenLineage facet, LLM suggestion, and counterevidence. Preserve metrics and denominators; never publish an uncalibrated similarity as a probability. `confidence` remains null until calibrated on labeled data. Every relationship cites at least one non-LLM evidence record; lineage cites execution/definition metadata and parse resolution.
 
+### 6a. Identity, rename, canonical encoding and migration (settled 2026-09-27)
+
+**Identity.** `stable_id(source_id, kind, native_id)` hashes those three parts and prefixes the
+kind, so an ID is reproducible from source facts and never from a display name. Each connector
+supplies a source-native identifier: PostgreSQL uses `pg_class.oid` for an object and
+`oid:attnum` for a field; ClickHouse uses the table UUID and `uuid:position`; MongoDB uses the
+`listCollections` `info.uuid` and `uuid:path`. All three are assigned by the server and are
+independent of the name, which is what makes a rename survivable.
+
+**An object with no native identity is not catalogued.** ClickHouse reports the all-zeros UUID
+for a table on a non-Atomic database engine, and a MongoDB view has no `info.uuid`. In both
+cases the collector emits an `IDENTITY_UNAVAILABLE` diagnostic and drops the object and its
+fields, rather than minting a name-derived ID. User decision on 2026-09-27: keep dropping and
+make it loud. A catalogue entry whose identity cannot survive a rename would attach history and
+edges to something that silently becomes a different object, which is the opposite of the
+precision-over-recall rule. The cost is explicit: those objects never appear.
+
+The drop is now visible without reading `diagnostics.jsonl`. The manifest carries
+`diagnostics`, a count per diagnostic code, derived by the writer from the validated rows so a
+producer cannot under-report, and checked by the reader against the actual rows so a manifest
+cannot disagree with its own file. Any diagnostic already makes a bundle `partial`.
+`diagnostics.jsonl` validates against a strict `Diagnostic` model whose `code` is required and
+constrained, because per-code counts can only total the row count if every row has exactly one
+well-formed code. Snapshots carry no diagnostics file and so report no summary at all, which is
+different from reporting an empty one.
+
+**Rename semantics.** Where native identity exists, a rename keeps the ID and changes `name`;
+the object is the same object and its history and edges follow it. Where native identity does
+not exist the object was never catalogued, so the delete-plus-add case does not arise in
+practice. This is verified rather than asserted: the engines' own documentation is unreachable
+from the build environment, so `tests/test_live_collectors.py` renames a real table, column and
+collection on the pinned `postgres:16.15`, `clickhouse-server:25.8.33.6` and `mongo:7.0.41`
+service containers and asserts the ID is unchanged while the name changed. Those tests run only
+in CI, under `DBIG_RUN_INTEGRATION=1`; they are skipped locally and their result is claimed only
+from an actual run.
+
+**Canonical encoding.** `canonical()` emits UTF-8 JSON with sorted keys, no inserted whitespace,
+`NaN` and infinities refused, and `None` fields omitted. Three properties were measured rather
+than assumed. A round trip through JSON reproduces the bytes exactly. Input key order does not
+affect the output. A timestamp must be UTC: the same instant written at a different offset
+serialises differently, so a non-UTC offset is refused at validation with a message naming the
+cause, rather than normalised, because a normalised record would fail its signature check later
+and report the wrong cause. Unicode names are deliberately **not** normalised, so an NFC and an
+NFD spelling of the same word produce different bytes; they are different identifiers in the
+source, and folding them would merge objects the source keeps apart. Floats use Python's
+shortest round-tripping representation.
+
+**The contract is pinned by a committed artifact, not only by tests.** Every other artifact test
+writes and reads inside one process, so it can only prove this version agrees with itself. The
+requester and planner install as separate wheels and are expected in the field to be older than
+the snapshot they read, so `tests/golden/ir-v1/` holds a collector bundle and a catalog snapshot
+produced once and committed, and `tests/test_golden.py` reads them back on every run: signature
+verification, the published JSON Schemas, manifest digests, a byte-identical read-and-rewrite,
+tolerance of an added unknown field, and refusal of a hand-edited row.
+`scripts/make_golden.py` regenerates them from a frozen clock, so a regeneration with no
+contract change produces no diff and any diff is the signal to review. Adding a manifest field
+with a container default is caught there mechanically, which is how the rule below is enforced
+rather than merely written down.
+
+**Migration policy.** A reader refuses an unknown major version and accepts additive minor
+fields. One rule follows from the signature construction and is easy to get wrong: the signature
+is taken over the manifest with `None` fields excluded, so **a new optional manifest field must
+default to `None`, never to an empty container.** A field defaulting to `{}` would change the
+signed bytes of every manifest, including those written before the field existed, and silently
+invalidate their signatures. `diagnostics` therefore defaults to `None`, absent means unreported
+rather than zero, and a bundle from a producer that predates the field still verifies. A
+compatibility test signs an older-shaped manifest and reads it back to hold that guarantee.
+
 ## 7. Collector implementation
 
 Common protocol: `discover(config, budget) -> DiscoveryResult`, `profile(object, budget) -> ProfileResult`, `observe_lineage(config, budget) -> ObservationResult`, `emit_bundle(result, destination) -> Manifest`. Budget accounting covers queries, wall time, rows, bytes and source-specific concurrency. Cancel on expiry, emit partial diagnostics, and respect source read-only transactions where supported. No unrestricted `SELECT *` on large tables.
@@ -130,6 +198,29 @@ MongoDB: list databases/collections, indexes, validator JSON Schema, collection 
 
 Collector errors become codes such as `PERMISSION_DENIED`, `TIMEOUT`, `UNSUPPORTED_VERSION`, `PARSE_UNRESOLVED`, `BUDGET_EXHAUSTED`, `PARTIAL_SCAN`; never silently substitute empty results for unavailable metadata.
 
+### 7a. Transport security and the readable catalogue (settled 2026-09-30)
+
+User decision on 2026-09-30: the user's databases are on other servers on their network, so
+their runs use verified TLS; a loopback-only opt-out is allowed for local development. Source
+config therefore has `tls` (default `true`) and `tls_ca_file` (a PEM of CA certificates, unset
+means the operating system store, refused when `tls = false` or when the file is missing). The
+CA file is passed explicitly because, verified from the installed driver source, the drivers
+find trust roots differently: pg8000 uses `ssl.create_default_context()`, ClickHouse Connect
+0.15.1 takes `ca_cert=` and otherwise uses the OS store, and PyMongo 4.18.1 takes `tlsCAFile`
+and handles `SSL_CERT_FILE` differently on Windows. `tls = false` requires every host to be a
+loopback IP literal, the same rule as plain HTTP to a private model endpoint. The bundle's
+`Source.transport` records which applied; it is an optional additive field, absent from older
+bundles and excluded from canonical bytes when absent.
+
+`dbig-builder render --snapshot S [--bundle B ...] --config C --out catalog.html` writes one
+self-contained HTML page. By user decision it reads the snapshot plus the bundles it was built
+from rather than extending the snapshot contract: statistics, keys, indexes and diagnostics
+stay in bundles, so the requester and planner contracts are unchanged. A bundle is accepted only
+if its signature verifies with the builder's keys and `bundle_run_id` (the same derivation the
+assembler uses) is among the snapshot's runs. A source with no bundle is rendered from the
+snapshot with a visible notice. Output is deterministic for the same inputs and written
+atomically.
+
 ## 8. Profiling and cross-source value evidence
 
 Per field, compute bounded null/non-null counts, approximate or exact distinct count with method label, min/max for allowed types, length histogram, top-frequency sketches only if safe, and type/nullability distribution. Use source statistics where trustworthy, annotate freshness. Sample selection and size are recorded. Sensitive fields can be metadata-only. Value normalization is type-aware; preserve case/locale policy, leading zeros, time zone, binary encoding, and null distinction. Candidate pair comparison requires compatible normalized types and direction checks.
@@ -137,6 +228,80 @@ Per field, compute bounded null/non-null counts, approximate or exact distinct c
 Raw sample values exist only in collector memory and, for allowed cross-source comparison, controlled assembler memory. Persist HMAC tokens or aggregate overlap metrics only according to the data policy; plain hashes are insufficient against dictionary attacks for low-entropy values. Encrypt bundle transport/storage if token sets are exported. Clear buffers on process exit; Python cannot guarantee memory zeroization, so deployment isolation and short retention are required. Never put raw values in LLM context, logs, graph artifacts, or developer code graphs.
 
 Initial candidate blocking: compare only permitted source pairs; require compatible value domains or explicit manual relationship hint; then generate top-K per field by normalized lexical similarity plus key/uniqueness cues. Compute evidence on blocked pairs, not all 1,000² pairs. Support composite keys by ordered tuple comparison only when component mapping is justified. Direction asks whether child values are contained in a candidate unique parent key, plus null/duplication rates, join evidence and counterexamples. Abstain when sample support or uniqueness is insufficient. Cross-source matches are `REFERENCE_CANDIDATE` unless observed joins or stronger evidence warrants an approved status tier.
+
+### 8a. Cross-source value evidence as implemented (2026-09-27)
+
+Tokens are opt-in twice over: a collector produces them only when sampling is configured *and* a
+`value_token_key_env` reference with a matching `value_token_key_id` is given. A key without an ID
+is refused, because an ID is what makes two sides comparable, and an ID without a key would claim
+a comparison that was never computed.
+
+A token is `HMAC-SHA256(run key, normalised text)`. Keyed, not hashed: an unkeyed digest of a
+low-entropy value such as a small integer or a country code is recovered by trying every
+candidate. `exact_text` normalisation does not fold case or trim, because §8 requires case, locale
+and leading zeros preserved; it does mean integer `123` and string `"123"` agree, which is the
+cross-source case that matters most, a MongoDB string identifier pointing at a relational integer
+key. Booleans, bytes and structured values are counted as unusable rather than coerced, since no
+normalisation for them would be agreed by two different engines.
+
+Tokens ride in their own `tokens.jsonl` inside the bundle, so an operator can see from the
+manifest whether a bundle carries them at all and a deployment can choose not to transport that
+file. A bundle is a controlled transfer; the published graph is not, and no token crosses into a
+snapshot.
+
+PostgreSQL sampling is one bounded read per table, with the discovered columns named explicitly
+rather than `SELECT *`, and the row limit bound rather than interpolated. The sample is the first
+rows the server returns, which is biased, and `sample_method` records exactly that. §20 rules out
+the alternatives that would look fairer: `ORDER BY random()` and unbounded scans are the reads
+that hurt a production source, and `TABLESAMPLE` plus `LIMIT` guarantees neither a cheap nor an
+unbiased fixed-size sample.
+
+The assembler measures **containment**, not similarity: a reference means the child's values are
+drawn from the parent's key, so the question is one-directional and the denominator is the child's
+distinct count. Jaccard overlap is reported alongside it, because a high containment on a tiny
+child sample against a huge parent is weak and the two numbers together show that. The evidence
+carries both metrics, both sample counts, both sample methods, the key ID, the minimum support,
+and `lower_bound_only` when either token set was capped.
+
+It **abstains** rather than reporting a meaningless number in four cases: either side has no
+tokens, the two were keyed under different key IDs, the two were normalised differently, or either
+distinct count is below `MIN_TOKEN_SUPPORT`. The different-key case matters most: those tokens are
+unrelated byte strings, so their zero overlap would read as a counterexample rather than as
+ignorance.
+
+Containment never promotes an edge. It is cited by the `REFERENCE_CANDIDATE` edge and changes
+neither its status nor its `confidence`, which stays null. Promotion needs the calibration that
+§15 requires and that does not exist yet.
+
+### 8b. Which pairs become candidates (widened 2026-09-28)
+
+Evidence is worthless on a pair that never gets compared, and the original blocking admitted very
+few. A child field had to end in `_id`, and a parent had to carry a declared single-column unique
+constraint, so a column called `owner_ref` or a genuinely unique key on a table that never declared
+one could not become a candidate however well its values contained.
+
+Three rules now decide admission, each deliberately narrow:
+
+1. **Suffix rule.** A child whose name ends in `_uuid`, `_code`, `_num`, `_ref`, `_key`, `_id`,
+   `_fk` or `_no` announces itself as a reference, so the stem is matched fuzzily against the
+   parent object's singularised name at the configured threshold. The longest suffix wins, and a
+   name that is nothing but a suffix is not stripped to an empty stem that would match everything.
+2. **Exact bare-name rule.** A child with no such suffix announces nothing, so only an exact match
+   against the singularised parent object name counts. This catches a column called `customer`
+   pointing at `customers` while refusing `custom`, which any fuzzy threshold would have accepted.
+   Fuzzy matching here would trade precision away for a flood of coincidental spellings.
+3. **Measured uniqueness.** A parent field whose profile reports uniqueness at or above
+   `MEASURED_UNIQUE` (0.99) may be a key with nothing declared. The evidence kind is
+   `measured_uniqueness`, never `catalog_key`: a measurement and a catalog assertion are different
+   claims and must not be read as the same strength. The threshold is pinned by a test, because a
+   number that decides which relationships get proposed is a contract rather than a tunable.
+
+A child measured entirely null is not compared at all. It references nothing, so name evidence for
+it would describe a relationship with nothing behind it. Sparse is not empty: an optional foreign
+key is mostly null by design and is still compared.
+
+The `name_similarity` evidence records which rule admitted the pair in `blocking_rule`, so a reader
+can tell a fuzzy suffix match from an exact bare-name match without re-deriving it.
 
 ## 9. Lineage and query history
 
@@ -187,11 +352,36 @@ dbig-planner serve --config <planner.toml>
 
 Exit codes: 0 complete success; 2 invalid invocation/config; 3 security/integrity violation; 4 unavailable source or partial result (unless `--allow-partial`); 5 internal error; 6 validation failure. JSON diagnostics have code, severity, source ID, object ID if safe, timestamp, retryability, and redacted message. CLI never prints secrets or raw values.
 
+Snapshot node rows validate strictly. `nodes.jsonl` carries exactly three record types, so it validates against the discriminated union `dbig_contracts.models.SnapshotNode` (`Source | Object | Field`, discriminated on `record_type`) rather than the permissive base `Record`, and `schemas/ir-v1/node.schema.json` publishes that contract as a `oneOf` with a `record_type` discriminator. `dbig_contracts.artifact.validate_row` is the single gate both the write and read paths use, so an unknown `record_type` or a row missing its own type's required fields is refused on publication and on read. `runs.jsonl` deliberately keeps no strict model and stays a base `Record`. The earlier `invalid snapshot node type` check in the referential pass was removed because the union makes it unreachable.
+
+### 12a. Operator errors at the command surface (settled 2026-09-27)
+
+`dbig_contracts.errors.OperatorError` is the one exception type each package's Click group
+converts into a clean command error. It means a failure the person running the command can fix
+from the message alone: a missing secret reference, an unknown identifier, state that has not
+been built yet. `SecretReferenceError` subclasses it, so the single conversion added earlier for
+secrets now covers the whole class. Catching a bare `ValueError` stays rejected, because it
+would dress a pydantic validation failure or a genuine bug as something an operator can fix; a
+test pins that `validate-graph`'s ordinary `signature key unavailable` failure keeps its full
+traceback, which is what keeps the distinction honest.
+
+Two defects were found by adding command coverage rather than by review. `join-paths` and
+`lineage-paths` raised `ValueError("UNKNOWN_OBJECT")`, which reached the operator as a traceback
+naming neither the identifier nor the remedy; and `search` before `index` raised the sqlite
+driver's "unable to open database file". Both now name the cause and the next step.
+
+The HTTP surface follows the private-network decision: the collector, planner and requester
+`serve` commands each refuse a non-loopback bind address and refuse a hostname outright rather
+than resolving it, since a name could resolve off-host. That behaviour already existed and had
+no test; it now has coverage for each command across several non-loopback addresses.
+
 ## 13. Security and operations
+
+Secret references resolve through one function, `dbig_contracts.security.secret_from_env`. Components never read a credential directly: validated configuration holds the *name* of an environment variable, and this resolver refuses a missing or blank reference, an unset variable, and a variable set to whitespace, so a wrong reference can never degrade into an unsigned bundle, an unverified scan request, or an unauthenticated API. The raised `ValueError` names the variable and the purpose so an operator can fix it, and never contains the secret's value; the resolved value is returned byte-for-byte because signing keys are byte-sensitive. Every secret call site uses it: builder config and reviewer, collector runtime, scan intake and `validate-bundle`, requester answer, scan dispatch and API, and planner API. The resolver raises `SecretReferenceError`, which subclasses `ValueError` so existing callers keep working. Each package's Click group is a `SecretAwareGroup` that converts only that type into a command error, so any command in any of the four CLIs reports a named message rather than a traceback when a secret reference is missing, blank, unset or empty. Only that type is converted: an ordinary `ValueError`, such as `validate-graph`'s `signature key unavailable`, keeps its full traceback, so validation and programming errors are not hidden behind a tidy message. The converter is duplicated once per package rather than shared, because §17 forbids the packages importing each other and `dbig_contracts` must not depend on Click.
 
 Use read-only accounts, TLS verification, per-query timeouts, connection pooling limits, process separation by source, and explicit allowlists. Bundle receiver enforces size limits, path traversal rejection, digest verification and trusted transport; optional signatures become mandatory if transfer is not otherwise authenticated. Require workload identity or equivalent secret delivery in production. Scrub logs and crash reports. Keep source-side raw sample in RAM only. Retention schedules apply to manifests and profiler tokens. Provide key rotation and rerun semantics. Run each collector on a schedule agreed with source owners; source load metrics and budgets are visible in diagnostics.
 
-Threat tests: malicious bundle path/JSON, oversized record, duplicate ID, HMAC mismatch, prompt injection in comments/SQL, model hallucinated IDs, timeout, collector privilege failure, and stale manifest replay. The LLM prompt treats source metadata as data, never instructions.
+[THREAT_MODEL.md](THREAT_MODEL.md) records the trust boundaries, the nine modelled threats and their controls, and the known gaps. Each mitigation there names the test that holds it, a mitigation without a test is listed as a gap rather than as a control, and `test_the_threat_model_cites_only_tests_that_exist` fails if a cited test is renamed or removed. Threat tests: malicious bundle path/JSON, oversized record, duplicate ID, HMAC mismatch, prompt injection in comments/SQL, model hallucinated IDs, timeout, collector privilege failure, and stale manifest replay. The LLM prompt treats source metadata as data, never instructions.
 
 ## 14. Test and acceptance plan
 
@@ -203,7 +393,11 @@ Performance: benchmark at the stated 10/200/1,000 scale with per-source load and
 
 The repository hook path is `.githooks`, installed via `python scripts/install_hooks.py`. Pre-commit calls `scripts/graph_sync.py`: check for partial staging that would make graphs reflect a different tree, refresh Graphify with `graphify update .`, refresh Graft with `graft build .` and verify `graft check .`, then run `codebase-memory-mcp cli index_repository --repo-path . --mode fast --persistence false`. Every required command must exist and exit 0; no silent fallback. Post-commit runs the same refresh against the committed tree. All steps are deterministic structural modes with no semantic/deep LLM calls. Graph caches are ignored until the artifact policy is chosen. Git's `--no-verify` and `core.hooksPath` overrides can bypass local hooks; protected branches and required CI compensate, but no local mechanism can make bypass impossible.
 
-CI on pull requests and pushes to `main`: install pinned Python, Graphify, Node/Graft, and Codebase Memory; run graph refresh/graft drift checks; check docs and TODO structure. Once code and a lockfile exist, run Ruff, types, tests and vulnerability audit. Integration containers, license/SBOM gates and measured quality thresholds remain implementation tasks. The release workflow refuses to publish until a tested package and lockfile exist. GitHub currently returns HTTP 403 for private-repository branch protection/rulesets on this account plan; by user decision, the repository remains private, so CI results cannot be a mandatory remote merge gate here.
+The three developer graph tools are pinned the same way. `[tool.dbig.graph-tools]` in `pyproject.toml` is the single source of truth for Graphify 0.9.65, Graft 0.18.0 and Codebase Memory MCP 0.11.0, each with its distribution name and ecosystem because the `graphify` command ships in the `graphifyy` distribution. `scripts/graph_sync.py` reads each tool's `--version` before indexing and fails closed on any mismatch, reporting every wrong tool at once with the exact install command; it tolerates Graft's upgrade notice by taking the first `X.Y.Z` in the output. `scripts/ci_check.py` refuses a workflow that installs a version other than the pin, and refuses the case where no workflow installs a pinned tool at all. Graft 0.20.0 and Graphify 0.9.69 exist upstream but are deliberately not adopted; an upgrade requires a reviewed, re-verified graph baseline. Tests stub the version reporter rather than invoking the tools, because the application-quality job does not install them.
+
+Tool version pinning is part of the gate, not an environment detail. `pyproject.toml` declares `[tool.uv] required-version = ">=0.10.0"`, and every `astral-sh/setup-uv` step pins one exact uv version (`0.12.19`) instead of defaulting to latest. The floor is empirical rather than from release notes: uv's changelog does not record the introduction of the preview `cyclonedx1.5` export format, so installed binaries were tested directly on 2026-09-27. `uv export --help` first offers `cyclonedx1.5` at uv 0.10.0 and omits it at 0.9.0 and 0.8.17, and `scripts/supply_chain.py` reproduces the same `113 components; unresolved license declarations: 0` result on uv 0.10.0, 0.11.0 and 0.12.19. Because uv validates command arguments before reading `required-version`, an older uv reports an unknown-format error rather than a version error, so `scripts/supply_chain.py` reports uv's own message together with the running and required versions. `scripts/ci_check.py` rejects an unpinned or floating `setup-uv` step, a pin below the declared floor, and pins that disagree across workflows, so a supply-chain gate can never silently depend on whichever uv is latest.
+
+CI on pull requests and pushes to `main`: install pinned Python, pinned uv, Graphify, Node/Graft, and Codebase Memory; run graph refresh/graft drift checks; check docs and TODO structure. Once code and a lockfile exist, run Ruff, types, tests and vulnerability audit. Integration containers, license/SBOM gates and measured quality thresholds remain implementation tasks. The release workflow refuses to publish until a tested package and lockfile exist. GitHub currently returns HTTP 403 for private-repository branch protection/rulesets on this account plan; by user decision, the repository remains private, so CI results cannot be a mandatory remote merge gate here.
 
 Ponytail is a coding-agent methodology, not a runtime dependency. On every meaningful change, apply `/ponytail [lite | full | ultra | off]` with `full` as intended baseline when the plugin is installed; run review for current diff, audit for repository-wide design, debt to keep TODO debt visible, gain only with measurements, and help when command behavior is uncertain. In Codex, upstream documents these as `@ponytail-*` skills after plugin installation/restart. If unavailable, explicitly report that status and manually apply the same minimal-design checks; never pretend a skill ran. Agent instructions in AGENTS.md and CLAUDE.md are the controlling project policy.
 
@@ -211,12 +405,15 @@ Ponytail is a coding-agent methodology, not a runtime dependency. On every meani
 
 1. Resolved: generated developer graphs are local/CI caches and are never committed.
 2. Resolved: make the first commit and use `https://github.com/Reza-Sh83/db-catalogue.git` as `origin`.
-3. Exact GPU model/VRAM and RAM; model size and latency remain provisional.
-4. Safe source sample/byte/time budgets and per-source authorization.
-5. Bundle transfer, signatures, retention and shared tokenization-key mechanism.
-6. Target versions and compatibility matrix for PostgreSQL, ClickHouse and MongoDB.
-7. Source of observed SQL/job metadata and its privacy policy.
-8. Labeled evaluation corpus and acceptance thresholds.
+3. **Open:** exact GPU model/VRAM and RAM; model size and latency remain provisional.
+4. Resolved 2026-09-27: source read budgets and value classification. Metadata-only stays the default; sampling, query history and cross-source token comparison are opt-in per source under mandatory row, byte and time budgets with a sensitive-field denylist.
+5. Resolved 2026-09-27: bundle transfer and tokenization key. A per-run HMAC key reaches authorized collectors by environment reference, the manifest records only its `key_id`, bundles move as signed files on a filesystem or object store, and tokens exist only in assembler memory inside one run boundary.
+6. Resolved 2026-09-27: the supported version matrix is exactly the server versions the CI integration fixtures run. Untested versions are unsupported rather than assumed working.
+7. **Open:** source of observed SQL/job metadata and its privacy policy. Until it is chosen, executed lineage stays unavailable and no edge may claim it.
+8. Resolved 2026-09-27 as a method, not as numbers: a labeled synthetic corpus plus an evaluation command reports precision-recall and calibration. Thresholds stay unset and the engine keeps abstaining with `confidence = null` until the user approves measured values.
+9. Resolved 2026-09-27: consumer scope. The independent requester and planner are the only machine consumers of a published snapshot, and their CLIs plus optional HTTP services are the product surface. No third-party catalog mapping is owed in v1, and `openlineage.jsonl` stays an optional export.
+10. Resolved 2026-09-27: object-rename semantics. Use a source-native stable identifier where one exists, emit a rename hint where none does, and treat an unverified rename as delete plus add.
+11. Resolved 2026-09-27: HTTP exposure. The adapters target a trusted private network with a loopback bind default and a bearer token from a secret reference; public exposure is documented as unsupported rather than partially hardened.
 
 These are tracked in TODO.md. Work that does not depend on them may proceed; behavior-changing assumptions must be surfaced to the user, including in the middle of a task.
 
@@ -229,6 +426,10 @@ The collector also publishes `row_count_estimate` and `row_count_method` object 
 PostgreSQL partition membership uses [`pg_class.relispartition`](https://www.postgresql.org/docs/16/catalog-pg-class.html) and its direct parent from [`pg_inherits`](https://www.postgresql.org/docs/16/catalog-pg-inherits.html). The collector labels a visible partition with `is_partition` and sets `parent_id` only when the parent is also in the authorized scan result. Pending detachments and out-of-scope parents do not create a parent link. It does not export partition bound expressions or mistake ordinary inheritance for declarative partitioning.
 
 Artifact publication validates each object parent against another object in the same source and rejects missing, cross-source or cyclic parent references before the manifest can be published.
+
+On 2026-09-27 the user decided items 4, 5, 6, 8, 9, 10 and 11 above, and the conservative 2026-09-23 profile stands unchanged where they overlap. Three of those decisions widen no behaviour and only make an existing default binding: metadata-only collection, per-run keyed tokens and the private-network HTTP posture are what the code already does, and they are now a contract rather than a starting point. Four of them add scope. The supported version matrix may name only versions an integration fixture actually exercised, so a version the fixtures do not run is reported as unsupported instead of untested. Rename handling gains a source-native identity path: PostgreSQL `pg_class.oid` and a ClickHouse table UUID prove that a renamed object is the same object, MongoDB offers no such identifier, so a collection rename yields a hint from structural similarity and, while unverified, a delete plus an add rather than a silent merge. Calibration gains an instrument before it gains numbers: a labeled synthetic corpus of declared-FK positives, deliberately hard negatives, ambiguous names and sparse low-cardinality fields, plus an evaluation command reporting precision-recall and calibration, with no threshold and no published probability until the user approves measured values. The consumer decision bounds what compatibility means: because the requester and planner are the only machine readers, golden-bundle and compatibility tests exist for an internal reason, namely that an independently installed older consumer must behave predictably against a newer snapshot, and not to satisfy an external product's schema.
+
+Two decisions remain open and are not implied by these. The GPU host and model identity stay unmeasured, so live vLLM and Langfuse behaviour is still untested by user decision. The source of observed SQL and job metadata is still unchosen, which is why executed lineage remains unavailable; defined lineage from view definitions is unaffected, and no edge asserts execution without that evidence.
 
 The first live metadata compatibility matrix was established by CI run 35911699728: PostgreSQL 16.15 (catalog read through a role granted schema usage and table SELECT), ClickHouse 25.8.33.6 (`system.tables` and `system.columns`), and MongoDB 7.0.41 (`listCollections` and indexes). The three tests passed with synthetic schemas. CI fixture services did not test verified TLS or production authentication. Only these exact tested versions have empirical metadata compatibility evidence; this is not a claim that adjacent versions or secure production connections have passed.
 

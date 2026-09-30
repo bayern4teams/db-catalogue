@@ -1,5 +1,6 @@
 import sys
 import types
+from datetime import UTC, datetime
 from pathlib import Path
 
 from click.testing import CliRunner
@@ -12,7 +13,8 @@ from dbig_collectors.runtime import (
     discover_mongodb,
     discover_postgresql,
 )
-from dbig_contracts.artifact import read_artifact
+from dbig_contracts.artifact import read_artifact, write_artifact
+from dbig_contracts.models import Source
 
 
 def config(kind: str = "postgresql") -> SourceConfig:
@@ -29,20 +31,40 @@ def config(kind: str = "postgresql") -> SourceConfig:
 
 
 class PgCursor:
+    """A fake that answers by which catalog it was asked about, not by call order.
+
+    An index-based fake silently mis-answers as soon as a query is added between two others,
+    which is exactly what happened when statistics profiling was introduced.
+    """
+
+    objects = [(42, "public", "orders", "r", 12.5, False, None)]
+    fields = [(42, 1, "id", "integer", True)]
+    constraints = [(99, 42, 42, "p", [1], None)]
+    # schemaname, tablename, attname, null_frac, n_distinct, avg_width, analyze, auto, reltuples
+    stats = [("public", "orders", "id", 0.25, -1.0, 4, None, None, 12.5)]
+    # Rows returned by the bounded value sample, one tuple per row in discovered-column order.
+    sample = [(1,), (2,), (3,)]
+
     def __init__(self):
         self.calls = []
-        self.index = 0
+        self.last = ""
 
     def execute(self, query, params=()):
         self.calls.append((query, params))
+        self.last = query
 
     def fetchall(self):
-        self.index += 1
-        if self.index == 1:
-            return [(42, "public", "orders", "r", 12.5, False, None)]
-        if self.index == 2:
-            return [(42, 1, "id", "integer", True)]
-        return [(99, 42, 42, "p", [1], None)]
+        if "pg_stats" in self.last:
+            return self.stats
+        if "pg_constraint" in self.last:
+            return self.constraints
+        if "pg_attribute" in self.last:
+            return self.fields
+        # The value sample is the only statement that selects quoted user columns rather than a
+        # catalog relation, so it is recognised by that rather than by call order.
+        if self.last.startswith('SELECT "'):
+            return self.sample
+        return self.objects
 
     def close(self):
         pass
@@ -65,7 +87,7 @@ class PgConnection:
 
 def test_postgres_catalog_only_and_stable_ids():
     connection = PgConnection()
-    records = discover_postgresql(connection, config(), Budget(3))
+    records = discover_postgresql(connection, config(), Budget(4))
     assert connection.rolled_back
     assert connection.fake_cursor.calls[0][0] == "SET TRANSACTION READ ONLY"
     assert records["fields.jsonl"][0].object_id == records["objects.jsonl"][0].id
@@ -77,18 +99,19 @@ def test_postgres_catalog_only_and_stable_ids():
 
 def test_postgres_view_definition_is_hashed_without_literals():
     class ViewCursor(PgCursor):
+        objects = [(42, "public", "orders_view", "v", -1.0, False, None)]
+        definitions = [(42, "SELECT * FROM orders WHERE token = 'canary-secret'")]
+        constraints = []
+        stats = []
+
         def fetchall(self):
-            self.index += 1
-            return {
-                1: [(42, "public", "orders_view", "v", -1.0, False, None)],
-                2: [(42, "SELECT * FROM orders WHERE token = 'canary-secret'")],
-                3: [(42, 1, "id", "integer", True)],
-                4: [],
-            }[self.index]
+            if "pg_get_viewdef" in self.last:
+                return self.definitions
+            return super().fetchall()
 
     connection = PgConnection()
     connection.fake_cursor = ViewCursor()
-    records = discover_postgresql(connection, config(), Budget(4))
+    records = discover_postgresql(connection, config(), Budget(5))
     attributes = records["objects.jsonl"][0].attributes
     assert attributes["view_definition_available"] is True
     assert "row_count_estimate" not in attributes
@@ -98,22 +121,24 @@ def test_postgres_view_definition_is_hashed_without_literals():
 
 def test_postgres_partitions_link_only_to_visible_parent():
     class PartitionCursor(PgCursor):
+        fields = []
+        constraints = []
+        stats = []
+
         def __init__(self, visible_parent):
             super().__init__()
             self.visible_parent = visible_parent
 
-        def fetchall(self):
-            self.index += 1
-            if self.index == 1:
-                rows = [(43, "public", "events_p0", "r", -1.0, True, 42)]
-                if self.visible_parent:
-                    rows.insert(0, (42, "public", "events", "p", -1.0, False, None))
-                return rows
-            return []
+        @property
+        def objects(self):
+            rows = [(43, "public", "events_p0", "r", -1.0, True, 42)]
+            if self.visible_parent:
+                rows.insert(0, (42, "public", "events", "p", -1.0, False, None))
+            return rows
 
     connection = PgConnection()
     connection.fake_cursor = PartitionCursor(True)
-    records = discover_postgresql(connection, config(), Budget(3))
+    records = discover_postgresql(connection, config(), Budget(4))
     parent, child = records["objects.jsonl"]
     assert child.parent_id == parent.id
     assert child.attributes["is_partition"] is True
@@ -121,18 +146,24 @@ def test_postgres_partitions_link_only_to_visible_parent():
 
     connection = PgConnection()
     connection.fake_cursor = PartitionCursor(False)
-    records = discover_postgresql(connection, config(), Budget(3))
+    records = discover_postgresql(connection, config(), Budget(4))
     assert records["objects.jsonl"][0].parent_id is None
     assert records["objects.jsonl"][0].attributes["is_partition"] is True
 
 
 class ChClient:
+    """Fake ClickHouse. The columns row carries `data_uncompressed_bytes` last, which is what
+    the width profile is derived from."""
+
+    tables_row = ("orders", "uuid-42", "MergeTree", "toYYYYMM(day)", "id", "id", [], [], 0)
+    columns_rows = [("orders", "id", "UInt64", 1, 0)]
+
     def query(self, statement, **kwargs):
+        outer = self
+
         class Result:
             result_set = (
-                [("orders", "uuid-42", "MergeTree", "toYYYYMM(day)", "id", "id", [], [], 0)]
-                if "system.tables" in statement
-                else [("orders", "id", "UInt64", 1)]
+                [outer.tables_row] if "system.tables" in statement else outer.columns_rows
             )
 
         return Result()
@@ -149,11 +180,7 @@ def test_clickhouse_uses_uuid_identity():
 
 def test_clickhouse_omits_unavailable_count():
     class UnknownCount(ChClient):
-        def query(self, statement, **kwargs):
-            result = super().query(statement, **kwargs)
-            if "system.tables" in statement:
-                result.result_set = [(*result.result_set[0][:-1], None)]
-            return result
+        tables_row = (*ChClient.tables_row[:-1], None)
 
     records = discover_clickhouse(UnknownCount(), config("clickhouse"), Budget(2))
     assert "row_count_estimate" not in records["objects.jsonl"][0].attributes
@@ -326,3 +353,357 @@ def test_collect_signed_bundle_contains_no_secret(tmp_path, monkeypatch):
     assert manifest.completeness == "complete"
     assert len(tables["constraints.jsonl"]) == 1
     assert all(b"canary-secret" not in path.read_bytes() for path in destination.iterdir())
+
+
+# --- objects with no source-native identity ---------------------------------------------
+#
+# A catalogue entry whose identity cannot survive a rename would corrupt history and edges, so
+# the collectors drop such an object and record why. User decision on 2026-09-27: keep dropping,
+# but make it loud. These tests cover both drop sites, which had none before.
+
+
+def test_clickhouse_drops_a_table_with_no_uuid_and_says_so():
+    """A non-Atomic database engine reports the all-zeros UUID, which is not an identity."""
+
+    class Ordinary(ChClient):
+        tables_row = (
+            ChClient.tables_row[0],
+            "00000000-0000-0000-0000-000000000000",
+            *ChClient.tables_row[2:],
+        )
+
+    records = discover_clickhouse(Ordinary(), config("clickhouse"), Budget(2))
+    assert records["objects.jsonl"] == [], "an unidentifiable table must not be catalogued"
+    assert records["fields.jsonl"] == [], "nor may its fields be, since they would dangle"
+    codes = [record.code for record in records["diagnostics.jsonl"]]
+    assert codes == ["IDENTITY_UNAVAILABLE"]
+
+
+def test_clickhouse_drops_a_table_with_an_empty_uuid():
+    class NoIdentity(ChClient):
+        tables_row = (ChClient.tables_row[0], "", *ChClient.tables_row[2:])
+
+    records = discover_clickhouse(NoIdentity(), config("clickhouse"), Budget(2))
+    assert records["objects.jsonl"] == []
+    assert [record.code for record in records["diagnostics.jsonl"]] == ["IDENTITY_UNAVAILABLE"]
+
+
+def test_mongo_drops_a_collection_with_no_uuid_and_says_so():
+    """A MongoDB view has no `info.uuid`, so it has no rename-stable identity."""
+
+    class ViewDb(MongoDb):
+        def list_collections(self):
+            return [{"name": "orders_view", "type": "view", "info": {}}]
+
+    class ViewClient:
+        def __getitem__(self, database):
+            return ViewDb()
+
+    records = discover_mongodb(ViewClient(), config("mongodb"), Budget(3))
+    assert records["objects.jsonl"] == []
+    assert records["fields.jsonl"] == []
+    assert [record.code for record in records["diagnostics.jsonl"]] == ["IDENTITY_UNAVAILABLE"]
+
+
+def test_an_unidentifiable_object_never_reaches_a_published_bundle(tmp_path, monkeypatch):
+    """End to end: the drop reaches the bundle as a counted diagnostic, not as an object."""
+    class Ordinary(ChClient):
+        tables_row = (
+            ChClient.tables_row[0],
+            "00000000-0000-0000-0000-000000000000",
+            *ChClient.tables_row[2:],
+        )
+
+    data = discover_clickhouse(Ordinary(), config("clickhouse"), Budget(2))
+    data["sources.jsonl"] = [
+        Source(
+            id="site-a",
+            kind="clickhouse",
+            name="site-a",
+            source_id="site-a",
+            observed_at=datetime.now(UTC),
+            collector_version="test",
+            provenance="synthetic",
+        )
+    ]
+    manifest = write_artifact(
+        tmp_path / "bundle",
+        "collector-bundle",
+        data,
+        producer="test",
+        source_run_ids=["run-a"],
+        completeness="partial",
+    )
+    assert manifest.diagnostics == {"IDENTITY_UNAVAILABLE": 1}
+    assert manifest.completeness == "partial", "a run that dropped an object is not complete"
+    _, published = read_artifact(tmp_path / "bundle")
+    assert published["objects.jsonl"] == []
+
+
+# --- statistics-based profiling ---------------------------------------------------------
+#
+# §20 says to use database statistics first. `pg_stats` exposes what the planner already
+# computed, so a profile costs one catalog query and reads no user data, which keeps it inside
+# the metadata-only default. `most_common_vals` and histogram bounds are never selected.
+
+
+def test_postgres_profiles_fields_from_planner_statistics():
+    records = discover_postgresql(PgConnection(), config(), Budget(4))
+    profile = records["profiles.jsonl"][0]
+    field = records["fields.jsonl"][0]
+    assert profile.field_id == field.id
+    assert profile.object_id == field.object_id
+    assert profile.method == "source_statistic"
+    assert profile.null_fraction == 0.25
+    assert profile.average_width_bytes == 4
+
+
+def test_a_negative_n_distinct_is_read_as_a_ratio_not_a_count():
+    """PostgreSQL stores -1.0 to mean "distinct scales with row count", i.e. fully unique.
+    Reading the sign literally would publish a distinct count of minus one."""
+    records = discover_postgresql(PgConnection(), config(), Budget(4))
+    profile = records["profiles.jsonl"][0]
+    assert profile.uniqueness == 1.0, "-1.0 means one distinct value per row"
+    assert profile.distinct_estimate == 12.5, "converted using the row estimate"
+    assert profile.distinct_is_ratio_derived is True, (
+        "the absolute count inherits the row estimate's error and must say so"
+    )
+
+
+def test_a_positive_n_distinct_is_an_absolute_count():
+    class Positive(PgCursor):
+        stats = [("public", "orders", "id", 0.0, 5.0, 4, None, None, 20.0)]
+
+    connection = PgConnection()
+    connection.fake_cursor = Positive()
+    profile = discover_postgresql(connection, config(), Budget(4))["profiles.jsonl"][0]
+    assert profile.distinct_estimate == 5.0
+    assert profile.distinct_is_ratio_derived is False
+    assert profile.uniqueness == 0.25
+
+
+def test_an_unknown_n_distinct_reports_nothing_rather_than_zero():
+    """PostgreSQL uses 0 for "unknown". Publishing that as zero distinct values would be a
+    measurement that was never taken."""
+
+    class Unknown(PgCursor):
+        stats = [("public", "orders", "id", None, 0.0, None, None, None, 12.5)]
+
+    connection = PgConnection()
+    connection.fake_cursor = Unknown()
+    profile = discover_postgresql(connection, config(), Budget(4))["profiles.jsonl"][0]
+    assert profile.distinct_estimate is None
+    assert profile.uniqueness is None
+    assert profile.null_fraction is None
+    assert profile.average_width_bytes is None
+
+
+def test_statistics_for_a_field_outside_the_scan_are_ignored():
+    class Extra(PgCursor):
+        stats = [
+            ("public", "orders", "id", 0.1, 3.0, 4, None, None, 12.5),
+            ("public", "not_scanned", "secret_column", 0.0, 1.0, 8, None, None, 5.0),
+        ]
+
+    connection = PgConnection()
+    connection.fake_cursor = Extra()
+    records = discover_postgresql(connection, config(), Budget(4))
+    assert len(records["profiles.jsonl"]) == 1
+    assert "secret_column" not in str(records)
+
+
+def test_profiling_never_selects_a_column_that_holds_values():
+    """`pg_stats` also exposes most_common_vals and histogram_bounds, which are real data."""
+    connection = PgConnection()
+    discover_postgresql(connection, config(), Budget(4))
+    statistics_query = next(
+        query for query, _ in connection.fake_cursor.calls if "pg_stats" in query
+    )
+    for forbidden in ("most_common_vals", "histogram_bounds", "most_common_elems"):
+        assert forbidden not in statistics_query
+
+
+def test_a_profile_reaches_a_published_bundle(tmp_path):
+    data = discover_postgresql(PgConnection(), config(), Budget(4))
+    data["sources.jsonl"] = [
+        Source(
+            id="site-a",
+            kind="postgresql",
+            name="site-a",
+            source_id="site-a",
+            observed_at=datetime.now(UTC),
+            collector_version="test",
+            provenance="synthetic",
+        )
+    ]
+    write_artifact(
+        tmp_path / "bundle", "collector-bundle", data, producer="test", source_run_ids=["run-a"]
+    )
+    _, published = read_artifact(tmp_path / "bundle")
+    assert published["profiles.jsonl"], "profiles.jsonl was always empty before this"
+    assert published["profiles.jsonl"][0].record_type == "profile"
+
+
+# --- query budget cost is a declared contract -------------------------------------------
+#
+# A scan's query count is part of its contract: operators size `max_queries` from it, and the
+# live CI tests hard-code a budget. Adding a query silently broke both, twice in one day, and
+# both times only the live tests caught it, because they are the only ones that run a real
+# server. These assertions pin the cost using the fakes, so drift fails locally instead.
+
+
+def test_postgresql_scan_costs_the_declared_number_of_queries():
+    """Four for a table-only scope: objects, fields, statistics, constraints."""
+    budget = Budget(50)
+    discover_postgresql(PgConnection(), config(), budget)
+    assert budget.used == 4, (
+        "If this changed deliberately, raise the budgets in tests/test_live_collectors.py too."
+    )
+
+
+def test_a_view_in_scope_adds_one_charged_query():
+    """The view-definition query is charged only when a view exists, which is why the live CI
+    scope, which has a view, costs five rather than four."""
+
+    class WithView(PgCursor):
+        objects = [
+            (42, "public", "orders", "r", 12.5, False, None),
+            (43, "public", "orders_view", "v", -1.0, False, None),
+        ]
+        definitions = [(43, "SELECT * FROM orders")]
+
+        def fetchall(self):
+            if "pg_get_viewdef" in self.last:
+                return self.definitions
+            return super().fetchall()
+
+    connection = PgConnection()
+    connection.fake_cursor = WithView()
+    budget = Budget(50)
+    discover_postgresql(connection, config(), budget)
+    assert budget.used == 5
+
+
+def test_clickhouse_scan_costs_the_declared_number_of_queries():
+    budget = Budget(50)
+    discover_clickhouse(ChClient(), config("clickhouse"), budget)
+    assert budget.used == 2, "a ClickHouse scan charges: system.tables, then columns"
+
+
+def test_mongodb_scan_cost_grows_per_collection_not_per_scan():
+    """Mongo is the case that caught us: the cost depends on how many collections exist, so a
+    fixed budget silently becomes too small when a namespace gains one."""
+    budget = Budget(50)
+    discover_mongodb(MongoClient(), config("mongodb"), budget)
+    assert budget.used == 3, "one per database plus two per collection, for one collection"
+
+
+# --- ClickHouse and MongoDB profiling ---------------------------------------------------
+#
+# Neither engine offers what PostgreSQL does. ClickHouse keeps no per-column null or distinct
+# statistics by default, so average width is honestly all that is available without reading
+# data. MongoDB exposes no per-field statistics at all, so its only profile comes from the
+# sample that was already taken. Both are emitted with the method that produced them, and
+# neither claims a measure it did not take.
+
+
+def test_clickhouse_profiles_average_width_without_an_extra_query():
+    class Populated(ChClient):
+        tables_row = (*ChClient.tables_row[:-1], 4)
+        columns_rows = [("orders", "id", "UInt64", 1, 32)]
+
+    budget = Budget(50)
+    records = discover_clickhouse(Populated(), config("clickhouse"), budget)
+    assert budget.used == 2, "profiling must ride on the query already made"
+    profile = records["profiles.jsonl"][0]
+    assert profile.method == "source_statistic"
+    assert profile.field_id == records["fields.jsonl"][0].id
+    assert profile.null_fraction is None, "ClickHouse reports no null statistics"
+    assert profile.distinct_estimate is None, "nor any distinct statistics"
+
+
+def test_clickhouse_reports_no_width_for_an_empty_table():
+    """Zero rows means nothing to measure, which is not the same as a width of zero."""
+
+    class Empty(ChClient):
+        tables_row = (*ChClient.tables_row[:-1], 0)
+        columns_rows = [("orders", "id", "UInt64", 1, 0)]
+
+    records = discover_clickhouse(Empty(), config("clickhouse"), Budget(50))
+    assert records["profiles.jsonl"] == []
+
+
+def test_clickhouse_reports_no_width_when_sizes_are_not_tracked():
+    """Found on a real 25.8 server: a table in a Compact part reports 0 bytes for every column
+    although it has rows. That is "not tracked", and the page showed it as a width of 0."""
+
+    class Compact(ChClient):
+        tables_row = (*ChClient.tables_row[:-1], 1000)
+        columns_rows = [("orders", "id", "UInt64", 1, 0)]
+
+    records = discover_clickhouse(Compact(), config("clickhouse"), Budget(50))
+    assert records["profiles.jsonl"] == []
+
+
+def test_clickhouse_divides_size_by_rows():
+    class Sized(ChClient):
+        tables_row = (*ChClient.tables_row[:-1], 10)
+        columns_rows = [("orders", "id", "UInt64", 1, 80)]
+
+    records = discover_clickhouse(Sized(), config("clickhouse"), Budget(50))
+    assert records["profiles.jsonl"][0].average_width_bytes == 8
+
+
+def test_mongo_emits_no_profile_without_a_sample():
+    """Metadata-only is the default, and it yields no basis for any field measure."""
+    records = discover_mongodb(MongoClient(), config("mongodb"), Budget(50))
+    assert records["profiles.jsonl"] == []
+
+
+def test_mongo_sample_profile_reports_absence_and_its_denominator():
+    """A type-only sample reads no values, so absence is the only thing it can measure."""
+
+    class Cursor:
+        def limit(self, count):
+            return self
+
+        def max_time_ms(self, timeout):
+            return self
+
+        def __iter__(self):
+            return iter([{"_id": 1, "sometimes": 2}, {"_id": 2}])
+
+        def close(self):
+            pass
+
+    class Db(MongoDb):
+        def list_collections(self):
+            return [{"name": "orders", "info": {"uuid": "uuid-42"}}]
+
+        def find(self, filter):
+            return Cursor()
+
+        def list_indexes(self):
+            return []
+
+    class Client:
+        def __getitem__(self, database):
+            return Db()
+
+    cfg = SourceConfig.model_validate(
+        {
+            **config("mongodb").model_dump(),
+            "sample_rows": 2,
+        }
+    )
+    records = discover_mongodb(Client(), cfg, Budget(50))
+    profiles = {profile.field_id: profile for profile in records["profiles.jsonl"]}
+    assert profiles, "sampling must produce profiles"
+    by_name = {field.name: field.id for field in records["fields.jsonl"]}
+    always = profiles[by_name["_id"]]
+    sometimes = profiles[by_name["sometimes"]]
+    assert always.method == "sample"
+    assert always.sample_count == 2
+    assert always.null_fraction == 0.0, "_id is present in both sampled documents"
+    assert sometimes.null_fraction == 0.5, "present in one of two sampled documents"
+    assert sometimes.distinct_estimate is None, "no value was read, so distinctness is unknown"
