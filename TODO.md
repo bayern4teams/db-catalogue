@@ -16,7 +16,7 @@ Update this file when work starts, a fact changes, a decision is needed, a check
 - [x] `tests/test_live_tls.py` now also covers, against the real servers: comments on the page, prefix search, a question found through a comment, a 3-hop MongoDB -> PostgreSQL path planned as one joined PostgreSQL read, and that read executed read-only (3 rows). `ask` is covered over real HTTP against the vLLM-contract stand-in.
 - [x] Runbook §7 (search, join paths, plans) and §9 (`ask`) added, and `examples/local/requester-with-vllm.toml` (loaded by a test). Section 7's bash blocks were executed verbatim from the markdown on a fresh three-database run, substituting only the two placeholder IDs.
 - [ ] Note: while editing the runbook, a shell heredoc whose text contained its own `EOF` marker ended early and bash ran some markdown lines as commands; all failed as "command not found" except `mkdir -p "$out/observations"`, which created an empty `/observations` in this cloud sandbox. Removing it needs a person's approval; it is outside the repository and harmless. Edits since go through script files.
-- [ ] PR, CI, subscribe to review and CI activity.
+- [x] PR [bayern4teams/db-catalogue#2](https://github.com/bayern4teams/db-catalogue/pull/2) opened and subscribed; CI [36719072476](https://github.com/bayern4teams/db-catalogue/actions/runs/36719072476) passed all seven jobs on `d2267a8`, with `25 passed` for the live suites. Merged by the user's standing instruction to merge once CI passes completely.
 
 ## Current change: merge-ready local run (started 2026-09-30)
 
