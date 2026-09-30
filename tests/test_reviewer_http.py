@@ -189,3 +189,41 @@ def test_plain_http_is_only_for_a_loopback_literal(url):
     anywhere. This is the rule the runbook tells operators about."""
     with pytest.raises(ValueError):
         ReviewConfig(base_url=url, model="m", model_digest="d", api_key_env="MODEL_KEY")
+
+
+def test_ask_over_http_sends_the_question_context_and_accepts_a_cited_answer(
+    tmp_path, monkeypatch
+):
+    """The requester's `ask`, end to end through the real client, against the same stand-in."""
+    from dbig_requester.answer import answer_question
+    from dbig_requester.config import AnswerConfig
+    from dbig_requester.search import index_snapshot
+
+    monkeypatch.setenv("BUNDLE_KEY", BUNDLE_KEY)
+    monkeypatch.setenv("MODEL_KEY", MODEL_KEY)
+    source_bundle(tmp_path / "bundle")
+    assemble([tmp_path / "bundle"], tmp_path / "snapshot",
+             BuilderConfig(signing_keys={"test": "BUNDLE_KEY"}))
+    index_snapshot(tmp_path / "snapshot", tmp_path / "state")
+
+    def cite_first(body: dict) -> str:
+        first = body["items"][0]
+        return json.dumps({"answer": f"{first['name']} is catalogued.", "citations": [first["id"]]})
+
+    stub = Stub(cite_first)
+    try:
+        result = answer_question(
+            tmp_path / "state", "which table keeps the customers?",
+            AnswerConfig(base_url=stub.url, model="local-model", model_digest="rev-abc123",
+                         api_key_env="MODEL_KEY"),
+        )
+    finally:
+        stub.close()
+    request = stub.requests[0]
+    assert request["path"] == "/v1/chat/completions"
+    assert request["auth"] == f"Bearer {MODEL_KEY}"
+    VllmJsonSchemaFormat.model_validate(request["body"]["response_format"]["json_schema"])
+    sent = json.loads(request["body"]["messages"][-1]["content"])
+    assert sent["items"][0]["name"] == "customers", "the question must retrieve what it asks about"
+    assert result["citations"] == [sent["items"][0]["id"]]
+    assert result["model_digest"] == "rev-abc123"

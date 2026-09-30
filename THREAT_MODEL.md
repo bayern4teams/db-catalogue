@@ -102,6 +102,17 @@ telemetry is reachable.
 *Deferred:* schema-constrained decoding behaviour on a real pinned vLLM build, and Langfuse
 masking, are untested until a GPU host exists.
 
+*Accepted by user decision on 2026-09-30:* table and column comments, which are free text
+written by database owners, are given to `ask` as context. That widens what an attacker who
+can write a comment can put in front of the model. Mitigations: comments are stripped of
+control characters and capped at 1,000 characters at collection; the system prompt names them
+as untrusted data; and the answer is accepted only if every citation is one of the retrieved
+entry IDs and it asserts no lineage, so an injected instruction can at most make an answer
+wrong or refused, never cite something outside the retrieval or claim lineage. Collection can
+be turned off per source with `include_comments = false`. Comments do not reach the builder's
+reviewer. *Tests:* `test_a_comment_is_cleaned_and_bounded`,
+`test_ask_retrieves_for_a_natural_question`, `test_comments_are_shown_escaped_and_searchable`.
+
 ### T6 — Unsafe or unresolvable SQL produces a wrong or dangerous claim
 
 SQL is parsed, never executed. Unresolvable or ambiguous references abstain with a diagnostic

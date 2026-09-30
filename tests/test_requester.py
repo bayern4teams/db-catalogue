@@ -29,7 +29,9 @@ def indexed(tmp_path, monkeypatch):
 def test_search_filters_and_stale_digest(tmp_path, monkeypatch):
     state = indexed(tmp_path, monkeypatch)
     found = search(state, SearchRequest(query="customer", kind="field"))
-    assert {item["name"] for item in found["results"]} == {"customer_id"}
+    # `customer_id` by its own name, ranked first; `customers.id` through its table's name.
+    assert [item["name"] for item in found["results"]][0] == "customer_id"
+    assert {item["name"] for item in found["results"]} == {"customer_id", "id"}
     assert all(item["source_id"] == "site-a" for item in found["results"])
     assert search(state, SearchRequest(query="customers", tag="billing"))["results"]
     assert search(state, SearchRequest(query="customers", capability="sql_read"))["results"]
@@ -155,3 +157,135 @@ def test_answer_telemetry_outage_does_not_hide_answer(tmp_path, monkeypatch):
     assert answer_question(state, "orders", config, client=client)["answer"] == "Catalogued."
     assert "input" not in calls[0] and "output" not in calls[0]
     assert "canary-secret" not in json.dumps(calls[0])
+
+
+# --- retrieval found wanting on a real catalogue ---------------------------------------------
+
+
+def test_a_term_matches_as_a_prefix(tmp_path, monkeypatch):
+    """`customer` used to miss the `customers` table: FTS matched whole tokens only."""
+    state = indexed(tmp_path, monkeypatch)
+    names = {item["name"] for item in search(state, SearchRequest(query="customer"))["results"]}
+    assert "customers" in names
+
+
+def test_explicit_search_still_needs_every_term(tmp_path, monkeypatch):
+    state = indexed(tmp_path, monkeypatch)
+    assert search(state, SearchRequest(query="customer zebra"))["results"] == []
+
+
+def test_a_question_retrieves_by_its_meaningful_words(tmp_path, monkeypatch):
+    """A natural question matched nothing when every word was required."""
+    state = indexed(tmp_path, monkeypatch)
+    question = "which table stores the customer records?"
+    assert search(state, SearchRequest(query=question))["results"] == []
+    found = search(state, SearchRequest(query=question, match="any"))["results"]
+    assert found and found[0]["name"] in {"customers", "customer_id"}
+
+
+def test_a_question_of_only_common_words_retrieves_nothing(tmp_path, monkeypatch):
+    state = indexed(tmp_path, monkeypatch)
+    assert search(state, SearchRequest(query="what is this?", match="any"))["results"] == []
+
+
+def test_fts_operators_in_a_query_are_data(tmp_path, monkeypatch):
+    state = indexed(tmp_path, monkeypatch)
+    for query in ('customer" OR "x', "NEAR(customer orders)", "customer*", "-customer"):
+        search(state, SearchRequest(query=query))
+        search(state, SearchRequest(query=query, match="any"))
+
+
+def test_ask_never_falls_back_to_an_arbitrary_slice(tmp_path, monkeypatch):
+    """No match used to send the model the first entries alphabetically."""
+    state = indexed(tmp_path, monkeypatch)
+    config = AnswerConfig(
+        base_url="http://127.0.0.1:9/v1", model="m", model_digest="d", api_key_env="MODEL_KEY"
+    )
+
+    class Unreachable:
+        class chat:  # noqa: N801 - mirrors the client's attribute path
+            class completions:  # noqa: N801
+                @staticmethod
+                def create(**_: object) -> None:
+                    raise AssertionError("the model must not be called without a match")
+
+    result = answer_question(state, "zebra giraffe", config, client=Unreachable())
+    assert result["error"]["code"] == "NO_CATALOGUE_MATCH"
+
+
+def _custom_index(tmp_path):
+    """A snapshot built to separate the retrieval rules: a column whose name starts with a
+    stopword, a column findable only by its comment, and a column that sorts first
+    alphabetically but matches only through its table's name."""
+    from datetime import UTC, datetime
+
+    from dbig_contracts.artifact import write_artifact
+    from dbig_contracts.models import Field, Object, Source
+
+    common = {"source_id": "s", "observed_at": datetime.now(UTC),
+              "collector_version": "t", "provenance": "t"}
+    nodes = [
+        Source(id="s", kind="postgresql", name="s", **common),
+        Object(id="o-customers", native_id="1", kind="table", name="customers", **common),
+        Object(id="o-ledger", native_id="2", kind="table", name="ledger", **common),
+        Field(id="f-aaa", object_id="o-customers", native_id="1:1", name="aaa",
+              data_type="text", **common),
+        Field(id="f-is", object_id="o-ledger", native_id="2:1", name="is_active",
+              data_type="boolean", **common),
+        Field(id="f-ref", object_id="o-ledger", native_id="2:2", name="customer_ref",
+              data_type="integer", **common),
+        Field(id="f-mail", object_id="o-ledger", native_id="2:3", name="addr",
+              data_type="text", description="Contact address for invoices", **common),
+    ]
+    write_artifact(tmp_path / "snapshot", "catalog-snapshot",
+                   {"nodes.jsonl": nodes, "edges.jsonl": [], "evidence.jsonl": []},
+                   producer="t", source_run_ids=[])
+    index_snapshot(tmp_path / "snapshot", tmp_path / "state")
+    return tmp_path / "state"
+
+
+def test_an_entry_matching_by_its_own_name_ranks_first(tmp_path):
+    """`aaa` sorts first but matches only through its table; `customer_ref` matches itself."""
+    state = _custom_index(tmp_path)
+    names = [row["name"] for row in
+             search(state, SearchRequest(query="customer", kind="field"))["results"]]
+    assert names == ["customer_ref", "aaa"]
+
+
+def test_a_comment_makes_a_column_findable(tmp_path):
+    state = _custom_index(tmp_path)
+    names = [row["name"] for row in search(state, SearchRequest(query="contact"))["results"]]
+    assert names == ["addr"]
+
+
+def test_stopwords_do_not_match_as_prefixes(tmp_path):
+    """Without the stopword filter, "is" would prefix-match `is_active` in any question."""
+    state = _custom_index(tmp_path)
+    assert search(state, SearchRequest(query="is it", match="any"))["results"] == []
+
+
+def test_ask_retrieves_for_a_natural_question(tmp_path):
+    state = _custom_index(tmp_path)
+    config = AnswerConfig(
+        base_url="http://127.0.0.1:9/v1", model="m", model_digest="d", api_key_env="MODEL_KEY"
+    )
+    seen: list[dict] = []
+
+    class Recording:
+        class chat:  # noqa: N801 - mirrors the client's attribute path
+            class completions:  # noqa: N801
+                @staticmethod
+                def create(**kwargs: object) -> SimpleNamespace:
+                    items = json.loads(kwargs["messages"][-1]["content"])["items"]  # type: ignore[index]
+                    seen.extend(items)
+                    body = json.dumps({"answer": "ledger.addr", "citations": [items[0]["id"]]})
+                    return SimpleNamespace(
+                        choices=[SimpleNamespace(message=SimpleNamespace(content=body))]
+                    )
+
+    result = answer_question(state, "where do we keep the contact address?", config,
+                             client=Recording())
+    assert result.get("answer") == "ledger.addr", result
+    assert seen[0]["name"] == "addr"
+    assert seen[0]["description"] == "Contact address for invoices", "comments reach the model"
+    assert seen[0]["object_name"] == "ledger"

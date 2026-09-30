@@ -3,6 +3,7 @@
 import json
 from ipaddress import ip_address
 from pathlib import Path
+from typing import Literal
 
 import click
 from dbig_contracts.errors import OperatorError
@@ -58,6 +59,13 @@ def index(config_path: Path) -> None:
 @click.option("--max-age-seconds", type=int)
 @click.option("--limit", type=int, default=20)
 @click.option("--offset", type=int, default=0)
+@click.option(
+    "--match",
+    type=click.Choice(["all", "any"]),
+    default="all",
+    show_default=True,
+    help="all: every word must match. any: rank by how well entries match any word.",
+)
 def search_command(
     config_path: Path,
     query: str,
@@ -70,6 +78,7 @@ def search_command(
     max_age_seconds: int | None,
     limit: int,
     offset: int,
+    match: Literal["all", "any"],
 ) -> None:
     config = load_config(config_path)
     click.echo(
@@ -87,6 +96,7 @@ def search_command(
                     max_age_seconds=max_age_seconds,
                     limit=limit,
                     offset=offset,
+                    match=match,
                 ),
             ),
             sort_keys=True,

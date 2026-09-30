@@ -87,6 +87,7 @@ td.num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap
 input#filter { width:100%; max-width:420px; padding:8px 10px; border:1px solid var(--line);
   border-radius:6px; background:var(--card); color:var(--fg); font:inherit; }
 a { color:var(--accent); } ul.evidence { margin:4px 0 0; padding-left:18px; }
+.description { white-space:pre-line; } p.description { margin:4px 0 6px; }
 """
 
 
@@ -320,7 +321,13 @@ def render_catalog(
         members = fields_by_object.get(item.id, [])
         # `lower()`, not `casefold()`, to match the filter script's `toLowerCase()`: casefold turns
         # "ß" into "ss", so a term typed as written would never match.
-        search = " ".join([label(item.id), *(field.name for field in members)]).lower()
+        search = " ".join(
+            [
+                label(item.id),
+                item.description or "",
+                *(f"{field.name} {field.description or ''}" for field in members),
+            ]
+        ).lower()
         described = dict(item.attributes)
         rows_estimate = described.pop("row_count_estimate", None)
         rows_method = described.pop("row_count_method", None)
@@ -335,6 +342,7 @@ def render_catalog(
             f"<td><code>{_e(field.data_type)}</code></td>"
             f"<td>{'' if field.nullable is None else ('yes' if field.nullable else 'no')}</td>"
             f"{profile_cells(field)}"
+            f"<td class='description'>{_e(field.description)}</td>"
             f"<td class='muted'>{_metrics(field.attributes)}</td></tr>"
             for field in members
         )
@@ -371,10 +379,14 @@ def render_catalog(
         return (
             f"<section class='card' id='{_anchor(item.id)}' data-search='{_e(search)}'>"
             f"<h3>{_e(label(item.id))} <span class='badge'>{_e(item.kind)}</span></h3>"
-            f"<div class='muted'>{attributes}</div>"
+            + (
+                f"<p class='description'>{_e(item.description)}</p>" if item.description else ""
+            )
+            + f"<div class='muted'>{attributes}</div>"
             f"<table><tr><th>#</th><th>Column</th><th>Type</th><th>Nullable</th>"
             f"<th>Null %</th><th>Distinct (est.)</th><th>Uniqueness</th>"
-            f"<th>Avg bytes</th><th>Statistics from</th><th>Attributes</th></tr>{rows}</table>"
+            f"<th>Avg bytes</th><th>Statistics from</th><th>Description</th>"
+            f"<th>Attributes</th></tr>{rows}</table>"
             + (f"<h4>Keys and indexes</h4><ul>{index_list}</ul>" if index_list else "")
             + relationship_table
             + "</section>"

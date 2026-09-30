@@ -41,6 +41,16 @@ POSTGRES_SEED = (
     f"CREATE SCHEMA {NAMESPACE}",
     f"CREATE TABLE {NAMESPACE}.customers (id integer PRIMARY KEY, email text)",  # noqa: S608
     f"INSERT INTO {NAMESPACE}.customers VALUES (1, 'a'), (2, 'b'), (3, NULL)",  # noqa: S608
+    f"COMMENT ON TABLE {NAMESPACE}.customers IS 'Everyone who has bought something'",
+    f"COMMENT ON COLUMN {NAMESPACE}.customers.email IS 'Contact address'",
+    # A declared chain inside PostgreSQL, so a path from another engine runs through several
+    # PostgreSQL tables in a row and the planner must join them in one query.
+    f"CREATE TABLE {NAMESPACE}.invoices (id integer PRIMARY KEY, "  # noqa: S608
+    f"customer_id integer REFERENCES {NAMESPACE}.customers(id))",
+    f"INSERT INTO {NAMESPACE}.invoices VALUES (10, 1), (11, 2)",  # noqa: S608
+    f"CREATE TABLE {NAMESPACE}.invoice_lines (id integer PRIMARY KEY, "  # noqa: S608
+    f"invoice_id integer REFERENCES {NAMESPACE}.invoices(id))",
+    f"INSERT INTO {NAMESPACE}.invoice_lines VALUES (100, 10), (101, 10), (102, 11)",  # noqa: S608
     f"ANALYZE {NAMESPACE}.customers",
 )
 
@@ -87,7 +97,7 @@ def seeded() -> None:
         client.command(f"CREATE DATABASE {NAMESPACE} ENGINE=Atomic")
         client.command(
             f"CREATE TABLE {NAMESPACE}.events (id UInt64, customer_id Int32, day Date) "
-            "ENGINE=MergeTree ORDER BY id"
+            "ENGINE=MergeTree ORDER BY id COMMENT 'Product events'"
         )
     finally:
         client.close()
@@ -219,3 +229,71 @@ def test_one_catalogue_from_all_three_engines(tmp_path):
     assert counts["candidates"] >= 1, "customer_id in ClickHouse and MongoDB should point at " \
         "the PostgreSQL customers key"
     assert SIGNING_KEY not in page
+    for comment in ("Everyone who has bought something", "Contact address", "Product events"):
+        assert comment in page, f"comment missing from the page: {comment}"
+
+    # Search, as an operator would: a prefix finds the table, and a question finds its column.
+    (tmp_path / "requester.toml").write_text(
+        f'[requester]\nsnapshot_dir = "{(tmp_path / "snapshot").as_posix()}"\n'
+        f'state_dir = "{(tmp_path / "state").as_posix()}"\napi_key_env = "REQUESTER_TOKEN"\n',
+        encoding="utf-8",
+    )
+    _tool(env, "dbig-requester", "index", "--config", str(tmp_path / "requester.toml"))
+    found = _tool(env, "dbig-requester", "search", "--config", str(tmp_path / "requester.toml"),
+                  "--query", "customer")
+    ids = {row["name"]: row["id"] for row in found["results"] if row["kind"] != "field"}
+    assert "customers" in ids, "a prefix must find the table"
+    asked = _tool(env, "dbig-requester", "search", "--config", str(tmp_path / "requester.toml"),
+                  "--query", "which column has the customer contact address", "--match", "any")
+    assert asked["results"][0]["name"] == "email", "the comment must make the column findable"
+
+    # A multi-hop path across engines, planned, and the PostgreSQL part executed read-only.
+    mongo_orders = next(
+        row["id"] for row in _tool(
+            env, "dbig-requester", "search", "--config", str(tmp_path / "requester.toml"),
+            "--query", "orders", "--source-id", "tls-mongodb",
+        )["results"] if row["kind"] == "collection"
+    )
+    lines = next(
+        row["id"] for row in _tool(
+            env, "dbig-requester", "search", "--config", str(tmp_path / "requester.toml"),
+            "--query", "invoice_lines",
+        )["results"] if row["name"] == "invoice_lines"
+    )
+    (tmp_path / "observations").mkdir()
+    _tool(env, "dbig-planner", "build", "--snapshot", str(tmp_path / "snapshot"),
+          "--observations", str(tmp_path / "observations"), "--out", str(tmp_path / "graph"))
+    paths = _tool(env, "dbig-planner", "join-paths", "--graph", str(tmp_path / "graph"),
+                  "--from", mongo_orders, "--to", lines)
+    assert paths["paths"], "orders (MongoDB) -> customers -> invoices -> invoice_lines"
+    plan = _tool(env, "dbig-planner", "plan", "--graph", str(tmp_path / "graph"),
+                 "--path-id", paths["paths"][0]["path_id"])
+    assert plan["status"] == "unresolved", "a cross-engine join needs a staging target"
+    assert [step["kind"] for step in plan["steps"]] == [
+        "source_read", "source_read", "logical_join",
+    ], "the three PostgreSQL tables must be one joined read"
+    sql = plan["steps"][1]["sql"]
+    assert sql.count(" JOIN ") == 2
+
+    from pg8000 import dbapi
+
+    connection = dbapi.connect(host="127.0.0.1", port=5432, user="postgres", database="postgres")
+    try:
+        cursor = connection.cursor()
+        cursor.execute("SET TRANSACTION READ ONLY")
+        cursor.execute(sql)
+        assert len(cursor.fetchall()) == 3, "every invoice line joins to its invoice and customer"
+    finally:
+        connection.rollback()
+        connection.close()
+
+
+def _tool(env: dict[str, str], name: str, *arguments: str) -> dict:
+    executable = SCRIPTS / name
+    if not executable.exists():
+        pytest.fail(f"the `{name}` console script is not installed")
+    result = subprocess.run(  # noqa: S603 - fixed argv, no shell
+        [str(executable), *arguments], capture_output=True, text=True, env=env, timeout=120,
+    )
+    assert result.returncode == 0, f"{name} {arguments[0]}: {result.stderr}"
+    return json.loads(result.stdout) if result.stdout.strip().startswith("{") else {}

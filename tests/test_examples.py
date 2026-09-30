@@ -11,6 +11,7 @@ from pathlib import Path
 import pytest
 from dbig_builder.config import load_config as load_builder
 from dbig_collectors.config import load_config as load_source
+from dbig_requester.config import load_config as load_requester
 
 EXAMPLES = Path(__file__).parents[1] / "examples" / "local"
 
@@ -31,3 +32,9 @@ def test_the_builder_examples_load_and_match_the_sources():
     assert set(plain.signing_keys) == {"local"}
     assert reviewed.review is not None
     assert reviewed.review.base_url == "http://127.0.0.1:8000/v1"
+
+
+def test_the_requester_example_loads():
+    config = load_requester(EXAMPLES / "requester-with-vllm.toml")
+    assert config.answer is not None
+    assert config.answer.base_url == "http://127.0.0.1:8000/v1"
