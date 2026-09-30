@@ -50,6 +50,8 @@ def calls(monkeypatch: pytest.MonkeyPatch) -> list[dict]:
     clickhouse.get_client = record("clickhouse")  # type: ignore[attr-defined]
 
     def parse_uri(uri: str, **_: object) -> dict:
+        if uri.startswith("mongodb+srv://"):
+            raise AssertionError("an SRV URI must be refused before parsing, which does DNS")
         hosts = uri.split("://", 1)[1].split("/", 1)[0].split("@")[-1]
         nodes = []
         for host in hosts.split(","):
@@ -299,6 +301,48 @@ def test_any_other_failure_is_left_alone():
     assert _failure(ConnectionRefusedError("connection refused")) is None
 
 
+@pytest.mark.parametrize(
+    "option",
+    ["tlsInsecure=true", "tlsAllowInvalidCertificates=TRUE", "tlsAllowInvalidHostnames=1",
+     "tls=false", "ssl=false"],
+)
+def test_a_mongodb_uri_cannot_switch_verification_off(monkeypatch, tmp_path, calls, option):
+    """Found in review: PyMongo merges URI options with ours, so without this a URI could turn
+    verification off while the bundle still said `tls-verified`."""
+    with pytest.raises(OperatorError, match="MongoDB URI sets"):
+        _collect(monkeypatch, tmp_path, "mongodb",
+                 {"uri": f"mongodb://10.0.0.7:27017/?authSource=app&{option}"})
+    assert calls == []
+
+
+def test_a_mongodb_uri_may_state_the_safe_values(monkeypatch, tmp_path, calls):
+    with pytest.raises(Connected):
+        _collect(monkeypatch, tmp_path, "mongodb",
+                 {"uri": "mongodb://10.0.0.7/?tls=true&tlsAllowInvalidCertificates=false"})
+
+
+def test_a_plaintext_config_with_a_tls_uri_is_a_contradiction(monkeypatch, tmp_path, calls):
+    with pytest.raises(OperatorError, match="contradicts"):
+        _collect(monkeypatch, tmp_path, "mongodb", {"uri": "mongodb://127.0.0.1/?tls=true"},
+                 tls=False)
+
+
+def test_a_wrapped_certificate_failure_in_a_runtime_error_is_still_explained(
+    monkeypatch, tmp_path, calls
+):
+    """Found in review: RuntimeError used to be caught for the budget first and re-raised raw."""
+
+    def fails(*_: object, **__: object) -> None:
+        try:
+            raise ssl.SSLCertVerificationError(1, "certificate verify failed")
+        except ssl.SSLError as inner:
+            raise RuntimeError("driver wrapper") from inner
+
+    sys.modules["pg8000.dbapi"].connect = fails  # type: ignore[attr-defined]
+    with pytest.raises(OperatorError, match="set tls_ca_file"):
+        _collect(monkeypatch, tmp_path, "postgresql", PG_REMOTE)
+
+
 def test_a_reached_limit_is_reported_with_the_limits_to_raise(monkeypatch, tmp_path):
     """Still no bundle, as before: only the report changes from a traceback to the fix."""
 
@@ -307,7 +351,7 @@ def test_a_reached_limit_is_reported_with_the_limits_to_raise(monkeypatch, tmp_p
             pass
 
     def exhausted(*_: object) -> dict:
-        raise RuntimeError("BUDGET_EXHAUSTED")
+        raise runtime.BudgetExhausted
 
     dbapi = types.ModuleType("pg8000.dbapi")
     dbapi.connect = lambda **_: Client()  # type: ignore[attr-defined]
@@ -317,9 +361,10 @@ def test_a_reached_limit_is_reported_with_the_limits_to_raise(monkeypatch, tmp_p
     monkeypatch.setitem(sys.modules, "pg8000.dbapi", dbapi)
     monkeypatch.setattr(runtime, "discover_postgresql", exhausted)
     monkeypatch.setenv("SIGNING_KEY", SIGNING_KEY)
-    with pytest.raises(OperatorError, match="max_queries=50"):
+    with pytest.raises(OperatorError, match="max_queries=50") as raised:
         _collect(monkeypatch, tmp_path, "postgresql", PG_LOOPBACK, tls=False)
     assert not (tmp_path / "bundle").exists()
+    assert "MongoDB" not in str(raised.value), "the MongoDB cost hint is for MongoDB only"
 
 
 def test_other_runtime_errors_are_not_disguised(monkeypatch, tmp_path, calls):

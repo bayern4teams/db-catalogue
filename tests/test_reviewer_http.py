@@ -120,6 +120,7 @@ def _run(tmp_path: Path, monkeypatch, answer, *, key: str = MODEL_KEY) -> tuple[
     return stub, {
         "manifest": manifest,
         "status": builder_run["review_status"],
+        "reasons": builder_run.get("partial_reasons", []),
         "suggestions": [
             item.model_dump() for item in data["evidence.jsonl"]
             if item.model_dump()["kind"] == "model_suggestion"
@@ -162,6 +163,7 @@ def test_a_wrong_key_still_publishes_the_deterministic_catalogue(tmp_path, monke
     assert result["status"] == "MODEL_UNAVAILABLE_OR_INVALID"
     assert result["suggestions"] == []
     assert result["manifest"].completeness == "partial"
+    assert result["reasons"] == ["MODEL_REVIEW_FAILED"], "the page must be able to say why"
 
 
 def test_an_invented_citation_is_refused(tmp_path, monkeypatch):

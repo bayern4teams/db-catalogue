@@ -128,9 +128,16 @@ def _verified_bundles(
     snapshot_runs: set[str], bundles: Iterable[Path], config: BuilderConfig
 ) -> list[tuple[Manifest, dict[str, list]]]:
     verified = []
+    seen: set[str] = set()
     for path in bundles:
         manifest, records = _read_signed(path, config)
+        if len(records["sources.jsonl"]) != 1:
+            raise OperatorError(f"bundle {path} must describe exactly one source")
         source = Source.model_validate(records["sources.jsonl"][0])
+        # Twice the same bundle, or two for one source, would double every key and diagnostic.
+        if source.id in seen:
+            raise OperatorError(f"more than one bundle given for source {source.id!r}")
+        seen.add(source.id)
         if bundle_run_id(source.id, manifest) not in snapshot_runs:
             raise OperatorError(
                 f"bundle {path} was not assembled into this snapshot; render it with the "
@@ -166,6 +173,12 @@ def render_catalog(
     evidence = {
         item.id: Evidence.model_validate(item.model_dump()) for item in records["evidence.jsonl"]
     }
+    # The reviewer's suggestions point at the edge they review through `subject_id` and are not
+    # among the edge's own `evidence_ids`, so they are collected separately to be shown at all.
+    suggestions: dict[str, list[Evidence]] = defaultdict(list)
+    for record in evidence.values():
+        if record.kind == "model_suggestion":
+            suggestions[record.subject_id].append(record)
 
     profiles: dict[str, list[Profile]] = defaultdict(list)
     constraints: dict[str, list[Constraint]] = defaultdict(list)
@@ -242,6 +255,13 @@ def render_catalog(
             for item in edge.evidence_ids
             if item in evidence
         )
+        reviewed = "".join(
+            f"<li><code>model_suggestion</code> <b>{_e(item.metrics.get('decision'))}</b>: "
+            f"{_e(item.explanation)} <span class='muted'>(weak evidence; model "
+            f"{_e(item.metrics.get('model_digest'))})</span></li>"
+            for item in sorted(suggestions.get(edge.id, []), key=lambda item: item.id)
+        )
+        cited += reviewed
         confidence = (
             "not calibrated" if edge.confidence is None else f"{edge.confidence:.2f}"
         )
@@ -298,7 +318,9 @@ def render_catalog(
 
     def object_card(item: Object) -> str:
         members = fields_by_object.get(item.id, [])
-        search = " ".join([label(item.id), *(field.name for field in members)]).casefold()
+        # `lower()`, not `casefold()`, to match the filter script's `toLowerCase()`: casefold turns
+        # "ß" into "ss", so a term typed as written would never match.
+        search = " ".join([label(item.id), *(field.name for field in members)]).lower()
         described = dict(item.attributes)
         rows_estimate = described.pop("row_count_estimate", None)
         rows_method = described.pop("row_count_method", None)
@@ -370,8 +392,13 @@ def render_catalog(
         + (
             ""
             if manifest.completeness == "complete"
-            else " &mdash; at least one source was partial or a step could not finish; see "
-            "diagnostics below."
+            else "<ul>"
+            + "".join(
+                f"<li><code>{_e(reason)}</code></li>"
+                for reason in builder_run.get("partial_reasons")
+                or ["reason not recorded by the producer of this snapshot"]
+            )
+            + "</ul>"
         )
         + "</div>"
     )
@@ -443,6 +470,11 @@ def render_catalog(
     try:
         with os.fdopen(handle, "w", encoding="utf-8") as stream:
             stream.write(page)
+        # mkstemp creates the file owner-only; a report should get the ordinary permissions a
+        # new file would, so a page in a shared or served directory stays readable.
+        umask = os.umask(0)
+        os.umask(umask)
+        os.chmod(temporary, 0o666 & ~umask)
         os.replace(temporary, output)
     except BaseException:
         Path(temporary).unlink(missing_ok=True)

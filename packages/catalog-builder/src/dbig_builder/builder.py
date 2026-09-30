@@ -307,6 +307,11 @@ def assemble(
     runs: list[Record] = []
     partial_source_receipts = partial_source_receipts or {}
     partial = bool(partial_source_receipts)
+    # Why the snapshot is partial, recorded on the builder run so a reader is told the cause
+    # rather than only the fact. Several causes produce no collector diagnostic at all.
+    partial_reasons: set[str] = {
+        f"PREVIOUS_COMPLETE_BUNDLE_USED {source}" for source in partial_source_receipts
+    }
     for path in bundle_paths:
         manifest, records = _read_signed(path, config)
         bundle_sources = records["sources.jsonl"]
@@ -316,7 +321,9 @@ def assemble(
         if source.id in sources:
             raise ValueError("ambiguous source identity")
         sources[source.id] = source
-        partial |= manifest.completeness == "partial"
+        if manifest.completeness == "partial":
+            partial = True
+            partial_reasons.add(f"SOURCE_BUNDLE_PARTIAL {source.id}")
         for table in ("sources.jsonl", "objects.jsonl", "fields.jsonl"):
             for record in records[table]:
                 if record.id in nodes:
@@ -402,6 +409,7 @@ def assemble(
             or len(ordinals) != len(target_ordinals)
         ):
             partial = True
+            partial_reasons.add("FOREIGN_KEY_TARGET_OUTSIDE_SNAPSHOT")
             continue
         pairs = []
         for left, right in zip(ordinals, target_ordinals, strict=True):
@@ -409,6 +417,7 @@ def assemble(
             parent = by_object.get(target, {}).get(right)
             if child is None or parent is None:
                 partial = True
+                partial_reasons.add("FOREIGN_KEY_TARGET_OUTSIDE_SNAPSHOT")
                 break
             pairs.append([child.id, parent.id])
         else:
@@ -544,7 +553,9 @@ def assemble(
         )
         for suggestion in suggestions:
             evidence[suggestion.id] = suggestion
-        partial |= review_status == "MODEL_UNAVAILABLE_OR_INVALID"
+        if review_status == "MODEL_UNAVAILABLE_OR_INVALID":
+            partial = True
+            partial_reasons.add("MODEL_REVIEW_FAILED")
     runs.append(
         Record.model_validate(
             {
@@ -563,6 +574,8 @@ def assemble(
                 "provenance": "assembler",
                 "review_status": review_status,
                 "partial_source_receipts": partial_source_receipts,
+                # Only when partial, so a complete snapshot's bytes are unchanged.
+                **({"partial_reasons": sorted(partial_reasons)} if partial_reasons else {}),
             }
         )
     )

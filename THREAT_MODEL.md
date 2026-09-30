@@ -179,6 +179,9 @@ Connect and PyMongo for servers whose certificates come from a private CA. `tls 
 for local development only and is refused unless every host in the connection reference is a
 loopback IP literal; `localhost` is refused because it is whatever the resolver says, a MongoDB
 URI is refused if any replica-set member is remote, and `mongodb+srv://` is refused outright.
+Whatever `tls` says, a MongoDB URI that sets `tlsInsecure`, `tlsAllowInvalidCertificates` or
+`tlsAllowInvalidHostnames`, or a `tls`/`ssl` value contradicting the configuration, is refused,
+because PyMongo merges URI options with the ones the collector passes.
 Every bundle records `transport` on its source (`tls-verified` or `plaintext-loopback`), and the
 catalogue page shows it per source. A certificate that fails verification ends the run with one
 line naming the fix, and never repeats connection details.

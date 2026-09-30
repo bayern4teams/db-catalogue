@@ -312,3 +312,76 @@ def test_the_render_command_reports_a_mismatch_without_a_traceback(built, tmp_pa
     assert result.exit_code == 1
     assert "not assembled into this snapshot" in result.output
     assert "Traceback" not in result.output
+
+
+# --- found in review ------------------------------------------------------------------------
+
+
+def test_the_same_bundle_twice_is_refused(built, config, tmp_path):
+    """It used to double every key badge and diagnostic."""
+    with pytest.raises(OperatorError, match="more than one bundle"):
+        render_catalog(
+            built["snapshot"], [built["bundle"], built["bundle"]], tmp_path / "c.html", config
+        )
+
+
+def test_the_page_gets_ordinary_file_permissions(built, config, tmp_path):
+    """mkstemp makes files owner-only; a report in a shared directory must stay readable."""
+    import os
+
+    previous = os.umask(0o022)
+    try:
+        _render(built, config, tmp_path / "c.html")
+    finally:
+        os.umask(previous)
+    assert (tmp_path / "c.html").stat().st_mode & 0o777 == 0o644
+
+
+def test_the_filter_index_uses_the_same_lowercasing_as_the_browser():
+    """`casefold()` turns "ß" into "ss", which the page's `toLowerCase()` never produces."""
+    assert "Straße".lower() == "straße"
+    import inspect
+
+    from dbig_builder import render
+
+    assert ".casefold()" not in inspect.getsource(render)
+    assert "toLowerCase()" in render.SCRIPT
+
+
+def test_a_partial_snapshot_says_why(tmp_path, config):
+    bundle = _bundle(tmp_path / "bundle", completeness="partial")
+    assemble([bundle], tmp_path / "snapshot", config)
+    page = _render({"bundle": bundle, "snapshot": tmp_path / "snapshot"}, config,
+                   tmp_path / "c.html")
+    assert "<code>SOURCE_BUNDLE_PARTIAL shop</code>" in page
+
+
+def test_model_suggestions_are_shown_on_the_candidate_they_review(built, config, tmp_path):
+    """They cite the edge through `subject_id`, not through the edge's `evidence_ids`, so the
+    page used to show none of them."""
+    from dbig_contracts.artifact import read_artifact
+    from dbig_contracts.models import Evidence
+
+    _, data = read_artifact(built["snapshot"])
+    candidate = next(
+        edge for edge in data["edges.jsonl"] if edge.model_dump()["kind"] == "REFERENCE_CANDIDATE"
+    )
+    suggestion = Evidence(
+        id="model-1", kind="model_suggestion", subject_id=candidate.id,
+        metrics={"decision": "supports", "model_digest": "rev-1"},
+        explanation="names and types agree", source_id="shop",
+        observed_at=datetime(2026, 9, 1, tzinfo=UTC), collector_version="t", provenance="rev-1",
+    )
+    write_artifact(
+        tmp_path / "reviewed",
+        "catalog-snapshot",
+        {
+            "nodes.jsonl": data["nodes.jsonl"], "edges.jsonl": data["edges.jsonl"],
+            "evidence.jsonl": sorted([*data["evidence.jsonl"], suggestion], key=lambda e: e.id),
+            "runs.jsonl": data["runs.jsonl"],
+        },
+        producer="test", source_run_ids=[record.id for record in data["runs.jsonl"]],
+    )
+    page = _render({"bundle": built["bundle"], "snapshot": tmp_path / "reviewed"}, config,
+                   tmp_path / "c.html")
+    assert "<b>supports</b>: names and types agree" in page

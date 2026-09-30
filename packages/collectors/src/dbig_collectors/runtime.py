@@ -13,6 +13,7 @@ from decimal import Decimal
 from importlib.metadata import version
 from pathlib import Path
 from typing import Any
+from urllib.parse import parse_qsl
 from uuid import uuid4
 
 from dbig_contracts.artifact import write_artifact
@@ -32,6 +33,17 @@ from dbig_contracts.security import secret_from_env
 from .config import SourceConfig
 
 
+class BudgetExhausted(RuntimeError):  # noqa: N818 - the established code name, kept for callers
+    """A configured query, object or field limit was reached before the scan finished.
+
+    A `RuntimeError` with the message `BUDGET_EXHAUSTED`, as before, so existing handling keeps
+    working; its own type lets `collect` recognise it without matching message text.
+    """
+
+    def __init__(self) -> None:
+        super().__init__("BUDGET_EXHAUSTED")
+
+
 class Budget:
     def __init__(self, max_queries: int) -> None:
         self.max_queries = max_queries
@@ -39,7 +51,7 @@ class Budget:
 
     def charge(self) -> None:
         if self.used >= self.max_queries:
-            raise RuntimeError("BUDGET_EXHAUSTED")
+            raise BudgetExhausted
         self.used += 1
 
 
@@ -255,7 +267,7 @@ def _profile_postgresql(
     )
     stat_rows = cursor.fetchall()
     if len(stat_rows) > config.max_fields:
-        raise RuntimeError("BUDGET_EXHAUSTED")
+        raise BudgetExhausted
     for schema, table, column, null_frac, n_distinct, width, analyzed, auto, reltuples in stat_rows:
         target = by_name.get((schema, table, column))
         if target is None:
@@ -337,7 +349,7 @@ def discover_postgresql(
         )
         rows = cursor.fetchall()
         if len(rows) > config.max_objects:
-            raise RuntimeError("BUDGET_EXHAUSTED")
+            raise BudgetExhausted
         kinds = {
             "r": "table",
             "p": "partitioned_table",
@@ -398,7 +410,7 @@ def discover_postgresql(
             )
             field_rows = cursor.fetchall()
             if len(field_rows) > config.max_fields:
-                raise RuntimeError("BUDGET_EXHAUSTED")
+                raise BudgetExhausted
             for oid, attnum, name, data_type, not_null in field_rows:
                 native = f"{oid}:{attnum}"
                 tables["fields.jsonl"].append(
@@ -424,7 +436,7 @@ def discover_postgresql(
             )
             constraint_rows = cursor.fetchall()
             if len(constraint_rows) > config.max_fields:
-                raise RuntimeError("BUDGET_EXHAUSTED")
+                raise BudgetExhausted
             discovered_oids = {row[0] for row in rows}
             for oid, owner_oid, target_oid, kind, keys, target_keys in constraint_rows:
                 if kind == "f" and target_oid not in discovered_oids:
@@ -481,7 +493,7 @@ def discover_clickhouse(
             settings={"max_execution_time": config.read_timeout_seconds},
         ).result_set
         if len(rows) > config.max_objects:
-            raise RuntimeError("BUDGET_EXHAUSTED")
+            raise BudgetExhausted
         identities: dict[str, str] = {}
         row_counts: dict[str, int] = {}
         for (
@@ -561,7 +573,7 @@ def discover_clickhouse(
             settings={"max_execution_time": config.read_timeout_seconds},
         ).result_set
         if len(columns) > config.max_fields:
-            raise RuntimeError("BUDGET_EXHAUSTED")
+            raise BudgetExhausted
         for table, name, data_type, position, uncompressed in columns:
             if table not in identities:
                 continue
@@ -711,7 +723,7 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
         for info in client[database].list_collections():
             total += 1
             if total > config.max_objects:
-                raise RuntimeError("BUDGET_EXHAUSTED")
+                raise BudgetExhausted
             native = str(info.get("info", {}).get("uuid", ""))
             if not native:
                 tables["diagnostics.jsonl"].append(
@@ -838,7 +850,7 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
                         cursor.close()
             for path, types in sorted(paths.items()):
                 if len(tables["fields.jsonl"]) >= config.max_fields:
-                    raise RuntimeError("BUDGET_EXHAUSTED")
+                    raise BudgetExhausted
                 field_native = f"{native}:{path}"
                 tables["fields.jsonl"].append(
                     Field(
@@ -982,23 +994,54 @@ def _certificate_failure(error: BaseException, config: SourceConfig) -> Operator
     return None
 
 
+# URI options that would switch certificate or hostname verification off. A MongoDB URI is free
+# text and PyMongo merges its options with the ones passed here, so without this check a URI
+# could disable verification while the bundle still recorded `tls-verified`.
+MONGO_INSECURE_OPTIONS = frozenset(
+    {"tlsinsecure", "tlsallowinvalidcertificates", "tlsallowinvalidhostnames"}
+)
+
+
+def _refuse_mongo_tls_overrides(uri: str, config: SourceConfig) -> None:
+    query = uri.split("?", 1)[1] if "?" in uri else ""
+    options = {
+        key.lower(): value.strip().lower()
+        for key, value in parse_qsl(query.replace(";", "&"), keep_blank_values=True)
+    }
+    for key in sorted(MONGO_INSECURE_OPTIONS & set(options)):
+        if options[key] != "false":
+            raise OperatorError(
+                f"the MongoDB URI sets {key}, which turns TLS verification off; remove it and "
+                "use tls_ca_file for a private CA"
+            )
+    for key in ("tls", "ssl"):
+        if key in options and options[key] != ("true" if config.tls else "false"):
+            raise OperatorError(
+                f"the MongoDB URI sets {key}={options[key]}, which contradicts tls = "
+                f"{'true' if config.tls else 'false'} in the source configuration; remove it"
+            )
+
+
 def collect(config: SourceConfig, destination: Path) -> None:
     """Create a signed bundle; never accept connection values on the CLI."""
     try:
         _collect(config, destination)
     except OperatorError:
         raise
-    except RuntimeError as error:
-        if str(error) != "BUDGET_EXHAUSTED":
-            raise
+    except BudgetExhausted as error:
         # Still fails closed with no bundle, as before; only the report changes, from a
         # traceback to the limits an operator can raise.
+        hint = (
+            ": MongoDB charges one query per database, one per collection and one more per "
+            "sampled collection"
+            if config.kind == "mongodb"
+            else ""
+        )
         raise OperatorError(
             f"{config.kind} source {config.source_id!r}: the scan reached a configured limit "
             f"before finishing (max_queries={config.max_queries}, "
             f"max_objects={config.max_objects}, max_fields={config.max_fields}); no bundle was "
-            "written. Raise the limit this source needs: MongoDB charges one query per "
-            "database, one per collection and one more per sampled collection"
+            f"written. Raise the limit this source needs{hint}"
         ) from error
     except Exception as error:
         converted = _certificate_failure(error, config)
@@ -1064,14 +1107,17 @@ def _collect(config: SourceConfig, destination: Path) -> None:
 
         if set(connection) != {"uri"}:
             raise ValueError("MongoDB connection needs only uri")
+        _refuse_mongo_tls_overrides(connection["uri"], config)
         mongo_options: dict[str, Any] = {"tls": config.tls}
         if config.tls:
             if ca_file is not None:
                 mongo_options["tlsCAFile"] = ca_file
         else:
-            parsed = uri_parser.parse_uri(connection["uri"], connect_timeout=None)
+            # Before parsing: parsing an SRV URI performs DNS lookups, which would hang or fail
+            # with a driver error before this refusal could be reported.
             if connection["uri"].startswith("mongodb+srv://"):
                 raise OperatorError("tls = false cannot be used with a mongodb+srv:// URI")
+            parsed = uri_parser.parse_uri(connection["uri"], connect_timeout=None)
             _require_loopback([host for host, _ in parsed["nodelist"]])
         client = MongoClient(
             connection["uri"],
