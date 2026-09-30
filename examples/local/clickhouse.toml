@@ -1,0 +1,10 @@
+# Connection JSON in CLICKHOUSE_CONNECTION: {"host", "port", "username", "password"}.
+# With TLS (the default) use the server's HTTPS port, 8443 unless your server says otherwise.
+[source]
+source_id = "ch-main"
+kind = "clickhouse"
+connection_env = "CLICKHOUSE_CONNECTION"
+signing_key_env = "DBIG_SIGNING_KEY"
+signing_key_id = "local"
+namespaces = ["default"]               # ClickHouse databases to catalogue
+# tls_ca_file = "C:/certs/company-ca.pem"

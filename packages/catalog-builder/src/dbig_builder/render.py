@@ -321,11 +321,20 @@ def render_catalog(
             for constraint in constraints.get(item.id, [])
             if constraint.kind in {"primary", "unique", "index"}
         ]
+        by_ordinal = {field.ordinal: field.name for field in members if field.ordinal is not None}
+
+        def covered(constraint: Constraint) -> str:
+            # Column names, never the constraint's native ID: that is an internal identifier (a
+            # PostgreSQL OID, or a MongoDB collection UUID) and meant nothing to a reader.
+            names = constraint.field_names or [
+                by_ordinal.get(ordinal, f"column {ordinal}")
+                for ordinal in constraint.field_ordinals
+            ]
+            return ", ".join(names)
+
         index_list = "".join(
             f"<li><span class='badge'>{_e(constraint.kind)}</span> "
-            f"<code>{_e(constraint.native_id)}</code> "
-            f"({_e(', '.join(constraint.field_names) or ', '.join(map(str, constraint.field_ordinals)))})"  # noqa: E501
-            "</li>"
+            f"<code>{_e(covered(constraint))}</code></li>"
             for constraint in indexes
         )
         related = edges_by_object.get(item.id, [])

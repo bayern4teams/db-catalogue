@@ -603,8 +603,13 @@ def _average_width(uncompressed: Any, rows: int | None) -> int | None:
     a width of zero is a measurement and "no rows to measure" is not. ClickHouse keeps no
     per-column null or distinct statistics by default, so this is the only field-level number
     available without reading data.
+
+    Zero bytes over a nonzero row count is also nothing. ClickHouse reports 0 per column for a
+    table stored in Compact parts, which keep every column in one file; observed on 25.8.33.6 on
+    2026-09-30 with a 1,000-row table whose only part was Compact. Rows cannot occupy no bytes,
+    so a zero here means "not tracked", and publishing it would be a false measurement.
     """
-    if uncompressed is None or not rows or rows <= 0:
+    if uncompressed is None or not rows or rows <= 0 or int(uncompressed) <= 0:
         return None
     width = int(uncompressed) // rows
     return width if width >= 0 else None
@@ -983,6 +988,18 @@ def collect(config: SourceConfig, destination: Path) -> None:
         _collect(config, destination)
     except OperatorError:
         raise
+    except RuntimeError as error:
+        if str(error) != "BUDGET_EXHAUSTED":
+            raise
+        # Still fails closed with no bundle, as before; only the report changes, from a
+        # traceback to the limits an operator can raise.
+        raise OperatorError(
+            f"{config.kind} source {config.source_id!r}: the scan reached a configured limit "
+            f"before finishing (max_queries={config.max_queries}, "
+            f"max_objects={config.max_objects}, max_fields={config.max_fields}); no bundle was "
+            "written. Raise the limit this source needs: MongoDB charges one query per "
+            "database, one per collection and one more per sampled collection"
+        ) from error
     except Exception as error:
         converted = _certificate_failure(error, config)
         if converted is not None:

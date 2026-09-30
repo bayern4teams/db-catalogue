@@ -31,8 +31,12 @@ scanned.
 ### T1 — A collector holds more privilege than it needs, or overloads a source
 
 A read-only identity per source, separable metadata and profiling grants, per-source query
-budgets, statement timeouts and bounded samples. Budget exhaustion is a diagnostic and a
-`partial` bundle, never a silent truncation.
+budgets, statement timeouts and bounded samples. Reaching `max_queries`, `max_objects` or
+`max_fields` aborts the scan with no bundle and an operator message naming the limits, never a
+silent truncation. (Corrected 2026-09-30: this line used to say exhaustion produced a diagnostic
+and a `partial` bundle, which the code has never done. The one exception is the optional
+MongoDB document count: it is skipped when no budget remains, and a count that fails becomes a
+`STATS_UNAVAILABLE` diagnostic.)
 
 *Tests:* `test_mongo_count_respects_budget_and_reports_driver_failure`,
 `test_mongo_sample_byte_budget_stops_without_publishing_values`,

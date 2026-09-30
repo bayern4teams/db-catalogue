@@ -633,6 +633,18 @@ def test_clickhouse_reports_no_width_for_an_empty_table():
     assert records["profiles.jsonl"] == []
 
 
+def test_clickhouse_reports_no_width_when_sizes_are_not_tracked():
+    """Found on a real 25.8 server: a table in a Compact part reports 0 bytes for every column
+    although it has rows. That is "not tracked", and the page showed it as a width of 0."""
+
+    class Compact(ChClient):
+        tables_row = (*ChClient.tables_row[:-1], 1000)
+        columns_rows = [("orders", "id", "UInt64", 1, 0)]
+
+    records = discover_clickhouse(Compact(), config("clickhouse"), Budget(50))
+    assert records["profiles.jsonl"] == []
+
+
 def test_clickhouse_divides_size_by_rows():
     class Sized(ChClient):
         tables_row = (*ChClient.tables_row[:-1], 10)

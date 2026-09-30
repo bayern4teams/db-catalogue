@@ -297,3 +297,35 @@ def test_with_a_ca_file_the_hint_says_to_check_it(ca_file):
 
 def test_any_other_failure_is_left_alone():
     assert _failure(ConnectionRefusedError("connection refused")) is None
+
+
+def test_a_reached_limit_is_reported_with_the_limits_to_raise(monkeypatch, tmp_path):
+    """Still no bundle, as before: only the report changes from a traceback to the fix."""
+
+    class Client:
+        def close(self) -> None:
+            pass
+
+    def exhausted(*_: object) -> dict:
+        raise RuntimeError("BUDGET_EXHAUSTED")
+
+    dbapi = types.ModuleType("pg8000.dbapi")
+    dbapi.connect = lambda **_: Client()  # type: ignore[attr-defined]
+    pg8000 = types.ModuleType("pg8000")
+    pg8000.dbapi = dbapi  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "pg8000", pg8000)
+    monkeypatch.setitem(sys.modules, "pg8000.dbapi", dbapi)
+    monkeypatch.setattr(runtime, "discover_postgresql", exhausted)
+    monkeypatch.setenv("SIGNING_KEY", SIGNING_KEY)
+    with pytest.raises(OperatorError, match="max_queries=50"):
+        _collect(monkeypatch, tmp_path, "postgresql", PG_LOOPBACK, tls=False)
+    assert not (tmp_path / "bundle").exists()
+
+
+def test_other_runtime_errors_are_not_disguised(monkeypatch, tmp_path, calls):
+    def broken(*_: object, **__: object) -> None:
+        raise RuntimeError("a genuine bug")
+
+    sys.modules["pg8000.dbapi"].connect = broken  # type: ignore[attr-defined]
+    with pytest.raises(RuntimeError, match="a genuine bug"):
+        _collect(monkeypatch, tmp_path, "postgresql", PG_LOOPBACK, tls=False)

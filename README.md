@@ -54,6 +54,13 @@ Create a planner graph with `dbig-planner build --snapshot <snapshot-dir> --obse
 
 The selected LLM stack is vLLM for private GPU serving, LangGraph for the builder's fixed review workflow, and self-hosted Langfuse for metadata-only visibility. The requester also calls the private vLLM endpoint for grounded catalogue questions. The planner is deterministic and makes no LLM call. Top-level LangChain and LangGraph Swarm remain deferred. The exact GPU, model revision, service versions and telemetry infrastructure must be validated before deployment.
 
+## Run it against your databases
+
+[docs/LOCAL_RUN.md](docs/LOCAL_RUN.md) takes you from a fresh clone to a readable HTML catalogue
+of your PostgreSQL, ClickHouse and MongoDB databases: read-only accounts, TLS with a company CA,
+the three commands, how to read the page, and optional review by your own vLLM. Example
+configurations are in [examples/local](examples/local).
+
 ## Developer setup
 
 1. Install Python 3.12+, Git, [Graphify](https://github.com/Graphify-Labs/graphify), [Graft](https://github.com/trailhq/Graft), and [Codebase Memory MCP](https://github.com/DeusData/codebase-memory-mcp) at the **exact pinned versions**: Graphify 0.9.65, Graft 0.18.0, Codebase Memory MCP 0.11.0. These are declared once in `pyproject.toml` under `[tool.dbig.graph-tools]`; `scripts/graph_sync.py` refuses to index with any other version and names the install command to run, and `python scripts/ci_check.py` refuses a workflow that installs a different one. Install with `python -m pip install graphifyy==0.9.65 codebase-memory-mcp==0.11.0` and `npm install --global @nanonets/graft@0.18.0` (the `graphify` command ships in the `graphifyy` distribution).

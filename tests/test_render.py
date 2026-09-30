@@ -146,7 +146,7 @@ def test_the_page_carries_every_part_of_the_catalogue(built, config, tmp_path):
     for expected in (
         "public.customers", "public.orders", "customer_id", "email",
         "~12,000</b> rows", "pg_class.reltuples",   # object size and where it came from
-        "PK", "customers_pkey",                       # declared keys, from the bundle
+        "PK", "<span class='badge'>primary</span> <code>id</code>",  # keys, by column name
         "3.1%", "11,800", "98.0%", ">24<",            # column statistics, from the bundle
         "analyzed 2026-08-30 12:00Z",                 # how fresh those statistics are
         "IDENTITY_UNAVAILABLE",                       # what could not be catalogued
@@ -177,7 +177,7 @@ def test_a_partial_snapshot_says_so_prominently(tmp_path, config):
 def test_without_bundles_the_page_says_what_is_missing(built, config, tmp_path):
     page = _render(built, config, tmp_path / "c.html", bundles=[])
     assert "No bundle was supplied for <code>shop</code>" in page
-    assert "customers_pkey" not in page
+    assert "<span class='badge'>primary</span>" not in page
     assert "public.customers" in page, "the snapshot's own content is still rendered"
 
 
@@ -208,6 +208,12 @@ def test_the_page_loads_nothing_from_anywhere(built, config, tmp_path):
     page = _render(built, config, tmp_path / "c.html")
     assert "http://" not in page and "https://" not in page
     assert " src=" not in page and "<link" not in page
+
+
+def test_keys_are_shown_by_column_not_by_internal_identifier(built, config, tmp_path):
+    """Found on a real run: the page listed a PostgreSQL OID and a MongoDB UUID in bytes form."""
+    page = _render(built, config, tmp_path / "c.html")
+    assert "customers_pkey" not in page
 
 
 def test_value_tokens_never_reach_the_page(built, config, tmp_path):
