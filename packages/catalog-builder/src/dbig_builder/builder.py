@@ -110,6 +110,7 @@ def _composite_candidates(
     objects: dict[str, Object],
     by_object_name: dict[str, dict[str, Field]],
     declared_pairs: set[tuple[str, str]],
+    field_profiles: dict[str, list[Profile]],
     evidence: dict[str, Evidence],
     edges: dict[str, Edge],
 ) -> None:
@@ -129,8 +130,12 @@ def _composite_candidates(
     per-field tokens cannot provide it: knowing each column's values overlap separately says
     nothing about whether the *combinations* do. Claiming containment from per-field tokens here
     would be the kind of invented measurement the rest of this design refuses.
+
+    Identifiers include which key matched, so a parent with two composite keys that one child
+    matches both of yields two candidates rather than one silently overwriting the other.
     """
     for parent_object_id, members in composite_keys:
+        key_ref = ":".join(member.id for member in members)
         parent_object = objects.get(parent_object_id)
         if parent_object is None:
             continue
@@ -151,8 +156,13 @@ def _composite_candidates(
                 component = member.name.casefold()
                 prefixed = folded.get(f"{singular}_{component}")
                 match = prefixed or folded.get(component)
-                if match is None or _type_family(match.data_type) != _type_family(
-                    member.data_type
+                # One child field cannot stand for two components, and a field with no values
+                # cannot reference anything, the same rule the single-field path applies.
+                if (
+                    match is None
+                    or match in matched
+                    or _type_family(match.data_type) != _type_family(member.data_type)
+                    or _measure(field_profiles.get(match.id), "null_fraction") == 1.0
                 ):
                     pairs = []
                     break
@@ -167,7 +177,7 @@ def _composite_candidates(
                 anchor,
                 "composite_name_match",
                 members[0].id,
-                f"composite:{parent_object_id}",
+                f"composite:{key_ref}",
                 {
                     "component_count": len(members),
                     "components_named_for_parent": named_for_parent,
@@ -178,13 +188,13 @@ def _composite_candidates(
                 members[0],
                 "catalog_key",
                 anchor.id,
-                f"composite-unique:{child_object_id}",
+                f"composite-unique:{child_object_id}:{key_ref}",
                 {"component_count": len(members)},
             )
             for item in (components, key):
                 evidence[item.id] = item
             edge_id = stable_id(
-                anchor.source_id, "edge", f"composite:{child_object_id}:{parent_object_id}"
+                anchor.source_id, "edge", f"composite:{child_object_id}:{key_ref}"
             )
             edges[edge_id] = Edge.model_validate(
                 {
@@ -513,7 +523,7 @@ def assemble(
                 }
             )
     _composite_candidates(
-        composite_keys, objects, by_object_name, declared_pairs, evidence, edges
+        composite_keys, objects, by_object_name, declared_pairs, field_profiles, evidence, edges
     )
     review_status = "REVIEW_DISABLED"
     if config.review is not None:
