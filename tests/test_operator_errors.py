@@ -50,10 +50,17 @@ def _chained(outer: BaseException, inner: BaseException) -> BaseException:
         return error
 
 
-def _pg_error(code: str) -> BaseException:
-    from pg8000.exceptions import DatabaseError
+def _driver(module: str, name: str) -> type[BaseException]:
+    """A driver's own exception type. The drivers are optional extras of the collector, absent
+    from the application-quality job, so those cases skip there and run in source-integration,
+    which installs every extra."""
+    return getattr(pytest.importorskip(module), name)
 
-    return DatabaseError({"S": "FATAL", "C": code, "M": f"user {SECRET} said no"})
+
+def _pg_error(code: str) -> BaseException:
+    return _driver("pg8000.exceptions", "DatabaseError")(
+        {"S": "FATAL", "C": code, "M": f"user {SECRET} said no"}
+    )
 
 
 @pytest.mark.parametrize(
@@ -65,7 +72,7 @@ def _pg_error(code: str) -> BaseException:
         (
             "postgresql",
             lambda: _chained(
-                __import__("pg8000.exceptions").exceptions.InterfaceError(
+                _driver("pg8000.exceptions", "InterfaceError")(
                     f"Can't create a connection to host {SECRET}"
                 ),
                 ConnectionRefusedError(111, "Connection refused"),
@@ -79,9 +86,7 @@ def _pg_error(code: str) -> BaseException:
         ),
         (
             "clickhouse",
-            lambda: __import__(
-                "clickhouse_connect.driver.exceptions"
-            ).driver.exceptions.DatabaseError(
+            lambda: _driver("clickhouse_connect.driver.exceptions", "DatabaseError")(
                 f"Received ClickHouse exception, code: 516, server response: {SECRET}"
             ),
             "the server refused the login",
@@ -89,23 +94,23 @@ def _pg_error(code: str) -> BaseException:
         (
             "clickhouse",
             lambda: _chained(
-                __import__(
-                    "clickhouse_connect.driver.exceptions"
-                ).driver.exceptions.OperationalError(f"Error HTTPSConnectionPool({SECRET})"),
+                _driver("clickhouse_connect.driver.exceptions", "OperationalError")(
+                    f"Error HTTPSConnectionPool({SECRET})"
+                ),
                 TimeoutError("timed out"),
             ),
             "the server did not answer in time",
         ),
         (
             "mongodb",
-            lambda: __import__("pymongo.errors").errors.OperationFailure(
+            lambda: _driver("pymongo.errors", "OperationFailure")(
                 f"Authentication failed for {SECRET}", 18
             ),
             "the server refused the login",
         ),
         (
             "mongodb",
-            lambda: __import__("pymongo.errors").errors.ServerSelectionTimeoutError(
+            lambda: _driver("pymongo.errors", "ServerSelectionTimeoutError")(
                 f"{SECRET}:27017: [Errno 111] Connection refused"
             ),
             "no server answered in time",
@@ -125,7 +130,7 @@ def test_driver_failures_become_one_line_without_driver_text(kind, error, expect
     "error",
     [
         lambda: _pg_error("42501"),  # permission denied: not a login problem
-        lambda: __import__("pymongo.errors").errors.OperationFailure("not authorized", 13),
+        lambda: _driver("pymongo.errors", "OperationFailure")("not authorized", 13),
         lambda: ValueError("a genuine bug"),
     ],
 )
