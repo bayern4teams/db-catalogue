@@ -22,18 +22,26 @@ dbig-requester ask      a question in plain language, answered by your own vLLM
 
 ## What has been verified, and what has not
 
-Verified, against real servers in CI and in the development workspace, at PostgreSQL 16.15,
-ClickHouse 25.8.33.6 and MongoDB 7.0.41:
+Verified against real servers, in CI on every run and in the development workspace, at two
+sets of versions: PostgreSQL 16.15, ClickHouse 25.8.33.6 and MongoDB 7.0.41, and the latest
+releases as of 2026-10-04, PostgreSQL 18.6, ClickHouse 26.9.10.4 and MongoDB 9.0.2:
 
 - `collect` over verified TLS on all three engines, with the CA supplied through `tls_ca_file`
   alone, and refusal of a certificate from an untrusted CA on all three;
-- the read-only accounts in step 2, including that they cannot write;
-- collect → assemble → render with all three engines in one catalogue.
+- the read-only accounts in step 2: on the latest versions each collected exactly what an
+  administrator collects, and each write was refused (MongoDB checked with access control on);
+- collect → assemble → render with all three engines in one catalogue, including quoted and
+  mixed-case names, composite keys, partitions, views and nested MongoDB documents;
+- search, join paths, and plans executed on the servers and compared with the true result,
+  across databases as well;
+- scan requests through both routes in step 10;
+- the one-line messages in the troubleshooting table for a refused login, an unreachable server
+  and a misspelt namespace.
 
-Not verified: other database versions (they will probably work; nothing has checked them), your
-network, your certificates, and the model review against a real vLLM. The review's request
-format is checked against vLLM's own source, but whether a given model follows the schema is
-only known once you run it.
+Not verified: versions between and outside those two sets (they will probably work), your
+network, your certificates, your data's shapes, and anything involving a real model: the review
+and `ask` against your vLLM. The review's request format is checked against vLLM's own source,
+but whether a given model follows the schema is only known once you run it.
 
 ## 1. Install
 
