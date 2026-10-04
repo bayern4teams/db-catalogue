@@ -7,6 +7,7 @@ import tomllib
 from pathlib import Path
 from typing import Literal
 
+from dbig_contracts.errors import OperatorError, load_toml_section, validate_configuration
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
@@ -79,10 +80,7 @@ class SourceConfig(BaseModel):
 
 
 def load_config(path: Path) -> SourceConfig:
-    raw = tomllib.loads(path.read_text(encoding="utf-8"))
-    if set(raw) != {"source"}:
-        raise ValueError("configuration must contain only [source]")
-    source = raw["source"]
+    source = load_toml_section(path, "source")
     string_fields = {
         "source_id",
         "kind",
@@ -95,5 +93,12 @@ def load_config(path: Path) -> SourceConfig:
     for key in SourceConfig.model_fields:
         env = os.getenv("DBIG_" + key.upper())
         if env is not None:
-            source[key] = env if key in string_fields else tomllib.loads("value = " + env)["value"]
-    return SourceConfig.model_validate(source)
+            try:
+                source[key] = (
+                    env if key in string_fields else tomllib.loads("value = " + env)["value"]
+                )
+            except tomllib.TOMLDecodeError as error:
+                raise OperatorError(
+                    f"environment override DBIG_{key.upper()} is not a valid value: {error}"
+                ) from error
+    return validate_configuration(path, SourceConfig, source)

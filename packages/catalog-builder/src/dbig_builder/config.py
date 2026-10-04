@@ -1,8 +1,8 @@
 """Assembler policy and key references."""
 
-import tomllib
 from pathlib import Path
 
+from dbig_contracts.errors import load_toml_section, validate_configuration
 from dbig_contracts.security import private_base_url, secret_from_env
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -54,7 +54,4 @@ class BuilderConfig(BaseModel):
 
 
 def load_config(path: Path) -> BuilderConfig:
-    data = tomllib.loads(path.read_text(encoding="utf-8"))
-    if set(data) != {"builder"}:
-        raise ValueError("configuration must contain only [builder]")
-    return BuilderConfig.model_validate(data["builder"])
+    return validate_configuration(path, BuilderConfig, load_toml_section(path, "builder"))

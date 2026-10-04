@@ -7,6 +7,7 @@ import hmac
 import ipaddress
 import json
 import re
+import socket
 import ssl
 from collections import defaultdict
 from decimal import Decimal
@@ -495,6 +496,21 @@ def discover_postgresql(
                         }
                     )
                 )
+        listed = {schema for _, schema, *_ in rows}
+        empty = [item for item in config.namespaces if item not in listed]
+        if empty:
+            # Only when a schema listed nothing: an empty schema is legitimate, a missing
+            # one is a typo. pg_namespace lists every schema whatever the account's privileges.
+            budget.charge()
+            cursor.execute(
+                "SELECT nspname FROM pg_catalog.pg_namespace "  # noqa: S608
+                f"WHERE nspname IN ({','.join(['%s'] * len(empty))})",
+                tuple(empty),
+            )
+            existing = {row[0] for row in cursor.fetchall()}
+            _refuse_missing_namespaces(
+                config, [item for item in empty if item not in existing], "schema"
+            )
         connection.rollback()
     finally:
         cursor.close()
@@ -506,6 +522,7 @@ def discover_clickhouse(
 ) -> dict[str, list[Record]]:
     common = _common(config)
     tables: dict[str, list[Record]] = defaultdict(list)
+    listed: set[str] = set()
     for database in config.namespaces:
         budget.charge()
         rows = client.query(
@@ -518,6 +535,8 @@ def discover_clickhouse(
         ).result_set
         if len(rows) > config.max_objects:
             raise BudgetExhausted
+        if rows:
+            listed.add(database)
         identities: dict[str, str] = {}
         row_counts: dict[str, int] = {}
         for (
@@ -632,6 +651,23 @@ def discover_clickhouse(
                         **common,
                     )
                 )
+    empty = [item for item in config.namespaces if item not in listed]
+    if empty:
+        # Only when a database listed no tables, so a normal scan pays nothing for this.
+        # system.databases shows only databases this account may see, so "missing" here also
+        # covers a database the account has no grant on.
+        budget.charge()
+        existing = {
+            row[0]
+            for row in client.query(
+                "SELECT name FROM system.databases WHERE has({names:Array(String)}, name)",
+                parameters={"names": empty},
+                settings={"max_execution_time": config.read_timeout_seconds},
+            ).result_set
+        }
+        _refuse_missing_namespaces(
+            config, [item for item in empty if item not in existing], "database"
+        )
     return tables
 
 
@@ -745,9 +781,11 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
     total = 0
     sampled_rows_total = 0
     sampled_bytes_total = 0
+    listed: dict[str, int] = defaultdict(int)
     for database in config.namespaces:
         budget.charge()
         for info in client[database].list_collections():
+            listed[database] += 1
             total += 1
             if total > config.max_objects:
                 raise BudgetExhausted
@@ -967,6 +1005,11 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
                 else:
                     item.attributes["row_count_estimate"] = int(estimate)
                     item.attributes["row_count_method"] = "estimated_document_count"
+    # MongoDB has no empty database: one with no collections does not exist, so a namespace that
+    # listed nothing is a typo or a database this account cannot read. No extra query needed.
+    _refuse_missing_namespaces(
+        config, [item for item in config.namespaces if not listed[item]], "database"
+    )
     return tables
 
 
@@ -1049,6 +1092,87 @@ def _refuse_mongo_tls_overrides(uri: str, config: SourceConfig) -> None:
             )
 
 
+# PostgreSQL SQLSTATE codes a login can fail with: invalid_password, and
+# invalid_authorization_specification (unknown role, or no pg_hba.conf entry allows it).
+POSTGRES_LOGIN_CODES = frozenset({"28P01", "28000"})
+# ClickHouse AUTHENTICATION_FAILED, as ClickHouse Connect reports it in the message text.
+CLICKHOUSE_LOGIN_FAILED = re.compile(r"\bcode: 516\b", re.IGNORECASE)
+# MongoDB AuthenticationFailed.
+MONGODB_LOGIN_FAILED = 18
+
+
+def _connection_failure(error: BaseException, config: SourceConfig) -> OperatorError | None:
+    """Recognise a refused login, a missing database or an unreachable server.
+
+    Each driver reports these differently (observed on PostgreSQL 16, ClickHouse 25.8 and
+    MongoDB 7): pg8000 carries the SQLSTATE in a dict or wraps the socket error, ClickHouse
+    Connect wraps urllib3 and only carries the server code in its text, and PyMongo raises its
+    own types with no socket error in the chain. Like the certificate message, these never
+    repeat driver or server text, which can include host names and user names.
+    """
+    where = f"{config.kind} source {config.source_id!r}"
+    current: BaseException | None = error
+    seen: set[int] = set()
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        code = (
+            current.args[0].get("C")
+            if current.args and isinstance(current.args[0], dict)
+            else None
+        )
+        name = type(current).__name__
+        if (
+            code in POSTGRES_LOGIN_CODES
+            or (name == "DatabaseError" and CLICKHOUSE_LOGIN_FAILED.search(str(current)))
+            or (
+                name == "OperationFailure"
+                and getattr(current, "code", None) == MONGODB_LOGIN_FAILED
+            )
+        ):
+            return OperatorError(
+                f"{where}: the server refused the login; check the user and password in "
+                f"{config.connection_env} and that the account exists on that server"
+            )
+        if code == "3D000":
+            return OperatorError(
+                f"{where}: the database named in {config.connection_env} does not exist on the "
+                "server"
+            )
+        reason = None
+        if isinstance(current, socket.gaierror):
+            reason = "the host name was not found"
+        elif isinstance(current, ConnectionRefusedError):
+            reason = "the connection was refused"
+        elif isinstance(current, TimeoutError):
+            reason = "the server did not answer in time"
+        elif name == "ServerSelectionTimeoutError":
+            reason = "no server answered in time"
+        if reason is not None:
+            return OperatorError(
+                f"{where}: could not reach the server ({reason}); check the host and port in "
+                f"{config.connection_env}, that this machine can reach them through any "
+                "firewall, and read_timeout_seconds for a slow network"
+            )
+        current = current.__cause__ or current.__context__
+    return None
+
+
+def _refuse_missing_namespaces(
+    config: SourceConfig, missing: list[str], what: str
+) -> None:
+    """Stop instead of publishing a complete-looking bundle for a namespace that is not there.
+
+    A misspelt namespace otherwise reads nothing, writes an empty bundle and marks it complete.
+    """
+    if missing:
+        raise OperatorError(
+            f"{config.kind} source {config.source_id!r}: {what} "
+            f"{', '.join(repr(item) for item in missing)} listed in namespaces does not exist or "
+            "is not visible to this account; check the spelling and the account's grants. No "
+            "bundle was written"
+        )
+
+
 def collect(config: SourceConfig, destination: Path) -> None:
     """Create a signed bundle; never accept connection values on the CLI."""
     try:
@@ -1071,7 +1195,7 @@ def collect(config: SourceConfig, destination: Path) -> None:
             f"written. Raise the limit this source needs{hint}"
         ) from error
     except Exception as error:
-        converted = _certificate_failure(error, config)
+        converted = _certificate_failure(error, config) or _connection_failure(error, config)
         if converted is not None:
             raise converted from error
         raise

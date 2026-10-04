@@ -159,7 +159,8 @@ jobs:
         run: |
           uv sync --locked --all-packages --all-extras --dev
           uv run --locked --all-packages --all-extras pytest -q -rs \
-            tests/test_live_collectors.py tests/test_live_pipeline.py tests/test_live_tls.py
+            tests/test_live_collectors.py tests/test_live_pipeline.py tests/test_live_tls.py \
+            tests/test_live_operator_errors.py
       - name: Container logs on failure
         if: failure()
         run: |

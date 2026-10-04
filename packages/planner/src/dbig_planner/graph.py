@@ -6,10 +6,13 @@ import hashlib
 import json
 import os
 import tempfile
+from collections.abc import Iterator
 from pathlib import Path
 
 from dbig_contracts.artifact import read_artifact
+from dbig_contracts.errors import OperatorError, describe_validation
 from dbig_contracts.models import Edge, Field, Object, Source
+from pydantic import ValidationError
 
 from .config import PlannerConfig
 from .observations import (
@@ -22,7 +25,7 @@ from .observations import (
     SQLObservation,
     SQLRelation,
     observation_digest,
-    read_lines,
+    read_located_lines,
     sql_relations,
 )
 
@@ -37,6 +40,34 @@ def build_graph(
     output: Path,
     config: PlannerConfig,
     mapping: DatasetMapping | None = None,
+) -> dict:
+    # An invalid observation is named by file and line, never by its content, which may be SQL
+    # text. A validation failure anywhere else (the snapshot's own records) keeps its traceback.
+    position = {"location": ""}
+    try:
+        return _build_graph(snapshot, observations, output, config, mapping, position)
+    except ValidationError as error:
+        if not position["location"]:
+            raise
+        raise OperatorError(
+            f"observation {position['location']} is invalid: {describe_validation(error)}"
+        ) from error
+
+
+def _located(records: list[tuple[str, dict]], position: dict[str, str]) -> Iterator[dict]:
+    for location, record in records:
+        position["location"] = location
+        yield record
+    position["location"] = ""
+
+
+def _build_graph(
+    snapshot: Path,
+    observations: Path,
+    output: Path,
+    config: PlannerConfig,
+    mapping: DatasetMapping | None,
+    position: dict[str, str],
 ) -> dict:
     manifest, tables = read_artifact(snapshot)
     if manifest.content_type != "catalog-snapshot":
@@ -144,7 +175,10 @@ def build_graph(
             }
         )
 
-    for record in read_lines(observations, config.max_observation_bytes, config.max_observations):
+    located = read_located_lines(
+        observations, config.max_observation_bytes, config.max_observations
+    )
+    for record in _located(located, position):
         kind = record.get("kind")
         if kind == "sql":
             observed = SQLObservation.model_validate(record)

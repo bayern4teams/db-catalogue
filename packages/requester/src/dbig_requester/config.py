@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import tomllib
 from pathlib import Path
 from typing import Literal
 
+from dbig_contracts.errors import load_toml_section, validate_configuration
 from dbig_contracts.security import private_base_url
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -69,7 +69,4 @@ class RequesterConfig(BaseModel):
 
 
 def load_config(path: Path) -> RequesterConfig:
-    data = tomllib.loads(path.read_text(encoding="utf-8"))
-    if set(data) != {"requester"}:
-        raise ValueError("configuration must contain only [requester]")
-    return RequesterConfig.model_validate(data["requester"])
+    return validate_configuration(path, RequesterConfig, load_toml_section(path, "requester"))

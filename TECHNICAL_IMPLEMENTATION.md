@@ -398,6 +398,30 @@ The HTTP surface follows the private-network decision: the collector, planner an
 than resolving it, since a name could resolve off-host. That behaviour already existed and had
 no test; it now has coverage for each command across several non-loopback addresses.
 
+Extended on 2026-10-04, after an independent run of the runbook still ended in tracebacks:
+
+- **Configuration files** are written by the operator, so a TOML syntax error, a wrong table or a
+  setting that fails validation is an `OperatorError` for all four commands
+  (`dbig_contracts.errors.load_toml_section` and `validate_configuration`). The message names the
+  setting and the rule, never the value, since a value can be a host or a path. A malformed
+  `DBIG_<SETTING>` override is reported the same way. Records inside artifacts are unchanged:
+  their validation failures keep the traceback, as above.
+- **Observation files and the dataset mapping** given to `dbig-planner build` are also operator
+  input. A record that is not JSON or fails validation is reported as `file:line`, never with its
+  content, which may be SQL text.
+- **Collector connections**: a refused login, an unknown PostgreSQL database and an unreachable
+  server become one line naming the `connection_env` variable to check. Recognised from each
+  driver's own types and codes as observed on the pinned servers (pg8000 SQLSTATE `28P01`, `28000`,
+  `3D000` and wrapped socket errors; ClickHouse code 516 in ClickHouse Connect's text; PyMongo
+  `OperationFailure` code 18 and `ServerSelectionTimeoutError`). Driver text is never repeated,
+  because it can carry host and user names. Anything else keeps its traceback.
+- **A namespace that is not there stops the run with no bundle.** Before, a misspelt namespace
+  produced an empty bundle marked `complete`. A namespace that listed nothing is checked against
+  `pg_namespace` or `system.databases` (one extra query, only in that case), so an existing but
+  empty schema or database still collects. MongoDB has no empty database, so a database with no
+  collections is reported without a further query. The message says "does not exist or is not
+  visible to this account", because the catalogs cannot tell those apart for every engine.
+
 ## 13. Security and operations
 
 Secret references resolve through one function, `dbig_contracts.security.secret_from_env`. Components never read a credential directly: validated configuration holds the *name* of an environment variable, and this resolver refuses a missing or blank reference, an unset variable, and a variable set to whitespace, so a wrong reference can never degrade into an unsigned bundle, an unverified scan request, or an unauthenticated API. The raised `ValueError` names the variable and the purpose so an operator can fix it, and never contains the secret's value; the resolved value is returned byte-for-byte because signing keys are byte-sensitive. Every secret call site uses it: builder config and reviewer, collector runtime, scan intake and `validate-bundle`, requester answer, scan dispatch and API, and planner API. The resolver raises `SecretReferenceError`, which subclasses `ValueError` so existing callers keep working. Each package's Click group is a `SecretAwareGroup` that converts only that type into a command error, so any command in any of the four CLIs reports a named message rather than a traceback when a secret reference is missing, blank, unset or empty. Only that type is converted: an ordinary `ValueError`, such as `validate-graph`'s `signature key unavailable`, keeps its full traceback, so validation and programming errors are not hidden behind a tidy message. The converter is duplicated once per package rather than shared, because §17 forbids the packages importing each other and `dbig_contracts` must not depend on Click.

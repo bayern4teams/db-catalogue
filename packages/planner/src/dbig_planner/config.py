@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import tomllib
 from pathlib import Path
 
+from dbig_contracts.errors import load_toml_section, validate_configuration
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -23,7 +23,4 @@ class PlannerConfig(BaseModel):
 
 
 def load_config(path: Path) -> PlannerConfig:
-    data = tomllib.loads(path.read_text(encoding="utf-8"))
-    if set(data) != {"planner"}:
-        raise ValueError("configuration must contain only [planner]")
-    return PlannerConfig.model_validate(data["planner"])
+    return validate_configuration(path, PlannerConfig, load_toml_section(path, "planner"))

@@ -5,7 +5,8 @@ from ipaddress import ip_address
 from pathlib import Path
 
 import click
-from dbig_contracts.errors import OperatorError
+from dbig_contracts.errors import OperatorError, describe_validation
+from pydantic import ValidationError
 
 from .config import PlannerConfig, load_config
 from .graph import build_graph
@@ -41,7 +42,12 @@ def main() -> None:
 @click.option("--out", type=click.Path(path_type=Path), required=True)
 @click.option("--mapping", type=click.Path(path_type=Path, exists=True))
 def build(snapshot: Path, observations: Path, out: Path, mapping: Path | None) -> None:
-    mapped = DatasetMapping.model_validate_json(mapping.read_bytes()) if mapping else None
+    try:
+        mapped = DatasetMapping.model_validate_json(mapping.read_bytes()) if mapping else None
+    except ValidationError as error:
+        raise OperatorError(
+            f"dataset mapping {mapping} is invalid: {describe_validation(error)}"
+        ) from error
     graph = build_graph(snapshot, observations, out, PlannerConfig(graph_dir=out), mapped)
     click.echo(
         json.dumps(

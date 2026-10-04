@@ -290,6 +290,12 @@ choice; the model is told to treat them as data, not instructions.
 | Message | Meaning and fix |
 |---|---|
 | `the server's TLS certificate did not verify` | Set `tls_ca_file` to your company CA, or check it is the right CA; connect with the host name the certificate names. |
+| `the server refused the login` | Wrong user or password in the connection variable it names, or the account does not exist on that server. |
+| `the database named in ... does not exist` | The PostgreSQL `database` in the connection variable is misspelt. |
+| `could not reach the server` | Wrong host or port, a firewall in between, or a slow network: raise `read_timeout_seconds`. |
+| `... listed in namespaces does not exist or is not visible to this account` | A misspelt schema or database in `namespaces`, or the account has no grant on it. No bundle was written. |
+| `configuration ... is invalid` / `is not valid TOML` | The message names the setting and line; fix the file. |
+| `observation <file>:<line> is invalid` | That line of an observation file does not match the format in `TECHNICAL_IMPLEMENTATION.md`. |
 | `the scan reached a configured limit` | Raise `max_queries` (MongoDB needs about 3 × collections + databases), `max_objects` or `max_fields`. No bundle was written. |
 | `tls = false is allowed only for loopback IP literals` | Plaintext is refused off this machine; enable TLS on the server. |
 | `Setting max_execution_time is unknown or readonly` | The ClickHouse account has `readonly = 1`; use `readonly = 2`. |
@@ -299,5 +305,4 @@ choice; the model is told to treat them as data, not instructions.
 | `STALE_INDEX` | The snapshot changed after indexing; run `dbig-requester index` again. |
 | `STALE_PATH` | The path came from another graph; run `join-paths` again against this one. |
 
-Other connection failures (wrong password, unreachable host) currently appear as the driver's
-own error message with a traceback.
+A traceback means something not listed here; please report it with the command you ran.

@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Literal, NamedTuple
 
 import sqlglot
+from dbig_contracts.errors import OperatorError
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from sqlglot import exp
 
@@ -141,7 +142,14 @@ def _unique_pairs(pairs: list[tuple[str, object]]) -> dict:
 
 
 def read_lines(directory: Path, max_bytes: int, max_records: int) -> list[dict]:
-    records: list[dict] = []
+    return [record for _, record in read_located_lines(directory, max_bytes, max_records)]
+
+
+def read_located_lines(
+    directory: Path, max_bytes: int, max_records: int
+) -> list[tuple[str, dict]]:
+    """Each record with `file:line`, so a bad record can be named without repeating it."""
+    records: list[tuple[str, dict]] = []
     if directory.is_symlink():
         raise ValueError("UNSAFE_OBSERVATION_DIRECTORY")
     if not directory.exists():
@@ -162,17 +170,28 @@ def read_lines(directory: Path, max_bytes: int, max_records: int) -> list[dict]:
         if len(raw) > remaining:
             raise ValueError("UNSAFE_OR_OVERSIZED_OBSERVATIONS")
         total_bytes += len(raw)
-        for line in raw.splitlines():
+        for number, line in enumerate(raw.splitlines(), start=1):
             if len(line) > max_bytes or len(records) >= max_records:
                 raise ValueError("OBSERVATION_LIMIT")
-            record = json.loads(
-                line,
-                object_pairs_hook=_unique_pairs,
-                parse_constant=lambda value: (_ for _ in ()).throw(ValueError("INVALID_NUMBER")),
-            )
+            location = f"{path.name}:{number}"
+            try:
+                record = json.loads(
+                    line,
+                    object_pairs_hook=_unique_pairs,
+                    parse_constant=lambda value: (_ for _ in ()).throw(
+                        ValueError("INVALID_NUMBER")
+                    ),
+                )
+            except ValueError as error:
+                # JSONDecodeError's text quotes only a position; the other two are our codes.
+                raise OperatorError(
+                    f"observation {location} is not a valid JSON record: {error}"
+                ) from error
             if not isinstance(record, dict):
-                raise ValueError("INVALID_OBSERVATION")
-            records.append(record)
+                raise OperatorError(
+                    f"INVALID_OBSERVATION: observation {location} is not a JSON object"
+                )
+            records.append((location, record))
     return records
 
 
