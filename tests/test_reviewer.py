@@ -147,3 +147,38 @@ def test_langfuse_span_is_metadata_only(monkeypatch):
     )
     assert "input" not in calls[1] and "output" not in calls[1]
     assert "canary-secret" not in json.dumps(calls[1])
+
+
+def test_the_prompt_names_each_linked_column_pair_on_its_own_side():
+    """The model saw only two table names before, so it could not tell which columns a
+    candidate links. Pairs are given left (referencing) then right, even when stored reversed,
+    with names and types only."""
+    from dbig_contracts.models import Field
+
+    edge, nodes, proof = context()
+    common = {
+        "source_id": "site-a",
+        "observed_at": datetime.now(UTC),
+        "collector_version": "synthetic",
+        "provenance": "synthetic",
+    }
+    nodes["orders-customer"] = Field(
+        id="orders-customer", object_id="left", native_id="1:2", name="customer_id",
+        data_type="integer", **common,
+    )
+    nodes["customers-id"] = Field(
+        id="customers-id", object_id="right", native_id="2:1", name="id",
+        data_type="integer", **common,
+    )
+    edge = Edge.model_validate(
+        {**edge.model_dump(), "field_pairs": [["customers-id", "orders-customer"]]}
+    )
+    client = FakeClient(json.dumps({"decisions": []}))
+    assert review_candidates([edge], nodes, proof, config(), client=client)[1] == "OK"
+    (candidate,) = json.loads(client.request["messages"][1]["content"])
+    assert candidate["field_pairs"] == [
+        {
+            "left": {"name": "customer_id", "type": "integer"},
+            "right": {"name": "id", "type": "integer"},
+        }
+    ]

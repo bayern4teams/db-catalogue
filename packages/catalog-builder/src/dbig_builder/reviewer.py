@@ -9,6 +9,7 @@ from typing import Any, Literal, TypedDict
 
 from dbig_contracts.ids import stable_id
 from dbig_contracts.models import Edge, Evidence, Object, Record
+from dbig_contracts.models import Field as CatalogField
 from dbig_contracts.security import secret_from_env
 from langgraph.graph import END, START, StateGraph
 from openai import OpenAI
@@ -41,6 +42,31 @@ class ReviewState(TypedDict, total=False):
 
 def _safe_label(value: str) -> str:
     return "".join(character for character in value[:128] if character.isprintable())
+
+
+def _field_pairs(edge: Edge, nodes: dict[str, Record]) -> list[dict[str, dict[str, str]]]:
+    """Each joined column pair as left and right names and types, whatever order it is stored in.
+
+    Names and types are catalog metadata, the same class of data as the object names already
+    given; no value, statistic or comment is added. Without them the model saw only two table
+    names and could not tell which columns the candidate links.
+    """
+    pairs = []
+    for pair in (edge.model_extra or {}).get("field_pairs", []):
+        if len(pair) != 2 or any(field_id not in nodes for field_id in pair):
+            continue
+        first, second = (
+            CatalogField.model_validate(nodes[field_id].model_dump(mode="json"))
+            for field_id in pair
+        )
+        left, right = (first, second) if first.object_id == edge.from_id else (second, first)
+        pairs.append(
+            {
+                side: {"name": _safe_label(item.name), "type": _safe_label(item.data_type)}
+                for side, item in (("left", left), ("right", right))
+            }
+        )
+    return pairs
 
 
 def _trace(config: ReviewConfig, candidate_count: int) -> Any:
@@ -108,6 +134,7 @@ def review_candidates(
                     "candidate_id": edge.id,
                     "left": _safe_label(left.name),
                     "right": _safe_label(right.name),
+                    "field_pairs": _field_pairs(edge, nodes),
                     "evidence": [
                         {"id": key, "kind": evidence[key].kind, "metrics": evidence[key].metrics}
                         for key in edge.evidence_ids
