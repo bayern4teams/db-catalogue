@@ -13,7 +13,7 @@ from dbig_planner.config import PlannerConfig
 from dbig_planner.graph import build_graph
 from dbig_planner.observations import DatasetMapping, SQLRelation, read_lines, sql_relations
 from dbig_planner.paths import PathRequest, find_paths
-from dbig_planner.plans import PlanRequest, _mongo_name, _sql_read, render_plan
+from dbig_planner.plans import PlanRequest, _mongo_name, _sql_join, render_plan
 from fastapi.testclient import TestClient
 from sqlglot import exp, parse_one
 from test_builder import source_bundle
@@ -326,7 +326,22 @@ def test_mongo_and_cross_source_plans(tmp_path):
         "source_read", "source_read", "logical_join",
     ]
     assert merged["steps"][1]["object_ids"] == ["users", "details"]
-    assert merged["steps"][1]["pipeline"][0]["$lookup"]["from"] == "details"
+    # The MongoDB read is restricted to the users the PostgreSQL read referenced, bound through
+    # the aggregate command's `let`, and takes the key from the first read's named column.
+    assert merged["steps"][1]["pipeline"][0] == {
+        "$match": {"$expr": {"$in": ["$_id", "$$keys_1_1"]}}
+    }
+    assert merged["steps"][1]["parameters"] == [
+        {
+            "name": "keys_1_1",
+            "filters_field": "_id",
+            "values_from_step": 0,
+            "values_from_column": "orders__user_id",
+        }
+    ]
+    assert merged["steps"][1]["parameter_binding"] == "aggregate let"
+    assert merged["steps"][0]["parameters"] == []
+    assert merged["steps"][1]["pipeline"][1]["$lookup"]["from"] == "details"
     assert merged["steps"][2]["left_object_id"] == "orders"
     assert merged["steps"][2]["right_object_id"] == "users"
 
@@ -828,11 +843,22 @@ def test_openlineage_dataset_facet_takes_precedence_over_column_facet(tmp_path, 
 
 def test_catalog_identifiers_are_quoted_and_mongo_operators_refused():
     malicious = 'users"; DROP TABLE secret; --'
-    sql = _sql_read({"name": malicious, "namespace": "public"}, "postgres", 10)
+    column = 'id"; DELETE FROM secret; --'
+    sql, names = _sql_join(
+        ["o"],
+        [],
+        {"o": {"name": malicious, "namespace": "public"}},
+        {"f": {"object_id": "o", "name": column, "ordinal": 1}},
+        "postgres",
+        10,
+        [],
+    )
     assert '"users""; DROP TABLE secret; --"' in sql
+    assert '"id""; DELETE FROM secret; --"' in sql
     parsed = parse_one(sql, read="postgres")
     assert isinstance(parsed, exp.Select)
     assert [table.name for table in parsed.find_all(exp.Table)] == [malicious]
+    assert names == {(0, column): f"{malicious}__{column}"}
     with pytest.raises(ValueError, match="UNSAFE_MONGO_IDENTIFIER"):
         _mongo_name("$where")
 

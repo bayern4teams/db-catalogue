@@ -110,6 +110,8 @@ def seeded() -> None:
             validator={"$jsonSchema": {"properties": {"customer_id": {"bsonType": "int"}}}},
         )
         orders.create_index("customer_id")
+        # Orders for customers 1 and 2, so the planned PostgreSQL read has keys to filter by.
+        orders.insert_many([{"customer_id": 1}, {"customer_id": 2}])
     finally:
         mongo.close()
 
@@ -274,16 +276,35 @@ def test_one_catalogue_from_all_three_engines(tmp_path):
     ], "the three PostgreSQL tables must be one joined read"
     sql = plan["steps"][1]["sql"]
     assert sql.count(" JOIN ") == 2
+    # The PostgreSQL read is restricted to the customers the MongoDB read returned, as a bound
+    # parameter; `test_live_plans.py` executes every kind of step, this is the operator's path.
+    (parameter,) = plan["steps"][1]["parameters"]
+    assert parameter["values_from_step"] == 0
+    from pymongo import MongoClient
+
+    mongo = MongoClient("mongodb://127.0.0.1:27017", serverSelectionTimeoutMS=5000)
+    try:
+        orders = list(
+            mongo[NAMESPACE][plan["steps"][0]["collection"]].aggregate(
+                plan["steps"][0]["pipeline"]
+            )
+        )
+    finally:
+        mongo.close()
+    keys = sorted({row[parameter["values_from_column"]] for row in orders})
+    assert keys == [1, 2]
 
     from pg8000 import dbapi
 
     connection = dbapi.connect(host="127.0.0.1", port=5432, user="postgres", database="postgres")
+    style, dbapi.paramstyle = dbapi.paramstyle, "pyformat"
     try:
         cursor = connection.cursor()
         cursor.execute("SET TRANSACTION READ ONLY")
-        cursor.execute(sql)
+        cursor.execute(sql, {parameter["name"]: keys})
         assert len(cursor.fetchall()) == 3, "every invoice line joins to its invoice and customer"
     finally:
+        dbapi.paramstyle = style
         connection.rollback()
         connection.close()
 

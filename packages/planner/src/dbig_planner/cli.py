@@ -88,8 +88,16 @@ def join_paths(graph: Path, from_id: str, to_id: str) -> None:
 @main.command("plan")
 @click.option("--graph", type=click.Path(path_type=Path, exists=True), required=True)
 @click.option("--path-id", required=True)
-def plan(graph: Path, path_id: str) -> None:
-    result = render_plan(graph, PlanRequest(path_id=path_id), PlannerConfig(graph_dir=graph))
+@click.option(
+    "--max-rows",
+    type=click.IntRange(1, 100_000),
+    help="Row limit for each read (default 1000)",
+)
+def plan(graph: Path, path_id: str, max_rows: int | None) -> None:
+    config = PlannerConfig(graph_dir=graph)
+    if max_rows is not None:
+        config = PlannerConfig(graph_dir=graph, max_plan_rows=max_rows)
+    result = render_plan(graph, PlanRequest(path_id=path_id, max_rows=max_rows), config)
     click.echo(json.dumps(result, sort_keys=True))
 
 

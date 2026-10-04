@@ -241,6 +241,22 @@ three-database snapshot:
 - **Plans.** A cross-source path is split into runs of consecutive objects in one source; each
   run is one read (a joined SELECT or a `$lookup` pipeline), and `logical_join` steps remain
   only between runs. A path that leaves a source and returns is separate reads.
+- **Columns and key-filtered reads (settled 2026-10-04).** A SQL read selects every catalogued
+  column by name with a unique output name `<table>__<column>` (`<table>_<position>__<column>`
+  when a table repeats), instead of `SELECT *`, which returned one `id` per joined table. An
+  object with no catalogued fields falls back to its `*` with a warning. In a cross-source plan
+  the first read is a bounded sample; every later read is restricted to the join keys the read
+  before it returned, so the final join covers every match for that sample. Before this, each
+  read took an independent `LIMIT` sample, and the final join could be empty although matches
+  existed. Keys are never written into a plan: each later step lists `parameters` (`name`,
+  `filters_field`, `values_from_step`, `values_from_column`) and its `parameter_binding`:
+  PostgreSQL `= ANY(%(name)s)` bound to an array (psycopg, or pg8000 with `pyformat`),
+  ClickHouse server-side `IN {name: Array(T)}`, MongoDB `$expr`/`$in` on `$$name` bound through
+  the aggregate command's `let`. A composite key filters each column separately, a superset that
+  the final join narrows exactly. Each read keeps the row limit, and the plan warns that a later
+  read returning exactly that many rows may be incomplete. Verified by executing plans on the
+  three pinned servers against ground truth (`tests/test_live_plans.py`). The planner still
+  executes nothing, and cross-source plans stay `unresolved` until a staging target is chosen.
 - **Limits.** Reaching `max_queries`, `max_objects` or `max_fields` keeps stopping with no
   bundle and an operator message.
 

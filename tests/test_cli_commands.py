@@ -374,3 +374,29 @@ def test_serve_refuses_a_hostname_rather_than_resolving_it(host, tmp_path):
         ["serve", "--config", str(config), "--host", host, "--port", "8080"],
     )
     assert result.exit_code != 0
+
+
+def test_plan_row_limit_is_settable_from_the_command_line(planner_graph):
+    """The runbook tells an operator to re-plan with a larger limit when a read may have been
+    cut off; the CLI capped every plan at the configured default of 1000 rows."""
+    graph, ids = planner_graph
+    joins = CliRunner().invoke(
+        planner_main,
+        ["join-paths", "--graph", str(graph), "--from", ids["orders"], "--to", ids["customers"]],
+    )
+    path_id = json.loads(joins.output)["paths"][0]["path_id"]
+
+    def limit(*extra: str) -> str:
+        result = CliRunner().invoke(
+            planner_main, ["plan", "--graph", str(graph), "--path-id", path_id, *extra]
+        )
+        assert result.exit_code == 0, result.output
+        return json.loads(result.output)["steps"][0]["sql"].rsplit("LIMIT ", 1)[1]
+
+    assert limit() == "1000"
+    assert limit("--max-rows", "5000") == "5000"
+    assert limit("--max-rows", "7") == "7"
+    refused = CliRunner().invoke(
+        planner_main, ["plan", "--graph", str(graph), "--path-id", path_id, "--max-rows", "0"]
+    )
+    assert refused.exit_code == 2

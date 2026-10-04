@@ -217,13 +217,32 @@ What the planner gives back:
 - **Multi-hop in one database**: `refunds -> orders -> customers` in PostgreSQL becomes one
   `SELECT ... JOIN ... JOIN ...` with status `ready_for_review` (`review_required` when a hop
   is an inferred candidate rather than a declared foreign key). Identifiers are quoted, the
-  statement is checked to be a single read, and it carries a row limit.
+  statement is checked to be a single read, and it carries a row limit. Every column is named
+  `<table>__<column>`, so `refunds__id`, `orders__id` and `customers__id` stay apart.
 - **Across databases**: `tickets` (MongoDB) -> `customers` -> `orders` -> `refunds`
   (PostgreSQL) becomes one read per database, with consecutive tables in the same database
   joined in that one read, plus a `logical_join` step naming the keys that connect them. The
+  first read returns up to `max_rows` rows; each later read fetches only the rows matching the
+  keys the read before it returned, so the final join finds every match for those rows. The
   status is `unresolved` because moving rows between databases needs a staging area or a
   federated engine you choose; the planner does not pick one for you.
 - Nothing is ever executed by the planner. You review a plan and run it yourself.
+
+Running a cross-database plan by hand: run the steps in order. A later step's `parameters`
+say which column of which earlier step supplies its keys (`values_from_step`,
+`values_from_column`); collect those values and bind them under the parameter's `name`:
+
+```bash
+# PostgreSQL step, from Python with psycopg: the placeholder is %(keys_1_1)s, bound to a list
+#   cur.execute(step_sql, {"keys_1_1": [150, 157]})
+# ClickHouse step: server-side parameter
+clickhouse-client --param_keys_1_1="[150,157]" --query "<step sql>"
+# MongoDB step: pass the keys as `let` variables
+mongosh ... --eval 'db.tickets.aggregate(<step pipeline>, {let: {keys_1_1: [150, 157]}})'
+```
+
+Each read keeps the row limit; if a later read returns exactly `max_rows` rows the plan's
+warning applies: re-plan with a larger limit, `dbig-planner plan ... --max-rows 5000`.
 
 `lineage-paths` answers "where did this data come from", which needs a record of what actually
 ran: SQL logs or pipeline events placed as JSON lines in the `observations` directory. With the
