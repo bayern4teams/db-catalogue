@@ -4,6 +4,22 @@ Update this file when work starts, a fact changes, a decision is needed, a check
 
 ## Current change: v1 implementation
 
+## Current change: verification fixes 1-10 (started 2026-10-04)
+
+- [x] Independent re-verification of `main` at `8b96ca8` on 2026-10-04: `uv sync --locked --all-packages --all-extras --dev` with uv 0.12.19, Ruff and mypy clean; `pytest` 387 passed, 30 skipped on Python 3.12; the 25 live tests passed against the CI containers started from `ci.yml`'s own steps; the runbook (collect, assemble, render, search, join-paths, plan, ask against a stand-in, `serve`, lineage with one SQL observation) reproduced by hand on a fresh three-database schema. CI on `main` [36719766075](https://github.com/bayern4teams/db-catalogue/actions/runs/36719766075) is green.
+- [x] Found on that run: (a) with no pinned interpreter `uv sync` chose Python 3.13, where `tests/test_ci_certificates.py` fails with `CA cert does not include key usage extension`, because 3.13 sets `VERIFY_X509_STRICT` in `ssl.create_default_context`; (b) wrong password, unreachable host and a malformed observation file end in a traceback; (c) plans use `SELECT *`, so a three-table join returns three columns named `id`; (d) cross-source plans read each source with an independent `LIMIT`, so the final join is over unrelated samples and can miss matches; (e) the reviewer prompt names only the two objects, not the field pairs; (f) scan dispatch has no live test.
+- [x] User decisions on 2026-10-04: do fixes 1-10 here; the user verifies vLLM, Langfuse and their own databases locally on Linux. Pin Python 3.12 (recommended; do not weaken certificate verification). Cross-source plans filter each later read by the keys of the earlier one (recommended). Test the latest released version of each engine in addition to the current pins.
+- [x] 1. Pin Python 3.12 for development and the runbook: `.python-version` = `3.12` (a default `uv sync` now picks 3.12.3 where it picked 3.13.14), runbook §1. The CI throwaway CA now carries `basicConstraints=critical,CA:TRUE` and `keyUsage=critical,keyCertSign,cRLSign`, and the leaf an authority and subject key identifier, so `tests/test_ci_certificates.py` passes on 3.13.14 as well (5 passed; failed before). Collector verification is unchanged. The 25 live tests pass against containers restarted with the new CA.
+- [~] 2. Operator errors instead of tracebacks: wrong password, unreachable host, unknown database, malformed config, malformed observation file.
+- [ ] 3. Plans select explicit, uniquely aliased columns instead of `*`.
+- [ ] 4. Cross-source plans: later reads filtered by the join keys of the earlier read, as a bound parameter; no execution.
+- [ ] 5. Reviewer prompt includes the candidate's field pairs.
+- [ ] 6. Live end-to-end test of `request-scan` -> `accept-scan` -> `process-scans`.
+- [ ] 7. Harder live fixtures: partitions, views, materialized views, composite FKs, quoted/mixed-case identifiers, several schemas, nested MongoDB arrays.
+- [ ] 8. Live suites against the latest released PostgreSQL, ClickHouse and MongoDB.
+- [ ] 9. Scale measurement at 10 sources / 200 objects / 1,000 fields.
+- [ ] 10. One shared loopback-literal helper in `dbig_contracts.security` (debt from the merge-ready review).
+
 ## Current change: requester, planner and comments on real data (started 2026-09-30)
 
 - [x] PR [bayern4teams/db-catalogue#1](https://github.com/bayern4teams/db-catalogue/pull/1) merged into `main` at `5c1eca7` by user instruction after all seven checks passed on its head; CI on `main` [36716385698](https://github.com/bayern4teams/db-catalogue/actions/runs/36716385698) passed. This branch restarted from `main`.

@@ -51,7 +51,11 @@ def generate(out: Path) -> dict[str, Path]:
 
     _openssl("req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", DAYS,
              "-keyout", str(ca_key), "-out", str(ca_crt),
-             "-subj", "/CN=dbig-ci-throwaway-ca")
+             "-subj", "/CN=dbig-ci-throwaway-ca",
+             # Python 3.13 verifies with VERIFY_X509_STRICT, which rejects a CA without
+             # keyUsage and a leaf without an authority key identifier.
+             "-addext", "basicConstraints=critical,CA:TRUE",
+             "-addext", "keyUsage=critical,keyCertSign,cRLSign")
     _openssl("req", "-newkey", "rsa:2048", "-nodes",
              "-keyout", str(server_key), "-out", str(server_csr),
              "-subj", "/CN=127.0.0.1")
@@ -61,7 +65,8 @@ def generate(out: Path) -> dict[str, Path]:
     extensions = out / "server.ext"
     extensions.write_text(
         f"subjectAltName={SUBJECT_ALT_NAME}\nbasicConstraints=CA:FALSE\n"
-        "keyUsage=digitalSignature,keyEncipherment\nextendedKeyUsage=serverAuth\n",
+        "keyUsage=digitalSignature,keyEncipherment\nextendedKeyUsage=serverAuth\n"
+        "authorityKeyIdentifier=keyid,issuer\nsubjectKeyIdentifier=hash\n",
         encoding="utf-8",
     )
     _openssl("x509", "-req", "-in", str(server_csr), "-days", DAYS,

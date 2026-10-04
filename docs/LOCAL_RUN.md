@@ -38,6 +38,10 @@ only known once you run it.
 ## 1. Install
 
 You need Python 3.12 and [uv](https://docs.astral.sh/uv/) 0.10 or newer (CI uses 0.12.19).
+`.python-version` pins 3.12, so `uv sync` uses it even when a newer Python is installed; if
+3.12 is missing, `uv python install 3.12` provides it. Python 3.13 and later verify
+certificates more strictly (a CA without a key-usage extension is refused), which is not
+what the supported matrix was checked with.
 
 ```bash
 git clone https://github.com/bayern4teams/db-catalogue.git
