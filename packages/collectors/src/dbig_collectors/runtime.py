@@ -779,13 +779,17 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
     common = _common(config)
     tables: dict[str, list[Record]] = defaultdict(list)
     total = 0
-    sampled_rows_total = 0
     sampled_bytes_total = 0
     listed: dict[str, int] = defaultdict(int)
     for database in config.namespaces:
         budget.charge()
         for info in client[database].list_collections():
             listed[database] += 1
+            if str(info.get("name", "")).startswith("system."):
+                # MongoDB reserves the `system.` prefix for its own collections: view
+                # definitions, the profiler, time-series buckets. They hold no application data,
+                # and sampling `system.views` would publish the shape of every view's pipeline.
+                continue
             total += 1
             if total > config.max_objects:
                 raise BudgetExhausted
@@ -799,7 +803,12 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
                                 config.source_id, "diagnostic", f"{database}:{info['name']}"
                             ),
                             "code": "IDENTITY_UNAVAILABLE",
-                            "message": "collection UUID unavailable",
+                            "message": (
+                                "MongoDB views have no collection UUID, so this view has no "
+                                "stable identity and is left out"
+                                if info.get("type") == "view"
+                                else "collection UUID unavailable"
+                            ),
                             **common,
                         }
                     )
@@ -863,15 +872,29 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
                 raise ValueError("value token key must contain at least 32 bytes")
             path_tokens: dict[str, set[str]] = {}
             path_observed: dict[str, int] = {}
-            if (
-                config.sample_rows
-                and sampled_rows_total < config.sample_rows
-                and sampled_bytes_total < config.max_sample_bytes
-            ):
-                budget.charge()
-                cursor = (
-                    client[database][name].find({}).limit(config.sample_rows - sampled_rows_total)
+            if config.sample_rows and sampled_bytes_total >= config.max_sample_bytes:
+                # Said rather than skipped: without a sample a collection with no validator has
+                # no fields at all, which would otherwise look like an empty collection.
+                tables["diagnostics.jsonl"].append(
+                    Record.model_validate(
+                        {
+                            "record_type": "diagnostic",
+                            "id": stable_id(
+                                config.source_id, "diagnostic", f"{native}:sample-bytes"
+                            ),
+                            "code": "SAMPLE_BYTE_LIMIT",
+                            "message": "not sampled: earlier collections used the source's "
+                            "max_sample_bytes",
+                            **common,
+                        }
+                    )
                 )
+            elif config.sample_rows:
+                # `sample_rows` is per collection, as it is per table for PostgreSQL. It was a
+                # total for the whole source, so after one large collection every later one was
+                # silently left unsampled. `max_sample_bytes` still bounds the whole source.
+                budget.charge()
+                cursor = client[database][name].find({}).limit(config.sample_rows)
                 cursor.max_time_ms(config.read_timeout_seconds * 1000)
                 try:
                     for document in cursor:
@@ -892,7 +915,6 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
                             )
                             break
                         sampled_bytes_total += document_bytes
-                        sampled_rows_total += 1
                         sample_count += 1
                         present: set[str] = set()
                         _mongo_paths(

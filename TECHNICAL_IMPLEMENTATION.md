@@ -260,6 +260,14 @@ three-database snapshot:
 - **Limits.** Reaching `max_queries`, `max_objects` or `max_fields` keeps stopping with no
   bundle and an operator message.
 
+- **MongoDB collections (corrected 2026-10-04).** `sample_rows` is per collection, as it is per
+  table for PostgreSQL; it was a total for the source, so after one collection that large every
+  later collection was left unsampled and, having no validator, had no fields, with no
+  diagnostic. `max_sample_bytes` still bounds the whole source and now says which collections it
+  left unsampled. Collections named `system.*` are MongoDB's own (view definitions, profiler,
+  time-series buckets) and are no longer catalogued. A view has no collection UUID and is still
+  left out under §6a, now with a diagnostic that says it is a view.
+
 ## 8. Profiling and cross-source value evidence
 
 Per field, compute bounded null/non-null counts, approximate or exact distinct count with method label, min/max for allowed types, length histogram, top-frequency sketches only if safe, and type/nullability distribution. Use source statistics where trustworthy, annotate freshness. Sample selection and size are recorded. Sensitive fields can be metadata-only. Value normalization is type-aware; preserve case/locale policy, leading zeros, time zone, binary encoding, and null distinction. Candidate pair comparison requires compatible normalized types and direction checks.
@@ -341,6 +349,15 @@ key is mostly null by design and is still compared.
 
 The `name_similarity` evidence records which rule admitted the pair in `blocking_rule`, so a reader
 can tell a fuzzy suffix match from an exact bare-name match without re-deriving it.
+
+**Type families (corrected 2026-10-04).** A pair is compared only within one type family. The
+families used to be the type name with its parameters cut off, so ClickHouse `String`,
+PostgreSQL `text` and MongoDB `str` were three families and `Nullable(Int32)` was the family
+`nullable`: no text key and no nullable ClickHouse key could become a cross-engine candidate.
+`Nullable(...)` and `LowCardinality(...)` are now unwrapped, and the integer, text and UUID
+spellings of the three engines are each one family (`dbig_builder.builder.INTEGER_TYPES`,
+`TEXT_TYPES`, `UUID_TYPES`). Found by `tests/test_live_shapes.py`, where
+`region_code LowCardinality(String)` in ClickHouse now meets `regions.code text`.
 
 ## 9. Lineage and query history
 

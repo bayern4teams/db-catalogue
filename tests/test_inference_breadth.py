@@ -251,3 +251,35 @@ def test_a_mostly_null_child_is_still_compared(tmp_path, monkeypatch):
     """Sparse is not empty. An optional foreign key is mostly null by design."""
     result = _snapshot(tmp_path, monkeypatch, child_name="customer_id", child_null_fraction=0.99)
     assert len(result["candidates"]) == 1
+
+
+@pytest.mark.parametrize(
+    ("left", "right"),
+    [
+        ("text", "String"),
+        ("character varying", "str"),
+        ("varchar(64)", "LowCardinality(String)"),
+        ("integer", "Nullable(Int32)"),
+        ("bigint", "LowCardinality(Nullable(UInt64))"),
+        ("int", "Int16"),
+        ("uuid", "Nullable(UUID)"),
+        ("FixedString(2)", "bpchar"),
+    ],
+)
+def test_one_value_domain_is_one_type_family_across_engines(left, right):
+    """ClickHouse `String`, PostgreSQL `text` and MongoDB `str` were three families, and a
+    `Nullable(...)` or `LowCardinality(...)` wrapper was a family of its own, so no text key and
+    no nullable ClickHouse key could become a cross-engine candidate."""
+    from dbig_builder.builder import _type_family
+
+    assert _type_family(left) == _type_family(right)
+
+
+@pytest.mark.parametrize(
+    ("left", "right"),
+    [("text", "integer"), ("String", "UUID"), ("Array(String)", "text"), ("str", "int")],
+)
+def test_different_value_domains_stay_apart(left, right):
+    from dbig_builder.builder import _type_family
+
+    assert _type_family(left) != _type_family(right)
