@@ -66,3 +66,20 @@ def test_a_refusal_never_contains_the_secret_value(monkeypatch: pytest.MonkeyPat
     with pytest.raises(ValueError) as failure:
         secret_from_env("DBIG_TEST_SECRET", purpose="test")
     assert " " not in str(failure.value)
+
+
+@pytest.mark.parametrize(
+    ("host", "expected"),
+    [
+        ("127.0.0.1", True), ("127.8.9.10", True), ("::1", True), ("[::1]", True),
+        (" 127.0.0.1 ", True), ("localhost", False), ("0.0.0.0", False), ("10.0.0.5", False),  # noqa: S104
+        ("::", False), ("[::]", False), ("", False), ("example.com", False), ("[127.0.0.1", False),
+    ],
+)
+def test_one_loopback_rule_for_every_boundary(host, expected):
+    """The rule behind plaintext database connections, plain-HTTP model endpoints and `serve`
+    binds. It lived in three copies that had already drifted: only one accepted `[::1]`, and the
+    `serve` copy raised on a hostname instead of refusing it."""
+    from dbig_contracts.security import is_loopback_literal
+
+    assert is_loopback_literal(host) is expected

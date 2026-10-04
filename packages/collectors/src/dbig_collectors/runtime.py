@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import hashlib
 import hmac
-import ipaddress
 import json
 import re
 import socket
@@ -30,7 +29,7 @@ from dbig_contracts.models import (
     ValueTokens,
     utc_now,
 )
-from dbig_contracts.security import secret_from_env
+from dbig_contracts.security import is_loopback_literal, secret_from_env
 
 from .config import SourceConfig
 
@@ -1043,11 +1042,7 @@ def _require_loopback(hosts: list[str]) -> None:
     HTTP to a private model endpoint.
     """
     for host in hosts or [""]:
-        try:
-            loopback = ipaddress.ip_address(host.strip("[]")).is_loopback
-        except ValueError:
-            loopback = False
-        if not loopback:
+        if not is_loopback_literal(host):
             raise OperatorError(
                 f"tls = false is allowed only for loopback IP literals such as 127.0.0.1 or ::1, "
                 f"not {host or 'an unspecified host'!r}; enable TLS on the server instead"

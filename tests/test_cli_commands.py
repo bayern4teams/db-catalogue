@@ -365,15 +365,27 @@ def test_serve_refuses_a_non_loopback_bind(command, extra, host, tmp_path, monke
     )
 
 
-@pytest.mark.parametrize("host", ["not-an-address", "example.com", ""])
-def test_serve_refuses_a_hostname_rather_than_resolving_it(host, tmp_path):
-    """A name could resolve anywhere, including off-host, so it is refused outright."""
+@pytest.mark.parametrize(
+    ("command", "extra"),
+    [
+        ("collector", ["--queue-db", "queue.sqlite3"]),
+        ("planner", []),
+        ("requester", []),
+    ],
+)
+@pytest.mark.parametrize("host", ["not-an-address", "example.com", "localhost", ""])
+def test_serve_refuses_a_hostname_rather_than_resolving_it(command, extra, host, tmp_path):
+    """A name could resolve anywhere, including off-host, so it is refused outright, with the
+    same one-line refusal as a non-loopback address. It used to reach `ip_address` unguarded
+    and fail with a ValueError traceback."""
+    mains = {"collector": collector_main, "planner": planner_main, "requester": requester_main}
     config = _write(tmp_path / "any.toml", "[unused]\n")
     result = CliRunner().invoke(
-        planner_main,
-        ["serve", "--config", str(config), "--host", host, "--port", "8080"],
+        mains[command],
+        ["serve", "--config", str(config), *extra, "--host", host, "--port", "8080"],
     )
-    assert result.exit_code != 0
+    assert result.exit_code == 2, result.exception
+    assert "loopback" in result.output
 
 
 def test_plan_row_limit_is_settable_from_the_command_line(planner_graph):

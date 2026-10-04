@@ -1,14 +1,13 @@
 """Collector site command line."""
 
 import json
-from ipaddress import ip_address
 from pathlib import Path
 
 import click
 from dbig_contracts.artifact import read_artifact
 from dbig_contracts.errors import OperatorError
 from dbig_contracts.scan import SignedScanRequest
-from dbig_contracts.security import secret_from_env
+from dbig_contracts.security import is_loopback_literal, secret_from_env
 
 from .config import load_config
 from .runtime import collect
@@ -89,7 +88,7 @@ def process_scans_command(config_path: Path, queue_db: Path, out_root: Path) -> 
 @click.option("--host", required=True)
 @click.option("--port", type=int, required=True)
 def serve(config_path: Path, queue_db: Path, host: str, port: int) -> None:
-    if not ip_address(host).is_loopback:
+    if not is_loopback_literal(host):
         raise click.UsageError("collector API binds only to loopback; use a private TLS proxy")
     import uvicorn
 

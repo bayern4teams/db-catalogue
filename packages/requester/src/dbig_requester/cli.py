@@ -1,13 +1,13 @@
 """Requester CLI using the same functions as its REST service."""
 
 import json
-from ipaddress import ip_address
 from pathlib import Path
 from typing import Literal
 
 import click
 from dbig_contracts.errors import OperatorError
 from dbig_contracts.scan import ScanRequest
+from dbig_contracts.security import is_loopback_literal
 
 from .answer import answer_question
 from .config import load_config
@@ -141,7 +141,7 @@ def request_scan(config_path: Path, request_path: Path, adapter: str) -> None:
 @click.option("--host", required=True)
 @click.option("--port", type=int, required=True)
 def serve(config_path: Path, host: str, port: int) -> None:
-    if not ip_address(host).is_loopback:
+    if not is_loopback_literal(host):
         raise click.UsageError("requester API binds only to loopback; use a private TLS proxy")
     import uvicorn
 

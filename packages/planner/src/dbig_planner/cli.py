@@ -1,11 +1,11 @@
 """Planner CLI backed by the same functions as its REST API."""
 
 import json
-from ipaddress import ip_address
 from pathlib import Path
 
 import click
 from dbig_contracts.errors import OperatorError, describe_validation
+from dbig_contracts.security import is_loopback_literal
 from pydantic import ValidationError
 
 from .config import PlannerConfig, load_config
@@ -108,7 +108,7 @@ def plan(graph: Path, path_id: str, max_rows: int | None) -> None:
 @click.option("--host", required=True)
 @click.option("--port", type=int, required=True)
 def serve(config_path: Path, host: str, port: int) -> None:
-    if not ip_address(host).is_loopback:
+    if not is_loopback_literal(host):
         raise click.UsageError("planner API binds only to loopback; use a private TLS proxy")
     import uvicorn
 

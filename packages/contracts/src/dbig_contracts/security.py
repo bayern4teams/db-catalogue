@@ -7,6 +7,22 @@ from urllib.parse import urlsplit
 from .errors import OperatorError
 
 
+def is_loopback_literal(host: str) -> bool:
+    """True only for a loopback IP literal such as `127.0.0.1`, `::1` or `[::1]`.
+
+    The one rule for every place that lets something cross only the local machine: plaintext
+    database connections, plain-HTTP model endpoints and the `serve` bind address. A name is never
+    loopback here, `localhost` included, because a name is whatever the resolver says it is.
+    """
+    candidate = host.strip()
+    if candidate.startswith("[") and candidate.endswith("]"):
+        candidate = candidate[1:-1]
+    try:
+        return ip_address(candidate).is_loopback
+    except ValueError:
+        return False
+
+
 def private_base_url(value: str) -> str:
     parsed = urlsplit(value)
     if parsed.scheme not in {"http", "https"} or not parsed.hostname:
@@ -19,7 +35,7 @@ def private_base_url(value: str) -> str:
         raise ValueError("private endpoint must use an IP literal") from error
     if not (address.is_private or address.is_loopback):
         raise ValueError("endpoint must resolve to a private address")
-    if parsed.scheme != "https" and not address.is_loopback:
+    if parsed.scheme != "https" and not is_loopback_literal(parsed.hostname):
         raise ValueError("non-loopback private endpoints require HTTPS")
     return value.rstrip("/")
 
