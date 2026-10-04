@@ -239,6 +239,7 @@ def test_the_requester_refuses_a_scope_it_is_not_allowed(site):
     )
     assert result.returncode != 0
     assert "UNAUTHORIZED_SCOPE" in result.stderr
+    assert "Traceback" not in result.stderr, result.stderr
     assert not (site["handoff"] / "scope-1").exists()
 
 
@@ -257,6 +258,7 @@ def test_the_collector_refuses_a_request_with_a_forged_signature(site):
     )
     assert result.returncode != 0
     assert "invalid scan signature" in result.stderr
+    assert "Traceback" not in result.stderr, result.stderr
     assert _process(site) == {"status": "empty"}
 
 

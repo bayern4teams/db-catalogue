@@ -10,6 +10,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from .artifact import canonical
+from .errors import OperatorError
 
 
 class ScanRequest(BaseModel):
@@ -77,9 +78,9 @@ def sign_scan(request: ScanRequest, key_id: str, key: bytes) -> SignedScanReques
 def verify_scan(envelope: SignedScanRequest, key: bytes, *, clock_skew_seconds: int = 0) -> None:
     expected = sign_scan(envelope.request, envelope.key_id, key).signature
     if not hmac.compare_digest(expected, envelope.signature):
-        raise ValueError("invalid scan signature")
+        raise OperatorError("invalid scan signature")
     now = datetime.now(UTC)
     if envelope.request.expires_at <= now or envelope.request.issued_at > now + timedelta(
         seconds=clock_skew_seconds
     ):
-        raise ValueError("expired or future scan request")
+        raise OperatorError("expired or future scan request")

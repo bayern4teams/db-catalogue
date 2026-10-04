@@ -34,7 +34,7 @@ def _open_queue(path: Path) -> sqlite3.Connection:
 
 def accept_scan(envelope: SignedScanRequest, config: SourceConfig, queue_path: Path) -> ScanReceipt:
     if envelope.key_id != config.signing_key_id:
-        raise ValueError("UNKNOWN_SIGNING_KEY")
+        raise OperatorError("UNKNOWN_SIGNING_KEY")
     verify_scan(
         envelope,
         secret_from_env(
@@ -45,21 +45,21 @@ def accept_scan(envelope: SignedScanRequest, config: SourceConfig, queue_path: P
     if request.expires_at.timestamp() - request.issued_at.timestamp() > (
         config.max_request_ttl_seconds
     ):
-        raise ValueError("REQUEST_TTL_EXCEEDED")
+        raise OperatorError("REQUEST_TTL_EXCEEDED")
     if (
         request.source_id != config.source_id
         or request.requester_id not in config.authorized_requesters
     ):
-        raise ValueError("UNAUTHORIZED_REQUESTER_OR_SOURCE")
+        raise OperatorError("UNAUTHORIZED_REQUESTER_OR_SOURCE")
     if not set(request.scopes) <= set(config.namespaces):
-        raise ValueError("UNAUTHORIZED_SCOPE")
+        raise OperatorError("UNAUTHORIZED_SCOPE")
     allowed = {"metadata"}
     if config.sample_rows:
         allowed.add("sample")
     if config.history_access:
         allowed.add("history")
     if not set(request.capabilities) <= allowed:
-        raise ValueError("UNAUTHORIZED_CAPABILITY")
+        raise OperatorError("UNAUTHORIZED_CAPABILITY")
     with closing(_open_queue(queue_path)) as connection:
         connection.execute("BEGIN IMMEDIATE")
         row = connection.execute(
@@ -69,7 +69,7 @@ def accept_scan(envelope: SignedScanRequest, config: SourceConfig, queue_path: P
         ).fetchone()
         if row:
             if row[0] != request.id or row[1] != envelope.signature:
-                raise ValueError("REPLAY_CONFLICT")
+                raise OperatorError("REPLAY_CONFLICT")
             return ScanReceipt(
                 request_id=row[0],
                 status=row[2],
@@ -81,7 +81,7 @@ def accept_scan(envelope: SignedScanRequest, config: SourceConfig, queue_path: P
             "SELECT count(*) FROM scans WHERE status IN ('queued','running')"
         ).fetchone()[0]
         if count >= config.max_queued_scans:
-            raise ValueError("COLLECTOR_QUEUE_FULL")
+            raise OperatorError("COLLECTOR_QUEUE_FULL")
         now = datetime.now(UTC)
         connection.execute(
             "INSERT INTO scans (id,idempotency_key,signature,request,status,received_at,"

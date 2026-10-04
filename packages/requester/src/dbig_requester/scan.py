@@ -11,6 +11,7 @@ from pathlib import Path
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from dbig_contracts.artifact import canonical
+from dbig_contracts.errors import OperatorError
 from dbig_contracts.scan import ScanReceipt, ScanRequest, sign_scan
 from dbig_contracts.security import secret_from_env
 
@@ -55,11 +56,11 @@ def dispatch_scan(
 ) -> ScanReceipt:
     allowed_scopes = config.allowed_sources.get(request.source_id)
     if allowed_scopes is None or not set(request.scopes) <= set(allowed_scopes):
-        raise ValueError("UNAUTHORIZED_SCOPE")
+        raise OperatorError("UNAUTHORIZED_SCOPE")
     if not set(request.capabilities) <= set(config.allowed_capabilities):
-        raise ValueError("UNAUTHORIZED_CAPABILITY")
+        raise OperatorError("UNAUTHORIZED_CAPABILITY")
     if request.expires_at <= datetime.now(UTC):
-        raise ValueError("EXPIRED_REQUEST")
+        raise OperatorError("EXPIRED_REQUEST")
     key = secret_from_env(
         config.signing_key_env, purpose="scan request signing"
     ).encode("utf-8")
@@ -71,14 +72,14 @@ def dispatch_scan(
             existing = config.handoff_root / request.id / "request.json"
             if existing.is_file() and existing.read_bytes() == payload:
                 return previous
-        raise ValueError("REPLAY_CONFLICT")
+        raise OperatorError("REPLAY_CONFLICT")
     if adapter == "bundle":
         if config.handoff_root is None:
-            raise ValueError("scheduler handoff is not configured")
+            raise OperatorError("scheduler handoff is not configured")
         root = config.handoff_root.resolve(strict=True)
         destination = root / request.id
         if destination.exists():
-            raise ValueError("scan request already submitted")
+            raise OperatorError("scan request already submitted")
         temporary = Path(tempfile.mkdtemp(prefix=".scan-", dir=root))
         try:
             with (temporary / "request.json").open("wb") as stream:
@@ -96,7 +97,7 @@ def dispatch_scan(
     elif adapter == "http":
         base = config.collector_urls.get(request.source_id)
         if base is None or config.http_token_env is None:
-            raise ValueError("collector HTTP route is not configured")
+            raise OperatorError("collector HTTP route is not configured")
         token = secret_from_env(
             config.http_token_env, purpose="collector HTTP bearer token"
         )
@@ -111,8 +112,8 @@ def dispatch_scan(
         ) as response:
             receipt = ScanReceipt.model_validate_json(response.read(65_536))
         if receipt.request_id != request.id:
-            raise ValueError("mismatched collector receipt")
+            raise OperatorError("mismatched collector receipt")
     else:
-        raise ValueError("unknown scan adapter")
+        raise OperatorError("unknown scan adapter")
     _store(state, receipt)
     return receipt
