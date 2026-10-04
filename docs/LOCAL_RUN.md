@@ -304,7 +304,43 @@ in the catalogue matches the question, you get `NO_CATALOGUE_MATCH` and the mode
 Comments are free text written by your database owners and are given to the model by your
 choice; the model is told to treat them as data, not instructions.
 
-## 10. Troubleshooting
+## 10. Optional: request a new scan from the requester
+
+The requester can ask a collector site to re-scan, signed with the same key the site signs
+bundles with. Add to the requester file:
+
+```toml
+[requester.scan]
+signing_key_env = "DBIG_SIGNING_KEY"
+key_id = "local"                                   # the site's signing_key_id
+allowed_sources = { "pg-main" = ["public"] }       # sources and namespaces it may ask for
+handoff_root = "artifacts/handoff"                 # route 1: a directory both sides can reach
+collector_urls = { "pg-main" = "http://127.0.0.1:8601" }  # route 2: the site's private API
+http_token_env = "COLLECTOR_TOKEN"
+```
+
+and to the source file `authorized_requesters = ["<requester_id>"]` (and `http_token_env` for
+route 2). A request is a JSON file with `id`, `source_id`, `scopes`, `capabilities`
+(`["metadata"]`), `reason`, `requester_id`, `idempotency_key`, `issued_at`, `expires_at` and
+`reply_location`. Then:
+
+```bash
+# Route 1: signed file in the handoff directory, accepted at the site
+dbig-requester request-scan --config "$out/requester.toml" --request scan.json --dispatch bundle
+dbig accept-scan --config artifacts/config/postgresql.toml \
+  --request artifacts/handoff/<id>/request.json --queue-db artifacts/scan-queue.sqlite3
+# Route 2: the site runs its API, and the requester posts to it
+dbig serve --config artifacts/config/postgresql.toml --queue-db artifacts/scan-queue.sqlite3 \
+  --host 127.0.0.1 --port 8601 &
+dbig-requester request-scan --config "$out/requester.toml" --request scan.json --dispatch http
+# Either way, the site runs what is queued; the receipt names the new bundle
+dbig process-scans --config artifacts/config/postgresql.toml \
+  --queue-db artifacts/scan-queue.sqlite3 --out-root artifacts/scans
+```
+
+A failed scan's receipt carries `error`, the same one-line message `collect` would print.
+
+## 11. Troubleshooting
 
 | Message | Meaning and fix |
 |---|---|

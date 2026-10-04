@@ -162,3 +162,28 @@ def test_private_http_dispatch_uses_signed_body(tmp_path, monkeypatch):
     assert receipt.status == "queued"
     assert calls[0].full_url == "https://10.0.0.2/v1/collector/scan-requests"
     assert json.loads(calls[0].data)["signature"]
+
+
+def test_a_queue_from_before_failure_reasons_keeps_working(tmp_path):
+    """Queues written by the previous release have no `error` column; opening one adds it
+    without losing the scans already recorded."""
+    import sqlite3
+
+    from dbig_collectors.scan import scan_status
+
+    queue = tmp_path / "queue.sqlite3"
+    with sqlite3.connect(queue) as connection:
+        connection.execute(
+            "CREATE TABLE scans(id TEXT PRIMARY KEY, idempotency_key TEXT UNIQUE NOT NULL, "
+            "signature TEXT NOT NULL, request TEXT NOT NULL, status TEXT NOT NULL, "
+            "received_at TEXT NOT NULL, bundle_path TEXT)"
+        )
+        connection.execute(
+            "INSERT INTO scans VALUES ('old-1','k','s','{}','complete',"
+            "'2026-09-30T10:00:00+00:00','/bundles/old-1')"
+        )
+    receipt = scan_status(queue, "old-1")
+    assert receipt is not None
+    assert (receipt.status, receipt.bundle_path, receipt.error) == (
+        "complete", "/bundles/old-1", None,
+    )

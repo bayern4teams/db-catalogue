@@ -61,6 +61,9 @@ class ScanReceipt(BaseModel):
     status: Literal["submitted", "queued", "running", "complete", "failed"]
     received_at: datetime
     bundle_path: str | None = None
+    # Why a scan failed: the collector's one-line operator message, or only the exception type
+    # for anything else, whose text could carry connection details. Absent unless failed.
+    error: str | None = Field(default=None, max_length=1024)
 
 
 def sign_scan(request: ScanRequest, key_id: str, key: bytes) -> SignedScanRequest:

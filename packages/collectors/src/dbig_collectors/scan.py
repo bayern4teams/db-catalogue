@@ -7,6 +7,7 @@ from contextlib import closing
 from datetime import UTC, datetime
 from pathlib import Path
 
+from dbig_contracts.errors import OperatorError
 from dbig_contracts.scan import ScanReceipt, ScanRequest, SignedScanRequest, verify_scan
 from dbig_contracts.security import secret_from_env
 
@@ -21,8 +22,12 @@ def _open_queue(path: Path) -> sqlite3.Connection:
         "CREATE TABLE IF NOT EXISTS scans("
         "id TEXT PRIMARY KEY, idempotency_key TEXT UNIQUE NOT NULL, "
         "signature TEXT NOT NULL, request TEXT NOT NULL, status TEXT NOT NULL, "
-        "received_at TEXT NOT NULL, bundle_path TEXT)"
+        "received_at TEXT NOT NULL, bundle_path TEXT, error TEXT)"
     )
+    # A queue created before failure reasons were recorded gains the column in place.
+    columns = {row[1] for row in connection.execute("PRAGMA table_info(scans)")}
+    if "error" not in columns:
+        connection.execute("ALTER TABLE scans ADD COLUMN error TEXT")
     connection.commit()
     return connection
 
@@ -58,7 +63,8 @@ def accept_scan(envelope: SignedScanRequest, config: SourceConfig, queue_path: P
     with closing(_open_queue(queue_path)) as connection:
         connection.execute("BEGIN IMMEDIATE")
         row = connection.execute(
-            "SELECT id,signature,status,received_at,bundle_path FROM scans WHERE idempotency_key=?",
+            "SELECT id,signature,status,received_at,bundle_path,error FROM scans "
+            "WHERE idempotency_key=?",
             (request.idempotency_key,),
         ).fetchone()
         if row:
@@ -69,6 +75,7 @@ def accept_scan(envelope: SignedScanRequest, config: SourceConfig, queue_path: P
                 status=row[2],
                 received_at=datetime.fromisoformat(row[3]),
                 bundle_path=row[4],
+                error=row[5],
             )
         count = connection.execute(
             "SELECT count(*) FROM scans WHERE status IN ('queued','running')"
@@ -77,7 +84,8 @@ def accept_scan(envelope: SignedScanRequest, config: SourceConfig, queue_path: P
             raise ValueError("COLLECTOR_QUEUE_FULL")
         now = datetime.now(UTC)
         connection.execute(
-            "INSERT INTO scans VALUES (?,?,?,?,?,?,?)",
+            "INSERT INTO scans (id,idempotency_key,signature,request,status,received_at,"
+            "bundle_path) VALUES (?,?,?,?,?,?,?)",
             (
                 request.id,
                 request.idempotency_key,
@@ -95,7 +103,8 @@ def accept_scan(envelope: SignedScanRequest, config: SourceConfig, queue_path: P
 def scan_status(queue_path: Path, request_id: str) -> ScanReceipt | None:
     with closing(_open_queue(queue_path)) as connection:
         row = connection.execute(
-            "SELECT id,status,received_at,bundle_path FROM scans WHERE id=?", (request_id,)
+            "SELECT id,status,received_at,bundle_path,error FROM scans WHERE id=?",
+            (request_id,),
         ).fetchone()
     return (
         ScanReceipt(
@@ -103,6 +112,7 @@ def scan_status(queue_path: Path, request_id: str) -> ScanReceipt | None:
             status=row[1],
             received_at=datetime.fromisoformat(row[2]),
             bundle_path=row[3],
+            error=row[4],
         )
         if row
         else None
@@ -121,7 +131,10 @@ def process_next(config: SourceConfig, queue_path: Path, output_root: Path) -> S
             return None
         request = ScanRequest.model_validate_json(row[1])
         if request.expires_at <= datetime.now(UTC):
-            connection.execute("UPDATE scans SET status='failed' WHERE id=?", (request.id,))
+            connection.execute(
+                "UPDATE scans SET status='failed',error=? WHERE id=?",
+                ("EXPIRED_REQUEST: the request expired before it was processed", request.id),
+            )
             connection.commit()
             return scan_status(queue_path, request.id)
         connection.execute("UPDATE scans SET status='running' WHERE id=?", (request.id,))
@@ -134,15 +147,18 @@ def process_next(config: SourceConfig, queue_path: Path, output_root: Path) -> S
             "history_access": config.history_access and "history" in request.capabilities,
         }
     )
+    error: str | None = None
     try:
         collect(local_config, destination)
         status = "complete"
-    except Exception:
-        status = "failed"
+    except OperatorError as failure:
+        status, error = "failed", str(failure)[:1024]
+    except Exception as failure:
+        status, error = "failed", type(failure).__name__
     with closing(_open_queue(queue_path)) as connection:
         connection.execute(
-            "UPDATE scans SET status=?,bundle_path=? WHERE id=?",
-            (status, str(destination) if status == "complete" else None, request.id),
+            "UPDATE scans SET status=?,bundle_path=?,error=? WHERE id=?",
+            (status, str(destination) if status == "complete" else None, error, request.id),
         )
         connection.commit()
     return scan_status(queue_path, request.id)
