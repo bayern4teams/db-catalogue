@@ -266,7 +266,19 @@ three-database snapshot:
   diagnostic. `max_sample_bytes` still bounds the whole source and now says which collections it
   left unsampled. Collections named `system.*` are MongoDB's own (view definitions, profiler,
   time-series buckets) and are no longer catalogued. A view has no collection UUID and is still
-  left out under §6a, now with a diagnostic that says it is a view.
+  left out under §6a; by user decision on 2026-10-05 it is reported as `VIEW_NOT_CATALOGUED`, an
+  informational diagnostic that is shown but does not make the bundle `partial`
+  (`INFORMATIONAL_DIAGNOSTICS` in the collector). The collection it reads is catalogued.
+- **Observed joins are join paths (user decision 2026-10-05).** Each `ON a.x = b.y [AND ...]`
+  in an observed SQL statement, with every column qualified by a table or alias in the same
+  SELECT, becomes a `JOINS_OBSERVED` reference with status `observed`, its column pairs, and the
+  IDs of the observations that showed it (`observed_join_columns`). The tables come from the
+  columns, not from the order in `FROM`. An `ON` with an OR, a non-equality, an unqualified
+  column or `USING` is skipped rather than guessed, and a column that does not resolve to exactly
+  one catalogued field reports `UNRESOLVED_SQL`. Between the same two objects, a declared key is
+  preferred to an observed join, which is preferred to a candidate; a path through an observed
+  hop has status `observed`, and its plan warns that the hop came from query logs. A SELECT join
+  is still never lineage.
 
 ## 8. Profiling and cross-source value evidence
 
@@ -349,6 +361,21 @@ key is mostly null by design and is still compared.
 
 The `name_similarity` evidence records which rule admitted the pair in `blocking_rule`, so a reader
 can tell a fuzzy suffix match from an exact bare-name match without re-deriving it.
+
+**Rules decided 2026-10-05** (user, after `tests/test_live_shapes.py` exposed both gaps):
+
+4. **Declared key first.** Measured uniqueness (rule 3) only proposes a column of a table that
+   declares no key at all, single or composite. On a two-row lookup table every column measures
+   unique, and `regions.name` was proposed beside the declared `regions.code`.
+5. **Case boundaries.** A name is split at case boundaries before the suffix rule
+   (`AccountID` -> `account_id`, `customerId` -> `customer_id`), so camelCase and PascalCase keys
+   reach rule 1; snake_case is unchanged.
+6. **Key name.** A child whose name equals, case-insensitively, a parent's declared
+   single-column key name is admitted with `blocking_rule = "key_name"`, whatever the parent
+   table is called; generic names (`id`, `_id`, `uuid`, `key`, `code`, `num`, `ref`, `fk`, `no`)
+   are excluded, since every table has an `id`. This links `AccountID` in ClickHouse and MongoDB
+   to PostgreSQL's `"Customer Accounts"."AccountID"`, which rule 1 cannot (`account` is too far
+   from `customer account`).
 
 **Type families (corrected 2026-10-04).** A pair is compared only within one type family. The
 families used to be the type name with its parameters cut off, so ClickHouse `String`,

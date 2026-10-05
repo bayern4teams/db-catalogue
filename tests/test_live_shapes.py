@@ -192,13 +192,28 @@ def catalogue(tmp_path_factory) -> dict:
     _tool(env, "dbig-builder", "render", "--config", str(root / "builder.toml"),
           "--snapshot", str(root / "snapshot"), *bundles, "--out", str(root / "page.html"))
     (root / "observations").mkdir()
+    # A join an application runs on ClickHouse, with no key or candidate behind it.
+    (root / "observations" / "queries.jsonl").write_text(
+        json.dumps({  # noqa: S608 - fixed fixture SQL, written to a file, never executed here
+            "kind": "sql", "id": "ch-join", "source_id": "shapes-clickhouse",
+            "dialect": "clickhouse", "status": "executed", "observed_at": "2026-10-01T10:00:00Z",
+            "sql": "SELECT v.id, d.ver FROM shapes.`Page Views` AS v "
+                   "JOIN shapes.dedup AS d ON v.id = d.id",
+        }) + "\n",
+        encoding="utf-8",
+    )
     _tool(env, "dbig-planner", "build", "--snapshot", str(root / "snapshot"),
           "--observations", str(root / "observations"), "--out", str(root / "graph"))
     _, tables = read_artifact(root / "snapshot")
     nodes = tables["nodes.jsonl"]
     objects = {item.id: item for item in nodes if item.record_type == "object"}
-    _, mongo_bundle = read_artifact(root / "bundle-mongodb", signing_key=SIGNING_KEY.encode())
+    snapshot_manifest, _ = read_artifact(root / "snapshot")
+    mongo_manifest, mongo_bundle = read_artifact(
+        root / "bundle-mongodb", signing_key=SIGNING_KEY.encode()
+    )
     return {
+        "snapshot_completeness": snapshot_manifest.completeness,
+        "mongo_completeness": mongo_manifest.completeness,
         "root": root,
         "objects": objects,
         "by_name": {(item.source_id, item.name): item for item in objects.values()},
@@ -379,9 +394,69 @@ def test_mongodb_internal_collections_are_not_catalogued(catalogue):
     names = {name for source, name in catalogue["by_name"] if source == "shapes-mongodb"}
     assert names == {"tickets", "capped_log"}
     assert not any(name.startswith("system.") for name in names)
-    (view,) = [item for item in catalogue["mongo_diagnostics"]
-               if item["code"] == "IDENTITY_UNAVAILABLE"]
-    assert "view" in view["message"]
+    (view,) = catalogue["mongo_diagnostics"]
+    assert view["code"] == "VIEW_NOT_CATALOGUED" and "view" in view["message"]
+
+
+def test_a_mongodb_view_does_not_make_the_catalogue_partial(catalogue):
+    """User decision 2026-10-05: a view is left out, said so, and is not a gap in the scan."""
+    assert catalogue["mongo_completeness"] == "complete"
+    assert catalogue["snapshot_completeness"] == "complete"
+
+
+def _candidates(catalogue: dict) -> set[tuple]:
+    objects = catalogue["objects"]
+    return {
+        (objects[edge.from_id].source_id, objects[edge.from_id].name, *_pairs(catalogue, edge)[0],
+         objects[edge.to_id].name)
+        for edge in catalogue["edges"] if edge.kind == "REFERENCE_CANDIDATE"
+    }
+
+
+def test_a_column_named_like_a_declared_key_is_linked_across_engines(catalogue):
+    """`AccountID` in ClickHouse and MongoDB, beside PostgreSQL's primary key
+    `"Customer Accounts"."AccountID"`. The stem `account` is too far from `customer account` for
+    the suffix rule, so these were never proposed before the key-name rule."""
+    found = _candidates(catalogue)
+    for source, table in (("shapes-clickhouse", "dedup"), ("shapes-clickhouse", "daily"),
+                          ("shapes-clickhouse", "Page Views"), ("shapes-mongodb", "capped_log"),
+                          ("shapes-postgresql", "events")):
+        assert (source, table, "AccountID", "AccountID", "Customer Accounts") in found, table
+
+
+def test_a_declared_key_wins_over_columns_that_measure_unique(catalogue):
+    """`regions` declares `code`; on two rows `name` also measures unique, and was proposed."""
+    assert not [item for item in _candidates(catalogue) if item[-1] == "regions"
+                and item[3] == "name"]
+
+
+def test_a_join_seen_in_query_logs_is_a_path_whose_plan_runs(catalogue):
+    import clickhouse_connect
+    from dbig_planner.config import PlannerConfig
+    from dbig_planner.paths import PathRequest, find_paths
+    from dbig_planner.plans import PlanRequest, render_plan
+
+    config = PlannerConfig(graph_dir=catalogue["root"] / "graph")
+    by_name = catalogue["by_name"]
+    paths = find_paths(
+        config.graph_dir,
+        PathRequest(from_id=by_name[("shapes-clickhouse", "Page Views")].id,
+                    to_id=by_name[("shapes-clickhouse", "dedup")].id, max_hops=1),
+        "join", config,
+    )
+    (path,) = paths["paths"]
+    assert path["status"] == "observed"
+    plan = render_plan(config.graph_dir, PlanRequest(path_id=path["path_id"], max_rows=1000),
+                       config)
+    sql = plan["steps"][0]["sql"]
+    assert '"t0"."id" = "t1"."id"' in sql and '"shapes"."Page Views"' in sql
+    client = clickhouse_connect.get_client(host="127.0.0.1", port=8123)
+    try:
+        client.command("INSERT INTO shapes.dedup SELECT number, 1, 1 FROM numbers(10)")
+        result = client.query(sql)
+    finally:
+        client.close()
+    assert len(result.result_set) == 10, "ids 0..9 exist on both sides"
 
 
 def test_the_page_shows_the_hard_names(catalogue):

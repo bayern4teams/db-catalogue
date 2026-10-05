@@ -41,6 +41,10 @@ def load_path(directory: Path, path_id: str) -> dict:
     return json.loads(row[0])
 
 
+def _strength(edge: dict) -> int:
+    return {"declared": 3, "executed": 3, "observed": 2}.get(edge["status"], 1)
+
+
 def find_paths(directory: Path, request: PathRequest, kind: str, config: PlannerConfig) -> dict:
     graph = load_graph(directory)
     if kind not in {"lineage", "join"}:
@@ -83,10 +87,14 @@ def find_paths(directory: Path, request: PathRequest, kind: str, config: Planner
         if left not in entities or right not in entities:
             continue
         key = (left, right) if kind == "lineage" else tuple(sorted((left, right)))
-        if key in selected and selected[key]["status"] == "declared":
+        # Between the same two objects a declared key beats a join seen in the logs, which beats
+        # an inferred candidate: the path cites the strongest claim available for each hop.
+        if key in selected and _strength(selected[key]) >= _strength(edge):
             continue
         selected[key] = edge
-        network.add_edge(left, right, weight=1 if edge["status"] in {"declared", "executed"} else 2)
+        network.add_edge(
+            left, right, weight=1 if edge["status"] in {"declared", "executed", "observed"} else 2
+        )
     found: list[dict] = []
     if network.has_node(request.from_id) and network.has_node(request.to_id):
         try:
@@ -126,6 +134,7 @@ def find_paths(directory: Path, request: PathRequest, kind: str, config: Planner
                     if kind == "lineage" and any(link["status"] == "defined" for link in links)
                     else "observed"
                     if kind == "lineage"
+                    or any(link["status"] == "observed" for link in links)
                     else "declared",
                     "snapshot_digest": graph["snapshot_digest"],
                     "limitations": sorted(

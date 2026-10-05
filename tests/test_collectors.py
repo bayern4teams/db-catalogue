@@ -3,6 +3,7 @@ import types
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
 from click.testing import CliRunner
 from dbig_collectors.cli import main
 from dbig_collectors.config import SourceConfig, load_config
@@ -391,21 +392,29 @@ def test_clickhouse_drops_a_table_with_an_empty_uuid():
     assert [record.code for record in records["diagnostics.jsonl"]] == ["IDENTITY_UNAVAILABLE"]
 
 
-def test_mongo_drops_a_collection_with_no_uuid_and_says_so():
-    """A MongoDB view has no `info.uuid`, so it has no rename-stable identity."""
-
-    class ViewDb(MongoDb):
+@pytest.mark.parametrize(
+    ("info", "code"),
+    [
+        # A view has no `info.uuid`, so no rename-stable identity; it is a saved query, so it is
+        # left out with its own informational code (user decision 2026-10-05).
+        ({"name": "orders_view", "type": "view", "info": {}}, "VIEW_NOT_CATALOGUED"),
+        # A collection that should have a UUID and does not is a real gap.
+        ({"name": "orders", "type": "collection", "info": {}}, "IDENTITY_UNAVAILABLE"),
+    ],
+)
+def test_mongo_drops_a_collection_with_no_uuid_and_says_so(info, code):
+    class NoUuidDb(MongoDb):
         def list_collections(self):
-            return [{"name": "orders_view", "type": "view", "info": {}}]
+            return [info]
 
-    class ViewClient:
+    class NoUuidClient:
         def __getitem__(self, database):
-            return ViewDb()
+            return NoUuidDb()
 
-    records = discover_mongodb(ViewClient(), config("mongodb"), Budget(3))
+    records = discover_mongodb(NoUuidClient(), config("mongodb"), Budget(3))
     assert records["objects.jsonl"] == []
     assert records["fields.jsonl"] == []
-    assert [record.code for record in records["diagnostics.jsonl"]] == ["IDENTITY_UNAVAILABLE"]
+    assert [record.code for record in records["diagnostics.jsonl"]] == [code]
 
 
 def test_an_unidentifiable_object_never_reaches_a_published_bundle(tmp_path, monkeypatch):

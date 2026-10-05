@@ -375,6 +375,11 @@ def render_plan(directory: Path, request: PlanRequest, config: PlannerConfig) ->
         raise ValueError("UNSUPPORTED_SOURCE_KIND")
     if path["status"] == "tentative":
         warnings.append("candidate relationship requires human review")
+    if any(link["status"] == "observed" for link in links):
+        warnings.append(
+            "a hop comes from a join seen in query logs, not from a declared key; check that "
+            "the join is meant, not incidental"
+        )
     if graph["completeness"] == "partial":
         warnings.append("catalog snapshot is partial")
     return {

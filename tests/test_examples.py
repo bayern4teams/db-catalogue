@@ -38,3 +38,39 @@ def test_the_requester_example_loads():
     config = load_requester(EXAMPLES / "requester-with-vllm.toml")
     assert config.answer is not None
     assert config.answer.base_url == "http://127.0.0.1:8000/v1"
+
+
+def test_the_env_example_loads_as_the_guide_says_and_names_every_variable():
+    """`set -a; . ./.env; set +a` must yield valid JSON connections, and every environment
+    variable the example configurations refer to must be listed there."""
+    import json
+    import re
+    import shutil
+    import subprocess
+    import tomllib
+
+    bash = shutil.which("bash")
+    if bash is None:
+        pytest.skip("bash is needed to load the file the way the guide says")
+    root = Path(__file__).resolve().parents[1]
+    loaded = subprocess.run(  # noqa: S603 - fixed argv, repository file
+        [bash, "-c", "set -a; . ./.env.example; set +a; env -0"],
+        cwd=root, capture_output=True, check=True,
+    ).stdout.decode()
+    environment = dict(item.split("=", 1) for item in loaded.split("\0") if "=" in item)
+    for name in ("PG_CONNECTION", "CLICKHOUSE_CONNECTION", "MONGODB_CONNECTION"):
+        assert isinstance(json.loads(environment[name]), dict), name
+    listed = set(re.findall(r"^#?\s*([A-Z][A-Z0-9_]+)=", (root / ".env.example").read_text(
+        encoding="utf-8"), flags=re.MULTILINE))
+    referenced = set()
+    for config in (root / "examples" / "local").glob("*.toml"):
+        def walk(value):
+            if isinstance(value, dict):
+                for key, item in value.items():
+                    if key.endswith("_env") and isinstance(item, str):
+                        referenced.add(item)
+                    walk(item)
+        walk(tomllib.loads(config.read_text(encoding="utf-8")))
+        builder = tomllib.loads(config.read_text(encoding="utf-8")).get("builder", {})
+        referenced.update(builder.get("signing_keys", {}).values())
+    assert referenced and referenced <= listed, referenced - listed

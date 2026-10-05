@@ -801,10 +801,18 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
                             "id": stable_id(
                                 config.source_id, "diagnostic", f"{database}:{info['name']}"
                             ),
-                            "code": "IDENTITY_UNAVAILABLE",
+                            # A view is a saved query, not stored data, and has no UUID to give it a
+                            # stable identity. Its own code keeps it out of the catalogue without
+                            # marking the scan partial (user decision 2026-10-05).
+                            "code": (
+                                "VIEW_NOT_CATALOGUED"
+                                if info.get("type") == "view"
+                                else "IDENTITY_UNAVAILABLE"
+                            ),
                             "message": (
                                 "MongoDB views have no collection UUID, so this view has no "
-                                "stable identity and is left out"
+                                "stable identity and is left out; the collection it reads is "
+                                "catalogued"
                                 if info.get("type") == "view"
                                 else "collection UUID unavailable"
                             ),
@@ -1032,6 +1040,11 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
         config, [item for item in config.namespaces if not listed[item]], "database"
     )
     return tables
+
+
+# Diagnostics that explain something deliberately left out rather than something the scan could
+# not read; they are published and shown, but do not make a bundle partial.
+INFORMATIONAL_DIAGNOSTICS = frozenset({"VIEW_NOT_CATALOGUED"})
 
 
 def _require_loopback(hosts: list[str]) -> None:
@@ -1314,7 +1327,14 @@ def _collect(config: SourceConfig, destination: Path) -> None:
         data,
         producer=version("dbig-collectors"),
         source_run_ids=[str(uuid4())],
-        completeness="partial" if data["diagnostics.jsonl"] else "complete",
+        completeness=(
+            "partial"
+            if any(
+                getattr(item, "code", None) not in INFORMATIONAL_DIAGNOSTICS
+                for item in data["diagnostics.jsonl"]
+            )
+            else "complete"
+        ),
         signing_key=signing_key,
         key_id=config.signing_key_id,
     )

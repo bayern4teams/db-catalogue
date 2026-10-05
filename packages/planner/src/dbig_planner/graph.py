@@ -25,6 +25,7 @@ from .observations import (
     SQLObservation,
     SQLRelation,
     observation_digest,
+    observed_join_columns,
     read_located_lines,
     sql_relations,
 )
@@ -107,6 +108,7 @@ def _build_graph(
     field_lineage: list[dict] = []
     field_lineage_ids: set[str] = set()
     joins: list[dict] = []
+    observed_references: dict[str, dict] = {}
     diagnostics: list[dict] = []
     mapped = mapping or DatasetMapping()
 
@@ -220,6 +222,39 @@ def _build_graph(
                             "observed_at": observed.observed_at.isoformat(),
                         }
                     )
+                # A join seen in the logs, with the columns it equated, is a join path in its own
+                # right (user decision 2026-10-05). Only when every column resolves to exactly
+                # one catalogued field; anything less is reported, not guessed.
+                for left, right, columns in observed_join_columns(
+                    observed.sql, observed.dialect
+                ):
+                    left_id, right_id = resolve(left), resolve(right)
+                    field_pairs = []
+                    for left_column, right_column in columns:
+                        left_fields = fields_by_name.get((left_id, left_column), [])
+                        right_fields = fields_by_name.get((right_id, right_column), [])
+                        if len(left_fields) != 1 or len(right_fields) != 1:
+                            raise ValueError("UNRESOLVED_JOIN_COLUMN")
+                        field_pairs.append([left_fields[0], right_fields[0]])
+                    reference_id = "edge:observed-" + hashlib.sha256(
+                        json.dumps([left_id, right_id, field_pairs]).encode()
+                    ).hexdigest()[:32]
+                    reference = observed_references.setdefault(
+                        reference_id,
+                        {
+                            "id": reference_id,
+                            "kind": "JOINS_OBSERVED",
+                            "from_id": left_id,
+                            "to_id": right_id,
+                            "status": "observed",
+                            "field_pairs": field_pairs,
+                            "evidence_ids": [],
+                            "observation_ids": [],
+                            "limitations": [],
+                        },
+                    )
+                    if observed.id not in reference["observation_ids"]:
+                        reference["observation_ids"].append(observed.id)
             except Exception as error:
                 diagnostics.append(
                     {"id": observed.id, "code": "UNRESOLVED_SQL", "detail": type(error).__name__}
@@ -413,7 +448,9 @@ def _build_graph(
         "sources": {key: value.model_dump(mode="json") for key, value in sources.items()},
         "objects": {key: value.model_dump(mode="json") for key, value in objects.items()},
         "fields": {key: value.model_dump(mode="json") for key, value in fields.items()},
-        "references": sorted(references, key=lambda item: item["id"]),
+        "references": sorted(
+            [*references, *observed_references.values()], key=lambda item: item["id"]
+        ),
         "lineage": sorted(lineage, key=lambda item: item["id"]),
         "field_lineage": sorted(field_lineage, key=lambda item: item["id"]),
         "observed_joins": sorted(joins, key=lambda item: (item["from_id"], item["to_id"])),

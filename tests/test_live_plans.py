@@ -156,7 +156,7 @@ def catalogue(tmp_path_factory) -> dict:
         for item in tables["nodes.jsonl"]
         if getattr(item, "record_type", None) == "object"
     }
-    return {"env": env, "graph": root / "graph", "ids": ids}
+    return {"env": env, "graph": root / "graph", "ids": ids, "root": root}
 
 
 def _tool(env: dict[str, str], name: str, *arguments: str) -> dict:
@@ -320,3 +320,46 @@ def test_clickhouse_reads_bind_server_side_parameters(catalogue):
     assert {row["page_views__customer_id"] for row in views} == (
         {row["customers__id"] for row in customers} & set(range(150, 160))
     )
+
+
+def test_the_run_plan_helper_reproduces_the_true_cross_source_join(catalogue):
+    """`scripts/run_plan.py` is what the live-test guide gives an operator to check a plan on
+    their own databases; it must bind and join exactly as the plan describes."""
+    root = catalogue["root"]
+    env = dict(catalogue["env"])
+    configs = []
+    for kind, connection in CONNECTIONS.items():
+        variable = f"RUN_PLAN_{kind.upper()}"
+        env[variable] = json.dumps(connection)
+        path = root / f"run-plan-{kind}.toml"
+        path.write_text(
+            f'[source]\nsource_id = "plans-{kind}"\nkind = "{kind}"\n'
+            f'connection_env = "{variable}"\nsigning_key_env = "DBIG_SIGNING_KEY"\n'
+            f'signing_key_id = "ci"\nnamespaces = ["{NAMESPACE}"]\n'
+            f'tls_ca_file = "{_ca_file().as_posix()}"\n',
+            encoding="utf-8",
+        )
+        configs += ["--config", str(path)]
+    plan = _plan(catalogue, ("plans-mongodb", "tickets"), ("plans-postgresql", "refunds"))
+    (root / "plan.json").write_text(json.dumps(plan), encoding="utf-8")
+    script = Path(__file__).resolve().parents[1] / "scripts" / "run_plan.py"
+    result = subprocess.run(  # noqa: S603 - fixed argv, no shell
+        [sys.executable, str(script), "--plan", str(root / "plan.json"), *configs],
+        capture_output=True, text=True, env=env, timeout=120,
+    )
+    assert result.returncode == 0, result.stderr
+    report = json.loads(result.stdout)
+    tickets, joined = report["steps"]
+    assert tickets["rows"] == len(TICKET_CUSTOMERS)
+    assert joined["bound_keys"] == {"keys_1_1": len(TICKET_CUSTOMERS)}
+    expected = sum(
+        1 for refund in range(1, CUSTOMERS * 2 // 3 + 1)
+        for customer in TICKET_CUSTOMERS
+        if 1 + (refund * 3 - 1) // 2 == customer
+    )
+    (join,) = report["joins"]
+    refunded = {1 + (refund * 3 - 1) // 2 for refund in range(1, CUSTOMERS * 2 // 3 + 1)}
+    # A ticket whose customer has no refund has no row in the inner-joined PostgreSQL read.
+    assert join["joined_rows"] == expected
+    assert join["left_rows_without_a_match"] == len(set(TICKET_CUSTOMERS) - refunded)
+    assert "sample" not in tickets, "no row values unless asked for"

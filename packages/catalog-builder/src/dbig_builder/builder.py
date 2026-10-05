@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import re
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
@@ -99,6 +100,22 @@ def _measure(profiles: list[Profile] | None, name: str) -> float | None:
     return None
 
 
+# Names too generic to identify a key by themselves: every table has an `id`, so a child called
+# `id` is not a reference to every table's primary key.
+GENERIC_KEY_NAMES = frozenset({"id", "_id", "uuid", "key", "code", "num", "ref", "fk", "no"})
+
+
+def _snake(name: str) -> str:
+    """`AccountID` -> `account_id`, `customerId` -> `customer_id`, `HTTPServerID` ->
+    `http_server_id`; snake_case is unchanged.
+
+    camelCase and PascalCase keys are common in schemas from SQL Server and in MongoDB, and the
+    suffix rule needs the underscore, so without this they were never compared at all.
+    """
+    spaced = re.sub(r"(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])", "_", name)
+    return spaced.casefold()
+
+
 def _reference_stem(name: str) -> tuple[str, bool]:
     """Return the part of a field name that should match a parent, and whether a suffix marked it.
 
@@ -107,11 +124,11 @@ def _reference_stem(name: str) -> tuple[str, bool]:
     against every unique key would trade precision away for recall; the caller requires an exact
     match in that case instead.
     """
-    folded = name.casefold()
+    folded = _snake(name)
     for suffix in REFERENCE_SUFFIXES:
         if folded.endswith(suffix) and len(folded) > len(suffix):
             return folded[: -len(suffix)], True
-    return folded, False
+    return name.casefold(), False
 
 
 def _composite_candidates(
@@ -470,8 +487,14 @@ def assemble(
     # table that never declared a primary key can still be referenced. Recorded separately so the
     # evidence says which it was: a catalog assertion and a measurement are not the same claim.
     declared_unique = {parent.id for parent in unique_fields}
+    # A table that declares a key says which column identifies its rows. Measured uniqueness is
+    # for tables that declare none: on a small lookup table every column measures unique, so
+    # `regions.name` was proposed beside the declared `regions.code` (user decision 2026-10-05).
+    keyed_objects = {parent.object_id for parent in unique_fields} | {
+        owner for owner, _ in composite_keys
+    }
     for candidate_parent in fields.values():
-        if candidate_parent.id in declared_unique:
+        if candidate_parent.id in declared_unique or candidate_parent.object_id in keyed_objects:
             continue
         if (_measure(field_profiles.get(candidate_parent.id), "uniqueness") or 0.0) >= (
             MEASURED_UNIQUE
@@ -498,6 +521,16 @@ def assemble(
             ):
                 continue
             target = parent_object.name.casefold().rstrip("s")
+            if (
+                parent.id in declared_unique
+                and child.name.casefold() == parent.name.casefold()
+                and child.name.casefold() not in GENERIC_KEY_NAMES
+            ):
+                # The child carries the parent's declared key name exactly, `AccountID` beside a
+                # primary key `AccountID`: as strong a name signal as there is, whatever the
+                # parent table is called (user decision 2026-10-05).
+                candidates.append((100, parent, "key_name"))
+                continue
             if suffixed:
                 # The name announces itself as a reference, so a fuzzy match is justified.
                 name_score = round(ratio(stem, target))
@@ -510,8 +543,8 @@ def assemble(
                 if stem != target:
                     continue
                 name_score = 100
-            candidates.append((name_score, parent))
-        for score, parent in sorted(candidates, key=lambda item: (-item[0], item[1].id))[
+            candidates.append((name_score, parent, "suffix" if suffixed else "exact_name"))
+        for score, parent, rule in sorted(candidates, key=lambda item: (-item[0], item[1].id))[
             : config.top_k_per_field
         ]:
             lexical = _evidence(
@@ -521,7 +554,7 @@ def assemble(
                 f"name:{parent.id}",
                 # Which blocking rule admitted the pair, so a reader can tell a fuzzy suffix match
                 # from an exact bare-name match without re-deriving it.
-                {"ratio_percent": score, "blocking_rule": "suffix" if suffixed else "exact_name"},
+                {"ratio_percent": score, "blocking_rule": rule},
             )
             typed = _evidence(child, "compatible_type", parent.id, f"type:{parent.id}")
             if parent.id in declared_unique:

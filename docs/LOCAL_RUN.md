@@ -127,8 +127,17 @@ mkdir -p artifacts/config
 cp examples/local/*.toml artifacts/config/
 ```
 
-Set the secrets in the shell you run from. Nothing reads a `.env` file; the variables must be in
-the environment.
+Put the secrets in a `.env` file in the repository root, which git ignores, and load it into the
+shell you run from. The commands read environment variables only; `set -a` exports everything
+the file sets:
+
+```bash
+cp .env.example .env && chmod 600 .env    # then edit .env: one JSON object per database
+set -a; . ./.env; set +a                  # in every new shell, before running any command
+```
+
+Keep the single quotes around each JSON value; a password containing a single quote is written
+as `'\''` inside them. Or set the variables directly:
 
 ```bash
 # One key signs every bundle in a run; at least 32 bytes.
@@ -182,9 +191,13 @@ You can catalogue fewer than three databases: collect only those, and pass only 
   fully read or the model review failed; the Diagnostics section says which.
 - **Diagnostics** lists what could not be catalogued and why, for example an object with no
   stable identifier (`IDENTITY_UNAVAILABLE`), which is left out rather than risk a wrong identity.
+  A MongoDB view is listed as `VIEW_NOT_CATALOGUED`: it is a saved query with no stable
+  identity, so it is left out, but the collection it reads is catalogued and the catalogue stays
+  `complete`.
 - **Relationships**: `DECLARES_FK` / `declared` comes from the database's own foreign keys.
-  `REFERENCE_CANDIDATE` / `tentative` is inferred from names, types, keys and, if sampling is on,
-  measured value overlap. Every candidate lists the evidence it rests on. Confidence reads "not
+  `REFERENCE_CANDIDATE` / `tentative` is inferred from names (`customer_id`, `customerId`, or a
+  column named exactly like another table's key, such as `AccountID`), types, keys and, if
+  sampling is on, measured value overlap. Every candidate lists the evidence it rests on. Confidence reads "not
   calibrated" on purpose: no probability is shown until one has been measured on labelled data.
 - **Statistics** come from the database's own planner statistics, with the time they were last
   analyzed; they are estimates and can be stale.
@@ -251,6 +264,15 @@ mongosh ... --eval 'db.tickets.aggregate(<step pipeline>, {let: {keys_1_1: [150,
 
 Each read keeps the row limit; if a later read returns exactly `max_rows` rows the plan's
 warning applies: re-plan with a larger limit, `dbig-planner plan ... --max-rows 5000`.
+
+Joins your applications run count too: a SELECT in the `observations` directory whose `ON`
+clause equates qualified columns (`ON v.account_ref = a.acct_no`) becomes a join path with
+status `observed`, even where no key or candidate links the tables. Each line of an
+observation file is one JSON object:
+
+```json
+{"kind": "sql", "id": "q1", "source_id": "pg-main", "dialect": "postgres", "status": "executed", "observed_at": "2026-10-01T10:00:00Z", "sql": "SELECT ... FROM public.visits v JOIN public.accounts a ON v.account_ref = a.acct_no"}
+```
 
 `lineage-paths` answers "where did this data come from", which needs a record of what actually
 ran: SQL logs or pipeline events placed as JSON lines in the `observations` directory. With the

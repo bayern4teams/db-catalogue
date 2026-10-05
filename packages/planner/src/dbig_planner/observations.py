@@ -257,5 +257,64 @@ def sql_relations(
     return (base_relation(target, target_table=True) if target is not None else None, names, joins)
 
 
+def observed_join_columns(
+    statement: str, dialect: str
+) -> list[tuple[SQLRelation, SQLRelation, list[tuple[str, str]]]]:
+    """Each pair of tables an `ON` clause joins, with the column pairs it equates.
+
+    Read from `ON a.x = b.y [AND ...]` only, with every column qualified by a table or its alias
+    in the same SELECT: the two tables come from the columns, not from the order in `FROM`, so
+    `A JOIN B ON .. JOIN C ON a.k = c.k` links A and C. An `ON` holding an OR, a non-equality or
+    an unqualified column says nothing certain about which columns join, so it is skipped
+    rather than guessed. Raises like `sql_relations` for SQL it cannot read.
+    """
+    parsed = sqlglot.parse(statement, read=dialect)
+    if len(parsed) != 1 or parsed[0] is None:
+        raise ValueError("UNRESOLVED_SQL")
+    tree = parsed[0]
+    cte_names = {cte.alias_or_name for cte in tree.find_all(exp.CTE)}
+    found: dict[tuple[SQLRelation, SQLRelation], list[tuple[str, str]]] = {}
+    for select in tree.find_all(exp.Select):
+        sources: list[exp.Expression] = []
+        primary = select.args.get("from_")
+        if primary is not None:
+            sources.append(primary.this)
+        joins = select.args.get("joins") or []
+        sources.extend(join.this for join in joins)
+        aliases: dict[str, SQLRelation] = {}
+        for table in sources:
+            if not isinstance(table, exp.Table) or table.catalog:
+                continue
+            if not table.db and table.name in cte_names:
+                continue
+            aliases[table.alias_or_name] = SQLRelation(table.name, table.db or None)
+        for join in joins:
+            condition = join.args.get("on")
+            if condition is None or condition.find(exp.Or):
+                continue
+            terms = list(condition.flatten()) if isinstance(condition, exp.And) else [condition]
+            pairs: dict[tuple[SQLRelation, SQLRelation], list[tuple[str, str]]] = {}
+            for term in terms:
+                if isinstance(term, exp.Paren):
+                    term = term.this
+                if not (
+                    isinstance(term, exp.EQ)
+                    and isinstance(term.this, exp.Column)
+                    and isinstance(term.expression, exp.Column)
+                ):
+                    continue
+                left = aliases.get(term.this.table)
+                right = aliases.get(term.expression.table)
+                if left is None or right is None or left == right:
+                    continue
+                pairs.setdefault((left, right), []).append(
+                    (term.this.name, term.expression.name)
+                )
+            for key, columns in pairs.items():
+                existing = found.setdefault(key, [])
+                existing.extend(column for column in columns if column not in existing)
+    return [(left, right, columns) for (left, right), columns in found.items()]
+
+
 def observation_digest(record: dict) -> str:
     return hashlib.sha256(json.dumps(record, sort_keys=True).encode()).hexdigest()
