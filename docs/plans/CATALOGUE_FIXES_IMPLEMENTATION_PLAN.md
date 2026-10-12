@@ -277,7 +277,7 @@ Then push and start CI: `gh workflow run ci.yml --ref feat/catalogue-fixes`; the
 - The first-listed Phase 1 items change no inference output and need no decision.
 
 - **Phase 0 — baseline and ownership (lead only; no feature code).** Run the full check and record per-stage result and time (expected on the
-  tested code: `pytest` 477 passed, 69 skipped, about 40 s; CI green on `2e87fa7`). Start CI on the branch head and record it. Record the §2.4 grep
+  tested code: `pytest` 478 passed, 68 skipped in the cloud (about 80 s) and 477 passed, 69 skipped on the user's machine, which has no system CA bundle for the one test that needs it; CI green on `2e87fa7`). Start CI on the branch head and record it. Record the §2.4 grep
   baseline. Lock the file-ownership table with `graphify affected` per item and write it into `HANDOFF.md`. A verifier builds synthetic fixtures under
   `tests/catalogue_fixes/` reproducing each failure *shape* with planted ground truth: lowercase no-separator names (`xid` style), camelCase
   columns, plural words, two sources whose key columns share no values, a source whose key columns share some, a stub model reproducing each B1/C1
