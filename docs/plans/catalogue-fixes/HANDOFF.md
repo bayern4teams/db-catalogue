@@ -3,18 +3,18 @@
 Overwrite this file at every commit. A fresh session reads it first, then
 [the plan](../CATALOGUE_FIXES_IMPLEMENTATION_PLAN.md). Git is the memory; a session's context is not.
 
-**Lock:** 2026-10-12T16:23:30Z · **Autonomy:** unattended-through-phase-4 · **Last heartbeat:** 2026-10-12T16:24:56Z
+**Lock:** 2026-10-12T16:23:30Z · **Autonomy:** unattended-through-phase-4 · **Last heartbeat:** 2026-10-12T16:41:34Z
 
 (Lock/heartbeat protocol: plan §7. A session sets `Lock: <ISO time>`, pushes it, and refreshes it at
 every commit; a lock older than 75 min is stale. `Autonomy` is `off`, `dryrun` (a tick only records
 what works and exits) or `unattended-through-phase-N` (authorises the supervisor to chain phases).
 Only the user changes it.)
 
-**Branch:** `feat/catalogue-fixes` (from `claude/gracious-bardeen-x1y6he` at `2e87fa7`, plus the report commit) · **Current phase:** 0 (not started)
+**Branch:** `feat/catalogue-fixes` (from `claude/gracious-bardeen-x1y6he` at `2e87fa7`, plus the report commit) · **Current phase:** 1
 
 | item | phase | state | commit | lead verdict |
 |---|---|---|---|---|
-| P0 baseline, ownership, fixtures | 0 | todo | | |
+| P0 baseline, ownership, fixtures | 0 | accepted-cloud | | lead: 80 pass/50 xfail(strict) fixtures verified; CI green on branch (38256268573); grep baseline 0 hits |
 | B1 `ask` schema (llama.cpp rejects `maxLength`) | 1 | todo | | |
 | B3 + D6a camelCase split in search | 1 | todo | | |
 | D6b stemming in search | 1 | todo | | |
@@ -78,7 +78,7 @@ Phase 0 table (file -> sole owner while its items are open; plan §8/§9 DAG; gr
 Phase 1: lane R and lane D concurrent (disjoint files); lead does C1 builder half, C2, D1b. Phase 2: lead chain only.
 
 ## Next action
-Phase 0: baseline recorded (CI green 38256268573, grep 0 hits, ownership locked); verifier is writing tests/catalogue_fixes fixtures, then PHASE0_REPORT.md, then Phase 1 lanes R and D. (Runs only while `Autonomy` is `unattended-through-phase-N`.)
+Phase 1: lane R (worker: B1, B3/D6a, D6b, B4, C1 requester half) and lane D (worker: C3) concurrent; lead does C1 builder half, C2, D1b. See PHASE0_REPORT.md for plan inconsistencies to resolve first (B4 vs D6b `tables`). (Runs only while `Autonomy` is `unattended-through-phase-N`.)
 
 ## Notifications
 (append `[PHASE n DONE]`, `[BLOCKED]`, `[Catalogue fixes COMPLETE]` entries here; the same prefixes go in commit messages)
