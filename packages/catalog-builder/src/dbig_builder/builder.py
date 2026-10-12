@@ -25,6 +25,7 @@ from dbig_contracts.models import (
 )
 from rapidfuzz.fuzz import ratio
 
+from .config import MIN_TOKEN_SUPPORT as MIN_TOKEN_SUPPORT
 from .config import BuilderConfig
 from .reviewer import MODEL_FAILURE_CODES, review_candidates
 
@@ -63,7 +64,12 @@ def _base(record: Record) -> dict[str, Any]:
 
 
 def _evidence(
-    source: Record, kind: str, target_id: str, suffix: str, metrics: dict[str, Any] | None = None
+    source: Record,
+    kind: str,
+    target_id: str,
+    suffix: str,
+    metrics: dict[str, Any] | None = None,
+    explanation: str = "",
 ) -> Evidence:
     return Evidence(
         id=stable_id(source.source_id, "evidence", f"{source.id}:{suffix}"),
@@ -71,11 +77,11 @@ def _evidence(
         subject_id=source.id,
         object_id=target_id,
         metrics=metrics or {},
+        explanation=explanation,
         **_base(source),
     )
 
 
-MIN_TOKEN_SUPPORT = 4
 # Suffixes that conventionally mark a field as pointing somewhere else. Only `_id` was recognised
 # before, so a column called `owner_ref` or `account_code` could not become a candidate at all,
 # however perfectly its values contained. Order matters: the longest match wins, so `_uuid` is
@@ -251,38 +257,60 @@ def _composite_candidates(
             )
 
 
-def _containment(
+def _overlap(
     child: Field,
+    parent_id: str,
     child_tokens: ValueTokens | None,
     parent_tokens: ValueTokens | None,
-) -> Evidence | None:
-    """Measure how much of a child's sampled values appear among a candidate parent key's.
+    min_support: int,
+) -> Evidence:
+    """Say what was learned about a candidate's values: a measurement, or why there is none.
 
     Containment, not similarity: a reference means the child's values are drawn from the parent's
     key, so the question is one-directional and the denominator is the child's distinct count.
     Overlap is reported too, because a high containment on a tiny child sample against a huge
     parent is weak, and the two numbers together show that.
 
-    Abstains, returning nothing, in four cases rather than reporting a number that means nothing:
-    either side has no tokens, the two were keyed under different key IDs and so are not
-    comparable at all, the two were normalised differently, or either side's distinct count is
-    below the minimum support. §15's rule applies: no `confidence` is produced here, only a
-    measurement with its denominators, and the strength tier stays whatever the deterministic
-    rules already chose.
+    Where no number is honest (either side has no tokens, the two were keyed under different key
+    IDs, normalised differently, or a side's distinct count is below `min_support`) the evidence
+    is `value_overlap_not_measured` with the reason as a code and counts only. Ignorance is never
+    reported as zero overlap: a zero measured here is the only thing the caller may drop on.
+    No `confidence` is produced (§15): a measurement with its denominators, and the strength tier
+    stays whatever the deterministic rules already chose.
     """
+
+    def unmeasured(reason: str, why: str, metrics: dict[str, int] | None = None) -> Evidence:
+        return _evidence(
+            child,
+            "value_overlap_not_measured",
+            parent_id,
+            f"containment:{parent_id}",
+            {"reason": reason, **(metrics or {})},
+            f"value overlap not measured: {why}",
+        )
+
     if child_tokens is None or parent_tokens is None:
-        return None
+        return unmeasured(
+            "no_value_tokens", "no value tokens for one side (sampling is off or unconfigured)"
+        )
     if child_tokens.key_id != parent_tokens.key_id:
         # Tokens keyed under different run keys are unrelated byte strings. Comparing them would
         # always report zero overlap, which reads as a counterexample rather than as ignorance.
-        return None
+        return unmeasured("key_ids_differ", "the two sides were tokenised under different key IDs")
     if child_tokens.normalization != parent_tokens.normalization:
-        return None
-    if min(child_tokens.distinct_count, parent_tokens.distinct_count) < MIN_TOKEN_SUPPORT:
-        return None
+        return unmeasured("normalisation_differs", "the two sides were normalised differently")
     child_set, parent_set = set(child_tokens.tokens), set(parent_tokens.tokens)
-    if not child_set:
-        return None
+    smallest = min(child_tokens.distinct_count, parent_tokens.distinct_count)
+    if smallest < min_support or not child_set:
+        return unmeasured(
+            "sample_too_small",
+            f"sample too small (minimum {min_support} distinct values per side)",
+            {
+                "child_distinct_sampled": child_tokens.distinct_count,
+                "parent_distinct_sampled": parent_tokens.distinct_count,
+                "minimum_support": min_support,
+            },
+        )
     shared = len(child_set & parent_set)
     union = len(child_set | parent_set)
     return _evidence(
@@ -303,7 +331,7 @@ def _containment(
             # A capped token set makes containment a lower bound, not a measurement.
             "lower_bound_only": child_tokens.truncated or parent_tokens.truncated,
             "key_id": child_tokens.key_id,
-            "minimum_support": MIN_TOKEN_SUPPORT,
+            "minimum_support": min_support,
         },
     )
 
@@ -510,6 +538,7 @@ def assemble(
             MEASURED_UNIQUE
         ):
             unique_fields.append(candidate_parent)
+    dropped_zero_overlap = 0
     known_objects = frozenset(item.name.casefold().rstrip("s") for item in objects.values())
     for child in fields.values():
         child_object = objects.get(child.object_id)
@@ -558,6 +587,22 @@ def assemble(
         for score, parent, rule in sorted(candidates, key=lambda item: (-item[0], item[1].id))[
             : config.top_k_per_field
         ]:
+            overlap = _overlap(
+                child,
+                parent.id,
+                token_sets.get(child.id),
+                token_sets.get(parent.id),
+                config.min_token_support,
+            )
+            if (
+                overlap.kind == "value_containment"
+                and overlap.metrics["shared_tokens"] == 0
+            ):
+                # Measured, with enough values on both sides, and not one value in common: the
+                # columns are unrelated (user decision 2026-10-12). Counted, never recorded by
+                # value. A non-zero overlap, however small, is shown and never drops.
+                dropped_zero_overlap += 1
+                continue
             lexical = _evidence(
                 child,
                 "name_similarity",
@@ -589,13 +634,15 @@ def assemble(
                 evidence[item.id] = item
             cited = [lexical.id, typed.id, key.id]
             explanation = f"name, compatible type, and {key_claim}"
-            containment = _containment(
-                child, token_sets.get(child.id), token_sets.get(parent.id)
-            )
-            if containment is not None:
-                evidence[containment.id] = containment
-                cited.append(containment.id)
-                explanation = f"{explanation}; {containment.explanation}"
+            evidence[overlap.id] = overlap
+            cited.append(overlap.id)
+            if overlap.kind == "value_overlap_not_measured":
+                explanation = f"{explanation}; values not compared ({overlap.explanation})"
+            else:
+                explanation = (
+                    f"{explanation}; value overlap {overlap.metrics['contained_fraction']:.0%} "
+                    f"of {overlap.metrics['child_distinct_sampled']} sampled child values"
+                )
             edge_id = stable_id(child.source_id, "edge", f"{child.id}:{parent.id}")
             edges[edge_id] = Edge.model_validate(
                 {
@@ -645,6 +692,12 @@ def assemble(
                 "provenance": "assembler",
                 "review_status": review_status,
                 "partial_source_receipts": partial_source_receipts,
+                # Only when something was dropped, so other snapshots' bytes are unchanged.
+                **(
+                    {"dropped_zero_overlap_candidates": dropped_zero_overlap}
+                    if dropped_zero_overlap
+                    else {}
+                ),
                 # Only when partial, so a complete snapshot's bytes are unchanged.
                 **({"partial_reasons": sorted(partial_reasons)} if partial_reasons else {}),
             }

@@ -3,7 +3,7 @@
 Overwrite this file at every commit. A fresh session reads it first, then
 [the plan](../CATALOGUE_FIXES_IMPLEMENTATION_PLAN.md). Git is the memory; a session's context is not.
 
-**Lock:** 2026-10-12T17:24:08Z · **Autonomy:** unattended-through-phase-4 · **Last heartbeat:** 2026-10-12T17:24:08Z
+**Lock:** 2026-10-12T17:30:47Z · **Autonomy:** unattended-through-phase-4 · **Last heartbeat:** 2026-10-12T17:30:47Z
 
 (Lock/heartbeat protocol: plan §7. A session sets `Lock: <ISO time>`, pushes it, and refreshes it at
 every commit; a lock older than 75 min is stale. `Autonomy` is `off`, `dryrun` (a tick only records
@@ -24,7 +24,7 @@ Only the user changes it.)
 | C3 documentation gaps | 1 | unverified-live | | |
 | D1b reasons for empty statistic cells | 1 | unverified-live | | |
 | D3 + B5(2) lowercase names (`companyid`) when the stem is a known object | 2 | in-progress (implemented; attack verifier pending with A1) | | |
-| A1 + D2 + D9 + A3 overlap labels, measured-zero drop | 2 | todo | | |
+| A1 + D2 + D9 + A3 overlap labels, measured-zero drop | 2 | in-progress (implemented; attack verifier pending with D3) | | |
 | A2 parent column name resembles child's (DEC-1) | 3 | blocked (DEC) - waiting for the user | | |
 | D1a ClickHouse key names, weak parent claim (DEC-2) | 3 | blocked (DEC) - waiting for the user | | |
 | D2(3) dataset groups / forbidden source pairs config (DEC-3) | 3 | blocked (DEC) - waiting for the user | | |
@@ -80,7 +80,7 @@ Phase 0 table (file -> sole owner while its items are open; plan §8/§9 DAG; gr
 Phase 1: lane R and lane D concurrent (disjoint files); lead does C1 builder half, C2, D1b. Phase 2: lead chain only.
 
 ## Next action
-Phase 2 (lead chain in builder.py): D3 + B5(2), then A1/D2/D9. C2 waits for DEC-11b; DEC-13 (pymongo CVEs, local pip-audit only; CI green) waits for the user. (Runs only while `Autonomy` is `unattended-through-phase-N`.)
+Phase 2: attack verifier on D3 + A1/D2/D9 (new evidence kind `value_overlap_not_measured`, config `min_token_support` default 4, run field `dropped_zero_overlap_candidates`), then Phase 2 gate. C2 waits for DEC-11b; DEC-13 for the user. (Runs only while `Autonomy` is `unattended-through-phase-N`.)
 
 ## Notifications
 (append `[PHASE n DONE]`, `[BLOCKED]`, `[Catalogue fixes COMPLETE]` entries here; the same prefixes go in commit messages)

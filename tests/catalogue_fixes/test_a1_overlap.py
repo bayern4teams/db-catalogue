@@ -79,7 +79,6 @@ def test_with_sampling_off_the_candidate_exists_and_none_is_dropped(tmp_path, mo
     assert CHILD in found, found
 
 
-@pytest.mark.xfail(strict=True, reason="A1/D2 not implemented")
 @pytest.mark.parametrize("cross", [True, False], ids=["cross-source", "same-source"])
 def test_sampling_off_says_values_were_not_compared(tmp_path, monkeypatch, cross):
     snapshot = _snapshot(tmp_path, monkeypatch, cross=cross)
@@ -89,7 +88,6 @@ def test_sampling_off_says_values_were_not_compared(tmp_path, monkeypatch, cross
     assert "values not compared" in _page(snapshot, tmp_path)
 
 
-@pytest.mark.xfail(strict=True, reason="A1/D2 not implemented")
 def test_different_key_ids_say_why_the_overlap_was_not_measured(tmp_path, monkeypatch):
     snapshot = _snapshot(
         tmp_path, monkeypatch, child_values=_range(0, N), parent_values=_range(0, N),
@@ -102,7 +100,6 @@ def test_different_key_ids_say_why_the_overlap_was_not_measured(tmp_path, monkey
     assert "values not compared" in _page(snapshot, tmp_path)
 
 
-@pytest.mark.xfail(strict=True, reason="A1/D2 not implemented")
 def test_a_sample_below_the_threshold_keeps_its_candidate_marked_too_small(tmp_path, monkeypatch):
     snapshot = _snapshot(
         tmp_path, monkeypatch, child_values=_range(0, N - 1), parent_values=_range(1000, N),
@@ -123,7 +120,6 @@ def test_a_sample_below_the_threshold_is_never_dropped(tmp_path, monkeypatch):
 # --- 2. measured zero is dropped ----------------------------------------------------------------
 
 
-@pytest.mark.xfail(strict=True, reason="A1/D2 not implemented")
 @pytest.mark.parametrize("cross", [True, False], ids=["cross-source", "same-source"])
 def test_disjoint_columns_give_no_candidate(tmp_path, monkeypatch, cross):
     """0 of N with N exactly at the threshold. Mutation target: removing the drop fails this."""
@@ -135,7 +131,6 @@ def test_disjoint_columns_give_no_candidate(tmp_path, monkeypatch, cross):
     assert "REFERENCE_CANDIDATE" not in edge_kinds(snapshot)
 
 
-@pytest.mark.xfail(strict=True, reason="A1/D2 not implemented")
 def test_a_large_disjoint_sample_is_dropped_too(tmp_path, monkeypatch):
     snapshot = _snapshot(
         tmp_path, monkeypatch, child_values=_range(0, 10 * N), parent_values=_range(10_000, 10 * N)
@@ -143,7 +138,6 @@ def test_a_large_disjoint_sample_is_dropped_too(tmp_path, monkeypatch):
     assert candidates(snapshot) == []
 
 
-@pytest.mark.xfail(strict=True, reason="A1/D2 not implemented")
 def test_only_the_disjoint_candidate_is_dropped_not_its_neighbour(tmp_path, monkeypatch):
     """One parent, two children: `part` overlaps and stays, `crate` is disjoint and goes."""
     sources = _sources(child_values=_range(0, N), parent_values=_range(0, N + 2), cross=False)

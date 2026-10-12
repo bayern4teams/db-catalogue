@@ -35,12 +35,19 @@ class ReviewConfig(BaseModel):
         return self
 
 
+# Fewest distinct sampled values a side needs before value overlap is measured. Below it a
+# candidate is kept and marked "sample too small"; at or above it, 0 shared values drops the
+# candidate.
+MIN_TOKEN_SUPPORT = 4
+
+
 class BuilderConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     signing_keys: dict[str, str] = Field(min_length=1)
     name_similarity_threshold: int = Field(default=80, ge=0, le=100)
     top_k_per_field: int = Field(default=5, ge=1)
+    min_token_support: int = Field(default=MIN_TOKEN_SUPPORT, ge=1)
     review: ReviewConfig | None = None
 
     def key(self, key_id: str) -> bytes:

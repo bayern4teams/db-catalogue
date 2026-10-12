@@ -16,7 +16,6 @@ Tests marked xfail fail on the pre-change code; the others are controls.
 
 from __future__ import annotations
 
-import pytest
 from catalogue_fixture_kit import build_snapshot, candidates
 
 NEVER_REFERENCES = ["xid", "valid", "paid"]
