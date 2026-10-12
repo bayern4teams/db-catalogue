@@ -1,0 +1,47 @@
+{
+  "status": "unresolved",
+  "warnings": [
+    "each read returns at most 1000 rows; a later read that returns exactly that many may be incomplete, so raise max_rows",
+    "candidate relationship requires human review"
+  ],
+  "steps": [
+    {
+      "source_id": "ch-main",
+      "rows": 1000,
+      "bound_keys": {},
+      "columns": [
+        "Company___version",
+        "Company__companyDescription",
+        "Company__companyDomain",
+        "Company__companyEmployeeCountRange",
+        "Company__companyEmployees",
+        "Company__companyID",
+        "Company__companyName",
+        "Company__companyPhone",
+        "Company__companyRevenue",
+        "Company__companyRevenueIn000s",
+        "Company__companyRevenueRange",
+        "Company__companyRevenue_currency",
+        "Company__companyTicker",
+        "Company__companyType",
+        "Company__website"
+      ]
+    },
+    {
+      "source_id": "pg-main",
+      "rows": 0,
+      "bound_keys": {
+        "keys_1_1": 1000
+      },
+      "columns": []
+    }
+  ],
+  "joins": [
+    {
+      "left_rows": 1000,
+      "right_rows": 0,
+      "joined_rows": 0,
+      "left_rows_without_a_match": 1000
+    }
+  ]
+}

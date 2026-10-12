@@ -1,0 +1,4 @@
+[requester]
+snapshot_dir = "artifacts/run-20261006-035124/snapshot"
+state_dir = "artifacts/run-20261006-035124/requester"
+api_key_env = "REQUESTER_TOKEN"

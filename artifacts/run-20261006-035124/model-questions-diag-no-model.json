@@ -1,0 +1,1403 @@
+[
+ {
+  "id": "D1",
+  "category": "direct",
+  "question": "Which column holds a person's role in PostgreSQL?",
+  "expected": [
+   [
+    "pg",
+    "person",
+    "role"
+   ]
+  ],
+  "retrieved_10": 10,
+  "recall_10": [
+   1,
+   1
+  ],
+  "missing_10": [],
+  "answer_10": null,
+  "error_10": "APIConnectionError: Connection error.",
+  "seconds_10": 0.2,
+  "retrieved_30": 30,
+  "recall_30": [
+   1,
+   1
+  ],
+  "missing_30": [],
+  "answer_30": null,
+  "error_30": "APIConnectionError: Connection error.",
+  "seconds_30": 0.0
+ },
+ {
+  "id": "D2",
+  "category": "direct",
+  "question": "Where is a company's ticker symbol stored, and what type is it?",
+  "expected": [
+   [
+    "ch",
+    "Company",
+    "companyTicker"
+   ]
+  ],
+  "retrieved_10": 10,
+  "recall_10": [
+   0,
+   1
+  ],
+  "missing_10": [
+   [
+    "ch",
+    "Company",
+    "companyTicker"
+   ]
+  ],
+  "answer_10": null,
+  "error_10": "APIConnectionError: Connection error.",
+  "seconds_10": 0.0,
+  "retrieved_30": 30,
+  "recall_30": [
+   0,
+   1
+  ],
+  "missing_30": [
+   [
+    "ch",
+    "Company",
+    "companyTicker"
+   ]
+  ],
+  "answer_30": null,
+  "error_30": "APIConnectionError: Connection error.",
+  "seconds_30": 0.0
+ },
+ {
+  "id": "D3",
+  "category": "direct",
+  "question": "Which PostgreSQL column stores the postal code of a location?",
+  "expected": [
+   [
+    "pg",
+    "location",
+    "postalcode"
+   ]
+  ],
+  "retrieved_10": 10,
+  "recall_10": [
+   1,
+   1
+  ],
+  "missing_10": [],
+  "answer_10": null,
+  "error_10": "APIConnectionError: Connection error.",
+  "seconds_10": 0.0,
+  "retrieved_30": 30,
+  "recall_30": [
+   1,
+   1
+  ],
+  "missing_30": [],
+  "answer_30": null,
+  "error_30": "APIConnectionError: Connection error.",
+  "seconds_30": 0.0
+ },
+ {
+  "id": "D4",
+  "category": "direct",
+  "question": "Which ClickHouse columns hold company revenue, and what are their types?",
+  "expected": [
+   [
+    "ch",
+    "Company",
+    "companyRevenue"
+   ],
+   [
+    "ch",
+    "Company",
+    "companyRevenueIn000s"
+   ]
+  ],
+  "retrieved_10": 10,
+  "recall_10": [
+   0,
+   2
+  ],
+  "missing_10": [
+   [
+    "ch",
+    "Company",
+    "companyRevenue"
+   ],
+   [
+    "ch",
+    "Company",
+    "companyRevenueIn000s"
+   ]
+  ],
+  "answer_10": null,
+  "error_10": "APIConnectionError: Connection error.",
+  "seconds_10": 0.0,
+  "retrieved_30": 30,
+  "recall_30": [
+   0,
+   2
+  ],
+  "missing_30": [
+   [
+    "ch",
+    "Company",
+    "companyRevenue"
+   ],
+   [
+    "ch",
+    "Company",
+    "companyRevenueIn000s"
+   ]
+  ],
+  "answer_30": null,
+  "error_30": "APIConnectionError: Connection error.",
+  "seconds_30": 0.0
+ },
+ {
+  "id": "D5",
+  "category": "direct",
+  "question": "Where are the names of industries stored?",
+  "expected": [
+   [
+    "pg",
+    "industryclassification",
+    "name"
+   ],
+   [
+    "ch",
+    "Industry",
+    "name"
+   ],
+   [
+    "mongo",
+    "zoominfo_industry",
+    "name"
+   ]
+  ],
+  "retrieved_10": 0,
+  "recall_10": [
+   0,
+   3
+  ],
+  "missing_10": [
+   [
+    "pg",
+    "industryclassification",
+    "name"
+   ],
+   [
+    "ch",
+    "Industry",
+    "name"
+   ],
+   [
+    "mongo",
+    "zoominfo_industry",
+    "name"
+   ]
+  ],
+  "answer_10": null,
+  "error_10": "APIConnectionError: Connection error.",
+  "seconds_10": 0.0,
+  "retrieved_30": 0,
+  "recall_30": [
+   0,
+   3
+  ],
+  "missing_30": [
+   [
+    "pg",
+    "industryclassification",
+    "name"
+   ],
+   [
+    "ch",
+    "Industry",
+    "name"
+   ],
+   [
+    "mongo",
+    "zoominfo_industry",
+    "name"
+   ]
+  ],
+  "answer_30": null,
+  "error_30": "APIConnectionError: Connection error.",
+  "seconds_30": 0.0
+ },
+ {
+  "id": "S1",
+  "category": "steps",
+  "question": "In PostgreSQL, which tables and columns do I use to get the industry names of a company?",
+  "expected": [
+   [
+    "pg",
+    "company",
+    "companyid"
+   ],
+   [
+    "pg",
+    "companyindustry",
+    "companyid"
+   ],
+   [
+    "pg",
+    "companyindustry",
+    "classificationid"
+   ],
+   [
+    "pg",
+    "industryclassification",
+    "classificationid"
+   ],
+   [
+    "pg",
+    "industryclassification",
+    "name"
+   ]
+  ],
+  "retrieved_10": 10,
+  "recall_10": [
+   0,
+   5
+  ],
+  "missing_10": [
+   [
+    "pg",
+    "company",
+    "companyid"
+   ],
+   [
+    "pg",
+    "companyindustry",
+    "companyid"
+   ],
+   [
+    "pg",
+    "companyindustry",
+    "classificationid"
+   ],
+   [
+    "pg",
+    "industryclassification",
+    "classificationid"
+   ],
+   [
+    "pg",
+    "industryclassification",
+    "name"
+   ]
+  ],
+  "answer_10": null,
+  "error_10": "APIConnectionError: Connection error.",
+  "seconds_10": 0.0,
+  "retrieved_30": 30,
+  "recall_30": [
+   0,
+   5
+  ],
+  "missing_30": [
+   [
+    "pg",
+    "company",
+    "companyid"
+   ],
+   [
+    "pg",
+    "companyindustry",
+    "companyid"
+   ],
+   [
+    "pg",
+    "companyindustry",
+    "classificationid"
+   ],
+   [
+    "pg",
+    "industryclassification",
+    "classificationid"
+   ],
+   [
+    "pg",
+    "industryclassification",
+    "name"
+   ]
+  ],
+  "answer_30": null,
+  "error_30": "APIConnectionError: Connection error.",
+  "seconds_30": 0.0
+ },
+ {
+  "id": "S2",
+  "category": "steps",
+  "question": "In PostgreSQL, how do I get from a person's name to the companies that person worked at?",
+  "expected": [
+   [
+    "pg",
+    "person",
+    "name"
+   ],
+   [
+    "pg",
+    "person",
+    "personid"
+   ],
+   [
+    "pg",
+    "companyexperience",
+    "personid"
+   ],
+   [
+    "pg",
+    "companyexperience",
+    "companyid"
+   ],
+   [
+    "pg",
+    "company",
+    "companyid"
+   ]
+  ],
+  "retrieved_10": 10,
+  "recall_10": [
+   2,
+   5
+  ],
+  "missing_10": [
+   [
+    "pg",
+    "companyexperience",
+    "personid"
+   ],
+   [
+    "pg",
+    "companyexperience",
+    "companyid"
+   ],
+   [
+    "pg",
+    "company",
+    "companyid"
+   ]
+  ],
+  "answer_10": null,
+  "error_10": "APIConnectionError: Connection error.",
+  "seconds_10": 0.0,
+  "retrieved_30": 30,
+  "recall_30": [
+   3,
+   5
+  ],
+  "missing_30": [
+   [
+    "pg",
+    "companyexperience",
+    "companyid"
+   ],
+   [
+    "pg",
+    "company",
+    "companyid"
+   ]
+  ],
+  "answer_30": null,
+  "error_30": "APIConnectionError: Connection error.",
+  "seconds_30": 0.0
+ },
+ {
+  "id": "S3",
+  "category": "steps",
+  "question": "In ClickHouse, how do I get the industry names for a company?",
+  "expected": [
+   [
+    "ch",
+    "Company",
+    "companyID"
+   ],
+   [
+    "ch",
+    "CompanyIndustry",
+    "companyID"
+   ],
+   [
+    "ch",
+    "CompanyIndustry",
+    "industryID"
+   ],
+   [
+    "ch",
+    "Industry",
+    "industryID"
+   ],
+   [
+    "ch",
+    "Industry",
+    "name"
+   ]
+  ],
+  "retrieved_10": 10,
+  "recall_10": [
+   2,
+   5
+  ],
+  "missing_10": [
+   [
+    "ch",
+    "Company",
+    "companyID"
+   ],
+   [
+    "ch",
+    "CompanyIndustry",
+    "companyID"
+   ],
+   [
+    "ch",
+    "Industry",
+    "name"
+   ]
+  ],
+  "answer_10": null,
+  "error_10": "APIConnectionError: Connection error.",
+  "seconds_10": 0.0,
+  "retrieved_30": 30,
+  "recall_30": [
+   2,
+   5
+  ],
+  "missing_30": [
+   [
+    "ch",
+    "Company",
+    "companyID"
+   ],
+   [
+    "ch",
+    "CompanyIndustry",
+    "companyID"
+   ],
+   [
+    "ch",
+    "Industry",
+    "name"
+   ]
+  ],
+  "answer_30": null,
+  "error_30": "APIConnectionError: Connection error.",
+  "seconds_30": 0.0
+ },
+ {
+  "id": "S4",
+  "category": "steps",
+  "question": "In the MongoDB zoominfo collections, how do I get from a staff member to the company?",
+  "expected": [
+   [
+    "mongo",
+    "zoominfo_staff",
+    "personID"
+   ],
+   [
+    "mongo",
+    "zoominfo_Experience",
+    "personID"
+   ],
+   [
+    "mongo",
+    "zoominfo_Experience",
+    "companyID"
+   ],
+   [
+    "mongo",
+    "zoominfo_Company",
+    "companyID"
+   ]
+  ],
+  "retrieved_10": 10,
+  "recall_10": [
+   1,
+   4
+  ],
+  "missing_10": [
+   [
+    "mongo",
+    "zoominfo_Experience",
+    "personID"
+   ],
+   [
+    "mongo",
+    "zoominfo_Experience",
+    "companyID"
+   ],
+   [
+    "mongo",
+    "zoominfo_Company",
+    "companyID"
+   ]
+  ],
+  "answer_10": null,
+  "error_10": "APIConnectionError: Connection error.",
+  "seconds_10": 0.0,
+  "retrieved_30": 30,
+  "recall_30": [
+   3,
+   4
+  ],
+  "missing_30": [
+   [
+    "mongo",
+    "zoominfo_Experience",
+    "personID"
+   ]
+  ],
+  "answer_30": null,
+  "error_30": "APIConnectionError: Connection error.",
+  "seconds_30": 0.0
+ },
+ {
+  "id": "S5",
+  "category": "steps",
+  "question": "In PostgreSQL, which tables do I join to list the investment rounds of a company together with the investor rows?",
+  "expected": [
+   [
+    "pg",
+    "company",
+    "companyid"
+   ],
+   [
+    "pg",
+    "companyinvestmentround",
+    "companyid"
+   ],
+   [
+    "pg",
+    "companyinvestmentround",
+    "investmentid"
+   ],
+   [
+    "pg",
+    "companyinvestor",
+    "investmentid"
+   ]
+  ],
+  "retrieved_10": 10,
+  "recall_10": [
+   3,
+   4
+  ],
+  "missing_10": [
+   [
+    "pg",
+    "companyinvestmentround",
+    "companyid"
+   ]
+  ],
+  "answer_10": null,
+  "error_10": "APIConnectionError: Connection error.",
+  "seconds_10": 0.0,
+  "retrieved_30": 30,
+  "recall_30": [
+   4,
+   4
+  ],
+  "missing_30": [],
+  "answer_30": null,
+  "error_30": "APIConnectionError: Connection error.",
+  "seconds_30": 0.0
+ },
+ {
+  "id": "C1",
+  "category": "comprehensive",
+  "question": "List every place in the catalogue where a company's website is stored.",
+  "expected": [
+   [
+    "pg",
+    "company",
+    "website"
+   ],
+   [
+    "ch",
+    "Company",
+    "website"
+   ],
+   [
+    "mongo",
+    "zoominfo_Company",
+    "website"
+   ],
+   [
+    "mongo",
+    "diffbot_Company",
+    "website"
+   ]
+  ],
+  "retrieved_10": 10,
+  "recall_10": [
+   4,
+   4
+  ],
+  "missing_10": [],
+  "answer_10": null,
+  "error_10": "APIConnectionError: Connection error.",
+  "seconds_10": 0.0,
+  "retrieved_30": 30,
+  "recall_30": [
+   4,
+   4
+  ],
+  "missing_30": [],
+  "answer_30": null,
+  "error_30": "APIConnectionError: Connection error.",
+  "seconds_30": 0.0
+ },
+ {
+  "id": "C2",
+  "category": "comprehensive",
+  "question": "Which tables in all three databases describe industries, and how do they relate to companies?",
+  "expected": [
+   [
+    "pg",
+    "industryclassification",
+    null
+   ],
+   [
+    "pg",
+    "companyindustry",
+    null
+   ],
+   [
+    "ch",
+    "Industry",
+    null
+   ],
+   [
+    "ch",
+    "CompanyIndustry",
+    null
+   ],
+   [
+    "mongo",
+    "zoominfo_industry",
+    null
+   ],
+   [
+    "mongo",
+    "zoominfo_CompanyIndustry",
+    null
+   ],
+   [
+    "mongo",
+    "diffbot_CompanyIndustry",
+    null
+   ]
+  ],
+  "retrieved_10": 1,
+  "recall_10": [
+   0,
+   7
+  ],
+  "missing_10": [
+   [
+    "pg",
+    "industryclassification",
+    null
+   ],
+   [
+    "pg",
+    "companyindustry",
+    null
+   ],
+   [
+    "ch",
+    "Industry",
+    null
+   ],
+   [
+    "ch",
+    "CompanyIndustry",
+    null
+   ],
+   [
+    "mongo",
+    "zoominfo_industry",
+    null
+   ],
+   [
+    "mongo",
+    "zoominfo_CompanyIndustry",
+    null
+   ],
+   [
+    "mongo",
+    "diffbot_CompanyIndustry",
+    null
+   ]
+  ],
+  "answer_10": null,
+  "error_10": "APIConnectionError: Connection error.",
+  "seconds_10": 0.0,
+  "retrieved_30": 1,
+  "recall_30": [
+   0,
+   7
+  ],
+  "missing_30": [
+   [
+    "pg",
+    "industryclassification",
+    null
+   ],
+   [
+    "pg",
+    "companyindustry",
+    null
+   ],
+   [
+    "ch",
+    "Industry",
+    null
+   ],
+   [
+    "ch",
+    "CompanyIndustry",
+    null
+   ],
+   [
+    "mongo",
+    "zoominfo_industry",
+    null
+   ],
+   [
+    "mongo",
+    "zoominfo_CompanyIndustry",
+    null
+   ],
+   [
+    "mongo",
+    "diffbot_CompanyIndustry",
+    null
+   ]
+  ],
+  "answer_30": null,
+  "error_30": "APIConnectionError: Connection error.",
+  "seconds_30": 0.0
+ },
+ {
+  "id": "C3",
+  "category": "comprehensive",
+  "question": "What does the ClickHouse database contain? List its tables.",
+  "expected": [
+   [
+    "ch",
+    "Company",
+    null
+   ],
+   [
+    "ch",
+    "CompanyIndustry",
+    null
+   ],
+   [
+    "ch",
+    "Experience",
+    null
+   ],
+   [
+    "ch",
+    "Industry",
+    null
+   ],
+   [
+    "ch",
+    "Location",
+    null
+   ],
+   [
+    "ch",
+    "Person",
+    null
+   ],
+   [
+    "ch",
+    "PersonContact",
+    null
+   ]
+  ],
+  "retrieved_10": 0,
+  "recall_10": [
+   0,
+   7
+  ],
+  "missing_10": [
+   [
+    "ch",
+    "Company",
+    null
+   ],
+   [
+    "ch",
+    "CompanyIndustry",
+    null
+   ],
+   [
+    "ch",
+    "Experience",
+    null
+   ],
+   [
+    "ch",
+    "Industry",
+    null
+   ],
+   [
+    "ch",
+    "Location",
+    null
+   ],
+   [
+    "ch",
+    "Person",
+    null
+   ],
+   [
+    "ch",
+    "PersonContact",
+    null
+   ]
+  ],
+  "answer_10": null,
+  "error_10": "APIConnectionError: Connection error.",
+  "seconds_10": 0.0,
+  "retrieved_30": 0,
+  "recall_30": [
+   0,
+   7
+  ],
+  "missing_30": [
+   [
+    "ch",
+    "Company",
+    null
+   ],
+   [
+    "ch",
+    "CompanyIndustry",
+    null
+   ],
+   [
+    "ch",
+    "Experience",
+    null
+   ],
+   [
+    "ch",
+    "Industry",
+    null
+   ],
+   [
+    "ch",
+    "Location",
+    null
+   ],
+   [
+    "ch",
+    "Person",
+    null
+   ],
+   [
+    "ch",
+    "PersonContact",
+    null
+   ]
+  ],
+  "answer_30": null,
+  "error_30": "APIConnectionError: Connection error.",
+  "seconds_30": 0.0
+ },
+ {
+  "id": "C4",
+  "category": "comprehensive",
+  "question": "In every source, which tables hold personal contact or identity details of people?",
+  "expected": [
+   [
+    "pg",
+    "person",
+    null
+   ],
+   [
+    "pg",
+    "companycontact",
+    null
+   ],
+   [
+    "ch",
+    "Person",
+    null
+   ],
+   [
+    "ch",
+    "PersonContact",
+    null
+   ],
+   [
+    "mongo",
+    "zoominfo_contact_information",
+    null
+   ],
+   [
+    "mongo",
+    "zoominfo_staff",
+    null
+   ]
+  ],
+  "retrieved_10": 10,
+  "recall_10": [
+   2,
+   6
+  ],
+  "missing_10": [
+   [
+    "pg",
+    "person",
+    null
+   ],
+   [
+    "ch",
+    "Person",
+    null
+   ],
+   [
+    "ch",
+    "PersonContact",
+    null
+   ],
+   [
+    "mongo",
+    "zoominfo_staff",
+    null
+   ]
+  ],
+  "answer_10": null,
+  "error_10": "APIConnectionError: Connection error.",
+  "seconds_10": 0.0,
+  "retrieved_30": 30,
+  "recall_30": [
+   2,
+   6
+  ],
+  "missing_30": [
+   [
+    "pg",
+    "person",
+    null
+   ],
+   [
+    "ch",
+    "Person",
+    null
+   ],
+   [
+    "ch",
+    "PersonContact",
+    null
+   ],
+   [
+    "mongo",
+    "zoominfo_staff",
+    null
+   ]
+  ],
+  "answer_30": null,
+  "error_30": "APIConnectionError: Connection error.",
+  "seconds_30": 0.0
+ },
+ {
+  "id": "C5",
+  "category": "comprehensive",
+  "question": "Which columns identify a company across the catalogue?",
+  "expected": [
+   [
+    "pg",
+    "company",
+    "companyid"
+   ],
+   [
+    "ch",
+    "Company",
+    "companyID"
+   ],
+   [
+    "mongo",
+    "zoominfo_Company",
+    "companyID"
+   ],
+   [
+    "mongo",
+    "diffbot_Company",
+    "companyID"
+   ]
+  ],
+  "retrieved_10": 10,
+  "recall_10": [
+   0,
+   4
+  ],
+  "missing_10": [
+   [
+    "pg",
+    "company",
+    "companyid"
+   ],
+   [
+    "ch",
+    "Company",
+    "companyID"
+   ],
+   [
+    "mongo",
+    "zoominfo_Company",
+    "companyID"
+   ],
+   [
+    "mongo",
+    "diffbot_Company",
+    "companyID"
+   ]
+  ],
+  "answer_10": null,
+  "error_10": "APIConnectionError: Connection error.",
+  "seconds_10": 0.0,
+  "retrieved_30": 30,
+  "recall_30": [
+   0,
+   4
+  ],
+  "missing_30": [
+   [
+    "pg",
+    "company",
+    "companyid"
+   ],
+   [
+    "ch",
+    "Company",
+    "companyID"
+   ],
+   [
+    "mongo",
+    "zoominfo_Company",
+    "companyID"
+   ],
+   [
+    "mongo",
+    "diffbot_Company",
+    "companyID"
+   ]
+  ],
+  "answer_30": null,
+  "error_30": "APIConnectionError: Connection error.",
+  "seconds_30": 0.0
+ },
+ {
+  "id": "I1",
+  "category": "inference",
+  "question": "Can I join PostgreSQL company and ClickHouse Company directly on their company ids?",
+  "expected": [
+   [
+    "pg",
+    "company",
+    "companyid"
+   ],
+   [
+    "ch",
+    "Company",
+    "companyID"
+   ]
+  ],
+  "retrieved_10": 10,
+  "recall_10": [
+   1,
+   2
+  ],
+  "missing_10": [
+   [
+    "ch",
+    "Company",
+    "companyID"
+   ]
+  ],
+  "answer_10": null,
+  "error_10": "APIConnectionError: Connection error.",
+  "seconds_10": 0.0,
+  "retrieved_30": 30,
+  "recall_30": [
+   2,
+   2
+  ],
+  "missing_30": [],
+  "answer_30": null,
+  "error_30": "APIConnectionError: Connection error.",
+  "seconds_30": 0.0
+ },
+ {
+  "id": "I2",
+  "category": "inference",
+  "question": "Which ClickHouse tables do the MongoDB zoominfo collections correspond to?",
+  "expected": [
+   [
+    "ch",
+    "Company",
+    null
+   ],
+   [
+    "ch",
+    "CompanyIndustry",
+    null
+   ],
+   [
+    "ch",
+    "Experience",
+    null
+   ],
+   [
+    "ch",
+    "Industry",
+    null
+   ],
+   [
+    "ch",
+    "Location",
+    null
+   ],
+   [
+    "ch",
+    "Person",
+    null
+   ]
+  ],
+  "retrieved_10": 10,
+  "recall_10": [
+   0,
+   6
+  ],
+  "missing_10": [
+   [
+    "ch",
+    "Company",
+    null
+   ],
+   [
+    "ch",
+    "CompanyIndustry",
+    null
+   ],
+   [
+    "ch",
+    "Experience",
+    null
+   ],
+   [
+    "ch",
+    "Industry",
+    null
+   ],
+   [
+    "ch",
+    "Location",
+    null
+   ],
+   [
+    "ch",
+    "Person",
+    null
+   ]
+  ],
+  "answer_10": null,
+  "error_10": "APIConnectionError: Connection error.",
+  "seconds_10": 0.0,
+  "retrieved_30": 30,
+  "recall_30": [
+   0,
+   6
+  ],
+  "missing_30": [
+   [
+    "ch",
+    "Company",
+    null
+   ],
+   [
+    "ch",
+    "CompanyIndustry",
+    null
+   ],
+   [
+    "ch",
+    "Experience",
+    null
+   ],
+   [
+    "ch",
+    "Industry",
+    null
+   ],
+   [
+    "ch",
+    "Location",
+    null
+   ],
+   [
+    "ch",
+    "Person",
+    null
+   ]
+  ],
+  "answer_30": null,
+  "error_30": "APIConnectionError: Connection error.",
+  "seconds_30": 0.0
+ },
+ {
+  "id": "I3",
+  "category": "inference",
+  "question": "Is companyrelation.relatedcompanyid a reference to company?",
+  "expected": [
+   [
+    "pg",
+    "companyrelation",
+    "relatedcompanyid"
+   ],
+   [
+    "pg",
+    "company",
+    "companyid"
+   ]
+  ],
+  "retrieved_10": 10,
+  "recall_10": [
+   1,
+   2
+  ],
+  "missing_10": [
+   [
+    "pg",
+    "company",
+    "companyid"
+   ]
+  ],
+  "answer_10": null,
+  "error_10": "APIConnectionError: Connection error.",
+  "seconds_10": 0.0,
+  "retrieved_30": 30,
+  "recall_30": [
+   2,
+   2
+  ],
+  "missing_30": [],
+  "answer_30": null,
+  "error_30": "APIConnectionError: Connection error.",
+  "seconds_30": 0.0
+ },
+ {
+  "id": "I4",
+  "category": "inference",
+  "question": "Which column should I use to count a company's employees?",
+  "expected": [
+   [
+    "ch",
+    "Company",
+    "companyEmployees"
+   ],
+   [
+    "ch",
+    "Company",
+    "companyEmployeeCountRange"
+   ]
+  ],
+  "retrieved_10": 10,
+  "recall_10": [
+   0,
+   2
+  ],
+  "missing_10": [
+   [
+    "ch",
+    "Company",
+    "companyEmployees"
+   ],
+   [
+    "ch",
+    "Company",
+    "companyEmployeeCountRange"
+   ]
+  ],
+  "answer_10": null,
+  "error_10": "APIConnectionError: Connection error.",
+  "seconds_10": 0.0,
+  "retrieved_30": 30,
+  "recall_30": [
+   0,
+   2
+  ],
+  "missing_30": [
+   [
+    "ch",
+    "Company",
+    "companyEmployees"
+   ],
+   [
+    "ch",
+    "Company",
+    "companyEmployeeCountRange"
+   ]
+  ],
+  "answer_30": null,
+  "error_30": "APIConnectionError: Connection error.",
+  "seconds_30": 0.0
+ },
+ {
+  "id": "I5",
+  "category": "inference",
+  "question": "Where would I look for the relationships between companies, such as subsidiaries or partners?",
+  "expected": [
+   [
+    "pg",
+    "companyrelation",
+    null
+   ]
+  ],
+  "retrieved_10": 0,
+  "recall_10": [
+   0,
+   1
+  ],
+  "missing_10": [
+   [
+    "pg",
+    "companyrelation",
+    null
+   ]
+  ],
+  "answer_10": null,
+  "error_10": "APIConnectionError: Connection error.",
+  "seconds_10": 0.0,
+  "retrieved_30": 0,
+  "recall_30": [
+   0,
+   1
+  ],
+  "missing_30": [
+   [
+    "pg",
+    "companyrelation",
+    null
+   ]
+  ],
+  "answer_30": null,
+  "error_30": "APIConnectionError: Connection error.",
+  "seconds_30": 0.0
+ }
+]

@@ -1,0 +1,4 @@
+# The key ID on the left must match `signing_key_id` in the source files; the value is the
+# environment variable that holds the key.
+[builder]
+signing_keys = { local = "DBIG_SIGNING_KEY" }

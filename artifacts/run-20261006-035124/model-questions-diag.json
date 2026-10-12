@@ -1,0 +1,1603 @@
+[
+ {
+  "id": "D1",
+  "category": "direct",
+  "question": "Which column holds a person's role in PostgreSQL?",
+  "expected": [
+   [
+    "pg",
+    "person",
+    "role"
+   ]
+  ],
+  "retrieved_10": 10,
+  "recall_10": [
+   1,
+   1
+  ],
+  "missing_10": [],
+  "answer_10": "The column is `person.role` [field:5e6cab3f3d0f18ecd1720ee376af56d4].",
+  "finish_10": "stop",
+  "tokens_10": 190,
+  "mentioned_10": [
+   1,
+   1
+  ],
+  "seconds_10": 10.8,
+  "retrieved_30": 30,
+  "recall_30": [
+   1,
+   1
+  ],
+  "missing_30": [],
+  "answer_30": "The role is held in the role column of public.person. [field:5e6cab3f3d0f18ecd1720ee376af56d4]",
+  "finish_30": "stop",
+  "tokens_30": 448,
+  "mentioned_30": [
+   1,
+   1
+  ],
+  "seconds_30": 17.0
+ },
+ {
+  "id": "D2",
+  "category": "direct",
+  "question": "Where is a company's ticker symbol stored, and what type is it?",
+  "expected": [
+   [
+    "ch",
+    "Company",
+    "companyTicker"
+   ]
+  ],
+  "retrieved_10": 10,
+  "recall_10": [
+   0,
+   1
+  ],
+  "missing_10": [
+   [
+    "ch",
+    "Company",
+    "companyTicker"
+   ]
+  ],
+  "answer_10": "The returned metadata does not contain a ticker-symbol field, so its storage location and type are not specified. [field:d5aac849b81768ae64fc8f3a03456ce7, field:bd105a5a3e21499268cb33d16958f07d]",
+  "finish_10": "stop",
+  "tokens_10": 3438,
+  "mentioned_10": [
+   0,
+   1
+  ],
+  "seconds_10": 31.9,
+  "retrieved_30": 30,
+  "recall_30": [
+   0,
+   1
+  ],
+  "missing_30": [
+   [
+    "ch",
+    "Company",
+    "companyTicker"
+   ]
+  ],
+  "answer_30": "The returned metadata does not show a ticker-symbol field. The company-related fields shown are types: public.company.types (text) [field:d5aac849b81768ae64fc8f3a03456ce7] and enrichment_engine.diffbot_Company.types (str) [field:bd105a5a3e21499268cb33d16958f07d].",
+  "finish_30": "stop",
+  "tokens_30": 4571,
+  "mentioned_30": [
+   0,
+   1
+  ],
+  "seconds_30": 54.4
+ },
+ {
+  "id": "D3",
+  "category": "direct",
+  "question": "Which PostgreSQL column stores the postal code of a location?",
+  "expected": [
+   [
+    "pg",
+    "location",
+    "postalcode"
+   ]
+  ],
+  "retrieved_10": 10,
+  "recall_10": [
+   1,
+   1
+  ],
+  "missing_10": [],
+  "answer_10": "postalcode [field:07881a985e5af07193a5165f89d2df8c]",
+  "finish_10": "stop",
+  "tokens_10": 148,
+  "mentioned_10": [
+   0,
+   1
+  ],
+  "seconds_10": 2.1,
+  "retrieved_30": 30,
+  "recall_30": [
+   1,
+   1
+  ],
+  "missing_30": [],
+  "answer_30": "The PostgreSQL column is postalcode on the public.location table [field:07881a985e5af07193a5165f89d2df8c].",
+  "finish_30": "stop",
+  "tokens_30": 208,
+  "mentioned_30": [
+   1,
+   1
+  ],
+  "seconds_30": 3.1
+ },
+ {
+  "id": "D4",
+  "category": "direct",
+  "question": "Which ClickHouse columns hold company revenue, and what are their types?",
+  "expected": [
+   [
+    "ch",
+    "Company",
+    "companyRevenue"
+   ],
+   [
+    "ch",
+    "Company",
+    "companyRevenueIn000s"
+   ]
+  ],
+  "retrieved_10": 10,
+  "recall_10": [
+   0,
+   2
+  ],
+  "missing_10": [
+   [
+    "ch",
+    "Company",
+    "companyRevenue"
+   ],
+   [
+    "ch",
+    "Company",
+    "companyRevenueIn000s"
+   ]
+  ],
+  "answer_10": "No ClickHouse company revenue columns appear in the provided catalogue metadata; the returned entries are all non-revenue “types” fields from pg-main or mongo-main. [field:214c07c640d7d54d2d9105c22beaddab, field:3021e810afdbb735a705b11696894436, field:9a1da762cd31867b0a372f810f04a479, field:d5aac849b81768ae64fc8f3a03456ce7, field:3274eca4b5ef28acf6f12d4a2de670c2, field:bd105a5a3e21499268cb33d16958f07d, field:fab61c9103d684f2ddf949d6fa897fd5, field:774d3861e1194379b9442597a261bc69, field:ccb297e3e70f42014e0cbf2f7e0a951a, field:429f3189d4dd31ccb9cd8cb263a45efa]",
+  "finish_10": "stop",
+  "tokens_10": 2085,
+  "mentioned_10": [
+   0,
+   2
+  ],
+  "seconds_10": 17.6,
+  "retrieved_30": 30,
+  "recall_30": [
+   0,
+   2
+  ],
+  "missing_30": [
+   [
+    "ch",
+    "Company",
+    "companyRevenue"
+   ],
+   [
+    "ch",
+    "Company",
+    "companyRevenueIn000s"
+   ]
+  ],
+  "answer_30": "The metadata does not explicitly identify these as ClickHouse columns. The company-revenue fields returned are:\n\n- db_schema.Company.columns.companyRevenue — dict [field:4881ddf6236f0482cdb57e1f8de012b2]\n- db_schema.Company.columns.companyRevenueIn000s — dict [field:0a0afac967e5db39f0e7439d14dc8569]\n- db_schema.Company.columns.companyRevenueRange — dict [field:9ff55d746dfd67ad501d5ed9b84c4d9b]",
+  "finish_30": "stop",
+  "tokens_30": 674,
+  "mentioned_30": [
+   2,
+   2
+  ],
+  "seconds_30": 7.1
+ },
+ {
+  "id": "D5",
+  "category": "direct",
+  "question": "Where are the names of industries stored?",
+  "expected": [
+   [
+    "pg",
+    "industryclassification",
+    "name"
+   ],
+   [
+    "ch",
+    "Industry",
+    "name"
+   ],
+   [
+    "mongo",
+    "zoominfo_industry",
+    "name"
+   ]
+  ],
+  "retrieved_10": 0,
+  "recall_10": [
+   0,
+   3
+  ],
+  "missing_10": [
+   [
+    "pg",
+    "industryclassification",
+    "name"
+   ],
+   [
+    "ch",
+    "Industry",
+    "name"
+   ],
+   [
+    "mongo",
+    "zoominfo_industry",
+    "name"
+   ]
+  ],
+  "answer_10": "No information provided in the catalogue metadata to answer this question.",
+  "finish_10": "stop",
+  "tokens_10": 549,
+  "mentioned_10": [
+   0,
+   3
+  ],
+  "seconds_10": 4.3,
+  "retrieved_30": 0,
+  "recall_30": [
+   0,
+   3
+  ],
+  "missing_30": [
+   [
+    "pg",
+    "industryclassification",
+    "name"
+   ],
+   [
+    "ch",
+    "Industry",
+    "name"
+   ],
+   [
+    "mongo",
+    "zoominfo_industry",
+    "name"
+   ]
+  ],
+  "answer_30": "I cannot answer the question based on the provided catalogue metadata.",
+  "finish_30": "stop",
+  "tokens_30": 633,
+  "mentioned_30": [
+   0,
+   3
+  ],
+  "seconds_30": 4.9
+ },
+ {
+  "id": "S1",
+  "category": "steps",
+  "question": "In PostgreSQL, which tables and columns do I use to get the industry names of a company?",
+  "expected": [
+   [
+    "pg",
+    "company",
+    "companyid"
+   ],
+   [
+    "pg",
+    "companyindustry",
+    "companyid"
+   ],
+   [
+    "pg",
+    "companyindustry",
+    "classificationid"
+   ],
+   [
+    "pg",
+    "industryclassification",
+    "classificationid"
+   ],
+   [
+    "pg",
+    "industryclassification",
+    "name"
+   ]
+  ],
+  "retrieved_10": 10,
+  "recall_10": [
+   0,
+   5
+  ],
+  "missing_10": [
+   [
+    "pg",
+    "company",
+    "companyid"
+   ],
+   [
+    "pg",
+    "companyindustry",
+    "companyid"
+   ],
+   [
+    "pg",
+    "companyindustry",
+    "classificationid"
+   ],
+   [
+    "pg",
+    "industryclassification",
+    "classificationid"
+   ],
+   [
+    "pg",
+    "industryclassification",
+    "name"
+   ]
+  ],
+  "answer_10": "Use CompanyIndustry.industryID and Industry.industryID, then read Industry.name or Industry.displayName for industry names. [field:f236f3793c92a1de29fc91a14bfabcdb, field:b91b378253a240e4ed9f5d0ca5857b0f, field:5a5455ad1dfd9db8954140be53206329, field:2ace82a3b72c0564e825dc7ad10eeb41]",
+  "finish_10": "stop",
+  "tokens_10": 1126,
+  "mentioned_10": [
+   0,
+   5
+  ],
+  "seconds_10": 10.6,
+  "retrieved_30": 30,
+  "recall_30": [
+   0,
+   5
+  ],
+  "missing_30": [
+   [
+    "pg",
+    "company",
+    "companyid"
+   ],
+   [
+    "pg",
+    "companyindustry",
+    "companyid"
+   ],
+   [
+    "pg",
+    "companyindustry",
+    "classificationid"
+   ],
+   [
+    "pg",
+    "industryclassification",
+    "classificationid"
+   ],
+   [
+    "pg",
+    "industryclassification",
+    "name"
+   ]
+  ],
+  "answer_30": "Only public.industryclassification is listed as a PostgreSQL table [object:44c53785e751aabcb831d1a58c77d629]. No PostgreSQL columns are included in the returned metadata, so the exact industry-name column cannot be identified.",
+  "finish_30": "stop",
+  "tokens_30": 3705,
+  "mentioned_30": [
+   1,
+   5
+  ],
+  "seconds_30": 36.8
+ },
+ {
+  "id": "S2",
+  "category": "steps",
+  "question": "In PostgreSQL, how do I get from a person's name to the companies that person worked at?",
+  "expected": [
+   [
+    "pg",
+    "person",
+    "name"
+   ],
+   [
+    "pg",
+    "person",
+    "personid"
+   ],
+   [
+    "pg",
+    "companyexperience",
+    "personid"
+   ],
+   [
+    "pg",
+    "companyexperience",
+    "companyid"
+   ],
+   [
+    "pg",
+    "company",
+    "companyid"
+   ]
+  ],
+  "retrieved_10": 10,
+  "recall_10": [
+   2,
+   5
+  ],
+  "missing_10": [
+   [
+    "pg",
+    "companyexperience",
+    "personid"
+   ],
+   [
+    "pg",
+    "companyexperience",
+    "companyid"
+   ],
+   [
+    "pg",
+    "company",
+    "companyid"
+   ]
+  ],
+  "answer_10": "The PostgreSQL metadata provided only shows public.person.name [field:35bbe1f69041cc864971e65231bbe28c] and public.person.personid [field:be34b2e648fef29d2674e6a288243107] in the public.person table [object:a304cb9932fe92f0dc604f4fcbf4e156]. It does not include a company or employment table/field needed to join a person to the companies they worked at, so a complete query can’t be determined from this catalogue.",
+  "finish_10": "stop",
+  "tokens_10": 562,
+  "mentioned_10": [
+   2,
+   5
+  ],
+  "seconds_10": 5.7,
+  "retrieved_30": 30,
+  "recall_30": [
+   3,
+   5
+  ],
+  "missing_30": [
+   [
+    "pg",
+    "companyexperience",
+    "companyid"
+   ],
+   [
+    "pg",
+    "company",
+    "companyid"
+   ]
+  ],
+  "answer_30": "In PostgreSQL, start from public.person.name [field:35bbe1f69041cc864971e65231bbe28c], use person.personid [field:be34b2e648fef29d2674e6a288243107], and join to companyexperience.personid [field:9895a6239314be7552969ff02192e7ff]; companyexperience.personname [field:9007cd6bf64aa2c28fbd8ae9c23c3c86] can also filter by name. The returned metadata does not list a company column, so it does not identify the company field itself.",
+  "finish_30": "stop",
+  "tokens_30": 1370,
+  "mentioned_30": [
+   3,
+   5
+  ],
+  "seconds_30": 41.6
+ },
+ {
+  "id": "S3",
+  "category": "steps",
+  "question": "In ClickHouse, how do I get the industry names for a company?",
+  "expected": [
+   [
+    "ch",
+    "Company",
+    "companyID"
+   ],
+   [
+    "ch",
+    "CompanyIndustry",
+    "companyID"
+   ],
+   [
+    "ch",
+    "CompanyIndustry",
+    "industryID"
+   ],
+   [
+    "ch",
+    "Industry",
+    "industryID"
+   ],
+   [
+    "ch",
+    "Industry",
+    "name"
+   ]
+  ],
+  "retrieved_10": 10,
+  "recall_10": [
+   2,
+   5
+  ],
+  "missing_10": [
+   [
+    "ch",
+    "Company",
+    "companyID"
+   ],
+   [
+    "ch",
+    "CompanyIndustry",
+    "companyID"
+   ],
+   [
+    "ch",
+    "Industry",
+    "name"
+   ]
+  ],
+  "answer_10": "Use the ClickHouse `Industry` table and join it on `industryID` to the company industry records: `CompanyIndustry.industryID` maps to `Industry.industryID` [field:4b2a14ef22d83ecba13065e76cef3edc, object:b37e592e35d7e306355ee5ca2c79ccbd, field:0268a310bcc97fd2334a62632d0bcb13].\n\nThe returned metadata does not list an industry-name field in `Industry`, so the exact name column cannot be confirmed from these items.",
+  "finish_10": "stop",
+  "tokens_10": 643,
+  "mentioned_10": [
+   3,
+   5
+  ],
+  "seconds_10": 18.6,
+  "retrieved_30": 30,
+  "recall_30": [
+   2,
+   5
+  ],
+  "missing_30": [
+   [
+    "ch",
+    "Company",
+    "companyID"
+   ],
+   [
+    "ch",
+    "CompanyIndustry",
+    "companyID"
+   ],
+   [
+    "ch",
+    "Industry",
+    "name"
+   ]
+  ],
+  "answer_30": "In ClickHouse, the returned metadata shows CompanyIndustry.industryID [field:4b2a14ef22d83ecba13065e76cef3edc] and Industry.industryID [field:0268a310bcc97fd2334a62632d0bcb13] on the Industry table [object:b37e592e35d7e306355ee5ca2c79ccbd], but it does not list an industry name field.",
+  "finish_30": "stop",
+  "tokens_30": 870,
+  "mentioned_30": [
+   3,
+   5
+  ],
+  "seconds_30": 74.2
+ },
+ {
+  "id": "S4",
+  "category": "steps",
+  "question": "In the MongoDB zoominfo collections, how do I get from a staff member to the company?",
+  "expected": [
+   [
+    "mongo",
+    "zoominfo_staff",
+    "personID"
+   ],
+   [
+    "mongo",
+    "zoominfo_Experience",
+    "personID"
+   ],
+   [
+    "mongo",
+    "zoominfo_Experience",
+    "companyID"
+   ],
+   [
+    "mongo",
+    "zoominfo_Company",
+    "companyID"
+   ]
+  ],
+  "retrieved_10": 10,
+  "recall_10": [
+   1,
+   4
+  ],
+  "missing_10": [
+   [
+    "mongo",
+    "zoominfo_Experience",
+    "personID"
+   ],
+   [
+    "mongo",
+    "zoominfo_Experience",
+    "companyID"
+   ],
+   [
+    "mongo",
+    "zoominfo_Company",
+    "companyID"
+   ]
+  ],
+  "answer_10": "The returned metadata does not provide a documented staff-to-company join key. `zoominfo_staff` [object:f31a9df59a0f342f207c824fdc638793] exposes `main_entity_id` [field:3049bd114158b166d5f4bda16dedc3ce], but no `zoominfo_Company` [object:141072960070f46d03b841a90b7d1498] field is listed to match it.",
+  "finish_10": "stop",
+  "tokens_10": 1262,
+  "mentioned_10": [
+   0,
+   4
+  ],
+  "seconds_10": 18.2,
+  "retrieved_30": 30,
+  "recall_30": [
+   3,
+   4
+  ],
+  "missing_30": [
+   [
+    "mongo",
+    "zoominfo_Experience",
+    "personID"
+   ]
+  ],
+  "answer_30": "The catalogue does not specify an explicit join or lineage between zoominfo_staff [object:f31a9df59a0f342f207c824fdc638793] and zoominfo_Company [object:141072960070f46d03b841a90b7d1498].\n\nPossible fields shown in the metadata are zoominfo_staff.main_entity_id [field:3049bd114158b166d5f4bda16dedc3ce] and zoominfo_Company.companyID [field:432304dddcc2942b121745cccf0daf0c], but their relationship is not confirmed.",
+  "finish_30": "stop",
+  "tokens_30": 1049,
+  "mentioned_30": [
+   1,
+   4
+  ],
+  "seconds_30": 9.8
+ },
+ {
+  "id": "S5",
+  "category": "steps",
+  "question": "In PostgreSQL, which tables do I join to list the investment rounds of a company together with the investor rows?",
+  "expected": [
+   [
+    "pg",
+    "company",
+    "companyid"
+   ],
+   [
+    "pg",
+    "companyinvestmentround",
+    "companyid"
+   ],
+   [
+    "pg",
+    "companyinvestmentround",
+    "investmentid"
+   ],
+   [
+    "pg",
+    "companyinvestor",
+    "investmentid"
+   ]
+  ],
+  "retrieved_10": 10,
+  "recall_10": [
+   3,
+   4
+  ],
+  "missing_10": [
+   [
+    "pg",
+    "companyinvestmentround",
+    "companyid"
+   ]
+  ],
+  "answer_10": "Join public.companyinvestmentround to public.companyinvestor on investmentid [field:951ad8881a7269f06fedccc8485d3d97][field:09430e166257d5d88e301596770b322e]. If you need the company itself, join public.company.companyid to companyinvestor.investorcompanyid [field:0006585d4b70be3a0f20a3714fa9a277][field:3cbc71216764680dbbfa54576f332ed7].",
+  "finish_10": "stop",
+  "tokens_10": 1166,
+  "mentioned_10": [
+   4,
+   4
+  ],
+  "seconds_10": 9.9,
+  "retrieved_30": 30,
+  "recall_30": [
+   4,
+   4
+  ],
+  "missing_30": [],
+  "answer_30": "Join companyinvestmentround to companyinvestor on investmentid [object:4e2bb69e0519d5b05463e40fd0f1ce9c, object:82313514b51848e2a799c8c9a5a6cf11, field:951ad8881a7269f06fedccc8485d3d97, field:09430e166257d5d88e301596770b322e].\n\nIf you also need the company row itself, join company on companyid [object:cdbf59a0739bcf46a9eef890233bf217, field:0006585d4b70be3a0f20a3714fa9a277, field:6a1df09484d8bfa11ed37e09c2d70ac7].",
+  "finish_30": "stop",
+  "tokens_30": 955,
+  "mentioned_30": [
+   4,
+   4
+  ],
+  "seconds_30": 8.9
+ },
+ {
+  "id": "C1",
+  "category": "comprehensive",
+  "question": "List every place in the catalogue where a company's website is stored.",
+  "expected": [
+   [
+    "pg",
+    "company",
+    "website"
+   ],
+   [
+    "ch",
+    "Company",
+    "website"
+   ],
+   [
+    "mongo",
+    "zoominfo_Company",
+    "website"
+   ],
+   [
+    "mongo",
+    "diffbot_Company",
+    "website"
+   ]
+  ],
+  "retrieved_10": 10,
+  "recall_10": [
+   4,
+   4
+  ],
+  "missing_10": [],
+  "answer_10": "pg-main public.company.website [field:993113c9f005c4cf0a5817df3a4fb11f]\nch-main testzoominfo_clone2.Company.website [field:ef648f1cce9bba8901324ec8da091195]\nmongo-main enrichment_engine.zoominfo_Company.website [field:47f03fa901a9bfdf26762dfe8b105be3]\nmongo-main enrichment_engine.diffbot_Company.website [field:8ca82f72ee83e7b663657d6d548cdead]",
+  "finish_10": "stop",
+  "tokens_10": 3751,
+  "mentioned_10": [
+   4,
+   4
+  ],
+  "seconds_10": 36.0,
+  "retrieved_30": 30,
+  "recall_30": [
+   4,
+   4
+  ],
+  "missing_30": [],
+  "answer_30": "Website-value locations (excluding schema/type metadata): [field:993113c9f005c4cf0a5817df3a4fb11f], [field:ef648f1cce9bba8901324ec8da091195], [field:47f03fa901a9bfdf26762dfe8b105be3], [field:8ca82f72ee83e7b663657d6d548cdead], [field:181c67aaa48b89c5a629ac17e885ba71], [field:bad3ba8b7fa1c09be9af008bba2f1513], [field:f8311fcc7168d6510290079c6df76b12].",
+  "finish_30": "stop",
+  "tokens_30": 9294,
+  "mentioned_30": [
+   0,
+   4
+  ],
+  "seconds_30": 101.3
+ },
+ {
+  "id": "C2",
+  "category": "comprehensive",
+  "question": "Which tables in all three databases describe industries, and how do they relate to companies?",
+  "expected": [
+   [
+    "pg",
+    "industryclassification",
+    null
+   ],
+   [
+    "pg",
+    "companyindustry",
+    null
+   ],
+   [
+    "ch",
+    "Industry",
+    null
+   ],
+   [
+    "ch",
+    "CompanyIndustry",
+    null
+   ],
+   [
+    "mongo",
+    "zoominfo_industry",
+    null
+   ],
+   [
+    "mongo",
+    "zoominfo_CompanyIndustry",
+    null
+   ],
+   [
+    "mongo",
+    "diffbot_CompanyIndustry",
+    null
+   ]
+  ],
+  "retrieved_10": 1,
+  "recall_10": [
+   0,
+   7
+  ],
+  "missing_10": [
+   [
+    "pg",
+    "industryclassification",
+    null
+   ],
+   [
+    "pg",
+    "companyindustry",
+    null
+   ],
+   [
+    "ch",
+    "Industry",
+    null
+   ],
+   [
+    "ch",
+    "CompanyIndustry",
+    null
+   ],
+   [
+    "mongo",
+    "zoominfo_industry",
+    null
+   ],
+   [
+    "mongo",
+    "zoominfo_CompanyIndustry",
+    null
+   ],
+   [
+    "mongo",
+    "diffbot_CompanyIndustry",
+    null
+   ]
+  ],
+  "answer_10": "Insufficient catalogue metadata: only a `relatedcompanyid` field in `companyrelation` from `pg-main` is provided; it does not identify industry tables in all three databases [field:401a1c792968a2ca378dc86a63994c4b].",
+  "finish_10": "stop",
+  "tokens_10": 300,
+  "mentioned_10": [
+   1,
+   7
+  ],
+  "seconds_10": 14.3,
+  "retrieved_30": 1,
+  "recall_30": [
+   0,
+   7
+  ],
+  "missing_30": [
+   [
+    "pg",
+    "industryclassification",
+    null
+   ],
+   [
+    "pg",
+    "companyindustry",
+    null
+   ],
+   [
+    "ch",
+    "Industry",
+    null
+   ],
+   [
+    "ch",
+    "CompanyIndustry",
+    null
+   ],
+   [
+    "mongo",
+    "zoominfo_industry",
+    null
+   ],
+   [
+    "mongo",
+    "zoominfo_CompanyIndustry",
+    null
+   ],
+   [
+    "mongo",
+    "diffbot_CompanyIndustry",
+    null
+   ]
+  ],
+  "answer_30": "Available metadata does not identify any industry tables in all three databases. The only cited table reference is public.companyrelation in pg-main, which contains a relatedcompanyid field linking a company relation to a company ID [field:401a1c792968a2ca378dc86a63994c4b].",
+  "finish_30": "stop",
+  "tokens_30": 318,
+  "mentioned_30": [
+   1,
+   7
+  ],
+  "seconds_30": 11.3
+ },
+ {
+  "id": "C3",
+  "category": "comprehensive",
+  "question": "What does the ClickHouse database contain? List its tables.",
+  "expected": [
+   [
+    "ch",
+    "Company",
+    null
+   ],
+   [
+    "ch",
+    "CompanyIndustry",
+    null
+   ],
+   [
+    "ch",
+    "Experience",
+    null
+   ],
+   [
+    "ch",
+    "Industry",
+    null
+   ],
+   [
+    "ch",
+    "Location",
+    null
+   ],
+   [
+    "ch",
+    "Person",
+    null
+   ],
+   [
+    "ch",
+    "PersonContact",
+    null
+   ]
+  ],
+  "retrieved_10": 0,
+  "recall_10": [
+   0,
+   7
+  ],
+  "missing_10": [
+   [
+    "ch",
+    "Company",
+    null
+   ],
+   [
+    "ch",
+    "CompanyIndustry",
+    null
+   ],
+   [
+    "ch",
+    "Experience",
+    null
+   ],
+   [
+    "ch",
+    "Industry",
+    null
+   ],
+   [
+    "ch",
+    "Location",
+    null
+   ],
+   [
+    "ch",
+    "Person",
+    null
+   ],
+   [
+    "ch",
+    "PersonContact",
+    null
+   ]
+  ],
+  "answer_10": "No catalogue metadata was provided to answer the question.",
+  "finish_10": "stop",
+  "tokens_10": 571,
+  "mentioned_10": [
+   0,
+   7
+  ],
+  "seconds_10": 13.4,
+  "retrieved_30": 0,
+  "recall_30": [
+   0,
+   7
+  ],
+  "missing_30": [
+   [
+    "ch",
+    "Company",
+    null
+   ],
+   [
+    "ch",
+    "CompanyIndustry",
+    null
+   ],
+   [
+    "ch",
+    "Experience",
+    null
+   ],
+   [
+    "ch",
+    "Industry",
+    null
+   ],
+   [
+    "ch",
+    "Location",
+    null
+   ],
+   [
+    "ch",
+    "Person",
+    null
+   ],
+   [
+    "ch",
+    "PersonContact",
+    null
+   ]
+  ],
+  "answer_30": "No catalogue metadata was provided to answer this question.",
+  "finish_30": "stop",
+  "tokens_30": 382,
+  "mentioned_30": [
+   0,
+   7
+  ],
+  "seconds_30": 45.4
+ },
+ {
+  "id": "C4",
+  "category": "comprehensive",
+  "question": "In every source, which tables hold personal contact or identity details of people?",
+  "expected": [
+   [
+    "pg",
+    "person",
+    null
+   ],
+   [
+    "pg",
+    "companycontact",
+    null
+   ],
+   [
+    "ch",
+    "Person",
+    null
+   ],
+   [
+    "ch",
+    "PersonContact",
+    null
+   ],
+   [
+    "mongo",
+    "zoominfo_contact_information",
+    null
+   ],
+   [
+    "mongo",
+    "zoominfo_staff",
+    null
+   ]
+  ],
+  "retrieved_10": 10,
+  "recall_10": [
+   2,
+   6
+  ],
+  "missing_10": [
+   [
+    "pg",
+    "person",
+    null
+   ],
+   [
+    "ch",
+    "Person",
+    null
+   ],
+   [
+    "ch",
+    "PersonContact",
+    null
+   ],
+   [
+    "mongo",
+    "zoominfo_staff",
+    null
+   ]
+  ],
+  "answer_10": "companycontact [field:71a72306b5f53a3b725ab8cab79d9b6b, field:c9a2611a4dd860082af598de8a2c5341]\n\nzoominfo_contact_information [object:470c61102ec03bc38f2bd9ee6f3524de, field:4811e91911b2b5db493021f416f38b2c]",
+  "finish_10": "stop",
+  "tokens_10": 803,
+  "mentioned_10": [
+   2,
+   6
+  ],
+  "seconds_10": 34.2,
+  "retrieved_30": 30,
+  "recall_30": [
+   2,
+   6
+  ],
+  "missing_30": [
+   [
+    "pg",
+    "person",
+    null
+   ],
+   [
+    "ch",
+    "Person",
+    null
+   ],
+   [
+    "ch",
+    "PersonContact",
+    null
+   ],
+   [
+    "mongo",
+    "zoominfo_staff",
+    null
+   ]
+  ],
+  "answer_30": "pg-main.public.companycontact [field:71a72306b5f53a3b725ab8cab79d9b6b, field:c9a2611a4dd860082af598de8a2c5341, field:23b1d0f885d0ba47894e9398587ed857] and mongo-main.enrichment_engine.zoominfo_contact_information [object:470c61102ec03bc38f2bd9ee6f3524de, field:4811e91911b2b5db493021f416f38b2c, field:f17d63808a62fa833ca7e51a26189b07].",
+  "finish_30": "stop",
+  "tokens_30": 1339,
+  "mentioned_30": [
+   2,
+   6
+  ],
+  "seconds_30": 31.3
+ },
+ {
+  "id": "C5",
+  "category": "comprehensive",
+  "question": "Which columns identify a company across the catalogue?",
+  "expected": [
+   [
+    "pg",
+    "company",
+    "companyid"
+   ],
+   [
+    "ch",
+    "Company",
+    "companyID"
+   ],
+   [
+    "mongo",
+    "zoominfo_Company",
+    "companyID"
+   ],
+   [
+    "mongo",
+    "diffbot_Company",
+    "companyID"
+   ]
+  ],
+  "retrieved_10": 10,
+  "recall_10": [
+   0,
+   4
+  ],
+  "missing_10": [
+   [
+    "pg",
+    "company",
+    "companyid"
+   ],
+   [
+    "ch",
+    "Company",
+    "companyID"
+   ],
+   [
+    "mongo",
+    "zoominfo_Company",
+    "companyID"
+   ],
+   [
+    "mongo",
+    "diffbot_Company",
+    "companyID"
+   ]
+  ],
+  "answer_10": "Company-identifying columns: field:4a90aec23f7e9cf4b37e1d8e798f9d68, field:975ef2c59dd5084a651a8822e10464bc, field:ffff8fd72335738cb2a40d21bb11162f, field:4e3e9a1cc6c36fa2944dc38dbe373cc0, field:8c510734c813155c63ae4013b498aed0",
+  "finish_10": "stop",
+  "tokens_10": 758,
+  "mentioned_10": [
+   0,
+   4
+  ],
+  "seconds_10": 11.3,
+  "retrieved_30": 30,
+  "recall_30": [
+   0,
+   4
+  ],
+  "missing_30": [
+   [
+    "pg",
+    "company",
+    "companyid"
+   ],
+   [
+    "ch",
+    "Company",
+    "companyID"
+   ],
+   [
+    "mongo",
+    "zoominfo_Company",
+    "companyID"
+   ],
+   [
+    "mongo",
+    "diffbot_Company",
+    "companyID"
+   ]
+  ],
+  "answer_30": "Company identifiers are the companyID columns: db_schema.Company.columns.companyID [field:ffff8fd72335738cb2a40d21bb11162f], db_schema.CompanyIndustry.columns.companyID [field:bea4520b57410e6776ad7851dc1b10a1], db_schema.Experience.columns.companyID [field:782db4dd34b93a15ddb644db528f2cec], db_schema.Location.columns.companyID [field:8224cebed7a7538acd88ca7540da732a].",
+  "finish_30": "stop",
+  "tokens_30": 3044,
+  "mentioned_30": [
+   2,
+   4
+  ],
+  "seconds_30": 40.6
+ },
+ {
+  "id": "I1",
+  "category": "inference",
+  "question": "Can I join PostgreSQL company and ClickHouse Company directly on their company ids?",
+  "expected": [
+   [
+    "pg",
+    "company",
+    "companyid"
+   ],
+   [
+    "ch",
+    "Company",
+    "companyID"
+   ]
+  ],
+  "retrieved_10": 10,
+  "recall_10": [
+   1,
+   2
+  ],
+  "missing_10": [
+   [
+    "ch",
+    "Company",
+    "companyID"
+   ]
+  ],
+  "answer_10": "I can’t confirm a direct join to ClickHouse from the returned metadata. I only see PostgreSQL `company.companyid` as `text` and the PostgreSQL `company` table; no ClickHouse `Company` object or company-id field is provided. [object:cdbf59a0739bcf46a9eef890233bf217], [field:0006585d4b70be3a0f20a3714fa9a277]",
+  "finish_10": "stop",
+  "tokens_10": 366,
+  "mentioned_10": [
+   2,
+   2
+  ],
+  "seconds_10": 10.1,
+  "retrieved_30": 30,
+  "recall_30": [
+   2,
+   2
+  ],
+  "missing_30": [],
+  "answer_30": "Yes, based on the metadata: PostgreSQL company.companyid is text [field:0006585d4b70be3a0f20a3714fa9a277] [object:cdbf59a0739bcf46a9eef890233bf217], and ClickHouse Company.companyID is String [field:861fe226e14fcf38588592aad6e62355]. No explicit cross-source join relationship is shown.",
+  "finish_30": "stop",
+  "tokens_30": 1041,
+  "mentioned_30": [
+   2,
+   2
+  ],
+  "seconds_30": 24.9
+ },
+ {
+  "id": "I2",
+  "category": "inference",
+  "question": "Which ClickHouse tables do the MongoDB zoominfo collections correspond to?",
+  "expected": [
+   [
+    "ch",
+    "Company",
+    null
+   ],
+   [
+    "ch",
+    "CompanyIndustry",
+    null
+   ],
+   [
+    "ch",
+    "Experience",
+    null
+   ],
+   [
+    "ch",
+    "Industry",
+    null
+   ],
+   [
+    "ch",
+    "Location",
+    null
+   ],
+   [
+    "ch",
+    "Person",
+    null
+   ]
+  ],
+  "retrieved_10": 10,
+  "recall_10": [
+   0,
+   6
+  ],
+  "missing_10": [
+   [
+    "ch",
+    "Company",
+    null
+   ],
+   [
+    "ch",
+    "CompanyIndustry",
+    null
+   ],
+   [
+    "ch",
+    "Experience",
+    null
+   ],
+   [
+    "ch",
+    "Industry",
+    null
+   ],
+   [
+    "ch",
+    "Location",
+    null
+   ],
+   [
+    "ch",
+    "Person",
+    null
+   ]
+  ],
+  "answer_10": "The provided catalogue metadata does not list corresponding ClickHouse tables for these MongoDB collections. [object:d893b70b9247c2c2be994c2181e7871e, object:141072960070f46d03b841a90b7d1498, object:efbbd660498803c533a4b608593c1ba3, object:6c1043d2a74d13d9885d0a89c006d83f, object:25d1569e8e39703656e9a3594bebd274, object:d681253ec289385206efe54ff8596eb7, object:f2b0a62f11b3e15b40bee193539116e0, object:7a8e731805eaf3ea82e09581cd997dd7, object:02a8357e7c688cc6bd4c007f52693cd2, object:3d09673b10e35e2790aceb72f05c0cc1]",
+  "finish_10": "stop",
+  "tokens_10": 568,
+  "mentioned_10": [
+   0,
+   6
+  ],
+  "seconds_10": 16.8,
+  "retrieved_30": 30,
+  "recall_30": [
+   0,
+   6
+  ],
+  "missing_30": [
+   [
+    "ch",
+    "Company",
+    null
+   ],
+   [
+    "ch",
+    "CompanyIndustry",
+    null
+   ],
+   [
+    "ch",
+    "Experience",
+    null
+   ],
+   [
+    "ch",
+    "Industry",
+    null
+   ],
+   [
+    "ch",
+    "Location",
+    null
+   ],
+   [
+    "ch",
+    "Person",
+    null
+   ]
+  ],
+  "answer_30": "Cannot determine: the supplied catalogue metadata lists the MongoDB zoominfo entries only as collections and does not provide any ClickHouse table correspondences [object:d893b70b9247c2c2be994c2181e7871e, object:141072960070f46d03b841a90b7d1498, object:efbbd660498803c533a4b608593c1ba3, object:6c1043d2a74d13d9885d0a89c006d83f, object:25d1569e8e39703656e9a3594bebd274, object:d681253ec289385206efe54ff8596eb7, object:f2b0a62f11b3e15b40bee193539116e0, object:7a8e731805eaf3ea82e09581cd997dd7, object:02a8357e7c688cc6bd4c007f52693cd2, object:3d09673b10e35e2790aceb72f05c0cc1, object:9c866ff8fdcd380a8f7d5b10d997a692, object:ec3a9de9808ac173369099f771924922, object:074604146bfc5cbf2951d114e4f241e4, object:f31a9df59a0f342f207c824fdc638793, object:470c61102ec03bc38f2bd9ee6f3524de, object:3cb877660f912f8ea083d6a7a4a0519f].",
+  "finish_30": "stop",
+  "tokens_30": 4333,
+  "mentioned_30": [
+   0,
+   6
+  ],
+  "seconds_30": 51.2
+ },
+ {
+  "id": "I3",
+  "category": "inference",
+  "question": "Is companyrelation.relatedcompanyid a reference to company?",
+  "expected": [
+   [
+    "pg",
+    "companyrelation",
+    "relatedcompanyid"
+   ],
+   [
+    "pg",
+    "company",
+    "companyid"
+   ]
+  ],
+  "retrieved_10": 10,
+  "recall_10": [
+   1,
+   2
+  ],
+  "missing_10": [
+   [
+    "pg",
+    "company",
+    "companyid"
+   ]
+  ],
+  "answer_10": "Not explicitly shown. companyrelation.relatedcompanyid is listed only as a text field on companyrelation [field:401a1c792968a2ca378dc86a63994c4b, object:d5f2735a9a250bd27b6aa437997b18a9]; no company reference is provided.",
+  "finish_10": "stop",
+  "tokens_10": 586,
+  "mentioned_10": [
+   2,
+   2
+  ],
+  "seconds_10": 20.0,
+  "retrieved_30": 30,
+  "recall_30": [
+   2,
+   2
+  ],
+  "missing_30": [],
+  "answer_30": "Not confirmed. The metadata lists companyrelation.relatedcompanyid as a text field in companyrelation, but it does not define it as a reference/FK to company. company.companyid is also text, but no explicit relationship is shown. [field:401a1c792968a2ca378dc86a63994c4b] [object:d5f2735a9a250bd27b6aa437997b18a9] [field:0006585d4b70be3a0f20a3714fa9a277] [object:cdbf59a0739bcf46a9eef890233bf217]",
+  "finish_30": "stop",
+  "tokens_30": 633,
+  "mentioned_30": [
+   2,
+   2
+  ],
+  "seconds_30": 23.8
+ },
+ {
+  "id": "I4",
+  "category": "inference",
+  "question": "Which column should I use to count a company's employees?",
+  "expected": [
+   [
+    "ch",
+    "Company",
+    "companyEmployees"
+   ],
+   [
+    "ch",
+    "Company",
+    "companyEmployeeCountRange"
+   ]
+  ],
+  "retrieved_10": 10,
+  "recall_10": [
+   0,
+   2
+  ],
+  "missing_10": [
+   [
+    "ch",
+    "Company",
+    "companyEmployees"
+   ],
+   [
+    "ch",
+    "Company",
+    "companyEmployeeCountRange"
+   ]
+  ],
+  "answer_10": "No listed field identifies a company employee count. [field:ed84bb2dc3f2b699f1ad6762ad88132a, field:23c1bf4d669a7893380e58e204e514f0, field:6cea84a80a143eae3d45d58c8127f7cf, field:6de1928690b96bbc8feb58b7f7d8947d, field:cb75ee5cfdd475e15e5b1b27dfe98745, field:8276e5ecfe3a91c3c7925fe1279ad701, field:ba5f408c511bc395d51951c82ceed724, field:11c22e543aa416d47c07ce4bb713a30a, field:e7cd1459ed1dd09348900fdab81fc403, field:116e160d289a1d4281fb8a9a5568be17]",
+  "finish_10": "stop",
+  "tokens_10": 1506,
+  "mentioned_10": [
+   0,
+   2
+  ],
+  "seconds_10": 16.5,
+  "retrieved_30": 30,
+  "recall_30": [
+   0,
+   2
+  ],
+  "missing_30": [
+   [
+    "ch",
+    "Company",
+    "companyEmployees"
+   ],
+   [
+    "ch",
+    "Company",
+    "companyEmployeeCountRange"
+   ]
+  ],
+  "answer_30": "No employee-count column is listed in the provided metadata. The available fields are CountryCode, country, user_prompt, counterparty, and schema metadata, not employee data [field:ed84bb2dc3f2b699f1ad6762ad88132a, field:8276e5ecfe3a91c3c7925fe1279ad701, field:23c1bf4d669a7893380e58e204e514f0, field:11c22e543aa416d47c07ce4bb713a30a].",
+  "finish_30": "stop",
+  "tokens_30": 898,
+  "mentioned_30": [
+   0,
+   2
+  ],
+  "seconds_30": 8.4
+ },
+ {
+  "id": "I5",
+  "category": "inference",
+  "question": "Where would I look for the relationships between companies, such as subsidiaries or partners?",
+  "expected": [
+   [
+    "pg",
+    "companyrelation",
+    null
+   ]
+  ],
+  "retrieved_10": 0,
+  "recall_10": [
+   0,
+   1
+  ],
+  "missing_10": [
+   [
+    "pg",
+    "companyrelation",
+    null
+   ]
+  ],
+  "answer_10": "No catalogue metadata was provided to answer this question.",
+  "finish_10": "stop",
+  "tokens_10": 494,
+  "mentioned_10": [
+   0,
+   1
+  ],
+  "seconds_10": 3.9,
+  "retrieved_30": 0,
+  "recall_30": [
+   0,
+   1
+  ],
+  "missing_30": [
+   [
+    "pg",
+    "companyrelation",
+    null
+   ]
+  ],
+  "answer_30": "There is no catalogue metadata provided to answer this question.",
+  "finish_30": "stop",
+  "tokens_30": 402,
+  "mentioned_30": [
+   0,
+   1
+  ],
+  "seconds_30": 2.9
+ }
+]
