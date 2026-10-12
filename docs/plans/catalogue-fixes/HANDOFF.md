@@ -3,7 +3,7 @@
 Overwrite this file at every commit. A fresh session reads it first, then
 [the plan](../CATALOGUE_FIXES_IMPLEMENTATION_PLAN.md). Git is the memory; a session's context is not.
 
-**Lock:** 2026-10-12T16:23:30Z · **Autonomy:** unattended-through-phase-4 · **Last heartbeat:** 2026-10-12T13:34:02Z
+**Lock:** 2026-10-12T16:23:30Z · **Autonomy:** unattended-through-phase-4 · **Last heartbeat:** 2026-10-12T16:24:56Z
 
 (Lock/heartbeat protocol: plan §7. A session sets `Lock: <ISO time>`, pushes it, and refreshes it at
 every commit; a lock older than 75 min is stale. `Autonomy` is `off`, `dryrun` (a tick only records
@@ -78,7 +78,7 @@ Phase 0 table (file -> sole owner while its items are open; plan §8/§9 DAG; gr
 Phase 1: lane R and lane D concurrent (disjoint files); lead does C1 builder half, C2, D1b. Phase 2: lead chain only.
 
 ## Next action
-Phase 0, step 1: baseline (plan section 8). (Runs only while `Autonomy` is `unattended-through-phase-N`.)
+Phase 0: baseline recorded (CI green 38256268573, grep 0 hits, ownership locked); verifier is writing tests/catalogue_fixes fixtures, then PHASE0_REPORT.md, then Phase 1 lanes R and D. (Runs only while `Autonomy` is `unattended-through-phase-N`.)
 
 ## Notifications
 (append `[PHASE n DONE]`, `[BLOCKED]`, `[Catalogue fixes COMPLETE]` entries here; the same prefixes go in commit messages)
