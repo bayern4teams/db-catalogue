@@ -21,7 +21,7 @@ Only the user changes it.)
 | B4 stopwords / no-match guard | 1 | unverified-live | | |
 | C1 + D7 distinct model error codes | 1 | unverified-live | | |
 | C2 `partial` diagnostics in manifest and CLI | 1 | blocked (DEC-11b) - waiting for the user | | |
-| C3 documentation gaps | 1 | in-progress (points 1-4 done; point 5 llama.cpp note now unblocked: B1+C1 accepted) | | |
+| C3 documentation gaps | 1 | unverified-live | | |
 | D1b reasons for empty statistic cells | 1 | unverified-live | | |
 | D3 + B5(2) lowercase names (`companyid`) when the stem is a known object | 2 | todo | | |
 | A1 + D2 + D9 + A3 overlap labels, measured-zero drop | 2 | todo | | |
@@ -59,6 +59,7 @@ Rules: plan section 2.9. A row with an empty Answer keeps its items `blocked`. A
 | DEC-10 | B2: review candidates in batches (configured size, default 5); no "thinking off" switch because it is unverified for this model? | yes | B2 | |
 | DEC-11 | C1: keep `MODEL_UNAVAILABLE_OR_INVALID` as an umbrella or replace it, if a schema or document lists it as a closed set? (added only if the lead finds such a list) | decide after evidence | C1 | |
 | DEC-12 | B5/X1: let the `key_name` rule apply to a measured-unique parent column with an identical non-generic name (so `classificationid` links to `industryclassification.classificationid`)? The 2026-10-05 decision admitted it only for declared keys. | yes | B5/X1 | |
+| DEC-13 | Supply chain: `pip-audit` now reports 3 CVEs (CVE-2026-96747/8/9) in locked `pymongo 4.18.1`, fixed in 4.18.2; they were published after the lock and are not caused by this branch. Bump `pymongo` to 4.18.2 in `uv.lock` (patch-level, same `>=4.14,<5` range)? Plan §2.5 forbids dependency changes without approval. Until answered, the `pip-audit` step stays red on this branch and on `main`. | yes (lock-only patch bump) | pip-audit stage of the full check / CI | |
 | DEC-11b | C2: a snapshot manifest cannot list partial reasons in `diagnostics` without a contract change: `read_artifact` (artifact.py ~line 272) requires `manifest.diagnostics` to equal the counts of `diagnostics.jsonl`, and snapshots carry none, so an older reader would reject the new snapshot. Options: (a) new optional manifest field `partial_reasons: list[str]` (additive, `extra=allow`, old readers ignore it; regenerate schemas; golden unchanged for complete snapshots) and render/CLI count = page diagnostics + reasons; (b) reuse `diagnostics` and relax the reader check for snapshots (old readers reject new snapshots). | (a) new optional field `partial_reasons` | C2 | |
 
 Already decided by the user on 2026-10-12 (not open): base the work on the tested branch; `companyid` is read as `company` + `id` only when the stem is a known object; a measured 0-of-N cross-source overlap drops the candidate and an unchecked one is labelled "values not compared"; graft is best effort in the cloud; Phase 1 bugs go ahead.

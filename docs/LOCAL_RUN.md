@@ -376,6 +376,24 @@ in the catalogue matches the question, you get `NO_CATALOGUE_MATCH` and the mode
 Comments are free text written by your database owners and are given to the model by your
 choice; the model is told to treat them as data, not instructions.
 
+### llama.cpp and other OpenAI-compatible servers
+
+The JSON schema sent to the server no longer carries length or item bounds (`maxLength`,
+`minLength`, `maxItems`, `minItems`): llama.cpp refuses them ("failed to parse grammar"), and the
+limits are checked after the reply is parsed instead. Failures now have their own code:
+`MODEL_UNREACHABLE` (host down or firewalled), `MODEL_TIMEOUT`, `MODEL_REJECTED_REQUEST` (an HTTP 4xx),
+`MODEL_TRUNCATED` (the server stopped on `max_tokens`) and `MODEL_INVALID_CITATION`. Other causes keep
+`MODEL_UNAVAILABLE_OR_INVALID`.
+
+A reasoning model spends tokens thinking before it answers. In one test with the default
+`max_tokens = 512` it used all 512 and returned an empty reply (`MODEL_TRUNCATED`); 20 review
+candidates did not finish in 8192 tokens (72 s), while 5 candidates with `max_tokens = 24000` and
+`timeout_seconds = 900` completed in 14.9 s using 1858 tokens. Raise `max_tokens` and
+`timeout_seconds` for such a model, and review fewer candidates. A shared server queues
+requests: a reply that took 19 s idle took over 60 s when the server was busy, so the timeout must
+cover the queue (`MODEL_TIMEOUT` says this, not "unavailable"). These numbers come from one
+model on one shared server; measure your own.
+
 ## 10. Optional: request a new scan from the requester
 
 The requester can ask a collector site to re-scan, signed with the same key the site signs

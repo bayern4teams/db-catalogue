@@ -48,3 +48,12 @@ configs, TLS preflight, collect, assemble, render) using the configs in `artifac
 - Result (filled in locally):
 
 (Point 5, the llama.cpp note, waits for B1 and C1.) Ticket: a `DBIG_SIGNING_KEY` under 32 bytes gives a ValueError traceback, not a one-line error (outside C3's files).
+
+### Phase 1 (B1, B3/D6a, D6b, B4, C1/D7, D1b) — live checks
+- Why cloud could not verify: no llama.cpp server, no real catalogue.
+- B1: `ask "Which column holds a company's website?"` answers with citations on llama.cpp (before: 0 of 30). Also confirm llama.cpp accepts the builder review schema (bounds removed here too).
+- B3/D6a: `search --query revenue` returns the camelCase revenue column; rerun `dbig-requester index` first (old indexes give `STALE_INDEX`).
+- D6b/B4: plural questions (`industries`) retrieve; the credit-card question gives `NO_CATALOGUE_MATCH`. "tables" alone no longer retrieves in `ask` until DEC-7.
+- C1: a busy server shows `MODEL_TIMEOUT`; a down host shows `MODEL_UNREACHABLE`; confirm a real connect timeout is classified `MODEL_UNREACHABLE`.
+- D1b: open the page; no blank statistic cell on the real sources.
+- Result (filled in locally):
