@@ -34,7 +34,7 @@ WEIGHTS = (10.0, 4.0, 1.0)
 INDEX_VERSION = "2"
 
 
-# Where a name breaks into words: lower to upper (`companyID`), the end of an upper-case run before
+# Where a name breaks into words: lower to upper (`unitID`), the end of an upper-case run before
 # a capitalised word (`HTTPServer`), and between letters and digits (`In000s`).
 _WORD_BREAK = re.compile(
     r"(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|(?<=[^\W\d_])(?=\d)|(?<=\d)(?=[^\W\d_])"
@@ -42,7 +42,7 @@ _WORD_BREAK = re.compile(
 
 
 def _words(name: str) -> list[str]:
-    """The words of a name, lower-cased: `companyRevenueIn000s` gives company, revenue, in, 000,
+    """The words of a name, lower-cased: `unitPriceIn000s` gives unit, price, in, 000,
     s; `HTTPServerID` gives http, server, id; `URL` stays one word.
 
     ponytail: case is read for the ASCII letters only; a name in another script is split at
@@ -201,11 +201,9 @@ def search(state: Path, request: SearchRequest) -> dict:
         if digest != metadata["digest"]:
             raise ValueError("STALE_INDEX")
         if metadata.get("index_version") != INDEX_VERSION:
-            # Rebuilt by the same command as any other stale index; refused here, not rebuilt,
-            # because a search must not write to the state directory.
-            raise ValueError(
-                "STALE_INDEX: index written by an older version; run `dbig-requester index`"
-            )
+            # Same code and same remedy (`dbig-requester index`) as any other stale index. Refused
+            # here, not rebuilt: a search must not write to the state directory.
+            raise ValueError("STALE_INDEX")
         terms = re.findall(r"\w+", request.query, flags=re.UNICODE)
         if request.match == "any":
             terms = [term for term in terms if term.casefold() not in STOPWORDS and len(term) > 1]
