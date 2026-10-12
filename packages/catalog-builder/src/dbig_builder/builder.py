@@ -141,8 +141,12 @@ def _reference_stem(name: str, known_objects: frozenset[str] = frozenset()) -> t
     lowered = name.casefold()
     for suffix in REFERENCE_SUFFIXES:
         bare = suffix.removeprefix("_")
-        stem = lowered[: -len(bare)].rstrip("s")
-        if lowered.endswith(bare) and stem in known_objects and len(lowered) > len(bare):
+        stem = lowered[: -len(bare)]
+        if (
+            lowered.endswith(bare)
+            and len(lowered) > len(bare)
+            and (stem in known_objects or stem.rstrip("s") in known_objects)
+        ):
             return stem, True
     return lowered, False
 
@@ -330,6 +334,7 @@ def _overlap(
             "parent_sample_method": parent_tokens.sample_method,
             # A capped token set makes containment a lower bound, not a measurement.
             "lower_bound_only": child_tokens.truncated or parent_tokens.truncated,
+            "parent_truncated": parent_tokens.truncated,
             "key_id": child_tokens.key_id,
             "minimum_support": min_support,
         },
@@ -539,7 +544,18 @@ def assemble(
         ):
             unique_fields.append(candidate_parent)
     dropped_zero_overlap = 0
-    known_objects = frozenset(item.name.casefold().rstrip("s") for item in objects.values())
+    known_objects = frozenset(
+        form
+        for item in objects.values()
+        for name in (item.name.casefold(),)
+        # The parent comparison drops a trailing `s`; `y` and `es` plurals are added so that
+        # `companyid` finds `companies` and `boxid` finds `boxes`.
+        for form in (
+            name.rstrip("s"),
+            name.removesuffix("ies") + "y" if name.endswith("ies") else name,
+            name.removesuffix("es") if name.endswith("es") else name,
+        )
+    )
     for child in fields.values():
         child_object = objects.get(child.object_id)
         if child_object is None:
@@ -584,9 +600,12 @@ def assemble(
                     continue
                 name_score = 100
             candidates.append((name_score, parent, "suffix" if suffixed else "exact_name"))
-        for score, parent, rule in sorted(candidates, key=lambda item: (-item[0], item[1].id))[
-            : config.top_k_per_field
-        ]:
+        kept = 0
+        # The cut to `top_k_per_field` comes after the overlap check, so a dropped best name
+        # match does not use up the slot of the parent that is really referenced.
+        for score, parent, rule in sorted(candidates, key=lambda item: (-item[0], item[1].id)):
+            if kept >= config.top_k_per_field:
+                break
             overlap = _overlap(
                 child,
                 parent.id,
@@ -597,12 +616,16 @@ def assemble(
             if (
                 overlap.kind == "value_containment"
                 and overlap.metrics["shared_tokens"] == 0
+                # A capped parent hides values the child may share. A capped child is still a
+                # sample of that child: none of its sampled values is in a complete parent.
+                and not overlap.metrics["parent_truncated"]
             ):
                 # Measured, with enough values on both sides, and not one value in common: the
                 # columns are unrelated (user decision 2026-10-12). Counted, never recorded by
                 # value. A non-zero overlap, however small, is shown and never drops.
                 dropped_zero_overlap += 1
                 continue
+            kept += 1
             lexical = _evidence(
                 child,
                 "name_similarity",

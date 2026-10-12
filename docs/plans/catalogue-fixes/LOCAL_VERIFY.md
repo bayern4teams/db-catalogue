@@ -57,3 +57,9 @@ configs, TLS preflight, collect, assemble, render) using the configs in `artifac
 - C1: a busy server shows `MODEL_TIMEOUT`; a down host shows `MODEL_UNREACHABLE`; confirm a real connect timeout is classified `MODEL_UNREACHABLE`.
 - D1b: open the page; no blank statistic cell on the real sources.
 - Result (filled in locally):
+
+### Phase 2 (D3, A1/D2/D9) — live checks
+- Why cloud could not verify: needs the user's databases and, for the drop, sampling on (`sample_rows`, `value_token_key_env`).
+- D3: J1 and J2 return a path; the 21 candidates grow by the PostgreSQL pairs (`companyid` style names).
+- A1/D2/D9: with sampling on, of the 21 candidates the 16 with 0% overlap disappear and the 5 with 100% stay; the 21% to 27% true pairs stay with their numbers; with sampling off every candidate says "values not compared". Check `dropped_zero_overlap_candidates` in the builder run record equals the disappeared count. Watch for a real FK dropped because its parent ids lie outside the sampled rows.
+- Result (filled in locally):

@@ -3,7 +3,7 @@
 Overwrite this file at every commit. A fresh session reads it first, then
 [the plan](../CATALOGUE_FIXES_IMPLEMENTATION_PLAN.md). Git is the memory; a session's context is not.
 
-**Lock:** 2026-10-12T17:30:47Z · **Autonomy:** unattended-through-phase-4 · **Last heartbeat:** 2026-10-12T17:30:47Z
+**Lock:** 2026-10-12T17:43:04Z · **Autonomy:** unattended-through-phase-4 · **Last heartbeat:** 2026-10-12T17:43:04Z
 
 (Lock/heartbeat protocol: plan §7. A session sets `Lock: <ISO time>`, pushes it, and refreshes it at
 every commit; a lock older than 75 min is stale. `Autonomy` is `off`, `dryrun` (a tick only records
@@ -23,8 +23,8 @@ Only the user changes it.)
 | C2 `partial` diagnostics in manifest and CLI | 1 | blocked (DEC-11b) - waiting for the user | | |
 | C3 documentation gaps | 1 | unverified-live | | |
 | D1b reasons for empty statistic cells | 1 | unverified-live | | |
-| D3 + B5(2) lowercase names (`companyid`) when the stem is a known object | 2 | in-progress (implemented; attack verifier pending with A1) | | |
-| A1 + D2 + D9 + A3 overlap labels, measured-zero drop | 2 | in-progress (implemented; attack verifier pending with D3) | | |
+| D3 + B5(2) lowercase names (`companyid`) when the stem is a known object | 2 | unverified-live | | |
+| A1 + D2 + D9 + A3 overlap labels, measured-zero drop | 2 | unverified-live | | |
 | A2 parent column name resembles child's (DEC-1) | 3 | blocked (DEC) - waiting for the user | | |
 | D1a ClickHouse key names, weak parent claim (DEC-2) | 3 | blocked (DEC) - waiting for the user | | |
 | D2(3) dataset groups / forbidden source pairs config (DEC-3) | 3 | blocked (DEC) - waiting for the user | | |
@@ -87,6 +87,7 @@ Phase 2: attack verifier on D3 + A1/D2/D9 (new evidence kind `value_overlap_not_
 - [PHASE 1 DONE] 2026-10-12: B1, B3/D6a, D6b, B4, C1/D7, C3, D1b accepted (unverified-live); C2 blocked on DEC-11b. Full check green locally except `pip-audit` (DEC-13, new pymongo CVEs); CI run 38283628671 green in all 7 jobs on the pushed head; ponytail-review of the phase diff: no deletions required, minor `_singulars`/`_ies_singular` overlap left deliberately (readability).
 
 ## Open escalations (worker/verifier results that passed only written tests or one case)
+- A1: the 0-of-N drop on a first-rows sample could drop a real FK whose parent ids lie outside the sampled rows (live risk, needs the user's sampling setup); a capped parent never drops. Attack files `tests/catalogue_fixes/attack*_*.py` are not collected by default; run them by path.
 - (round 2 done) D6b: fold keeps only `-ies`->`-y` at index time, query tries several singulars, min singular length 3 + short non-plural list (`ids` no longer folds to `id`); INDEX_VERSION is now "4"; `ask` returns `STALE_INDEX`, the question route answers 503 (search route 409): lead call, user may prefer 409. DEC-11 is moot (umbrella code is in no schema/doc; kept for malformed JSON, lineage claim, 5xx, missing key).
 - B3/D6a: a stale index (no `index_version`) is refused with `STALE_INDEX` (rerun `dbig-requester index`), not rebuilt, because `search` must not write the state directory. Plan said "rebuilt"; lead accepts the refusal (never misread). Tell the user.
 - D6b/B4: the plural fold is not a stemmer (`boxes` -> `boxe`); and `tables`/`numbers` are schema words in `ask` (singular is a stopword), so "tables" alone no longer retrieves in `ask` until DEC-7. Explicit `search` is unaffected.
