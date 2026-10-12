@@ -116,7 +116,7 @@ def _snake(name: str) -> str:
     return spaced.casefold()
 
 
-def _reference_stem(name: str) -> tuple[str, bool]:
+def _reference_stem(name: str, known_objects: frozenset[str] = frozenset()) -> tuple[str, bool]:
     """Return the part of a field name that should match a parent, and whether a suffix marked it.
 
     With a suffix the name announces itself as a reference, so a fuzzy match against the parent
@@ -128,7 +128,17 @@ def _reference_stem(name: str) -> tuple[str, bool]:
     for suffix in REFERENCE_SUFFIXES:
         if folded.endswith(suffix) and len(folded) > len(suffix):
             return folded[: -len(suffix)], True
-    return name.casefold(), False
+    # No separator and no case boundary (`companyid`): read it as a reference only when what is
+    # left of the suffix is a known object, so `xid`, `valid` and `paid` propose nothing
+    # (user decision 2026-10-12). `known_objects` holds object names as the parent comparison
+    # normalises them.
+    lowered = name.casefold()
+    for suffix in REFERENCE_SUFFIXES:
+        bare = suffix.removeprefix("_")
+        stem = lowered[: -len(bare)].rstrip("s")
+        if lowered.endswith(bare) and stem in known_objects and len(lowered) > len(bare):
+            return stem, True
+    return lowered, False
 
 
 def _composite_candidates(
@@ -500,6 +510,7 @@ def assemble(
             MEASURED_UNIQUE
         ):
             unique_fields.append(candidate_parent)
+    known_objects = frozenset(item.name.casefold().rstrip("s") for item in objects.values())
     for child in fields.values():
         child_object = objects.get(child.object_id)
         if child_object is None:
@@ -508,7 +519,7 @@ def assemble(
         # evidence for a relationship that has nothing behind it.
         if _measure(field_profiles.get(child.id), "null_fraction") == 1.0:
             continue
-        stem, suffixed = _reference_stem(child.name)
+        stem, suffixed = _reference_stem(child.name, known_objects)
         candidates = []
         for parent in unique_fields:
             parent_object = objects.get(parent.object_id)

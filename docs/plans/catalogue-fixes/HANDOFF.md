@@ -23,7 +23,7 @@ Only the user changes it.)
 | C2 `partial` diagnostics in manifest and CLI | 1 | blocked (DEC-11b) - waiting for the user | | |
 | C3 documentation gaps | 1 | unverified-live | | |
 | D1b reasons for empty statistic cells | 1 | unverified-live | | |
-| D3 + B5(2) lowercase names (`companyid`) when the stem is a known object | 2 | todo | | |
+| D3 + B5(2) lowercase names (`companyid`) when the stem is a known object | 2 | in-progress (implemented; attack verifier pending with A1) | | |
 | A1 + D2 + D9 + A3 overlap labels, measured-zero drop | 2 | todo | | |
 | A2 parent column name resembles child's (DEC-1) | 3 | blocked (DEC) - waiting for the user | | |
 | D1a ClickHouse key names, weak parent claim (DEC-2) | 3 | blocked (DEC) - waiting for the user | | |
