@@ -36,14 +36,16 @@ never check out, merge, rebase or delete another branch.
    works (the CLI is an accepted tier-3 substitute); graphify, graft and codebase-memory-mcp on
    PATH. Also record: `command -v uv` and `uv --version`, `python3.12 --version` or `uv python list --only-installed`, and whether
    `gh workflow run ci.yml --ref feat/catalogue-fixes` is accepted (record the run id, then `gh run list --workflow ci.yml --branch feat/catalogue-fixes --limit 1`;
-   if it is refused, record the exact one-line error); the output of `bash scripts/cloud_setup.sh` is recorded only if you had to run it. Also record: `cat /tmp/cloud_setup.log` (the environment's setup line writes it; if the file is
+   if it is refused, record the exact one-line error); Also record: `cat /tmp/cloud_setup.log` (the environment's setup line writes it; if the file is
    absent the setup line did NOT run at session start), `grep -in 'init\|script\|setup'
    /tmp/env-manager.log | tail -20`, and `ls -la /opt/graphtools /usr/local/bin | head -20`.
-   If graphify, graft or codebase-memory-mcp are missing, run `bash scripts/cloud_setup.sh 2>&1 |
-   tail -40` ONCE by hand, record its exit code, wall time and the last lines, then re-check PATH
-   and `python scripts/refresh_graphs.py` (record exit code and `.tmp/refresh_graphs.log`). That
-   install is the only action beyond the one-line file allowed in dryrun. Commit, push, stop. Do
-   nothing else (no lock, no code).
+   Then, whether or not the tools were present, run the project bootstrap ONCE: `time bash scripts/cloud_setup.sh 2>&1 | tail -40`, and record its
+   exit code, wall time and last lines (it is the only part of the cloud path the setup script does not exercise: uv, Python 3.12, `uv sync`, graft, graph build).
+   Then record, from the output of these commands only: `graphify --version`, `graft --version`, `codebase-memory-mcp --version`,
+   `.venv/bin/python scripts/graph_sync.py --check-tools` (exit code; it fails when a tool is not at the pin in `pyproject.toml`), `ls .git/hooks` vs
+   `git config core.hooksPath`, and `time uv run pytest -q 2>&1 | tail -3` (expected on this code: 477 passed, 69 skipped). Do not touch
+   `scripts/refresh_graphs.py`: this project has none; its graph script is `scripts/graph_sync.py`. The bootstrap and these checks are the only actions
+   beyond the one-line file allowed in dryrun. Commit, push, stop. Do nothing else (no lock, no code).
 2. EXIT IMMEDIATELY, doing nothing else and writing nothing, if any of these hold:
    - your session's rate limit is a hard stop (any status other than "allowed" or
      "allowed_warning"; the warning band is NOT a reason to stop: work, commit per step, and let
