@@ -154,7 +154,6 @@ def test_the_singular_fixture_queries_find_something(stem, singular):
     assert _ids(stem, singular)
 
 
-@pytest.mark.xfail(strict=True, reason="D6b not implemented")
 @pytest.mark.parametrize(
     ("singular", "plural"),
     [("industry", "industries"), ("table", "tables"), ("company", "companies"),
@@ -212,7 +211,6 @@ def _ask(state, question, monkeypatch, reply=cite_first):
         return result, list(stub.requests)
 
 
-@pytest.mark.xfail(strict=True, reason="B4 not implemented")
 @pytest.mark.parametrize("word", SCHEMA_WORDS)
 def test_a_question_matching_only_through_a_schema_word_finds_nothing(
     noise, monkeypatch, word

@@ -5,11 +5,12 @@ from __future__ import annotations
 import json
 import logging
 import re
+from http import HTTPStatus
 from pathlib import Path
 from typing import Any
 
 from dbig_contracts.security import secret_from_env
-from openai import OpenAI
+from openai import APIConnectionError, APIStatusError, APITimeoutError, OpenAI
 from pydantic import BaseModel, ConfigDict, field_validator
 
 from .config import AnswerConfig
@@ -33,6 +34,37 @@ class Answer(BaseModel):
         if len(value) > ANSWER_MAX_CHARS:
             raise ValueError("answer too long")
         return value
+
+
+# What went wrong with the model, by cause. Each is derived from the type of the exception or the
+# shape of the response, never from text the model, the question or the catalogue supplied, so a
+# code can be logged and shown as it is.
+UNREACHABLE = "MODEL_UNREACHABLE"
+REJECTED = "MODEL_REJECTED_REQUEST"
+TIMEOUT = "MODEL_TIMEOUT"
+TRUNCATED = "MODEL_TRUNCATED"
+INVALID_CITATION = "MODEL_INVALID_CITATION"
+# Everything else: a reply not in the schema, a claim of lineage, a server error, a missing key.
+UNAVAILABLE_OR_INVALID = "MODEL_UNAVAILABLE_OR_INVALID"
+FINISH_REASON_LENGTH = "length"
+
+
+class _ModelFailure(Exception):
+    def __init__(self, code: str) -> None:
+        super().__init__(code)
+        self.code = code
+
+
+def _failure_code(error: Exception) -> str:
+    if isinstance(error, _ModelFailure):
+        return error.code
+    if isinstance(error, APITimeoutError):  # a subclass of APIConnectionError: test it first
+        return TIMEOUT
+    if isinstance(error, APIConnectionError):
+        return UNREACHABLE
+    if isinstance(error, APIStatusError) and error.status_code < HTTPStatus.INTERNAL_SERVER_ERROR:
+        return REJECTED
+    return UNAVAILABLE_OR_INVALID
 
 
 def _trace(config: AnswerConfig, retrieval_count: int) -> Any:
@@ -137,14 +169,17 @@ def answer_question(
             },
             max_tokens=config.max_tokens,
         )
-        parsed = Answer.model_validate_json(response.choices[0].message.content or "")
+        choice = response.choices[0]
+        if choice.finish_reason == FINISH_REASON_LENGTH:
+            raise _ModelFailure(TRUNCATED)
+        parsed = Answer.model_validate_json(choice.message.content or "")
         if not parsed.citations or not set(parsed.citations) <= allowed:
-            raise ValueError("invalid model citations")
+            raise _ModelFailure(INVALID_CITATION)
         if re.search(r"\b(lineage|derived from|flows into|writes to)\b", parsed.answer, re.I):
             raise ValueError("model asserted lineage")
-    except Exception:
+    except Exception as error:
         return {
-            "error": {"code": "MODEL_UNAVAILABLE_OR_INVALID"},
+            "error": {"code": _failure_code(error)},
             "snapshot_digest": results["snapshot_digest"],
         }
     finally:

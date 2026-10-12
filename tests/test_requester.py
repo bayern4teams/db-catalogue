@@ -52,7 +52,11 @@ class FakeClient:
 
     def create(self, **kwargs):
         return SimpleNamespace(
-            choices=[SimpleNamespace(message=SimpleNamespace(content=self.content))]
+            choices=[
+                SimpleNamespace(
+                    finish_reason="stop", message=SimpleNamespace(content=self.content)
+                )
+            ]
         )
 
 
@@ -71,6 +75,12 @@ def test_answers_validate_citations_and_outage(tmp_path, monkeypatch):
     assert answer_question(state, "orders", config, client=good)["citations"] == [rows[0]["id"]]
     bad = FakeClient(json.dumps({"answer": "Invented", "citations": ["unknown"]}))
     assert answer_question(state, "orders", config, client=bad)["error"]["code"] == (
+        "MODEL_INVALID_CITATION"
+    )
+    lineage = FakeClient(
+        json.dumps({"answer": "It flows into x.", "citations": [rows[0]["id"]]})
+    )
+    assert answer_question(state, "orders", config, client=lineage)["error"]["code"] == (
         "MODEL_UNAVAILABLE_OR_INVALID"
     )
     assert answer_question(state, "show lineage", config)["error"]["code"] == (
@@ -280,7 +290,11 @@ def test_ask_retrieves_for_a_natural_question(tmp_path):
                     seen.extend(items)
                     body = json.dumps({"answer": "ledger.addr", "citations": [items[0]["id"]]})
                     return SimpleNamespace(
-                        choices=[SimpleNamespace(message=SimpleNamespace(content=body))]
+                        choices=[
+                            SimpleNamespace(
+                                finish_reason="stop", message=SimpleNamespace(content=body)
+                            )
+                        ]
                     )
 
     result = answer_question(state, "where do we keep the contact address?", config,

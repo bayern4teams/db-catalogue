@@ -3,7 +3,7 @@
 Overwrite this file at every commit. A fresh session reads it first, then
 [the plan](../CATALOGUE_FIXES_IMPLEMENTATION_PLAN.md). Git is the memory; a session's context is not.
 
-**Lock:** 2026-10-12T16:46:23Z · **Autonomy:** unattended-through-phase-4 · **Last heartbeat:** 2026-10-12T16:46:23Z
+**Lock:** 2026-10-12T16:55:38Z · **Autonomy:** unattended-through-phase-4 · **Last heartbeat:** 2026-10-12T16:55:38Z
 
 (Lock/heartbeat protocol: plan §7. A session sets `Lock: <ISO time>`, pushes it, and refreshes it at
 every commit; a lock older than 75 min is stale. `Autonomy` is `off`, `dryrun` (a tick only records
@@ -15,10 +15,10 @@ Only the user changes it.)
 | item | phase | state | commit | lead verdict |
 |---|---|---|---|---|
 | P0 baseline, ownership, fixtures | 0 | accepted-cloud | | lead: 80 pass/50 xfail(strict) fixtures verified; CI green on branch (38256268573); grep baseline 0 hits |
-| B1 `ask` schema (llama.cpp rejects `maxLength`) | 1 | todo | | |
-| B3 + D6a camelCase split in search | 1 | todo | | |
-| D6b stemming in search | 1 | todo | | |
-| B4 stopwords / no-match guard | 1 | todo | | |
+| B1 `ask` schema (llama.cpp rejects `maxLength`) | 1 | in-progress (implemented, lead-reviewed diff; attack verifier running) | | |
+| B3 + D6a camelCase split in search | 1 | in-progress (implemented, lead-reviewed diff; attack verifier running) | | |
+| D6b stemming in search | 1 | in-progress (implemented, lead-reviewed diff; attack verifier running) | | |
+| B4 stopwords / no-match guard | 1 | in-progress (implemented, lead-reviewed diff; attack verifier running) | | |
 | C1 + D7 distinct model error codes | 1 | in-progress (builder half done by lead; requester half in lane R) | | |
 | C2 `partial` diagnostics in manifest and CLI | 1 | blocked (DEC-11b) - waiting for the user | | |
 | C3 documentation gaps | 1 | in-progress (points 1-4 done, lead-reviewed diff; point 5 waits for B1+C1) | | |
@@ -85,4 +85,7 @@ Phase 1: lane R (worker: B1, B3/D6a, D6b, B4, C1 requester half) and lane D (wor
 (append `[PHASE n DONE]`, `[BLOCKED]`, `[Catalogue fixes COMPLETE]` entries here; the same prefixes go in commit messages)
 
 ## Open escalations (worker/verifier results that passed only written tests or one case)
-none
+- B3/D6a: a stale index (no `index_version`) is refused with `STALE_INDEX` (rerun `dbig-requester index`), not rebuilt, because `search` must not write the state directory. Plan said "rebuilt"; lead accepts the refusal (never misread). Tell the user.
+- D6b/B4: the plural fold is not a stemmer (`boxes` -> `boxe`); and `tables`/`numbers` are schema words in `ask` (singular is a stopword), so "tables" alone no longer retrieves in `ask` until DEC-7. Explicit `search` is unaffected.
+- Builder review schema still carries `minItems`/`maxLength` (non-strict test); the report says llama.cpp accepted it. Verify live.
+- Ticket: `DBIG_SIGNING_KEY` under 32 bytes gives a ValueError traceback, not a one-line error.

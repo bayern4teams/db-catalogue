@@ -20,10 +20,15 @@ from pydantic import Field as PydanticField
 
 # Words that carry no catalogue meaning in a question. Dropped only for `match="any"`, which is
 # how `ask` retrieves: as a prefix match, "is" would otherwise hit every `is_active` column.
+# The last line is schema words: a question about "which column holds ..." matches any collection
+# that describes columns, so they cannot be what makes a question match. ponytail: a word list is
+# the ceiling; the deferred alternative is to require a minimum share of the meaningful words to
+# match.
 STOPWORDS = frozenset(
     "a an and any are as at be by can do does for from have how i in into is it its me my "
     "of on or show tell that the their there these this to what where which who why with "
-    "we you your all list find give get".split()
+    "we you your all list find give get "
+    "column table field number holds store stored".split()
 )
 # Relevance weights for bm25 over the indexed columns: name, context (owning table and schema),
 # description. A hit on the entry's own name matters most, its table's name next.
@@ -31,7 +36,7 @@ WEIGHTS = (10.0, 4.0, 1.0)
 # Bump when what `index_snapshot` writes into the full-text table changes meaning. An index
 # written under another version is refused with STALE_INDEX instead of answering from words it
 # does not hold (a search would return nothing, as if the catalogue lacked the column).
-INDEX_VERSION = "2"
+INDEX_VERSION = "3"
 
 
 # Where a name breaks into words: lower to upper (`unitID`), the end of an upper-case run before
@@ -51,14 +56,40 @@ def _words(name: str) -> list[str]:
     return re.findall(r"[^\W_]+", _WORD_BREAK.sub(" ", name).casefold())
 
 
-def _indexed_name(name: str | None) -> str:
-    """The name as indexed: whole, so `companyid` finds it, followed by its words when case or
-    digits split it. A name the tokenizer already splits (snake_case) is left as it is."""
-    if not name:
+# Plural endings folded to the singular, longest first. Anything else ending in `s` loses it,
+# except `ss`, `us` and `is` (address, status, analysis), which are not plurals.
+_PLURAL_ENDINGS = (("ies", "y"), ("sses", "ss"))
+_NOT_PLURAL = ("ss", "us", "is")
+
+
+def _singular(word: str) -> str:
+    """A plural noun folded to its singular, any other word unchanged: industries gives industry,
+    tables gives table, address stays address.
+
+    ponytail: a fold, not a stemmer. `-es` words other than `-sses` lose only the `s`
+    (`boxes` gives `boxe`, so `box` does not find `boxes`). Ceiling: swap in a real stemmer
+    (the FTS5 `porter` tokenizer drops the exact form that ranks an exact name first).
+    """
+    for ending, replacement in _PLURAL_ENDINGS:
+        if word.endswith(ending) and len(word) > len(ending):
+            return word[: -len(ending)] + replacement
+    if word.endswith("s") and not word.endswith(_NOT_PLURAL) and len(word) > 1:
+        return word[:-1]
+    return word
+
+
+def _indexed_text(text: str | None) -> str:
+    """Text as indexed: whole, so `unitid` finds `unitID`, then its words when case or digits
+    split it, then the singular of every plural word. Names the tokenizer already splits
+    (snake_case) keep only the extras they need."""
+    if not text:
         return ""
-    if _WORD_BREAK.search(name):
-        return f"{name} {' '.join(_words(name))}"
-    return name
+    words = _words(text)
+    pieces = [text]
+    if _WORD_BREAK.search(text):
+        pieces.append(" ".join(words))
+    pieces.extend(sorted({singular for word in words if (singular := _singular(word)) != word}))
+    return " ".join(pieces)
 
 
 class SearchRequest(BaseModel):
@@ -164,9 +195,9 @@ def index_snapshot(snapshot: Path, state: Path) -> str:
                 "INSERT INTO fts(id,name,context,description) VALUES (?,?,?,?)",
                 (
                     row[0],
-                    _indexed_name(row[3]),
-                    " ".join(_indexed_name(part) for part in extra[:2] if part),
-                    extra[2] or "",
+                    _indexed_text(row[3]),
+                    " ".join(_indexed_text(part) for part in extra[:2] if part),
+                    _indexed_text(extra[2]),
                 ),
             )
         connection.executemany(
@@ -206,7 +237,15 @@ def search(state: Path, request: SearchRequest) -> dict:
             raise ValueError("STALE_INDEX")
         terms = re.findall(r"\w+", request.query, flags=re.UNICODE)
         if request.match == "any":
-            terms = [term for term in terms if term.casefold() not in STOPWORDS and len(term) > 1]
+            # Checked on the word as asked and on its singular, so `tables` is a schema word
+            # because `table` is.
+            terms = [
+                term
+                for term in terms
+                if len(term) > 1
+                and term.casefold() not in STOPWORDS
+                and _singular(term.casefold()) not in STOPWORDS
+            ]
             if not terms:
                 # A question made only of common words has nothing to look up. Returning every
                 # entry instead would hand a model an arbitrary slice of the catalogue.
@@ -219,9 +258,11 @@ def search(state: Path, request: SearchRequest) -> dict:
             parameters.extend(WEIGHTS)
             conditions.append("fts MATCH ?")
             # Each term as a quoted prefix: `customer` finds `customers` and `customer_id`, and
-            # quoting keeps FTS5 operators in user input from being interpreted.
+            # quoting keeps FTS5 operators in user input from being interpreted. A plural also
+            # matches its singular as a whole word (`industries` finds `industry`); the index
+            # holds the singular of every plural it has seen, so the other way round works too.
             joiner = " AND " if request.match == "all" else " OR "
-            parameters.append(joiner.join('"' + term.replace('"', "") + '"*' for term in terms))
+            parameters.append(joiner.join(_term_query(term) for term in terms))
         for condition, value in (
             ("e.source_id=?", request.source_id),
             ("e.kind=?", request.kind),
@@ -270,6 +311,14 @@ def search(state: Path, request: SearchRequest) -> dict:
         "limit": request.limit,
         "offset": request.offset,
     }
+
+
+def _term_query(term: str) -> str:
+    # `term` is word characters only (`\w+`), so it cannot carry a quote or an FTS5 operator.
+    singular = _singular(term.casefold())
+    if singular == term.casefold():
+        return f'"{term}"*'
+    return f'("{term}"* OR "{singular}")'
 
 
 def _empty(manifest: Any, digest: str, request: SearchRequest) -> dict:

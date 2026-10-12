@@ -109,13 +109,11 @@ def _code(result: dict) -> str | None:
     return (result.get("error") or {}).get("code")
 
 
-@pytest.mark.xfail(strict=True, reason="C1 not implemented")
 @pytest.mark.parametrize("cause", list(CAUSES))
 def test_ask_reports_each_cause_under_its_own_code(ask_outcomes, cause):
     assert _code(ask_outcomes[cause]) == CAUSES[cause], ask_outcomes[cause]
 
 
-@pytest.mark.xfail(strict=True, reason="C1 not implemented")
 def test_ask_five_causes_give_five_distinct_codes(ask_outcomes):
     codes = {_code(result) for result in ask_outcomes.values()}
     assert len(codes) == len(set(CAUSES.values())) == 5, codes
