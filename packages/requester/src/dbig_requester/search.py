@@ -39,56 +39,80 @@ WEIGHTS = (10.0, 4.0, 1.0)
 INDEX_VERSION = "3"
 
 
-# Where a name breaks into words: lower to upper (`unitID`), the end of an upper-case run before
-# a capitalised word (`HTTPServer`), and between letters and digits (`In000s`).
-_WORD_BREAK = re.compile(
-    r"(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|(?<=[^\W\d_])(?=\d)|(?<=\d)(?=[^\W\d_])"
-)
+class StaleIndexError(OperatorError):
+    """The index does not match the snapshot it was built from, or was written by another version.
+    The message is the bare code, which the HTTP route returns as it is; the remedy is always
+    `dbig-requester index`."""
+
+
+def _broken(name: str) -> str:
+    """The name with a space at every word break: lower to upper (`unitID`), the end of an
+    upper-case run before a capitalised word (`HTTPServer`), and letters to digits and back
+    (`In000s`). Case is read with `str.isupper`, so an accented or Cyrillic capital breaks too."""
+    out: list[str] = []
+    for index, char in enumerate(name):
+        if index:
+            before, after = name[index - 1], name[index + 1 : index + 2]
+            if (
+                (char.isupper() and before.islower())
+                or (char.isupper() and before.isupper() and after.islower())
+                or (char.isdigit() != before.isdigit() and char.isalnum() and before.isalnum())
+            ):
+                out.append(" ")
+        out.append(char)
+    return "".join(out)
 
 
 def _words(name: str) -> list[str]:
-    """The words of a name, lower-cased: `unitPriceIn000s` gives unit, price, in, 000,
-    s; `HTTPServerID` gives http, server, id; `URL` stays one word.
-
-    ponytail: case is read for the ASCII letters only; a name in another script is split at
-    separators and digits but not by case. Ceiling: add a per-script rule when a catalogue needs it.
-    """
-    return re.findall(r"[^\W_]+", _WORD_BREAK.sub(" ", name).casefold())
+    """The words of a name, lower-cased: `unitPriceIn000s` gives unit, price, in, 000, s;
+    `HTTPServerID` gives http, server, id; `URL` stays one word."""
+    return re.findall(r"[^\W_]+", _broken(name).casefold())
 
 
-# Plural endings folded to the singular, longest first. Anything else ending in `s` loses it,
-# except `ss`, `us` and `is` (address, status, analysis), which are not plurals.
-_PLURAL_ENDINGS = (("ies", "y"), ("sses", "ss"))
-_NOT_PLURAL = ("ss", "us", "is")
+# Folding a plural to its singular. Candidates, not one answer, because English is ambiguous
+# (`movies` is `movie`, `boxes` is `box`, `industries` is `industry`); each is tried as a whole
+# word. A fold below MIN_SINGULAR_LENGTH is refused (`pos` is not `po`, `gas` is not `ga`), and so
+# is a word in NON_PLURALS, which ends in `s` and is not one (`news` is not `new`).
+# ponytail: a finite list and two rules, not a stemmer; the FTS5 `porter` tokenizer drops the
+# exact form that ranks an exact name first. Ceilings: a two-letter singular (`ids`) is not
+# folded; a non-plural word ending in `s` missing from the list merges with its shorter word.
+MIN_SINGULAR_LENGTH = 3
+NON_PLURALS = frozenset("news lens series species bias alias canvas atlas".split())
+_NOT_PLURAL_ENDINGS = ("ss", "us", "is")  # address, status, analysis
+_SIBILANT_ENDINGS = ("s", "x", "z", "ch", "sh")  # a plural adds `es` after these
 
 
-def _singular(word: str) -> str:
-    """A plural noun folded to its singular, any other word unchanged: industries gives industry,
-    tables gives table, address stays address.
+def _ies_singular(word: str) -> str | None:
+    if word.endswith("ies") and word not in NON_PLURALS:
+        singular = word[: -len("ies")] + "y"
+        return singular if len(singular) >= MIN_SINGULAR_LENGTH else None
+    return None
 
-    ponytail: a fold, not a stemmer. `-es` words other than `-sses` lose only the `s`
-    (`boxes` gives `boxe`, so `box` does not find `boxes`). Ceiling: swap in a real stemmer
-    (the FTS5 `porter` tokenizer drops the exact form that ranks an exact name first).
-    """
-    for ending, replacement in _PLURAL_ENDINGS:
-        if word.endswith(ending) and len(word) > len(ending):
-            return word[: -len(ending)] + replacement
-    if word.endswith("s") and not word.endswith(_NOT_PLURAL) and len(word) > 1:
-        return word[:-1]
-    return word
+
+def _singulars(word: str) -> list[str]:
+    """The words `word` may be the plural of; empty when it is not a plural."""
+    if word in NON_PLURALS or not word.endswith("s") or word.endswith(_NOT_PLURAL_ENDINGS):
+        return []
+    candidates = [word[:-1]]
+    if word.endswith("ies"):
+        candidates.append(_ies_singular(word) or "")
+    elif word.endswith("es") and word[:-2].endswith(_SIBILANT_ENDINGS):
+        candidates.append(word[:-2])
+    return [item for item in candidates if len(item) >= MIN_SINGULAR_LENGTH]
 
 
 def _indexed_text(text: str | None) -> str:
     """Text as indexed: whole, so `unitid` finds `unitID`, then its words when case or digits
-    split it, then the singular of every plural word. Names the tokenizer already splits
-    (snake_case) keep only the extras they need."""
+    split it, then the `-y` singular of every `-ies` word (`industries` also holds `industry`,
+    which a prefix match on `industry` cannot reach). Other plurals need nothing: the singular is
+    a prefix of them, and adding it would make `invoices` rank with `invoice`."""
     if not text:
         return ""
     words = _words(text)
     pieces = [text]
-    if _WORD_BREAK.search(text):
+    if _broken(text) != text:
         pieces.append(" ".join(words))
-    pieces.extend(sorted({singular for word in words if (singular := _singular(word)) != word}))
+    pieces.extend(sorted({singular for word in words if (singular := _ies_singular(word))}))
     return " ".join(pieces)
 
 
@@ -230,21 +254,21 @@ def search(state: Path, request: SearchRequest) -> dict:
         manifest, _ = read_artifact(snapshot)
         digest = hashlib.sha256((snapshot / "manifest.json").read_bytes()).hexdigest()
         if digest != metadata["digest"]:
-            raise ValueError("STALE_INDEX")
+            raise StaleIndexError("STALE_INDEX")
         if metadata.get("index_version") != INDEX_VERSION:
             # Same code and same remedy (`dbig-requester index`) as any other stale index. Refused
             # here, not rebuilt: a search must not write to the state directory.
-            raise ValueError("STALE_INDEX")
+            raise StaleIndexError("STALE_INDEX")
         terms = re.findall(r"\w+", request.query, flags=re.UNICODE)
         if request.match == "any":
-            # Checked on the word as asked and on its singular, so `tables` is a schema word
-            # because `table` is.
+            # Checked on the word as asked and on what it may be the plural of, so `tables` is a
+            # schema word because `table` is.
             terms = [
                 term
                 for term in terms
                 if len(term) > 1
                 and term.casefold() not in STOPWORDS
-                and _singular(term.casefold()) not in STOPWORDS
+                and not STOPWORDS.intersection(_singulars(term.casefold()))
             ]
             if not terms:
                 # A question made only of common words has nothing to look up. Returning every
@@ -259,8 +283,8 @@ def search(state: Path, request: SearchRequest) -> dict:
             conditions.append("fts MATCH ?")
             # Each term as a quoted prefix: `customer` finds `customers` and `customer_id`, and
             # quoting keeps FTS5 operators in user input from being interpreted. A plural also
-            # matches its singular as a whole word (`industries` finds `industry`); the index
-            # holds the singular of every plural it has seen, so the other way round works too.
+            # matches each of its singulars as a whole word (`industries` finds `industry`); the
+            # other way round, `industry` finds `industries`, the index holds the `-y` form.
             joiner = " AND " if request.match == "all" else " OR "
             parameters.append(joiner.join(_term_query(term) for term in terms))
         for condition, value in (
@@ -273,11 +297,13 @@ def search(state: Path, request: SearchRequest) -> dict:
                 parameters.append(value)
         if conditions:
             sql += " WHERE " + " AND ".join(conditions)
-        sql += (
-            " ORDER BY rank, e.name COLLATE NOCASE, e.id"
-            if terms
-            else " ORDER BY e.name COLLATE NOCASE, e.id"
-        )
+        if terms:
+            # An entry named exactly as asked comes first: a plural query also matches its
+            # singular, and `invoices` must not rank below `invoice` for `invoices`.
+            sql += " ORDER BY e.name = ? COLLATE NOCASE DESC, rank, e.name COLLATE NOCASE, e.id"
+            parameters.append(request.query.strip())
+        else:
+            sql += " ORDER BY e.name COLLATE NOCASE, e.id"
         rows = []
         cutoff = (
             datetime.now(UTC) - timedelta(seconds=request.max_age_seconds)
@@ -315,10 +341,8 @@ def search(state: Path, request: SearchRequest) -> dict:
 
 def _term_query(term: str) -> str:
     # `term` is word characters only (`\w+`), so it cannot carry a quote or an FTS5 operator.
-    singular = _singular(term.casefold())
-    if singular == term.casefold():
-        return f'"{term}"*'
-    return f'("{term}"* OR "{singular}")'
+    alternatives = "".join(f' OR "{singular}"' for singular in _singulars(term.casefold()))
+    return f'("{term}"*{alternatives})' if alternatives else f'"{term}"*'
 
 
 def _empty(manifest: Any, digest: str, request: SearchRequest) -> dict:

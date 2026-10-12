@@ -14,7 +14,7 @@ from openai import APIConnectionError, APIStatusError, APITimeoutError, OpenAI
 from pydantic import BaseModel, ConfigDict, field_validator
 
 from .config import AnswerConfig
-from .search import SearchRequest, search
+from .search import SearchRequest, StaleIndexError, search
 
 # The longest answer accepted. It is enforced after parsing and not in the schema sent to the
 # server: llama.cpp refuses a JSON schema that carries a length or item bound ("failed to parse
@@ -59,6 +59,11 @@ def _failure_code(error: Exception) -> str:
     if isinstance(error, _ModelFailure):
         return error.code
     if isinstance(error, APITimeoutError):  # a subclass of APIConnectionError: test it first
+        # A connect timeout is a host that is down or firewalled, not a slow model.
+        # ponytail: matched by class name so httpx, openai's transitive dependency, is not
+        # imported directly; upgrade to isinstance if httpx becomes a declared dependency.
+        if type(error.__cause__).__name__ == "ConnectTimeout":
+            return UNREACHABLE
         return TIMEOUT
     if isinstance(error, APIConnectionError):
         return UNREACHABLE
@@ -108,9 +113,13 @@ def answer_question(
     # Ranked by any meaningful word, not all of them: a question is not a keyword query. And no
     # fallback to unfiltered entries when nothing matches, which used to hand the model the
     # first entries alphabetically, unrelated to the question.
-    results = search(
-        state, SearchRequest(query=question, limit=config.retrieval_limit, match="any")
-    )
+    try:
+        results = search(
+            state, SearchRequest(query=question, limit=config.retrieval_limit, match="any")
+        )
+    except StaleIndexError as error:
+        # The same code the search route reports; the remedy is `dbig-requester index`.
+        return {"error": {"code": str(error)}}
     allowed = {item["id"] for item in results["results"]}
     if not allowed:
         return {

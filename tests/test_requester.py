@@ -1,8 +1,10 @@
 import json
+import sqlite3
 import sys
 import types
 from types import SimpleNamespace
 
+import httpx
 import pytest
 from dbig_builder.builder import assemble
 from dbig_builder.config import BuilderConfig
@@ -303,3 +305,65 @@ def test_ask_retrieves_for_a_natural_question(tmp_path):
     assert seen[0]["name"] == "addr"
     assert seen[0]["description"] == "Contact address for invoices", "comments reach the model"
     assert seen[0]["object_name"] == "ledger"
+
+
+def _answer_config() -> AnswerConfig:
+    return AnswerConfig(
+        base_url="http://127.0.0.1:8000/v1", model="private", model_digest="sha",
+        api_key_env="VLLM_KEY",
+    )
+
+
+@pytest.mark.parametrize("how", ["version", "digest"])
+def test_ask_on_a_stale_index_returns_the_code_and_the_http_routes_agree(
+    tmp_path, monkeypatch, how
+):
+    """A stale index (another index version, or a snapshot changed since indexing) is the same
+    typed error everywhere: `search` raises it, `ask` returns it as a code, and the HTTP search
+    route answers 409 with it, instead of a traceback or a 500."""
+    state = indexed(tmp_path, monkeypatch)
+    if how == "version":
+        database = sqlite3.connect(state / "catalog.sqlite3")
+        database.execute("DELETE FROM meta WHERE key='index_version'")
+        database.commit()
+        database.close()
+    else:
+        manifest = tmp_path / "snapshot" / "manifest.json"
+        changed = json.loads(manifest.read_text(encoding="utf-8"))
+        changed["completeness"] = "partial"
+        manifest.write_text(json.dumps(changed), encoding="utf-8")
+    assert answer_question(state, "orders", _answer_config()) == {"error": {"code": "STALE_INDEX"}}
+    monkeypatch.setenv("REQUESTER_TOKEN", "synthetic-api-token")
+    config = RequesterConfig(
+        snapshot_dir=tmp_path / "snapshot", state_dir=state, api_key_env="REQUESTER_TOKEN"
+    )
+    with TestClient(create_app(config)) as client:
+        response = client.get(
+            "/v1/catalogue/search?query=orders",
+            headers={"Authorization": "Bearer synthetic-api-token"},
+        )
+    assert response.status_code == 409 and response.json()["detail"] == {"code": "STALE_INDEX"}
+
+
+@pytest.mark.parametrize(
+    ("cause", "code"),
+    [(httpx.ConnectTimeout("x"), "MODEL_UNREACHABLE"), (httpx.ReadTimeout("x"), "MODEL_TIMEOUT")],
+)
+def test_a_connect_timeout_is_unreachable_and_a_read_timeout_is_a_timeout(
+    tmp_path, monkeypatch, cause, code
+):
+    """A host that never completes the connection is down or firewalled; only a slow reply is a
+    timeout the operator can fix with `timeout_seconds`."""
+    from openai import APITimeoutError
+
+    state = indexed(tmp_path, monkeypatch)
+
+    class Slow:
+        class chat:  # noqa: N801
+            class completions:  # noqa: N801
+                @staticmethod
+                def create(**kwargs: object) -> None:
+                    raise APITimeoutError(request=httpx.Request("POST", "http://x")) from cause
+
+    result = answer_question(state, "orders", _answer_config(), client=Slow())
+    assert result["error"]["code"] == code
