@@ -21,7 +21,7 @@ Only the user changes it.)
 | B4 stopwords / no-match guard | 1 | todo | | |
 | C1 + D7 distinct model error codes | 1 | in-progress (builder half done by lead; requester half in lane R) | | |
 | C2 `partial` diagnostics in manifest and CLI | 1 | blocked (DEC-11b) - waiting for the user | | |
-| C3 documentation gaps | 1 | todo | | |
+| C3 documentation gaps | 1 | in-progress (points 1-4 done, lead-reviewed diff; point 5 waits for B1+C1) | | |
 | D1b reasons for empty statistic cells | 1 | in-progress (implemented, attack verifier pending) | | |
 | D3 + B5(2) lowercase names (`companyid`) when the stem is a known object | 2 | todo | | |
 | A1 + D2 + D9 + A3 overlap labels, measured-zero drop | 2 | todo | | |

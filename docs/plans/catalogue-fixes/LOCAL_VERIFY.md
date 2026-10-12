@@ -40,4 +40,11 @@ configs, TLS preflight, collect, assemble, render) using the configs in `artifac
 - Result (filled in locally):
 ```
 
-(no entries yet)
+### C3 (points 1-4) — guide gaps
+- Why cloud could not verify: no ClickHouse server or docker daemon in the session.
+- Command: `GRANT SELECT ON <db>.* TO <reader>` then `scripts/run_plan.py`; the LIVE_TEST section 3 helpers (`pgq`, `chq`, `mongoq`, `mongoprobe`) against the real servers.
+- Independent check: run_plan.py without the grant gives code 497; with it, the plan executes.
+- Expected evidence: 497 before the grant, success after; helpers return rows (they were only run as far as a refused connection).
+- Result (filled in locally):
+
+(Point 5, the llama.cpp note, waits for B1 and C1.) Ticket: a `DBIG_SIGNING_KEY` under 32 bytes gives a ValueError traceback, not a one-line error (outside C3's files).

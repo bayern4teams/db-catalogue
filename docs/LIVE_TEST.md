@@ -89,12 +89,12 @@ command that lists each malformed line by number and variable name without print
 **Checks without `psql` or `mongosh`.** Sections 2 and 7 give statements for those clients. They
 are optional: with `.env` loaded, these helpers run the same statements through the collector's
 drivers, with the account in your connection variables (the one `collect` uses), over verified
-TLS. They are for your servers, which use TLS; set `CHECK_CA_FILE` to your CA file or leave it
+TLS. They are for your servers, which use TLS; uncomment the first line below and point `CHECK_CA_FILE` at your CA file, or leave it
 unset if the CA is in the system trust store. A refused statement or an unreachable server ends
 in a traceback whose last line is the message.
 
 ```bash
-export CHECK_CA_FILE=/path/to/company-ca.pem     # leave unset if the CA is in the system trust store
+# export CHECK_CA_FILE=/path/to/company-ca.pem   # only if your CA is not in the system trust store
 
 pgq() { python -c '
 import json, os, ssl, sys
