@@ -3,7 +3,7 @@
 Overwrite this file at every commit. A fresh session reads it first, then
 [the plan](../CATALOGUE_FIXES_IMPLEMENTATION_PLAN.md). Git is the memory; a session's context is not.
 
-**Lock:** 2026-10-12T13:27:43Z · **Autonomy:** unattended-through-phase-4 · **Last heartbeat:** 2026-10-12T13:27:43Z
+**Lock:** 2026-10-12T13:27:43Z · **Autonomy:** unattended-through-phase-4 · **Last heartbeat:** 2026-10-12T13:34:02Z
 
 (Lock/heartbeat protocol: plan §7. A session sets `Lock: <ISO time>`, pushes it, and refreshes it at
 every commit; a lock older than 75 min is stale. `Autonomy` is `off`, `dryrun` (a tick only records
@@ -63,10 +63,19 @@ Rules: plan section 2.9. A row with an empty Answer keeps its items `blocked`. A
 Already decided by the user on 2026-10-12 (not open): base the work on the tested branch; `companyid` is read as `company` + `id` only when the stem is a known object; a measured 0-of-N cross-source overlap drops the candidate and an unchecked one is labelled "values not compared"; graft is best effort in the cloud; Phase 1 bugs go ahead.
 
 ## Locked file-ownership table (Phase 0)
-(filled by Phase 0 from `graphify affected`)
+Phase 0 table (file -> sole owner while its items are open; plan §8/§9 DAG; graph cross-check: graphify built 2029 nodes, graft 1082, cbm 2535):
+
+| file | owner | items (serial order) |
+|---|---|---|
+| `packages/requester/src/dbig_requester/{answer,search,config}.py`, `tests/test_requester.py` | lane R worker | B1, B3/D6a, D6b, B4, C1 requester half; later DEC-5/6/7/8/9 (lead) |
+| `docs/LOCAL_RUN.md`, `docs/LIVE_TEST.md`, `.env.example` | lane D worker | C3 (llama.cpp note last, after B1+C1) |
+| `packages/catalog-builder/src/dbig_builder/{reviewer,render,cli,state}.py` | lead | C1 builder half, C2, D1b, then B2 |
+| `packages/catalog-builder/src/dbig_builder/builder.py` | lead (serial chain) | D3, A1/D2/D9, DEC-12, DEC-2, DEC-1, DEC-3 |
+| `packages/planner/src/dbig_planner/{paths,plans}.py` | lead | D4 (DEC-4) |
+| `tests/catalogue_fixes/` | verifier | Phase 0 fixtures (xfail strict until the item lands) |
 
 ## Lane plan
-(filled by Phase 0)
+Phase 1: lane R and lane D concurrent (disjoint files); lead does C1 builder half, C2, D1b. Phase 2: lead chain only.
 
 ## Next action
 Phase 0, step 1: baseline (plan section 8). (Runs only while `Autonomy` is `unattended-through-phase-N`.)
