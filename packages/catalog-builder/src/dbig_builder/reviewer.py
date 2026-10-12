@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import UTC, datetime
+from http import HTTPStatus
 from typing import Any, Literal, TypedDict
 
 from dbig_contracts.ids import stable_id
@@ -13,9 +14,11 @@ from dbig_contracts.models import Field as CatalogField
 from dbig_contracts.security import secret_from_env
 from langgraph.graph import END, START, StateGraph
 from openai import APIConnectionError, APIStatusError, APITimeoutError, OpenAI
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, field_validator
 
 from .config import ReviewConfig
+
+REASON_MAX_CHARS = 256
 
 
 class Decision(BaseModel):
@@ -23,8 +26,24 @@ class Decision(BaseModel):
 
     candidate_id: str
     decision: Literal["supports", "opposes", "unknown"]
-    cited_evidence_ids: list[str] = Field(min_length=1)
-    reason: str = Field(max_length=256)
+    cited_evidence_ids: list[str]
+    reason: str
+
+    # The limits are enforced here, after parsing, not as schema keywords: llama.cpp refuses a
+    # JSON schema carrying `minItems` or `maxLength` ("failed to parse grammar").
+    @field_validator("cited_evidence_ids")
+    @classmethod
+    def _cites_something(cls, value: list[str]) -> list[str]:
+        if not value:
+            raise ValueError("a decision must cite evidence")
+        return value
+
+    @field_validator("reason")
+    @classmethod
+    def _short_reason(cls, value: str) -> str:
+        if len(value) > REASON_MAX_CHARS:
+            raise ValueError("reason too long")
+        return value
 
 
 class DecisionBatch(BaseModel):
@@ -128,10 +147,15 @@ def _failure_code(error: Exception) -> str:
     if isinstance(error, _InvalidCitation):
         return "MODEL_INVALID_CITATION"
     if isinstance(error, APITimeoutError):
+        # A connect timeout is a host that is down or firewalled, not a slow model.
+        # ponytail: matched by class name so httpx, openai's transitive dependency, is not
+        # imported directly; upgrade to isinstance if httpx becomes a declared dependency.
+        if type(error.__cause__).__name__ == "ConnectTimeout":
+            return "MODEL_UNREACHABLE"
         return "MODEL_TIMEOUT"
     if isinstance(error, APIConnectionError):
         return "MODEL_UNREACHABLE"
-    if isinstance(error, APIStatusError):
+    if isinstance(error, APIStatusError) and error.status_code < HTTPStatus.INTERNAL_SERVER_ERROR:
         return "MODEL_REJECTED_REQUEST"
     return "MODEL_UNAVAILABLE_OR_INVALID"
 
