@@ -102,7 +102,7 @@ def test_reviewer_rejects_invented_evidence_and_outage():
         )
     )
     assert review_candidates([edge], nodes, proof, config(), client=invalid)[1] == (
-        "MODEL_UNAVAILABLE_OR_INVALID"
+        "MODEL_INVALID_CITATION"
     )
 
     class Down(FakeClient):

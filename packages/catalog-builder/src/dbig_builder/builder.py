@@ -26,7 +26,7 @@ from dbig_contracts.models import (
 from rapidfuzz.fuzz import ratio
 
 from .config import BuilderConfig
-from .reviewer import review_candidates
+from .reviewer import MODEL_FAILURE_CODES, review_candidates
 
 
 def _read_signed(path: Path, config: BuilderConfig) -> tuple[Manifest, dict[str, list[Record]]]:
@@ -613,9 +613,9 @@ def assemble(
         )
         for suggestion in suggestions:
             evidence[suggestion.id] = suggestion
-        if review_status == "MODEL_UNAVAILABLE_OR_INVALID":
+        if review_status in MODEL_FAILURE_CODES:
             partial = True
-            partial_reasons.add("MODEL_REVIEW_FAILED")
+            partial_reasons.update({"MODEL_REVIEW_FAILED", review_status})
     runs.append(
         Record.model_validate(
             {

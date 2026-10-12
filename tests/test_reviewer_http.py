@@ -160,10 +160,10 @@ def test_nothing_secret_is_sent_to_the_model(tmp_path, monkeypatch):
 def test_a_wrong_key_still_publishes_the_deterministic_catalogue(tmp_path, monkeypatch):
     stub, result = _run(tmp_path, monkeypatch, _supports_everything, key="not-the-key")
     assert stub.requests[0]["auth"] == "Bearer not-the-key"
-    assert result["status"] == "MODEL_UNAVAILABLE_OR_INVALID"
+    assert result["status"] == "MODEL_REJECTED_REQUEST"
     assert result["suggestions"] == []
     assert result["manifest"].completeness == "partial"
-    assert result["reasons"] == ["MODEL_REVIEW_FAILED"], "the page must be able to say why"
+    assert result["reasons"] == ["MODEL_REJECTED_REQUEST", "MODEL_REVIEW_FAILED"]
 
 
 def test_an_invented_citation_is_refused(tmp_path, monkeypatch):
@@ -174,7 +174,7 @@ def test_an_invented_citation_is_refused(tmp_path, monkeypatch):
         ]})
 
     _, result = _run(tmp_path, monkeypatch, invent)
-    assert result["status"] == "MODEL_UNAVAILABLE_OR_INVALID"
+    assert result["status"] == "MODEL_INVALID_CITATION"
     assert result["suggestions"] == []
 
 

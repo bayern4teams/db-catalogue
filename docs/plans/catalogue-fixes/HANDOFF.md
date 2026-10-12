@@ -3,7 +3,7 @@
 Overwrite this file at every commit. A fresh session reads it first, then
 [the plan](../CATALOGUE_FIXES_IMPLEMENTATION_PLAN.md). Git is the memory; a session's context is not.
 
-**Lock:** 2026-10-12T16:23:30Z · **Autonomy:** unattended-through-phase-4 · **Last heartbeat:** 2026-10-12T16:41:34Z
+**Lock:** 2026-10-12T16:44:29Z · **Autonomy:** unattended-through-phase-4 · **Last heartbeat:** 2026-10-12T16:44:29Z
 
 (Lock/heartbeat protocol: plan §7. A session sets `Lock: <ISO time>`, pushes it, and refreshes it at
 every commit; a lock older than 75 min is stale. `Autonomy` is `off`, `dryrun` (a tick only records
@@ -19,7 +19,7 @@ Only the user changes it.)
 | B3 + D6a camelCase split in search | 1 | todo | | |
 | D6b stemming in search | 1 | todo | | |
 | B4 stopwords / no-match guard | 1 | todo | | |
-| C1 + D7 distinct model error codes | 1 | todo | | |
+| C1 + D7 distinct model error codes | 1 | in-progress (builder half done by lead; requester half in lane R) | | |
 | C2 `partial` diagnostics in manifest and CLI | 1 | todo | | |
 | C3 documentation gaps | 1 | todo | | |
 | D1b reasons for empty statistic cells | 1 | todo | | |

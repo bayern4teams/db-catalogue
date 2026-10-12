@@ -12,7 +12,7 @@ from dbig_contracts.models import Edge, Evidence, Object, Record
 from dbig_contracts.models import Field as CatalogField
 from dbig_contracts.security import secret_from_env
 from langgraph.graph import END, START, StateGraph
-from openai import OpenAI
+from openai import APIConnectionError, APIStatusError, APITimeoutError, OpenAI
 from pydantic import BaseModel, ConfigDict, Field
 
 from .config import ReviewConfig
@@ -101,6 +101,41 @@ def _trace(config: ReviewConfig, candidate_count: int) -> Any:
     )
 
 
+MODEL_FAILURE_CODES = frozenset(
+    {
+        "MODEL_UNAVAILABLE_OR_INVALID",
+        "MODEL_UNREACHABLE",
+        "MODEL_REJECTED_REQUEST",
+        "MODEL_TIMEOUT",
+        "MODEL_TRUNCATED",
+        "MODEL_INVALID_CITATION",
+    }
+)
+
+
+class _Truncated(Exception):
+    """The server stopped on its token limit."""
+
+
+class _InvalidCitation(Exception):
+    """The reply cited a candidate or evidence id that was not offered."""
+
+
+def _failure_code(error: Exception) -> str:
+    """Name the cause from the exception type only; never from its message or any content."""
+    if isinstance(error, _Truncated):
+        return "MODEL_TRUNCATED"
+    if isinstance(error, _InvalidCitation):
+        return "MODEL_INVALID_CITATION"
+    if isinstance(error, APITimeoutError):
+        return "MODEL_TIMEOUT"
+    if isinstance(error, APIConnectionError):
+        return "MODEL_UNREACHABLE"
+    if isinstance(error, APIStatusError):
+        return "MODEL_REJECTED_REQUEST"
+    return "MODEL_UNAVAILABLE_OR_INVALID"
+
+
 def review_candidates(
     candidates: list[Edge],
     nodes: dict[str, Record],
@@ -165,6 +200,8 @@ def review_candidates(
             },
             max_tokens=config.max_tokens,
         )
+        if getattr(response.choices[0], "finish_reason", None) == "length":
+            raise _Truncated
         return {"response": response.choices[0].message.content or ""}
 
     def validate(state: ReviewState) -> ReviewState:
@@ -174,9 +211,9 @@ def review_candidates(
         seen: set[str] = set()
         for item in batch.decisions:
             if item.candidate_id in seen or item.candidate_id not in known:
-                raise ValueError("unknown or duplicate candidate")
+                raise _InvalidCitation
             if not set(item.cited_evidence_ids) <= known[item.candidate_id]:
-                raise ValueError("invented evidence citation")
+                raise _InvalidCitation
             seen.add(item.candidate_id)
         return {"decisions": batch.decisions}
 
@@ -225,5 +262,5 @@ def review_candidates(
             with tracer:
                 result = graph.compile().invoke({})
         return result["suggestions"], "OK"
-    except Exception:
-        return [], "MODEL_UNAVAILABLE_OR_INVALID"
+    except Exception as error:
+        return [], _failure_code(error)

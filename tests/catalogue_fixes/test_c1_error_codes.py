@@ -213,7 +213,6 @@ def review_outcomes(tmp_path_factory):
     return outcomes
 
 
-@pytest.mark.xfail(strict=True, reason="C1 not implemented")
 @pytest.mark.parametrize("cause", list(CAUSES))
 def test_review_reports_each_cause_under_its_own_code(review_outcomes, cause):
     outcome = review_outcomes[cause]
