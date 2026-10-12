@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import json
 
-import pytest
 from catalogue_fixture_kit import MODEL_KEY, ModelStub, build_snapshot, cite_first, schema_bounds
 from dbig_requester.answer import answer_question
 from dbig_requester.config import AnswerConfig
@@ -46,7 +45,6 @@ def _config(stub: ModelStub, monkeypatch, **overrides) -> AnswerConfig:
     )
 
 
-@pytest.mark.xfail(strict=True, reason="B1 not implemented")
 def test_ask_answers_when_the_server_rejects_length_bounds(tmp_path, monkeypatch):
     state = _state(tmp_path, monkeypatch)
     with ModelStub(cite_first, reject_bounds=True) as stub:
@@ -57,7 +55,6 @@ def test_ask_answers_when_the_server_rejects_length_bounds(tmp_path, monkeypatch
     assert stub.rejected == 0, "the sent schema must not carry a bound the server refuses"
 
 
-@pytest.mark.xfail(strict=True, reason="B1 not implemented")
 def test_the_schema_sent_carries_no_bound_keyword(tmp_path, monkeypatch):
     state = _state(tmp_path, monkeypatch)
     with ModelStub(cite_first) as stub:  # accepts everything, so even the old code gets through

@@ -10,17 +10,29 @@ from typing import Any
 
 from dbig_contracts.security import secret_from_env
 from openai import OpenAI
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, field_validator
 
 from .config import AnswerConfig
 from .search import SearchRequest, search
+
+# The longest answer accepted. It is enforced after parsing and not in the schema sent to the
+# server: llama.cpp refuses a JSON schema that carries a length or item bound ("failed to parse
+# grammar"), so the schema must stay free of every such keyword.
+ANSWER_MAX_CHARS = 2000
 
 
 class Answer(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    answer: str = Field(max_length=2000)
+    answer: str
     citations: list[str]
+
+    @field_validator("answer")
+    @classmethod
+    def _within_limit(cls, value: str) -> str:
+        if len(value) > ANSWER_MAX_CHARS:
+            raise ValueError("answer too long")
+        return value
 
 
 def _trace(config: AnswerConfig, retrieval_count: int) -> Any:

@@ -56,13 +56,11 @@ def camel(tmp_path, monkeypatch):
     return _state(tmp_path, monkeypatch, CAMEL)
 
 
-@pytest.mark.xfail(strict=True, reason="B3/D6a not implemented")
 def test_a_part_of_a_camel_case_name_finds_it(camel):
     found = _names(camel, "revenue", kind="field")
     assert "accountRevenue" in found and "accountRevenueIn000s" in found
 
 
-@pytest.mark.xfail(strict=True, reason="B3/D6a not implemented")
 def test_an_upper_case_run_is_one_word_and_splits_from_its_neighbours(camel):
     assert "customerURL" in _names(camel, "url", kind="field")
     found = _names(camel, "server", kind="field")
@@ -93,7 +91,6 @@ def test_a_leading_word_of_a_camel_case_name_already_matches(camel):
     assert {"companyID", "companyCode"} <= set(_names(camel, "company", kind="field"))
 
 
-@pytest.mark.xfail(strict=True, reason="B3/D6a not implemented")
 def test_an_index_in_the_old_format_is_refused_or_rebuilt_never_misread(tmp_path, monkeypatch):
     """Rewrite the index into the shape the pre-change code wrote (whole lower-cased names in the
     full-text table, no version marker), then search it. Either the fix rebuilds it and `revenue`

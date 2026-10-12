@@ -28,6 +28,37 @@ STOPWORDS = frozenset(
 # Relevance weights for bm25 over the indexed columns: name, context (owning table and schema),
 # description. A hit on the entry's own name matters most, its table's name next.
 WEIGHTS = (10.0, 4.0, 1.0)
+# Bump when what `index_snapshot` writes into the full-text table changes meaning. An index
+# written under another version is refused with STALE_INDEX instead of answering from words it
+# does not hold (a search would return nothing, as if the catalogue lacked the column).
+INDEX_VERSION = "2"
+
+
+# Where a name breaks into words: lower to upper (`companyID`), the end of an upper-case run before
+# a capitalised word (`HTTPServer`), and between letters and digits (`In000s`).
+_WORD_BREAK = re.compile(
+    r"(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|(?<=[^\W\d_])(?=\d)|(?<=\d)(?=[^\W\d_])"
+)
+
+
+def _words(name: str) -> list[str]:
+    """The words of a name, lower-cased: `companyRevenueIn000s` gives company, revenue, in, 000,
+    s; `HTTPServerID` gives http, server, id; `URL` stays one word.
+
+    ponytail: case is read for the ASCII letters only; a name in another script is split at
+    separators and digits but not by case. Ceiling: add a per-script rule when a catalogue needs it.
+    """
+    return re.findall(r"[^\W_]+", _WORD_BREAK.sub(" ", name).casefold())
+
+
+def _indexed_name(name: str | None) -> str:
+    """The name as indexed: whole, so `companyid` finds it, followed by its words when case or
+    digits split it. A name the tokenizer already splits (snake_case) is left as it is."""
+    if not name:
+        return ""
+    if _WORD_BREAK.search(name):
+        return f"{name} {' '.join(_words(name))}"
+    return name
 
 
 class SearchRequest(BaseModel):
@@ -131,7 +162,12 @@ def index_snapshot(snapshot: Path, state: Path) -> str:
             )
             connection.execute(
                 "INSERT INTO fts(id,name,context,description) VALUES (?,?,?,?)",
-                (row[0], row[3], " ".join(part for part in extra[:2] if part), extra[2] or ""),
+                (
+                    row[0],
+                    _indexed_name(row[3]),
+                    " ".join(_indexed_name(part) for part in extra[:2] if part),
+                    extra[2] or "",
+                ),
             )
         connection.executemany(
             "INSERT INTO meta VALUES (?,?)",
@@ -139,6 +175,7 @@ def index_snapshot(snapshot: Path, state: Path) -> str:
                 ("snapshot", str(snapshot.resolve(strict=True))),
                 ("digest", digest),
                 ("completeness", manifest.completeness),
+                ("index_version", INDEX_VERSION),
             ),
         )
         connection.commit()
@@ -163,6 +200,12 @@ def search(state: Path, request: SearchRequest) -> dict:
         digest = hashlib.sha256((snapshot / "manifest.json").read_bytes()).hexdigest()
         if digest != metadata["digest"]:
             raise ValueError("STALE_INDEX")
+        if metadata.get("index_version") != INDEX_VERSION:
+            # Rebuilt by the same command as any other stale index; refused here, not rebuilt,
+            # because a search must not write to the state directory.
+            raise ValueError(
+                "STALE_INDEX: index written by an older version; run `dbig-requester index`"
+            )
         terms = re.findall(r"\w+", request.query, flags=re.UNICODE)
         if request.match == "any":
             terms = [term for term in terms if term.casefold() not in STOPWORDS and len(term) > 1]
