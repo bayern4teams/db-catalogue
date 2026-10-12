@@ -27,6 +27,35 @@ graft/
 
 # Local runtime products
 .data/
-artifacts/
+artifacts/*
 config/local.toml
 *.log
+
+# Live-test report for the engineer (2026-10-12): these files in artifacts/ are tracked.
+# Everything else in artifacts/ (other runs, scans, handoff, search indexes, graphs) stays ignored.
+!artifacts/README.md
+!artifacts/live-test-report.md
+!artifacts/candidate-trace.md
+!artifacts/statistics-analysis.md
+!artifacts/engineer-fixes.md
+!artifacts/model-questions.md
+!artifacts/model-questions-results.md
+!artifacts/section2_write_check.py
+!artifacts/section2-write-refusals.txt
+!artifacts/section1-pytest.log
+!artifacts/config/
+!artifacts/logs/
+!artifacts/logs/*.log
+!artifacts/run-20261006-035124/
+artifacts/run-20261006-035124/*
+!artifacts/run-20261006-035124/*.json
+!artifacts/run-20261006-035124/*.toml
+!artifacts/run-20261006-035124/catalog.html
+!artifacts/run-20261006-035124/catalog-reviewed.html
+!artifacts/run-20261006-035124/catalog-no-model.html
+!artifacts/run-20261006-035124/bundle-pg/
+!artifacts/run-20261006-035124/bundle-ch/
+!artifacts/run-20261006-035124/bundle-mongo/
+!artifacts/run-20261006-035124/snapshot/
+!artifacts/run-20261006-035124/snapshot-reviewed-small/
+!artifacts/run-20261006-035124/snapshot-no-model/

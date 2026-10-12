@@ -1,0 +1,52 @@
+{
+  "status": "unresolved",
+  "warnings": [
+    "each read returns at most 1000 rows; a later read that returns exactly that many may be incomplete, so raise max_rows",
+    "candidate relationship requires human review"
+  ],
+  "steps": [
+    {
+      "source_id": "ch-main",
+      "rows": 1000,
+      "bound_keys": {},
+      "columns": [
+        "Experience___version",
+        "Experience__companyID",
+        "Experience__jobTitle",
+        "Experience__personHashtags",
+        "Experience__personID",
+        "Experience__title"
+      ]
+    },
+    {
+      "source_id": "pg-main",
+      "rows": 0,
+      "bound_keys": {
+        "keys_1_1": 825
+      },
+      "columns": []
+    },
+    {
+      "source_id": "ch-main",
+      "rows": 0,
+      "bound_keys": {
+        "keys_2_1": 0
+      },
+      "columns": []
+    }
+  ],
+  "joins": [
+    {
+      "left_rows": 1000,
+      "right_rows": 0,
+      "joined_rows": 0,
+      "left_rows_without_a_match": 1000
+    },
+    {
+      "left_rows": 0,
+      "right_rows": 0,
+      "joined_rows": 0,
+      "left_rows_without_a_match": 0
+    }
+  ]
+}

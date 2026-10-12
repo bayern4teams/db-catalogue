@@ -1,0 +1,86 @@
+[
+ {
+  "id": "Z1",
+  "child": "mongo:zoominfo_Company.companyID",
+  "parent": "ch:Company.companyID",
+  "sampled": 93,
+  "found_in_parent": 27
+ },
+ {
+  "id": "Z2",
+  "child": "mongo:zoominfo_CompanyIndustry.companyID",
+  "parent": "ch:Company.companyID",
+  "sampled": 91,
+  "found_in_parent": 25
+ },
+ {
+  "id": "Z3",
+  "child": "mongo:zoominfo_CompanyIndustry.industryID",
+  "parent": "ch:Industry.industryID",
+  "sampled": 41,
+  "found_in_parent": 8
+ },
+ {
+  "id": "Z4",
+  "child": "mongo:zoominfo_Experience.companyID",
+  "parent": "ch:Company.companyID",
+  "sampled": 93,
+  "found_in_parent": 27
+ },
+ {
+  "id": "Z5",
+  "child": "mongo:zoominfo_Experience.personID",
+  "parent": "ch:Person.personID",
+  "sampled": 5000,
+  "found_in_parent": 1222
+ },
+ {
+  "id": "Z6",
+  "child": "mongo:zoominfo_staff.personID",
+  "parent": "ch:Person.personID",
+  "sampled": 5000,
+  "found_in_parent": 1264
+ },
+ {
+  "id": "Z7",
+  "child": "mongo:zoominfo_contact_information.personID",
+  "parent": "ch:Person.personID",
+  "sampled": 3777,
+  "found_in_parent": 928
+ },
+ {
+  "id": "Z8",
+  "child": "mongo:zoominfo_location.locationID",
+  "parent": "ch:Location.locationID",
+  "sampled": 103,
+  "found_in_parent": 39
+ },
+ {
+  "id": "Z9",
+  "child": "mongo:zoominfo_evidence.company_id",
+  "parent": "ch:Company.companyID",
+  "sampled": 69,
+  "found_in_parent": 20
+ },
+ {
+  "id": "Z10",
+  "child": "mongo:zoominfo_contracts.company_id",
+  "parent": "ch:Company.companyID",
+  "sampled": 10,
+  "found_in_parent": 3
+ },
+ {
+  "id": "Z11",
+  "child": "mongo:zoominfo_industry.industryID",
+  "parent": "ch:Industry.industryID",
+  "sampled": 41,
+  "found_in_parent": 8
+ },
+ {
+  "id": "Z12",
+  "child": "ch:Industry.industryID",
+  "parent": "mongo:zoominfo_industry.industryID",
+  "sampled": 37,
+  "found_in_parent": 8
+ }
+]

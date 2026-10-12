@@ -1,0 +1,12 @@
+[requester]
+snapshot_dir = "artifacts/run-20261006-035124/snapshot"
+state_dir = "artifacts/run-20261006-035124/requester"
+api_key_env = "REQUESTER_TOKEN"
+
+[requester.answer]
+base_url = "http://127.0.0.1:8000/v1"
+model = "Qwen3.8-Flash-Next"
+model_digest = "178b998806b7b406c311a3e6174aa99cf6304eaf"
+api_key_env = "VLLM_API_KEY"
+timeout_seconds = 60
+retrieval_limit = 10

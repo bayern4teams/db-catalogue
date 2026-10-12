@@ -1,0 +1,17 @@
+[builder]
+signing_keys = { local = "DBIG_SIGNING_KEY" }
+
+# Optional review of ambiguous candidates by your own vLLM. Suggestions are recorded as weak,
+# cited evidence and never change a declared fact; if the model is down or answers badly, the
+# deterministic catalogue is still published, marked partial.
+[builder.review]
+# Plain HTTP only to a loopback IP literal. A vLLM on another machine needs HTTPS on a private
+# IP literal, for example "https://10.0.0.20:8000/v1". Hostnames are refused.
+base_url = "http://127.0.0.1:8000/v1"
+# Exactly the name vLLM serves: its --model argument, or --served-model-name if you set one.
+model = "Qwen3.8-Flash-Next"
+model_digest = "178b998806b7b406c311a3e6174aa99cf6304eaf"
+api_key_env = "VLLM_API_KEY"           # the same token you passed to `vllm serve --api-key`
+timeout_seconds = 300
+max_candidates = 20
+max_tokens = 8192

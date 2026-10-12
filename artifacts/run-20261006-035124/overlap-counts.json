@@ -1,0 +1,366 @@
+[
+ {
+  "id": "C1",
+  "child": "mongo:zoominfo_Experience.companyID",
+  "parent": "pg:company.companyid",
+  "sampled": 93,
+  "found_in_parent": 0
+ },
+ {
+  "id": "C2",
+  "child": "mongo:diffbot_CompanyExperience.personID",
+  "parent": "pg:person.personid",
+  "sampled": 84,
+  "found_in_parent": 84
+ },
+ {
+  "id": "C3",
+  "child": "ch:Experience.companyID",
+  "parent": "pg:company.companyid",
+  "sampled": 5000,
+  "found_in_parent": 0
+ },
+ {
+  "id": "C4",
+  "child": "ch:Experience.personID",
+  "parent": "pg:person.personid",
+  "sampled": 5000,
+  "found_in_parent": 0
+ },
+ {
+  "id": "C5",
+  "child": "ch:CompanyIndustry.companyID",
+  "parent": "pg:company.companyid",
+  "sampled": 5000,
+  "found_in_parent": 0
+ },
+ {
+  "id": "C6",
+  "child": "mongo:zoominfo_Experience.personID",
+  "parent": "pg:person.personid",
+  "sampled": 5000,
+  "found_in_parent": 0
+ },
+ {
+  "id": "C7",
+  "child": "mongo:diffbot_CompanyInvestmentRound.companyID",
+  "parent": "pg:company.companyid",
+  "sampled": 5,
+  "found_in_parent": 5
+ },
+ {
+  "id": "C8",
+  "child": "mongo:diffbot_CompanyIndustry.companyID",
+  "parent": "pg:company.companyid",
+  "sampled": 22,
+  "found_in_parent": 22
+ },
+ {
+  "id": "C9",
+  "child": "ch:Location.locationID",
+  "parent": "pg:location.companyid",
+  "sampled": 5000,
+  "found_in_parent": 0
+ },
+ {
+  "id": "C10",
+  "child": "mongo:zoominfo_Company.companyID",
+  "parent": "pg:company.companyid",
+  "sampled": 93,
+  "found_in_parent": 0
+ },
+ {
+  "id": "C11",
+  "child": "mongo:diffbot_Company.companyID",
+  "parent": "pg:company.companyid",
+  "sampled": 22,
+  "found_in_parent": 22
+ },
+ {
+  "id": "C12",
+  "child": "mongo:diffbot_CompanyExperience.companyID",
+  "parent": "pg:company.companyid",
+  "sampled": 17,
+  "found_in_parent": 17
+ },
+ {
+  "id": "C13",
+  "child": "ch:Company.companyID",
+  "parent": "pg:company.companyid",
+  "sampled": 5000,
+  "found_in_parent": 0
+ },
+ {
+  "id": "C14",
+  "child": "ch:Person.personID",
+  "parent": "pg:person.personid",
+  "sampled": 5000,
+  "found_in_parent": 0
+ },
+ {
+  "id": "C15",
+  "child": "mongo:zoominfo_contact_information.personID",
+  "parent": "pg:person.personid",
+  "sampled": 3777,
+  "found_in_parent": 0
+ },
+ {
+  "id": "C16",
+  "child": "ch:PersonContact.personID",
+  "parent": "pg:person.personid",
+  "sampled": 5000,
+  "found_in_parent": 0
+ },
+ {
+  "id": "C17",
+  "child": "mongo:zoominfo_evidence.company_id",
+  "parent": "pg:company.companyid",
+  "sampled": 69,
+  "found_in_parent": 0
+ },
+ {
+  "id": "C18",
+  "child": "mongo:zoominfo_contracts.company_id",
+  "parent": "pg:company.companyid",
+  "sampled": 10,
+  "found_in_parent": 0
+ },
+ {
+  "id": "C19",
+  "child": "mongo:zoominfo_CompanyIndustry.companyID",
+  "parent": "pg:company.companyid",
+  "sampled": 91,
+  "found_in_parent": 0
+ },
+ {
+  "id": "C20",
+  "child": "mongo:zoominfo_location.locationID",
+  "parent": "pg:location.companyid",
+  "sampled": 103,
+  "found_in_parent": 0
+ },
+ {
+  "id": "C21",
+  "child": "mongo:zoominfo_staff.personID",
+  "parent": "pg:person.personid",
+  "sampled": 5000,
+  "found_in_parent": 0
+ },
+ {
+  "id": "M1",
+  "child": "pg:companycontact.companyid",
+  "parent": "pg:company.companyid",
+  "sampled": 3362,
+  "found_in_parent": 3361
+ },
+ {
+  "id": "M2",
+  "child": "pg:companyemployeecategory.companyid",
+  "parent": "pg:company.companyid",
+  "sampled": 618,
+  "found_in_parent": 618
+ },
+ {
+  "id": "M3",
+  "child": "pg:companyexperience.companyid",
+  "parent": "pg:company.companyid",
+  "sampled": 482,
+  "found_in_parent": 482
+ },
+ {
+  "id": "M4",
+  "child": "pg:companyfinancials.companyid",
+  "parent": "pg:company.companyid",
+  "sampled": 29,
+  "found_in_parent": 29
+ },
+ {
+  "id": "M5",
+  "child": "pg:companyindustry.companyid",
+  "parent": "pg:company.companyid",
+  "sampled": 3940,
+  "found_in_parent": 3940
+ },
+ {
+  "id": "M6",
+  "child": "pg:companyinvestmentround.companyid",
+  "parent": "pg:company.companyid",
+  "sampled": 154,
+  "found_in_parent": 154
+ },
+ {
+  "id": "M7",
+  "child": "pg:companyrelation.companyid",
+  "parent": "pg:company.companyid",
+  "sampled": 245,
+  "found_in_parent": 245
+ },
+ {
+  "id": "M8",
+  "child": "pg:companytechnographics.companyid",
+  "parent": "pg:company.companyid",
+  "sampled": 814,
+  "found_in_parent": 814
+ },
+ {
+  "id": "M9",
+  "child": "pg:companyinvestor.investorcompanyid",
+  "parent": "pg:company.companyid",
+  "sampled": 794,
+  "found_in_parent": 0
+ },
+ {
+  "id": "M10",
+  "child": "pg:companyrelation.relatedcompanyid",
+  "parent": "pg:company.companyid",
+  "sampled": 5000,
+  "found_in_parent": 0
+ },
+ {
+  "id": "M11",
+  "child": "pg:location.companyid",
+  "parent": "pg:company.companyid",
+  "sampled": 3506,
+  "found_in_parent": 3506
+ },
+ {
+  "id": "M12",
+  "child": "pg:companyexperience.personid",
+  "parent": "pg:person.personid",
+  "sampled": 1215,
+  "found_in_parent": 1214
+ },
+ {
+  "id": "M13",
+  "child": "pg:companyindustry.classificationid",
+  "parent": "pg:industryclassification.classificationid",
+  "sampled": 340,
+  "found_in_parent": 339
+ },
+ {
+  "id": "M14",
+  "child": "pg:companyinvestor.investmentid",
+  "parent": "pg:companyinvestmentround.investmentid",
+  "sampled": 394,
+  "found_in_parent": 393
+ },
+ {
+  "id": "M15",
+  "child": "ch:CompanyIndustry.companyID",
+  "parent": "ch:Company.companyID",
+  "sampled": 5000,
+  "found_in_parent": 1294
+ },
+ {
+  "id": "M16",
+  "child": "ch:CompanyIndustry.industryID",
+  "parent": "ch:Industry.industryID",
+  "sampled": 180,
+  "found_in_parent": 37
+ },
+ {
+  "id": "M17",
+  "child": "ch:Experience.companyID",
+  "parent": "ch:Company.companyID",
+  "sampled": 5000,
+  "found_in_parent": 1343
+ },
+ {
+  "id": "M18",
+  "child": "ch:Experience.personID",
+  "parent": "ch:Person.personID",
+  "sampled": 5000,
+  "found_in_parent": 1278
+ },
+ {
+  "id": "M19",
+  "child": "ch:Location.companyID",
+  "parent": "ch:Company.companyID",
+  "sampled": 5000,
+  "found_in_parent": 1343
+ },
+ {
+  "id": "M20",
+  "child": "ch:PersonContact.personID",
+  "parent": "ch:Person.personID",
+  "sampled": 5000,
+  "found_in_parent": 1209
+ },
+ {
+  "id": "M21",
+  "child": "mongo:zoominfo_CompanyIndustry.companyID",
+  "parent": "mongo:zoominfo_Company.companyID",
+  "sampled": 91,
+  "found_in_parent": 91
+ },
+ {
+  "id": "M22",
+  "child": "mongo:zoominfo_CompanyIndustry.industryID",
+  "parent": "mongo:zoominfo_industry.industryID",
+  "sampled": 41,
+  "found_in_parent": 41
+ },
+ {
+  "id": "M23",
+  "child": "mongo:zoominfo_products.industryID",
+  "parent": "mongo:zoominfo_industry.industryID",
+  "sampled": 0,
+  "found_in_parent": 0
+ },
+ {
+  "id": "M24a",
+  "child": "mongo:zoominfo_Experience.companyID",
+  "parent": "mongo:zoominfo_Company.companyID",
+  "sampled": 93,
+  "found_in_parent": 93
+ },
+ {
+  "id": "M24b",
+  "child": "mongo:zoominfo_location.companyID",
+  "parent": "mongo:zoominfo_Company.companyID",
+  "sampled": 0,
+  "found_in_parent": 0
+ },
+ {
+  "id": "M24c",
+  "child": "mongo:zoominfo_contracts.company_id",
+  "parent": "mongo:zoominfo_Company.companyID",
+  "sampled": 10,
+  "found_in_parent": 10
+ },
+ {
+  "id": "M24d",
+  "child": "mongo:zoominfo_evidence.company_id",
+  "parent": "mongo:zoominfo_Company.companyID",
+  "sampled": 69,
+  "found_in_parent": 69
+ },
+ {
+  "id": "M25a",
+  "child": "mongo:diffbot_CompanyExperience.companyID",
+  "parent": "mongo:diffbot_Company.companyID",
+  "sampled": 17,
+  "found_in_parent": 17
+ },
+ {
+  "id": "M25b",
+  "child": "mongo:diffbot_CompanyIndustry.companyID",
+  "parent": "mongo:diffbot_Company.companyID",
+  "sampled": 22,
+  "found_in_parent": 22
+ },
+ {
+  "id": "M25c",
+  "child": "mongo:diffbot_CompanyInvestmentRound.companyID",
+  "parent": "mongo:diffbot_Company.companyID",
+  "sampled": 5,
+  "found_in_parent": 5
+ },
+ {
+  "id": "M26",
+  "child": "mongo:diffbot_CompanyIndustry.classificationID",
+  "parent": "pg:industryclassification.classificationid",
+  "sampled": 14,
+  "found_in_parent": 14
+ }
+]
