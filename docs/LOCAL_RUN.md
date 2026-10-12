@@ -90,6 +90,19 @@ Use `readonly = 2`, not `1`. The collector sets a per-query time limit (`max_exe
 and `readonly = 1` forbids changing any setting, so the scan fails. `2` still refuses every
 write.
 
+`SHOW TABLES, SHOW COLUMNS` is all `collect` needs. If you also want to run query plans with
+`scripts/run_plan.py` (`docs/LIVE_TEST.md` section 9), that script runs the plan's `SELECT`
+against your tables, so the account needs `SELECT` as well, or ClickHouse refuses with code 497
+("Not enough privileges"):
+
+```sql
+GRANT SELECT ON mydb.* TO dbig_reader;
+```
+
+Reading rows is the only thing this adds; `readonly = 2` still refuses every write. Leave the
+grant out if you never execute a plan. The statement above is not covered by the verification
+claim at the top of this step.
+
 **MongoDB**, in the database being catalogued:
 
 ```javascript
@@ -137,7 +150,32 @@ set -a; . ./.env; set +a                  # in every new shell, before running a
 ```
 
 Keep the single quotes around each JSON value; a password containing a single quote is written
-as `'\''` inside them. Or set the variables directly:
+as `'\''` inside them. `DBIG_SIGNING_KEY` must be filled in too: unset or empty, `collect`
+stops with a one-line message naming it, and a key shorter than 32 bytes is refused.
+
+If `. ./.env` fails, the shell's message points at the wrong place: for an unclosed quote it
+names the last line of the file, and for an unquoted space it names the word after the space
+as the missing command. This command lists each suspect line by number and variable name, and
+never prints a value (no output means every line looks well formed):
+
+```bash
+awk '
+  /^[[:space:]]*(#|$)/ { next }
+  { line = $0; sub(/^[[:space:]]*(export[[:space:]]+)?/, "", line)
+    name = line; sub(/=.*/, "", name)
+    plain = line; gsub(/\\\047/, "", plain); quotes = gsub(/\047/, "&", plain)
+    if (line !~ /^[A-Za-z_][A-Za-z0-9_]*=/) print "line " NR ": not NAME=value"
+    else if (quotes % 2) print "line " NR ": " name ": unbalanced single quote"
+    else if (line ~ /^[A-Za-z_][A-Za-z0-9_]*=[^\047"]*[[:space:]]/) print "line " NR ": " name ": space in an unquoted value"
+    else if (line ~ /\r$/) print "line " NR ": " name ": Windows line ending" }
+' .env
+```
+
+It checks the shapes that break the file (a line that is not `NAME=value`, an odd number of
+single quotes once `\'` is set aside, a space in an unquoted value, a Windows line ending); it
+does not parse the JSON, which the check in `docs/LIVE_TEST.md` section 3 does.
+
+Or set the variables directly:
 
 ```bash
 # One key signs every bundle in a run; at least 32 bytes.
@@ -261,6 +299,10 @@ clickhouse-client --param_keys_1_1="[150,157]" --query "<step sql>"
 # MongoDB step: pass the keys as `let` variables
 mongosh ... --eval 'db.tickets.aggregate(<step pipeline>, {let: {keys_1_1: [150, 157]}})'
 ```
+
+`scripts/run_plan.py` does all of this for you with the same drivers the collector uses, so none
+of `psql`, `clickhouse-client` or `mongosh` is needed (`docs/LIVE_TEST.md` section 9); the
+lines above show what it does.
 
 Each read keeps the row limit; if a later read returns exactly `max_rows` rows the plan's
 warning applies: re-plan with a larger limit, `dbig-planner plan ... --max-rows 5000`.
