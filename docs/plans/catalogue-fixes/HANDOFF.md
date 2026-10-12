@@ -3,14 +3,14 @@
 Overwrite this file at every commit. A fresh session reads it first, then
 [the plan](../CATALOGUE_FIXES_IMPLEMENTATION_PLAN.md). Git is the memory; a session's context is not.
 
-**Lock:** 2026-10-12T17:43:04Z · **Autonomy:** unattended-through-phase-4 · **Last heartbeat:** 2026-10-12T17:43:04Z
+**Lock:** none · **Autonomy:** unattended-through-phase-4 · **Last heartbeat:** 2026-10-12T17:46:17Z
 
 (Lock/heartbeat protocol: plan §7. A session sets `Lock: <ISO time>`, pushes it, and refreshes it at
 every commit; a lock older than 75 min is stale. `Autonomy` is `off`, `dryrun` (a tick only records
 what works and exits) or `unattended-through-phase-N` (authorises the supervisor to chain phases).
 Only the user changes it.)
 
-**Branch:** `feat/catalogue-fixes` (from `claude/gracious-bardeen-x1y6he` at `2e87fa7`, plus the report commit) · **Current phase:** 2
+**Branch:** `feat/catalogue-fixes` (from `claude/gracious-bardeen-x1y6he` at `2e87fa7`, plus the report commit) · **Current phase:** 3 (all remaining items blocked on Decisions)
 
 | item | phase | state | commit | lead verdict |
 |---|---|---|---|---|
@@ -80,10 +80,11 @@ Phase 0 table (file -> sole owner while its items are open; plan §8/§9 DAG; gr
 Phase 1: lane R and lane D concurrent (disjoint files); lead does C1 builder half, C2, D1b. Phase 2: lead chain only.
 
 ## Next action
-Phase 2: attack verifier on D3 + A1/D2/D9 (new evidence kind `value_overlap_not_measured`, config `min_token_support` default 4, run field `dropped_zero_overlap_candidates`), then Phase 2 gate. C2 waits for DEC-11b; DEC-13 for the user. (Runs only while `Autonomy` is `unattended-through-phase-N`.)
+waiting for the user: DEC-1, DEC-2, DEC-3, DEC-4, DEC-5, DEC-6, DEC-7, DEC-8, DEC-9, DEC-10, DEC-11b, DEC-12, DEC-13 (write each Answer in the Decisions table; DEC-11 is moot, no closed list exists). Then the next tick builds the answered items in DAG order, then Phase 4.
 
 ## Notifications
 (append `[PHASE n DONE]`, `[BLOCKED]`, `[Catalogue fixes COMPLETE]` entries here; the same prefixes go in commit messages)
+- [PHASE 2 DONE] 2026-10-12: D3 and A1/D2/D9 accepted (unverified-live); CI run 38286115142 green in all 7 jobs on the pushed head; ponytail-review of the phase diff: nothing to cut. Phase 3 items are all blocked on Decisions.
 - [PHASE 1 DONE] 2026-10-12: B1, B3/D6a, D6b, B4, C1/D7, C3, D1b accepted (unverified-live); C2 blocked on DEC-11b. Full check green locally except `pip-audit` (DEC-13, new pymongo CVEs); CI run 38283628671 green in all 7 jobs on the pushed head; ponytail-review of the phase diff: no deletions required, minor `_singulars`/`_ies_singular` overlap left deliberately (readability).
 
 ## Open escalations (worker/verifier results that passed only written tests or one case)
