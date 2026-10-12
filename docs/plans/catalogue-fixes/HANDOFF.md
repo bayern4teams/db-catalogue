@@ -1,0 +1,78 @@
+# Catalogue fixes handoff — the only memory that survives a session
+
+Overwrite this file at every commit. A fresh session reads it first, then
+[the plan](../CATALOGUE_FIXES_IMPLEMENTATION_PLAN.md). Git is the memory; a session's context is not.
+
+**Lock:** none · **Autonomy:** off · **Last heartbeat:** n/a
+
+(Lock/heartbeat protocol: plan §7. A session sets `Lock: <ISO time>`, pushes it, and refreshes it at
+every commit; a lock older than 75 min is stale. `Autonomy` is `off`, `dryrun` (a tick only records
+what works and exits) or `unattended-through-phase-N` (authorises the supervisor to chain phases).
+Only the user changes it.)
+
+**Branch:** `feat/catalogue-fixes` (from `claude/gracious-bardeen-x1y6he` at `2e87fa7`, plus the report commit) · **Current phase:** 0 (not started)
+
+| item | phase | state | commit | lead verdict |
+|---|---|---|---|---|
+| P0 baseline, ownership, fixtures | 0 | todo | | |
+| B1 `ask` schema (llama.cpp rejects `maxLength`) | 1 | todo | | |
+| B3 + D6a camelCase split in search | 1 | todo | | |
+| D6b stemming in search | 1 | todo | | |
+| B4 stopwords / no-match guard | 1 | todo | | |
+| C1 + D7 distinct model error codes | 1 | todo | | |
+| C2 `partial` diagnostics in manifest and CLI | 1 | todo | | |
+| C3 documentation gaps | 1 | todo | | |
+| D1b reasons for empty statistic cells | 1 | todo | | |
+| D3 + B5(2) lowercase names (`companyid`) when the stem is a known object | 2 | todo | | |
+| A1 + D2 + D9 + A3 overlap labels, measured-zero drop | 2 | todo | | |
+| A2 parent column name resembles child's (DEC-1) | 3 | blocked (DEC) - waiting for the user | | |
+| D1a ClickHouse key names, weak parent claim (DEC-2) | 3 | blocked (DEC) - waiting for the user | | |
+| D2(3) dataset groups / forbidden source pairs config (DEC-3) | 3 | blocked (DEC) - waiting for the user | | |
+| D4 + A1(3) planner prefers same-source, warns on unverified edges (DEC-4) | 3 | blocked (DEC) - waiting for the user | | |
+| D5a relationships and evidence in the model context (DEC-5) | 3 | blocked (DEC) - waiting for the user | | |
+| D5b answer rules: `lineage`, uncited "not established" (DEC-6) | 3 | blocked (DEC) - waiting for the user | | |
+| D6c source/engine words, object retrieval, ranking (DEC-7) | 3 | blocked (DEC) - waiting for the user | | |
+| C4 exclude schema-description collections (DEC-8) | 3 | blocked (DEC) - waiting for the user | | |
+| D8 resolve cited IDs to names (DEC-9) | 3 | blocked (DEC) - waiting for the user | | |
+| B2 review in batches (DEC-10) | 3 | blocked (DEC) - waiting for the user | | |
+| B5/X1 `key_name` for measured-unique parents (DEC-12) | 3 | blocked (DEC) - waiting for the user | | |
+| Final integration, ponytail audit/debt/gain, final report | 4 | todo | | |
+
+States: `todo` · `in-progress` · `accepted-cloud` (lead accepted, cloud-verifiable parts proven)
+· `unverified-live` (accepted but needs the real environment — see LOCAL_VERIFY.md) · `blocked` (needs a user Decision or a missing tool) · `deferred-by-user` (the user answered "no" or "later").
+
+## Decisions (only the user writes the Answer column)
+
+Rules: plan section 2.9. A row with an empty Answer keeps its items `blocked`. Answer with `yes`, `no`, `later`, or a short instruction that changes the proposal. The lead may add rows.
+
+| id | question | recommendation | blocks | Answer |
+|---|---|---|---|---|
+| DEC-1 | A2: when choosing the parent column, prefer the one whose name matches the child's, and propose nothing if none resembles it? | yes | A2 | |
+| DEC-2 | D1a: keep ClickHouse primary/sorting key column names (metadata, not values; changes the bundle schema) and treat them as a weak, labelled parent claim? | yes | D1a | |
+| DEC-3 | D2(3): add an optional config for dataset groups or forbidden source pairs (default none)? | yes | D2(3) | |
+| DEC-4 | D4/A1(3): planner prefers same-source paths and warns when every edge is an unverified cross-source candidate? | yes | D4 | |
+| DEC-5 | D5a: pass relationship edges with their evidence status to the answering model (bounded, metadata only)? | yes | D5a | |
+| DEC-6 | D5b: stop rejecting the word `lineage`; validate claims instead; allow an uncited "not established" outcome with its own code? | yes | D5b | |
+| DEC-7 | D6c: index source/engine/namespace words, retrieve by object for list questions, rank object hits above generic columns, filter by a named source? | yes | D6c | |
+| DEC-8 | C4: optional per-source exclude list for schema-description collections (default none)? | per-source list | C4 | |
+| DEC-9 | D8: resolve cited IDs to object and column names in the reply, app-side? | yes | D8 | |
+| DEC-10 | B2: review candidates in batches (configured size, default 5); no "thinking off" switch because it is unverified for this model? | yes | B2 | |
+| DEC-11 | C1: keep `MODEL_UNAVAILABLE_OR_INVALID` as an umbrella or replace it, if a schema or document lists it as a closed set? (added only if the lead finds such a list) | decide after evidence | C1 | |
+| DEC-12 | B5/X1: let the `key_name` rule apply to a measured-unique parent column with an identical non-generic name (so `classificationid` links to `industryclassification.classificationid`)? The 2026-10-05 decision admitted it only for declared keys. | yes | B5/X1 | |
+
+Already decided by the user on 2026-10-12 (not open): base the work on the tested branch; `companyid` is read as `company` + `id` only when the stem is a known object; a measured 0-of-N cross-source overlap drops the candidate and an unchecked one is labelled "values not compared"; graft is best effort in the cloud; Phase 1 bugs go ahead.
+
+## Locked file-ownership table (Phase 0)
+(filled by Phase 0 from `graphify affected`)
+
+## Lane plan
+(filled by Phase 0)
+
+## Next action
+Phase 0, step 1: baseline (plan section 8). (Runs only while `Autonomy` is `unattended-through-phase-N`.)
+
+## Notifications
+(append `[PHASE n DONE]`, `[BLOCKED]`, `[Catalogue fixes COMPLETE]` entries here; the same prefixes go in commit messages)
+
+## Open escalations (worker/verifier results that passed only written tests or one case)
+none

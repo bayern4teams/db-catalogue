@@ -59,3 +59,6 @@ artifacts/run-20261006-035124/*
 !artifacts/run-20261006-035124/snapshot/
 !artifacts/run-20261006-035124/snapshot-reviewed-small/
 !artifacts/run-20261006-035124/snapshot-no-model/
+
+# Scratch for cloud agents (the tracked handoff files live in .handoff/)
+.tmp/

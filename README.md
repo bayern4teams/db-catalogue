@@ -64,6 +64,8 @@ configurations are in [examples/local](examples/local).
 [docs/LIVE_TEST.md](docs/LIVE_TEST.md) is the checklist for the first live run on your own
 databases and vLLM, what to report back, and a prompt for a local agent to carry it out.
 
+[docs/plans/CATALOGUE_FIXES_IMPLEMENTATION_PLAN.md](docs/plans/CATALOGUE_FIXES_IMPLEMENTATION_PLAN.md) is the plan for fixing what the live test found (`artifacts/engineer-fixes.md`) with an unattended cloud routine; [docs/plans/catalogue-fixes/LAUNCH.md](docs/plans/catalogue-fixes/LAUNCH.md) is the one-time setup.
+
 ## Developer setup
 
 1. Install Python 3.12+, Git, [Graphify](https://github.com/Graphify-Labs/graphify), [Graft](https://github.com/trailhq/Graft), and [Codebase Memory MCP](https://github.com/DeusData/codebase-memory-mcp) at the **exact pinned versions**: Graphify 0.9.65, Graft 0.18.0, Codebase Memory MCP 0.11.0. These are declared once in `pyproject.toml` under `[tool.dbig.graph-tools]`; `scripts/graph_sync.py` refuses to index with any other version and names the install command to run, and `python scripts/ci_check.py` refuses a workflow that installs a different one. Install with `python -m pip install graphifyy==0.9.65 codebase-memory-mcp==0.11.0` and `npm install --global @nanonets/graft@0.18.0` (the `graphify` command ships in the `graphifyy` distribution).
