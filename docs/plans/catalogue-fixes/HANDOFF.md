@@ -3,14 +3,14 @@
 Overwrite this file at every commit. A fresh session reads it first, then
 [the plan](../CATALOGUE_FIXES_IMPLEMENTATION_PLAN.md). Git is the memory; a session's context is not.
 
-**Lock:** 2026-10-12T17:18:59Z · **Autonomy:** unattended-through-phase-4 · **Last heartbeat:** 2026-10-12T17:18:59Z
+**Lock:** 2026-10-12T17:24:08Z · **Autonomy:** unattended-through-phase-4 · **Last heartbeat:** 2026-10-12T17:24:08Z
 
 (Lock/heartbeat protocol: plan §7. A session sets `Lock: <ISO time>`, pushes it, and refreshes it at
 every commit; a lock older than 75 min is stale. `Autonomy` is `off`, `dryrun` (a tick only records
 what works and exits) or `unattended-through-phase-N` (authorises the supervisor to chain phases).
 Only the user changes it.)
 
-**Branch:** `feat/catalogue-fixes` (from `claude/gracious-bardeen-x1y6he` at `2e87fa7`, plus the report commit) · **Current phase:** 1
+**Branch:** `feat/catalogue-fixes` (from `claude/gracious-bardeen-x1y6he` at `2e87fa7`, plus the report commit) · **Current phase:** 2
 
 | item | phase | state | commit | lead verdict |
 |---|---|---|---|---|
@@ -80,10 +80,11 @@ Phase 0 table (file -> sole owner while its items are open; plan §8/§9 DAG; gr
 Phase 1: lane R and lane D concurrent (disjoint files); lead does C1 builder half, C2, D1b. Phase 2: lead chain only.
 
 ## Next action
-Phase 1: lane R (worker: B1, B3/D6a, D6b, B4, C1 requester half) and lane D (worker: C3) concurrent; lead does C1 builder half, C2, D1b. See PHASE0_REPORT.md for plan inconsistencies to resolve first (B4 vs D6b `tables`). (Runs only while `Autonomy` is `unattended-through-phase-N`.)
+Phase 2 (lead chain in builder.py): D3 + B5(2), then A1/D2/D9. C2 waits for DEC-11b; DEC-13 (pymongo CVEs, local pip-audit only; CI green) waits for the user. (Runs only while `Autonomy` is `unattended-through-phase-N`.)
 
 ## Notifications
 (append `[PHASE n DONE]`, `[BLOCKED]`, `[Catalogue fixes COMPLETE]` entries here; the same prefixes go in commit messages)
+- [PHASE 1 DONE] 2026-10-12: B1, B3/D6a, D6b, B4, C1/D7, C3, D1b accepted (unverified-live); C2 blocked on DEC-11b. Full check green locally except `pip-audit` (DEC-13, new pymongo CVEs); CI run 38283628671 green in all 7 jobs on the pushed head; ponytail-review of the phase diff: no deletions required, minor `_singulars`/`_ies_singular` overlap left deliberately (readability).
 
 ## Open escalations (worker/verifier results that passed only written tests or one case)
 - (round 2 done) D6b: fold keeps only `-ies`->`-y` at index time, query tries several singulars, min singular length 3 + short non-plural list (`ids` no longer folds to `id`); INDEX_VERSION is now "4"; `ask` returns `STALE_INDEX`, the question route answers 503 (search route 409): lead call, user may prefer 409. DEC-11 is moot (umbrella code is in no schema/doc; kept for malformed JSON, lineage claim, 5xx, missing key).
