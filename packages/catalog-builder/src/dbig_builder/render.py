@@ -309,12 +309,25 @@ def render_catalog(
         provenance = ", ".join(methods)
         if updated is not None:
             provenance += f" (analyzed {updated:%Y-%m-%d %H:%M}Z)"
+
+        def cell(shown: str, *, after_nulls: bool = False) -> str:
+            # An empty cell says why, chosen from the profile's method and values only.
+            if shown:
+                return f"<td class='num'>{shown}</td>"
+            if not measured:
+                reason = "not computed"
+            elif after_nulls and null_fraction == 1:
+                reason = "all values null"
+            else:
+                reason = "not provided by this source"
+            return f"<td class='num'><span class='muted'>{reason}</span></td>"
+
         return (
-            f"<td class='num'>{_percent(null_fraction)}</td>"
-            f"<td class='num'>{_number(distinct)}</td>"
-            f"<td class='num'>{_percent(uniqueness)}</td>"
-            f"<td class='num'>{_number(width)}</td>"
-            f"<td class='muted'>{_e(provenance)}</td>"
+            cell(_percent(null_fraction))
+            + cell(_number(distinct), after_nulls=True)
+            + cell(_percent(uniqueness), after_nulls=True)
+            + cell(_number(width))
+            + f"<td class='muted'>{_e(provenance)}</td>"
         )
 
     def object_card(item: Object) -> str:

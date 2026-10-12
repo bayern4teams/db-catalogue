@@ -77,41 +77,35 @@ def test_a_populated_cell_still_shows_its_number(page):
     assert cells(page, "payload")[AVG_BYTES]
 
 
-@pytest.mark.xfail(strict=True, reason="D1b not implemented")
 def test_no_blank_statistic_cell_remains(page):
     assert "<td class='num'></td>" not in page
     for field in ("amount", "memo", "payload", "flag", "title"):
         assert all(cells(page, field)), (field, cells(page, field))
 
 
-@pytest.mark.xfail(strict=True, reason="D1b not implemented")
 def test_an_all_null_column_says_all_values_null(page):
     found = cells(page, "memo")
     assert "all values null" in found[DISTINCT].lower(), found
     assert "all values null" in found[UNIQUENESS].lower(), found
 
 
-@pytest.mark.xfail(strict=True, reason="D1b not implemented")
 def test_a_source_that_gives_only_a_width_says_not_provided_by_this_source(page):
     found = cells(page, "payload")
     for index in (NULL_PCT, DISTINCT, UNIQUENESS):
         assert "not provided by this source" in found[index].lower(), found
 
 
-@pytest.mark.xfail(strict=True, reason="D1b not implemented")
 def test_a_sampled_field_says_not_provided_for_what_a_sample_does_not_compute(page):
     found = cells(page, "title")
     for index in (DISTINCT, UNIQUENESS, AVG_BYTES):
         assert "not provided by this source" in found[index].lower(), found
 
 
-@pytest.mark.xfail(strict=True, reason="D1b not implemented")
 def test_a_field_with_no_profile_says_not_computed(page):
     found = cells(page, "flag")
     assert all("not computed" in cell.lower() for cell in found), found
 
 
-@pytest.mark.xfail(strict=True, reason="D1b not implemented")
 def test_the_reason_follows_the_values_not_the_names(tmp_path, monkeypatch):
     """The same profiles under names that tempt a source- or column-based rule give the same
     reasons: a PostgreSQL column named like an engine, a ClickHouse column named `is_null`."""

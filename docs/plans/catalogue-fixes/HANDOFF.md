@@ -3,7 +3,7 @@
 Overwrite this file at every commit. A fresh session reads it first, then
 [the plan](../CATALOGUE_FIXES_IMPLEMENTATION_PLAN.md). Git is the memory; a session's context is not.
 
-**Lock:** 2026-10-12T16:44:29Z · **Autonomy:** unattended-through-phase-4 · **Last heartbeat:** 2026-10-12T16:44:29Z
+**Lock:** 2026-10-12T16:46:23Z · **Autonomy:** unattended-through-phase-4 · **Last heartbeat:** 2026-10-12T16:46:23Z
 
 (Lock/heartbeat protocol: plan §7. A session sets `Lock: <ISO time>`, pushes it, and refreshes it at
 every commit; a lock older than 75 min is stale. `Autonomy` is `off`, `dryrun` (a tick only records
@@ -22,7 +22,7 @@ Only the user changes it.)
 | C1 + D7 distinct model error codes | 1 | in-progress (builder half done by lead; requester half in lane R) | | |
 | C2 `partial` diagnostics in manifest and CLI | 1 | blocked (DEC-11b) - waiting for the user | | |
 | C3 documentation gaps | 1 | todo | | |
-| D1b reasons for empty statistic cells | 1 | todo | | |
+| D1b reasons for empty statistic cells | 1 | in-progress (implemented, attack verifier pending) | | |
 | D3 + B5(2) lowercase names (`companyid`) when the stem is a known object | 2 | todo | | |
 | A1 + D2 + D9 + A3 overlap labels, measured-zero drop | 2 | todo | | |
 | A2 parent column name resembles child's (DEC-1) | 3 | blocked (DEC) - waiting for the user | | |

@@ -19,6 +19,8 @@ issue. Counts, names of tables and columns, error messages and timings are what 
 - Linux, `git`, and [uv](https://docs.astral.sh/uv/) 0.10 or newer (`uv --version`).
 - Python 3.12. If `uv python find 3.12` finds nothing, run `uv python install 3.12`.
 - `openssl` (for the TLS checks) and network access from this machine to each database.
+- `psql`, `clickhouse-client` and `mongosh` are optional: section 3 defines the same checks with
+  the Python drivers the collector already installed (`pg8000`, `clickhouse_connect`, `pymongo`).
 - The PEM file of the CA that issued your database certificates, if it is a company CA.
 - An account on each database that can create a read-only user, or a DBA who will.
 - For sections 10-11: a Linux or WSL2 machine with a GPU running vLLM.
@@ -40,7 +42,11 @@ need the CI database containers; they ran in CI. Write down the summary line.
 ## 2. Read-only accounts
 
 Create them exactly as `docs/LOCAL_RUN.md` step 2 says, for every schema (PostgreSQL) or
-database (ClickHouse, MongoDB) you will catalogue. Then prove each one cannot write:
+database (ClickHouse, MongoDB) you will catalogue. If you will run plans in section 9, the
+ClickHouse account also needs `GRANT SELECT ON <db>.* TO dbig_reader`, which that step explains.
+Then prove each one cannot write, with `psql`, `clickhouse-client` and `mongosh` as below, or
+with the helpers of section 3 once `.env` is loaded (`pgq "INSERT ..."`, `chq "INSERT ..."`,
+`mongoprobe <db> <collection>`); the refusal message is the last line they print:
 
 ```sql
 -- PostgreSQL, connected as dbig_reader: expect "permission denied"
@@ -75,6 +81,71 @@ set -a; . ./.env; set +a
 
 Check: `python -c 'import json,os; [json.loads(os.environ[v]) for v in ("PG_CONNECTION","CLICKHOUSE_CONNECTION","MONGODB_CONNECTION")]; print("ok")'`
 prints `ok`.
+
+If `. ./.env` fails, or the check above does, the shell's message does not name the variable
+(an unclosed quote is reported at the last line of the file). `docs/LOCAL_RUN.md` step 4 has a
+command that lists each malformed line by number and variable name without printing a value.
+
+**Checks without `psql` or `mongosh`.** Sections 2 and 7 give statements for those clients. They
+are optional: with `.env` loaded, these helpers run the same statements through the collector's
+drivers, with the account in your connection variables (the one `collect` uses), over verified
+TLS. They are for your servers, which use TLS; set `CHECK_CA_FILE` to your CA file or leave it
+unset if the CA is in the system trust store. A refused statement or an unreachable server ends
+in a traceback whose last line is the message.
+
+```bash
+export CHECK_CA_FILE=/path/to/company-ca.pem     # leave unset if the CA is in the system trust store
+
+pgq() { python -c '
+import json, os, ssl, sys
+from pg8000.dbapi import connect
+c = json.loads(os.environ["PG_CONNECTION"])
+keys = ("host", "port", "database", "user", "password")
+tls = ssl.create_default_context(cafile=os.environ.get("CHECK_CA_FILE"))
+con = connect(**{k: c[k] for k in keys if k in c}, ssl_context=tls, timeout=30)
+cur = con.cursor()
+cur.execute(sys.argv[1])
+if cur.description:
+    print(*cur.fetchall(), sep="\n")
+con.rollback()
+' "$1"; }
+
+chq() { python -c '
+import json, os, sys
+import clickhouse_connect
+c = json.loads(os.environ["CLICKHOUSE_CONNECTION"])
+keys = ("host", "port", "username", "password")
+client = clickhouse_connect.get_client(
+    **{k: c[k] for k in keys if k in c},
+    secure=True, verify=True, ca_cert=os.environ.get("CHECK_CA_FILE"),
+)
+result = client.query(sys.argv[1])
+print(*result.result_set, sep="\n")
+' "$1"; }
+
+mongoq() { python -c '
+import json, os, sys
+from pymongo import MongoClient
+c = json.loads(os.environ["MONGODB_CONNECTION"])
+client = MongoClient(c["uri"], tls=True, tlsCAFile=os.environ.get("CHECK_CA_FILE"), serverSelectionTimeoutMS=30000)
+db = client[sys.argv[1]]
+for info in db.list_collections():
+    print(info["name"], info["type"])
+' "$1"; }
+
+mongoprobe() { python -c '
+import json, os, sys
+from pymongo import MongoClient
+c = json.loads(os.environ["MONGODB_CONNECTION"])
+client = MongoClient(c["uri"], tls=True, tlsCAFile=os.environ.get("CHECK_CA_FILE"), serverSelectionTimeoutMS=30000)
+client[sys.argv[1]][sys.argv[2]].insert_one({"probe": 1})
+print("WRITE WAS ACCEPTED: this account is not read-only")
+' "$1" "$2"; }
+```
+
+Use them as `pgq "SELECT count(*) FROM information_schema.tables WHERE table_schema = '<schema>'"`,
+`chq "SELECT count() FROM system.tables WHERE database = '<db>'"` and `mongoq <db>`, which prints
+each collection and its type (`collection` or `view`).
 
 ## 4. Source configuration files
 
@@ -112,7 +183,9 @@ Write down the time each command took (`time dbig collect ...`).
 
 ## 7. The catalogue matches your databases
 
-Compare counts the database reports with the page's counts:
+Compare counts the database reports with the page's counts (run each statement with `psql` or
+`clickhouse-client`, or as the argument of `pgq` / `chq` from section 3; for MongoDB use
+`mongosh` as shown or `mongoq <db>`):
 
 ```sql
 -- PostgreSQL, per catalogued schema
@@ -174,7 +247,8 @@ python scripts/run_plan.py --plan "$out/plan.json" \
   --config artifacts/config/mongodb.toml
 ```
 
-Take three joins inside one database and, if you have one, one across databases.
+Take three joins inside one database and, if you have one, one across databases. The ClickHouse
+account needs `SELECT` for this (step 2 above); without it the script ends with code 497.
 `scripts/run_plan.py` runs every step read-only, binds each later step to the keys the earlier
 one returned, and reports rows per step and the joined row count. Pass: for a same-database
 plan, the row count equals your own hand-written query with the same joins and `LIMIT 1000`;
