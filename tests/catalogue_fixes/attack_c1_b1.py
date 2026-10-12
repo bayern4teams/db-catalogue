@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 """Attack tests for B1 (ask schema) and C1 (error codes) in `ask` and in the builder's review.
 
 Run by file name:

@@ -243,10 +243,6 @@ def test_each_review_fixture_really_reached_the_stub(review_outcomes, cause):
     assert review_outcomes[cause]["calls"] >= 1
 
 
-@pytest.mark.xfail(
-    strict=False,
-    reason="not in plan section 9: the review schema also carries minItems and maxLength",
-)
 def test_the_review_schema_also_avoids_the_bounds_a_llama_cpp_server_refuses(
     tmp_path, monkeypatch
 ):

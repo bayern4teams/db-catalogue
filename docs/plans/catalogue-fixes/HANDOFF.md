@@ -3,7 +3,7 @@
 Overwrite this file at every commit. A fresh session reads it first, then
 [the plan](../CATALOGUE_FIXES_IMPLEMENTATION_PLAN.md). Git is the memory; a session's context is not.
 
-**Lock:** 2026-10-12T16:55:38Z · **Autonomy:** unattended-through-phase-4 · **Last heartbeat:** 2026-10-12T16:55:38Z
+**Lock:** 2026-10-12T17:18:59Z · **Autonomy:** unattended-through-phase-4 · **Last heartbeat:** 2026-10-12T17:18:59Z
 
 (Lock/heartbeat protocol: plan §7. A session sets `Lock: <ISO time>`, pushes it, and refreshes it at
 every commit; a lock older than 75 min is stale. `Autonomy` is `off`, `dryrun` (a tick only records
@@ -15,14 +15,14 @@ Only the user changes it.)
 | item | phase | state | commit | lead verdict |
 |---|---|---|---|---|
 | P0 baseline, ownership, fixtures | 0 | accepted-cloud | | lead: 80 pass/50 xfail(strict) fixtures verified; CI green on branch (38256268573); grep baseline 0 hits |
-| B1 `ask` schema (llama.cpp rejects `maxLength`) | 1 | in-progress (implemented, lead-reviewed diff; attack verifier running) | | |
-| B3 + D6a camelCase split in search | 1 | in-progress (implemented, lead-reviewed diff; attack verifier running) | | |
-| D6b stemming in search | 1 | in-progress (implemented, lead-reviewed diff; attack verifier running) | | |
-| B4 stopwords / no-match guard | 1 | in-progress (implemented, lead-reviewed diff; attack verifier running) | | |
-| C1 + D7 distinct model error codes | 1 | in-progress (builder half done by lead; requester half in lane R) | | |
+| B1 `ask` schema (llama.cpp rejects `maxLength`) | 1 | unverified-live | | |
+| B3 + D6a camelCase split in search | 1 | unverified-live | | |
+| D6b stemming in search | 1 | unverified-live | | |
+| B4 stopwords / no-match guard | 1 | unverified-live | | |
+| C1 + D7 distinct model error codes | 1 | unverified-live | | |
 | C2 `partial` diagnostics in manifest and CLI | 1 | blocked (DEC-11b) - waiting for the user | | |
-| C3 documentation gaps | 1 | in-progress (points 1-4 done, lead-reviewed diff; point 5 waits for B1+C1) | | |
-| D1b reasons for empty statistic cells | 1 | in-progress (implemented, attack verifier pending) | | |
+| C3 documentation gaps | 1 | in-progress (points 1-4 done; point 5 llama.cpp note now unblocked: B1+C1 accepted) | | |
+| D1b reasons for empty statistic cells | 1 | unverified-live | | |
 | D3 + B5(2) lowercase names (`companyid`) when the stem is a known object | 2 | todo | | |
 | A1 + D2 + D9 + A3 overlap labels, measured-zero drop | 2 | todo | | |
 | A2 parent column name resembles child's (DEC-1) | 3 | blocked (DEC) - waiting for the user | | |
@@ -85,6 +85,7 @@ Phase 1: lane R (worker: B1, B3/D6a, D6b, B4, C1 requester half) and lane D (wor
 (append `[PHASE n DONE]`, `[BLOCKED]`, `[Catalogue fixes COMPLETE]` entries here; the same prefixes go in commit messages)
 
 ## Open escalations (worker/verifier results that passed only written tests or one case)
+- (round 2 done) D6b: fold keeps only `-ies`->`-y` at index time, query tries several singulars, min singular length 3 + short non-plural list (`ids` no longer folds to `id`); INDEX_VERSION is now "4"; `ask` returns `STALE_INDEX`, the question route answers 503 (search route 409): lead call, user may prefer 409. DEC-11 is moot (umbrella code is in no schema/doc; kept for malformed JSON, lineage claim, 5xx, missing key).
 - B3/D6a: a stale index (no `index_version`) is refused with `STALE_INDEX` (rerun `dbig-requester index`), not rebuilt, because `search` must not write the state directory. Plan said "rebuilt"; lead accepts the refusal (never misread). Tell the user.
 - D6b/B4: the plural fold is not a stemmer (`boxes` -> `boxe`); and `tables`/`numbers` are schema words in `ask` (singular is a stopword), so "tables" alone no longer retrieves in `ask` until DEC-7. Explicit `search` is unaffected.
 - Builder review schema still carries `minItems`/`maxLength` (non-strict test); the report says llama.cpp accepted it. Verify live.

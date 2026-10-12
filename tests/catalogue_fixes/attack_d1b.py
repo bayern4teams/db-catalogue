@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 """Attack tests for D1b (empty statistic cells say why) beyond test_d1b_empty_cells.py.
 
 Run by file name:

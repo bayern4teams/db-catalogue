@@ -55,3 +55,45 @@ real catalogue, real 5xx behaviour of a shared server (mapped to the umbrella by
 `export_schemas.py --check` ran clean (no schema changed).
 Transient: one full run mid-way showed reviewer tests failing while another lane was editing reviewer.py; they
 passed on re-run and in the final full run.
+
+# Round 1 corrections (lead review of phase1.verdict.md)
+
+Checks: ruff clean for my files (remaining 9 E501 are in the lead's `attack_*.py`), mypy clean, full pytest
+597 passed, 68 skipped, 14 xfailed, 1 xpassed (the non-strict review-schema finding, lead's); attack_search.py and
+attack_c1_b1.py all 103 pass. No attack test edited.
+
+## D6b redesign (search.py)
+- Index no longer adds the singular to every plural (that made `invoices` rank with `invoice`). It adds only the
+  `-y` form of an `-ies` word (`industries` also holds `industry`); every other singular is already a prefix of its plural.
+- Query: a plural term is `("plural"* OR "candidate" ...)`; candidates come from `_singulars`: drop `s`; for `-ies` also
+  `y`; for `-es` after a sibilant (s x z ch sh) also drop `es`. So indexes/statuses/boxes/taxes/batches/matches/prefixes/
+  movies/cookies/industries/categories all find their singular. Each candidate is a whole word, not a prefix.
+- False merges cut by two rules, chosen over a vocabulary check because `new_flag` IS in the index, so no vocabulary test
+  can reject `news`: `MIN_SINGULAR_LENGTH = 3` (pos, gas) and the finite `NON_PLURALS` list (news lens series species bias
+  alias canvas atlas). Ceilings (ponytail comment): a two-letter singular (`ids`->`id`) is not folded; a non-plural
+  word ending in s that is missing from the list merges with its shorter word.
+- Exact-name rank: `ORDER BY e.name = <query> COLLATE NOCASE DESC, rank, ...` for any query with terms. Needed for
+  `invoices` (plural query also matches the singular table, bm25 tie); `invoice` -> `invoice` first now holds too.
+- Stopword check uses `_singulars` (so `tables`, `stores`, `numbers` remain schema words; the trade-off in the verdict
+  stands and is deliberate).
+- D-2 (not asked, cheap): `_broken()` reads case with `str.isupper/islower`, so accented and Cyrillic capitals split
+  (3 attack cases now pass); the ASCII-only ceiling is gone. `INDEX_VERSION` stays "3": the index layout changed from the
+  previously committed version-3 content (D6b index additions removed), so BUMP IT if any version-3 index was built
+  from the earlier WIP commit; not bumped here because no release carried it (lead decides).
+
+## B3 stale index typed (search.py, answer.py)
+`StaleIndexError(OperatorError)` (subclass of ValueError; message is the bare code `STALE_INDEX`) now raised by both the
+digest and the version check. Surfaces: `search` raises it (HTTP search route: 409 `{"code":"STALE_INDEX"}` unchanged; CLI
+`search`/`index` commands: Click error instead of a traceback, via OperatorError); `answer_question` catches it and returns
+`{"error": {"code": "STALE_INDEX"}}`, so CLI `ask` prints JSON and the HTTP question route answers 503 with that code
+(api.py is not mine; 409 like the search route would be more consistent: lead's call). Tests added in
+tests/test_requester.py for both version and digest staleness through ask and the HTTP search route.
+
+## C1 addendum (answer.py)
+`APITimeoutError` whose `__cause__` class name is `ConnectTimeout` -> MODEL_UNREACHABLE, other timeouts MODEL_TIMEOUT,
+mirroring reviewer.py (class name, no httpx import in src). 5xx stays the umbrella in ask. Test added (httpx is imported
+by the test only, as a transitive dependency of openai).
+
+## Not verified
+Live behaviour of any of it on the real catalogue; whether the real client wraps a connect timeout with `ConnectTimeout`
+as `__cause__` (emulated with the same class chain in the test).

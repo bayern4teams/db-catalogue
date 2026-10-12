@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 """Attack tests for B3/D6a (camelCase split), D6b (plural fold), B4 (schema stopwords), old index.
 
 Beyond tests/catalogue_fixes/test_search_split_stem_stop.py. Run by file name (the name does not
@@ -229,7 +230,7 @@ def test_every_listed_schema_word_alone_and_in_plural_is_refused(tmp_path, monke
 
 def _old_code_index(tmp_path, snapshot, state):
     """Build the index with the parent commit's code in a git worktree (set up by the caller)."""
-    old = Path(os.environ.get("DBIG_OLD_TREE", "/tmp/wt-old"))
+    old = Path(os.environ.get("DBIG_OLD_TREE", "/nonexistent-old-tree"))
     if not (old / "packages/requester/src").is_dir():
         pytest.skip("no old worktree: git worktree add /tmp/wt-old fbaaa7d")
     env = dict(os.environ)
@@ -242,7 +243,7 @@ def _old_code_index(tmp_path, snapshot, state):
         f"assert str(s.__file__).startswith({str(old)!r}), s.__file__;"
         f"s.index_snapshot(pathlib.Path({str(snapshot)!r}), pathlib.Path({str(state)!r}))"
     )
-    subprocess.run([sys.executable, "-c", code], check=True, env=env, cwd=tmp_path)
+    subprocess.run([sys.executable, "-c", code], check=True, env=env, cwd=tmp_path)  # noqa: S603
 
 
 def test_an_index_written_by_the_old_code_is_refused_not_misread(tmp_path, monkeypatch):
