@@ -188,6 +188,8 @@ compatibility test signs an older-shaped manifest and reads it back to hold that
 
 ## 7. Collector implementation
 
+Candidate review (2026-10-13, DEC-10): `[builder.review] batch_size` (default 5) candidates per model call, `max_candidates` overall; the first failing batch ends the review, keeps the decisions already made and reports that batch's failure code. Keys (2026-10-13, E1): `dbig_contracts.security.key_from_env` requires 32 bytes and turns a shorter key into a one-line command error naming the variable.
+
 Common protocol: `discover(config, budget) -> DiscoveryResult`, `profile(object, budget) -> ProfileResult`, `observe_lineage(config, budget) -> ObservationResult`, `emit_bundle(result, destination) -> Manifest`. Budget accounting covers queries, wall time, rows, bytes and source-specific concurrency. Cancel on expiry, emit partial diagnostics, and respect source read-only transactions where supported. No unrestricted `SELECT *` on large tables.
 
 PostgreSQL: query `pg_catalog` for namespaces, relations, attributes, keys, FK constraints, indexes, view/materialized-view definitions, statistics and comments where allowed. Use quoted identifiers and parameterized dynamic values. Prefer catalog row estimates and existing statistics; use bounded sample queries only when permitted. Record partitioning and composite key order. Capture observed SQL only from configured logs/audit/job metadata, never assume `pg_stat_statements` includes result data or execution time history sufficient for lineage.

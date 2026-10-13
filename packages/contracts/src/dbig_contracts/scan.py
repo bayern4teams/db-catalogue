@@ -69,7 +69,7 @@ class ScanReceipt(BaseModel):
 
 def sign_scan(request: ScanRequest, key_id: str, key: bytes) -> SignedScanRequest:
     if len(key) < 32:
-        raise ValueError("signing key too short")
+        raise OperatorError("scan signing key must hold at least 32 bytes; generate a longer one")
     payload = canonical({"key_id": key_id, "request": request.model_dump(mode="json")})
     signature = hmac.new(key, payload, hashlib.sha256).hexdigest()
     return SignedScanRequest(request=request, key_id=key_id, signature=signature)

@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from dbig_contracts.errors import load_toml_section, validate_configuration
-from dbig_contracts.security import private_base_url, secret_from_env
+from dbig_contracts.security import key_from_env, private_base_url
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
@@ -17,6 +17,9 @@ class ReviewConfig(BaseModel):
     timeout_seconds: int = Field(default=20, ge=1)
     max_tokens: int = Field(default=512, ge=1)
     max_candidates: int = Field(default=20, ge=1)
+    # Candidates per model call (user decision 2026-10-13, DEC-10): a reasoning model spends its
+    # token budget thinking, and 20 in one call ran out at 8192 tokens where 5 completed.
+    batch_size: int = Field(default=5, ge=1)
     langfuse_url: str | None = None
     langfuse_public_key_env: str | None = None
     langfuse_secret_key_env: str | None = None
@@ -80,13 +83,9 @@ class BuilderConfig(BaseModel):
         return any(left in group and right in group for group in grouped)
 
     def key(self, key_id: str) -> bytes:
-        env_name = self.signing_keys[key_id]
-        value = secret_from_env(
-            env_name, purpose="collector bundle signature verification"
-        ).encode("utf-8")
-        if len(value) < 32:
-            raise ValueError("bundle signing key too short")
-        return value
+        return key_from_env(
+            self.signing_keys[key_id], purpose="collector bundle signature verification"
+        )
 
 
 def load_config(path: Path) -> BuilderConfig:

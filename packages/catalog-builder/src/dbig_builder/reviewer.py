@@ -168,10 +168,33 @@ def review_candidates(
     *,
     client: Any | None = None,
 ) -> tuple[list[Evidence], str]:
-    """Return weak suggestion evidence and a typed outcome; never raise on model failure."""
+    """Return weak suggestion evidence and a typed outcome; never raise on model failure.
+
+    Candidates go to the model in batches of `config.batch_size`. The first batch that fails ends
+    the review: what earlier batches decided is kept and the outcome is that batch's failure code,
+    so a busy or failing server is not asked again for every remaining batch.
+    """
     selected = sorted(candidates, key=lambda edge: edge.id)[: config.max_candidates]
     if not selected:
         return [], "NO_CANDIDATES"
+    suggestions: list[Evidence] = []
+    for start in range(0, len(selected), config.batch_size):
+        batch, status = _review_batch(
+            selected[start : start + config.batch_size], nodes, evidence, config, client
+        )
+        suggestions.extend(batch)
+        if status != "OK":
+            return suggestions, status
+    return suggestions, "OK"
+
+
+def _review_batch(
+    selected: list[Edge],
+    nodes: dict[str, Record],
+    evidence: dict[str, Evidence],
+    config: ReviewConfig,
+    client: Any | None,
+) -> tuple[list[Evidence], str]:
     known = {edge.id: set(edge.evidence_ids) for edge in selected}
     try:
         model_client = client or OpenAI(

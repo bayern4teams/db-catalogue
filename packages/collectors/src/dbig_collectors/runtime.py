@@ -29,7 +29,7 @@ from dbig_contracts.models import (
     ValueTokens,
     utc_now,
 )
-from dbig_contracts.security import is_loopback_literal, secret_from_env
+from dbig_contracts.security import is_loopback_literal, key_from_env, secret_from_env
 
 from .config import SourceConfig
 
@@ -192,11 +192,7 @@ def _tokenize_postgresql(
     """
     if config.sample_rows <= 0 or not config.value_token_key_env:
         return
-    key = secret_from_env(
-        config.value_token_key_env, purpose="cross-source value tokenisation"
-    ).encode("utf-8")
-    if len(key) < 32:
-        raise ValueError("value token key must contain at least 32 bytes")
+    key = key_from_env(config.value_token_key_env, purpose="cross-source value tokenisation")
     key_id = config.value_token_key_id or ""
     identity = {oid: (schema, name) for oid, schema, name, kind, *_ in object_rows if kind in "rmp"}
     columns: dict[int, list[tuple[int, str]]] = defaultdict(list)
@@ -901,14 +897,10 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
             present_counts: dict[str, int] = defaultdict(int)
             # Tokenising needs a key as well as a sample, and is off unless both are configured.
             token_key = (
-                secret_from_env(
-                    config.value_token_key_env, purpose="cross-source value tokenisation"
-                ).encode("utf-8")
+                key_from_env(config.value_token_key_env, purpose="cross-source value tokenisation")
                 if config.value_token_key_env
                 else None
             )
-            if token_key is not None and len(token_key) < 32:
-                raise ValueError("value token key must contain at least 32 bytes")
             path_tokens: dict[str, set[str]] = {}
             path_observed: dict[str, int] = {}
             if config.sample_rows and sampled_bytes_total >= config.max_sample_bytes:
@@ -1269,11 +1261,7 @@ def _collect(config: SourceConfig, destination: Path) -> None:
     )
     if not isinstance(connection, dict):
         raise ValueError("connection reference must contain a JSON object")
-    signing_key = secret_from_env(
-        config.signing_key_env, purpose="collector bundle signing"
-    ).encode("utf-8")
-    if len(signing_key) < 32:
-        raise ValueError("signing key must contain at least 32 bytes")
+    signing_key = key_from_env(config.signing_key_env, purpose="collector bundle signing")
     budget = Budget(config.max_queries)
     ca_file = str(config.tls_ca_file) if config.tls_ca_file is not None else None
     if config.kind == "postgresql":
