@@ -209,6 +209,7 @@ def build_snapshot(
     *,
     review: ReviewConfig | None = None,
     name: str = "snapshot",
+    builder_extra: dict[str, Any] | None = None,
 ) -> Path:
     """Assemble `sources` ({source_id: {"kind": ..., "tables": {...}}}) into a snapshot."""
     monkeypatch.setenv("BUNDLE_KEY", BUNDLE_KEY)
@@ -218,7 +219,11 @@ def build_snapshot(
         write_bundle(bundle, source_id, spec.get("kind", "postgresql"), spec["tables"])
         bundles.append(bundle)
     snapshot = tmp_path / name
-    assemble(bundles, snapshot, BuilderConfig(signing_keys={"test": "BUNDLE_KEY"}, review=review))
+    assemble(
+        bundles,
+        snapshot,
+        BuilderConfig(signing_keys={"test": "BUNDLE_KEY"}, review=review, **(builder_extra or {})),
+    )
     return snapshot
 
 

@@ -382,6 +382,10 @@ can tell a fuzzy suffix match from an exact bare-name match without re-deriving 
    and separators), is within the name-similarity threshold, or is a generic key name; and a
    generic one is dropped when another column of the same parent is named like the child. A
    declared key is exempt. This removes `location.companyid` as the parent of a `locationid`.
+9. **Source groups (2026-10-13, DEC-3).** `[builder]` accepts `source_groups` (lists of source
+   IDs that hold one dataset) and `forbidden_source_pairs` (pairs never linked). Both default to
+   none, which changes nothing. With groups set, two sources are paired only when they share a
+   group; a source in no group is unrestricted.
 7. **Weak key claim (2026-10-13, DEC-2).** The ClickHouse collector reports a table's
    one-column plain sorting or primary key as an `index` constraint whose `native_id` ends in
    `:primary_key` or `:sorting_key` (column names only; expressions and multi-column keys are

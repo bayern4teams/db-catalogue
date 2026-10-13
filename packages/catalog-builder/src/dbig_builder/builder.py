@@ -596,6 +596,7 @@ def assemble(
                 or parent.id == child.id
                 or parent.object_id == child.object_id
                 or (child.object_id, parent.object_id) in declared_pairs
+                or not config.pair_allowed(child.source_id, parent.source_id)
                 or _type_family(child.data_type) != _type_family(parent.data_type)
             ):
                 continue
