@@ -114,6 +114,12 @@ def find_paths(directory: Path, request: PathRequest, kind: str, config: Planner
             weight = 2
         network.add_edge(left, right, weight=weight)
     found: list[dict] = []
+    same_source = (
+        kind == "join"
+        and request.from_id in objects
+        and request.to_id in objects
+        and objects[request.from_id]["source_id"] == objects[request.to_id]["source_id"]
+    )
     if network.has_node(request.from_id) and network.has_node(request.to_id):
         try:
             for nodes in islice(
@@ -165,7 +171,9 @@ def find_paths(directory: Path, request: PathRequest, kind: str, config: Planner
                     **({"warnings": warnings} if warnings else {}),
                 }
                 found.append(item)
-                if len(found) >= max_paths:
+                # Both ends in one source: keep collecting, the same-source filter below
+                # decides which max_paths survive (a longer same-source path can rank later).
+                if len(found) >= max_paths and not same_source:
                     break
         except nx.NetworkXNoPath:
             pass
@@ -180,6 +188,7 @@ def find_paths(directory: Path, request: PathRequest, kind: str, config: Planner
                 if all(objects[node]["source_id"] == home for node in item["object_ids"])
             ]
             found = inside or found
+    found = found[:max_paths]
     with closing(_cache(directory)) as connection:
         connection.executemany(
             "INSERT OR REPLACE INTO paths VALUES (?,?)",

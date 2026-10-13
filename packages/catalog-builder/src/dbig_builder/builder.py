@@ -171,6 +171,7 @@ def _composite_candidates(
     field_profiles: dict[str, list[Profile]],
     evidence: dict[str, Evidence],
     edges: dict[str, Edge],
+    config: BuilderConfig,
 ) -> None:
     """Propose candidates against declared multi-column keys.
 
@@ -204,7 +205,9 @@ def _composite_candidates(
             if (child_object_id, parent_object_id) in declared_pairs:
                 continue
             child_object = objects.get(child_object_id)
-            if child_object is None:
+            if child_object is None or not config.pair_allowed(
+                child_object.source_id, parent_object.source_id
+            ):
                 continue
             folded = {name.casefold(): field for name, field in child_fields.items()}
             matched: list[Field] = []
@@ -735,7 +738,14 @@ def assemble(
                 }
             )
     _composite_candidates(
-        composite_keys, objects, by_object_name, declared_pairs, field_profiles, evidence, edges
+        composite_keys,
+        objects,
+        by_object_name,
+        declared_pairs,
+        field_profiles,
+        evidence,
+        edges,
+        config,
     )
     review_status = "REVIEW_DISABLED"
     if config.review is not None:
