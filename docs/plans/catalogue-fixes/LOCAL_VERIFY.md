@@ -63,3 +63,16 @@ configs, TLS preflight, collect, assemble, render) using the configs in `artifac
 - D3: J1 and J2 return a path; the 21 candidates grow by the PostgreSQL pairs (`companyid` style names).
 - A1/D2/D9: with sampling on, of the 21 candidates the 16 with 0% overlap disappear and the 5 with 100% stay; the 21% to 27% true pairs stay with their numbers; with sampling off every candidate says "values not compared". Check `dropped_zero_overlap_candidates` in the builder run record equals the disappeared count. Watch for a real FK dropped because its parent ids lie outside the sampled rows.
 - Result (filled in locally):
+
+### Phase 2 and Phase 3 — live checks (added 2026-10-13)
+All need the real databases and model (see "Restore the environment first"). Rerun `dbig-requester index` first: the index version is now 6.
+- D3 / DEC-12: `companyexperience.companyid` and `companyindustry.classificationid` are proposed; J1 and J2 return a path. DEC-1: `locationID` names `location.locationid`, never `location.companyid`.
+- A1 / D2 / D9 (needs sampling on): the 16 candidates with 0% overlap disappear, the 5 with 100% stay, the 21% to 27% ClickHouse pairs stay with their numbers; with sampling off every candidate says "values not compared".
+- DEC-2: the Z1 to Z11 `zoominfo_*` to ClickHouse pairs are proposed; check the key claim reads "weak key claim" and that ClickHouse sorting keys are single plain columns (expression keys are skipped).
+- DEC-3: optional `source_groups` / `forbidden_source_pairs` in `[builder]`; with the PostgreSQL and ClickHouse/Mongo datasets in separate groups the cross-dataset candidates are gone.
+- DEC-4: J3 (ClickHouse `Experience` to `Company`) offers the direct ClickHouse join first; a path of only unverified cross-source candidates carries `CROSS_SOURCE_CANDIDATES_UNVERIFIED`.
+- DEC-5/6/7/8/9: rerun the 20 questions in `artifacts/model-questions.md` with `ask`; target no Wrong. Check: "ClickHouse tables" lists that source's tables; relationships appear with evidence; an unanswerable question returns `NOT_ESTABLISHED_BY_CATALOGUE` as a normal reply; `cited` shows names; set `exclude_objects` for the Mongo schema-description collections and re-index.
+- DEC-10: the review of the 21 candidates completes in batches of 5 with the shipped example config (state `max_tokens`/`timeout_seconds` used).
+- E1: a `DBIG_SIGNING_KEY` under 32 bytes gives a one-line error naming the variable.
+- C2: `render` `diagnostics` equals the page count and the manifest has `partial_reasons` for a partial snapshot.
+- Result (filled in locally):
