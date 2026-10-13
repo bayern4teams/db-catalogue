@@ -377,6 +377,11 @@ can tell a fuzzy suffix match from an exact bare-name match without re-deriving 
    are excluded, since every table has an `id`. This links `AccountID` in ClickHouse and MongoDB
    to PostgreSQL's `"Customer Accounts"."AccountID"`, which rule 1 cannot (`account` is too far
    from `customer account`).
+8. **Parent column must resemble the child (2026-10-13, DEC-1).** A parent column that is only
+   measured unique or a weak claim is accepted when its name equals the child's (ignoring case
+   and separators), is within the name-similarity threshold, or is a generic key name; and a
+   generic one is dropped when another column of the same parent is named like the child. A
+   declared key is exempt. This removes `location.companyid` as the parent of a `locationid`.
 7. **Weak key claim (2026-10-13, DEC-2).** The ClickHouse collector reports a table's
    one-column plain sorting or primary key as an `index` constraint whose `native_id` ends in
    `:primary_key` or `:sorting_key` (column names only; expressions and multi-column keys are

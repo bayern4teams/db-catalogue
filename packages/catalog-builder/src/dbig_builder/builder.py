@@ -153,6 +153,16 @@ def _reference_stem(name: str, known_objects: frozenset[str] = frozenset()) -> t
     return lowered, False
 
 
+def _resembles(child: Field, parent: Field, config: BuilderConfig) -> bool:
+    """Whether a parent column's name is the child's name (up to case and separators) or generic."""
+    name = parent.name.casefold()
+    if name in GENERIC_KEY_NAMES:
+        return True
+    left = _snake(child.name).replace("_", "")
+    right = _snake(parent.name).replace("_", "")
+    return left == right or round(ratio(left, right)) >= config.name_similarity_threshold
+
+
 def _composite_candidates(
     composite_keys: list[tuple[str, list[Field]]],
     objects: dict[str, Object],
@@ -589,6 +599,12 @@ def assemble(
                 or _type_family(child.data_type) != _type_family(parent.data_type)
             ):
                 continue
+            if parent.id not in declared_unique and not _resembles(child, parent, config):
+                # A column that only measures unique, or is a weak claim, is accepted when its
+                # name is the child's or a generic key name, so the right table's wrong column
+                # (`location.companyid` for a `locationid`) is never proposed (user decision
+                # 2026-10-13, DEC-1). A declared key is exempt: the source said what it is.
+                continue
             target = parent_object.name.casefold().rstrip("s")
             if (
                 child.name.casefold() == parent.name.casefold()
@@ -613,6 +629,20 @@ def assemble(
                     continue
                 name_score = 100
             candidates.append((name_score, parent, "suffix" if suffixed else "exact_name"))
+        # Several columns of one parent can qualify: the one named like the child wins over a
+        # generic or merely-unique one (DEC-1). A declared key stays, whatever its name.
+        objects_with_named_key = {
+            parent.object_id
+            for _, parent, _ in candidates
+            if parent.name.casefold() not in GENERIC_KEY_NAMES
+        }
+        candidates = [
+            item
+            for item in candidates
+            if item[1].object_id not in objects_with_named_key
+            or item[1].name.casefold() not in GENERIC_KEY_NAMES
+            or item[1].id in declared_unique
+        ]
         kept = 0
         # The cut to `top_k_per_field` comes after the overlap check, so a dropped best name
         # match does not use up the slot of the parent that is really referenced.
