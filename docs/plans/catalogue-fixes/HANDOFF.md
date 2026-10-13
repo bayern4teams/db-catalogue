@@ -3,7 +3,7 @@
 Overwrite this file at every commit. A fresh session reads it first, then
 [the plan](../CATALOGUE_FIXES_IMPLEMENTATION_PLAN.md). Git is the memory; a session's context is not.
 
-**Lock:** 2026-10-13T12:25:00Z · **Autonomy:** unattended-through-phase-5 · **Last heartbeat:** 2026-10-13T12:25:00Z
+**Lock:** none · **Autonomy:** unattended-through-phase-5 · **Last heartbeat:** 2026-10-13T12:25:00Z
 
 (Lock/heartbeat protocol: plan §7. A session sets `Lock: <ISO time>`, pushes it, and refreshes it at
 every commit; a lock older than 75 min is stale. `Autonomy` is `off`, `dryrun` (a tick only records
@@ -96,6 +96,7 @@ Phase 1: lane R and lane D concurrent (disjoint files); lead does C1 builder hal
 Phase 5 (cloud hardening), items H0 to H8 in plan section 9, **only when `Autonomy` is `unattended-through-phase-5`** (the user sets it; at `phase-4` exit without doing anything). Start with H0 and H1 in parallel (verifiers, at most 2 at a time), then H2 to H7. Finish with H8: Next action `READY FOR LOCAL VERIFY - waiting for the user`.
 
 ## Notifications
+- [BLOCKED] 2026-10-13T12:40Z: H4 (`tests/catalogue_fixes/test_h4_privacy_canaries.py`) has 40 errors + 6 failures: `read_artifact(bundle)` raises `signature key unavailable` because bundles are signed (H3 passes: 21 passed, 1 xfailed alone). Planned fix: wrapper passing `BUNDLE_KEY.encode()` as `signing_key`; the edit was denied by the permission classifier (reason: Security Test Removal), so it was not made and not worked around. User: allow the edit or fix the test locally, then resume (H3 done pending report, H4, H5-H8 remain).
 - [Catalogue fixes COMPLETE] 2026-10-13: Phase 4 done (final report, LOCAL_VERIFY finalised, `.handoff/` purged, ponytail review/debt recorded in FINAL_REPORT.md). Never merged.
 (append `[PHASE n DONE]`, `[BLOCKED]`, `[Catalogue fixes COMPLETE]` entries here; the same prefixes go in commit messages)
 - [PHASE 3 DONE] 2026-10-13: DEC-13, C2, DEC-12, DEC-2, DEC-1, DEC-3, DEC-4, DEC-7/8, DEC-5, DEC-6, DEC-9, DEC-10, E1 built; full check green locally (663 passed, 68 skipped; pip-audit clean; package isolation under 3.12); CI run 38364040378 green in all 8 jobs incl. both source-integration; ponytail-review of the phase diff: nothing mandatory to cut (only cosmetic shrink in `question_scope`'s `named` set, left for readability).
