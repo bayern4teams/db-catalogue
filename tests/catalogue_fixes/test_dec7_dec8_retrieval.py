@@ -165,3 +165,65 @@ def test_relationships_are_bounded_and_can_be_turned_off(linked, monkeypatch):
 def test_objects_with_no_relationship_add_none(linked, monkeypatch):
     _, payload = _ask_payload(linked, monkeypatch, "What is the unrelated note?")
     assert payload["relationships"] == []
+
+
+# --- DEC-6: claims are validated, not words; "not established" is an outcome --------------------
+
+
+def _ask_with(state, monkeypatch, question, content):
+    monkeypatch.setenv("MODEL_KEY", MODEL_KEY)
+    with ModelStub(content=content) as stub:
+        config = AnswerConfig(
+            base_url=stub.url, model="m", model_digest="d", api_key_env="MODEL_KEY",
+            timeout_seconds=5,
+        )
+        return answer_question(state, question, config), stub
+
+
+def test_the_word_lineage_in_a_question_is_answered(linked, monkeypatch):
+    import json as _json
+
+    first = _json.dumps({"answer": "No lineage is catalogued.", "citations": []})
+    reply, stub = _ask_with(linked, monkeypatch, "Is there lineage for shipment?", first)
+    assert reply["error"]["code"] == "MODEL_INVALID_CITATION"  # answered outcome must cite
+    assert stub.requests, "the model was called: the question was not refused"
+
+
+def test_a_not_established_outcome_may_cite_nothing_and_has_its_own_code(linked, monkeypatch):
+    import json as _json
+
+    content = _json.dumps(
+        {"answer": "The catalogue records no lineage for shipment.", "citations": [],
+         "outcome": "not_established"}
+    )
+    reply, _ = _ask_with(linked, monkeypatch, "What is the lineage of shipment?", content)
+    assert "error" not in reply, reply
+    assert reply["code"] == "NOT_ESTABLISHED_BY_CATALOGUE"
+    assert reply["citations"] == []
+
+
+def test_not_established_still_rejects_an_unknown_citation(linked, monkeypatch):
+    import json as _json
+
+    content = _json.dumps({"answer": "none", "citations": ["made-up"],
+                           "outcome": "not_established"})
+    reply, _ = _ask_with(linked, monkeypatch, "What is the lineage of shipment?", content)
+    assert reply["error"]["code"] == "MODEL_INVALID_CITATION"
+
+
+def test_a_lineage_claim_in_an_answer_is_still_rejected(linked, monkeypatch):
+    import json as _json
+
+    _, payload = _ask_payload(linked, monkeypatch, "How does shipment relate to vendor?")
+    cited = payload["items"][0]["id"]
+    content = _json.dumps({"answer": "shipment flows into vendor", "citations": [cited]})
+    reply, _ = _ask_with(linked, monkeypatch, "How does shipment relate to vendor?", content)
+    assert reply["error"]["code"] == "MODEL_UNAVAILABLE_OR_INVALID"
+
+
+def test_the_answer_schema_has_the_outcome_and_no_length_bounds(linked, monkeypatch):
+    from catalogue_fixture_kit import schema_bounds
+
+    _, stub = _ask_with(linked, monkeypatch, "What is the lineage of shipment?", "{}")
+    schema = stub.schemas[-1]
+    assert "outcome" in schema["properties"] and schema_bounds(schema) == []

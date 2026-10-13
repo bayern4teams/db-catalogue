@@ -85,9 +85,8 @@ def test_answers_validate_citations_and_outage(tmp_path, monkeypatch):
     assert answer_question(state, "orders", config, client=lineage)["error"]["code"] == (
         "MODEL_UNAVAILABLE_OR_INVALID"
     )
-    assert answer_question(state, "show lineage", config)["error"]["code"] == (
-        "LINEAGE_REQUIRES_PLANNER"
-    )
+    # DEC-6: the word is not a refusal; only a claim in the answer is.
+    assert "error" not in answer_question(state, "show orders lineage", config, client=good)
 
 
 def test_authenticated_requester_api_and_payload_limit(tmp_path, monkeypatch):

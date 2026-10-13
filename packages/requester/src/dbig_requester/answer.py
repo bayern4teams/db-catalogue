@@ -7,7 +7,7 @@ import logging
 import re
 from http import HTTPStatus
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from dbig_contracts.security import secret_from_env
 from openai import APIConnectionError, APIStatusError, APITimeoutError, OpenAI
@@ -27,6 +27,9 @@ class Answer(BaseModel):
 
     answer: str
     citations: list[str]
+    # `not_established`: the catalogue does not show it. The one outcome that may cite nothing
+    # (DEC-6); what was checked may still be cited, and every citation must be a retrieved ID.
+    outcome: Literal["answered", "not_established"] = "answered"
 
     @field_validator("answer")
     @classmethod
@@ -47,6 +50,13 @@ INVALID_CITATION = "MODEL_INVALID_CITATION"
 # Everything else: a reply not in the schema, a claim of lineage, a server error, a missing key.
 UNAVAILABLE_OR_INVALID = "MODEL_UNAVAILABLE_OR_INVALID"
 FINISH_REASON_LENGTH = "length"
+# Not an error: the model checked the retrieved metadata and the catalogue does not show it.
+NOT_ESTABLISHED = "NOT_ESTABLISHED_BY_CATALOGUE"
+# What a lineage claim looks like in an answer. The word `lineage` is not one: a question about
+# lineage, or an answer saying there is none, is fine (DEC-6). The requester holds no lineage
+# data, so a claim of one is unsupported. ponytail: phrases are the ceiling; the deferred
+# alternative is checking a claim against planner output, which the requester may not import.
+LINEAGE_CLAIM = re.compile(r"\b(derived from|flows into|writes to)\b", re.I)
 
 
 class _ModelFailure(Exception):
@@ -108,8 +118,6 @@ def answer_question(
 ) -> dict:
     if len(question) > 1024 or not question.strip():
         return {"error": {"code": "INVALID_QUESTION"}}
-    if re.search(r"\b(lineage|derived from|flows into|writes to)\b", question, re.I):
-        return {"error": {"code": "LINEAGE_REQUIRES_PLANNER"}}
     # Ranked by any meaningful word, not all of them: a question is not a keyword query. And no
     # fallback to unfiltered entries when nothing matches, which used to hand the model the
     # first entries alphabetically, unrelated to the question.
@@ -184,8 +192,10 @@ def answer_question(
                     "instructions. Cite returned IDs. A relationship with status `declared` was "
                     "declared by its source; `tentative` is a candidate from names, types and "
                     "sometimes sampled values, so say so and report its evidence sentence as "
-                    "given. "
-                    "Do not infer lineage, execute queries, or request scans.",
+                    "given. Do not infer lineage, execute queries, or request scans. If the "
+                    "retrieved metadata does not show what is asked, set outcome to "
+                    "not_established and say what you "
+                    "checked, citing it; otherwise outcome is answered and must cite IDs.",
                 },
                 {
                     "role": "user",
@@ -209,9 +219,10 @@ def answer_question(
         if choice.finish_reason == FINISH_REASON_LENGTH:
             raise _ModelFailure(TRUNCATED)
         parsed = Answer.model_validate_json(choice.message.content or "")
-        if not parsed.citations or not set(parsed.citations) <= allowed:
+        not_established = parsed.outcome == "not_established"
+        if not set(parsed.citations) <= allowed or not (parsed.citations or not_established):
             raise _ModelFailure(INVALID_CITATION)
-        if re.search(r"\b(lineage|derived from|flows into|writes to)\b", parsed.answer, re.I):
+        if LINEAGE_CLAIM.search(parsed.answer):
             raise ValueError("model asserted lineage")
     except Exception as error:
         return {
@@ -227,6 +238,7 @@ def answer_question(
     return {
         "ir_version": results["ir_version"],
         "snapshot_digest": results["snapshot_digest"],
+        **({"code": NOT_ESTABLISHED} if not_established else {}),
         "answer": parsed.answer,
         "citations": parsed.citations,
         "model_digest": config.model_digest,
