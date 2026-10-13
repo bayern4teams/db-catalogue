@@ -578,13 +578,13 @@ def assemble(
                 continue
             target = parent_object.name.casefold().rstrip("s")
             if (
-                parent.id in declared_unique
-                and child.name.casefold() == parent.name.casefold()
+                child.name.casefold() == parent.name.casefold()
                 and child.name.casefold() not in GENERIC_KEY_NAMES
             ):
-                # The child carries the parent's declared key name exactly, `AccountID` beside a
-                # primary key `AccountID`: as strong a name signal as there is, whatever the
-                # parent table is called (user decision 2026-10-05).
+                # The child carries the parent's key name exactly, `AccountID` beside a primary
+                # key `AccountID`: as strong a name signal as there is, whatever the parent table
+                # is called (user decision 2026-10-05). A measured-unique parent column counts too
+                # (user decision 2026-10-13, DEC-12); the overlap check below guards that case.
                 candidates.append((100, parent, "key_name"))
                 continue
             if suffixed:

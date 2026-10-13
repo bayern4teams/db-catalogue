@@ -154,15 +154,25 @@ def test_a_declared_key_still_beats_a_column_that_only_measures_unique(tmp_path,
     assert ("shop", "region_code", "region", "code") in found
 
 
-def test_a_stem_that_names_a_table_only_by_a_longer_name_stays_unproposed_until_dec12(
-    tmp_path, monkeypatch
-):
-    """`classificationid` has stem `classification`, but the table is `tradeclassification`.
-    The D3 rule (stem must be a known object) does not fix it; that is DEC-12, user-gated. When
-    DEC-12 lands this control must be flipped by the lead on purpose, not by accident."""
+def test_a_measured_unique_parent_with_the_identical_name_links_dec12(tmp_path, monkeypatch):
+    """DEC-12 (user, 2026-10-13): `classificationid` has stem `classification`, but the table is
+    `tradeclassification` and no key is declared. The identical, non-generic column name on a
+    measured-unique parent column is enough for the `key_name` rule."""
     found = _found(tmp_path, monkeypatch, {
         "tradeclassification": {"fields": [("classificationid", "integer"), ("title", "text")],
                                    "unique": {"classificationid": 1.0}},
         "vendortrade": {"fields": [("id", "integer"), ("classificationid", "integer")]},
+    })
+    assert found == [
+        ("vendortrade", "classificationid", "tradeclassification", "classificationid")
+    ], found
+
+
+def test_dec12_never_admits_a_generic_name_or_a_non_unique_parent(tmp_path, monkeypatch):
+    """`id` and `code` stay generic; a parent column that does not measure unique is no parent."""
+    found = _found(tmp_path, monkeypatch, {
+        "alpha": {"fields": [("id", "integer"), ("batchno", "integer")],
+                  "unique": {"id": 1.0, "batchno": 0.5}},
+        "beta": {"fields": [("id", "integer"), ("batchno", "integer")]},
     })
     assert found == [], found

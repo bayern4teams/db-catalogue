@@ -371,7 +371,8 @@ can tell a fuzzy suffix match from an exact bare-name match without re-deriving 
    (`AccountID` -> `account_id`, `customerId` -> `customer_id`), so camelCase and PascalCase keys
    reach rule 1; snake_case is unchanged.
 6. **Key name.** A child whose name equals, case-insensitively, a parent's declared
-   single-column key name is admitted with `blocking_rule = "key_name"`, whatever the parent
+   or measured-unique single-column key name (measured-unique added 2026-10-13, DEC-12; with
+   sampling on the overlap check guards it) is admitted with `blocking_rule = "key_name"`, whatever the parent
    table is called; generic names (`id`, `_id`, `uuid`, `key`, `code`, `num`, `ref`, `fk`, `no`)
    are excluded, since every table has an `id`. This links `AccountID` in ClickHouse and MongoDB
    to PostgreSQL's `"Customer Accounts"."AccountID"`, which rule 1 cannot (`account` is too far
