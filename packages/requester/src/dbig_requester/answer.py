@@ -14,7 +14,7 @@ from openai import APIConnectionError, APIStatusError, APITimeoutError, OpenAI
 from pydantic import BaseModel, ConfigDict, field_validator
 
 from .config import AnswerConfig
-from .search import SearchRequest, StaleIndexError, search
+from .search import SearchRequest, StaleIndexError, question_scope, search
 
 # The longest answer accepted. It is enforced after parsing and not in the schema sent to the
 # server: llama.cpp refuses a JSON schema that carries a length or item bound ("failed to parse
@@ -114,8 +114,23 @@ def answer_question(
     # fallback to unfiltered entries when nothing matches, which used to hand the model the
     # first entries alphabetically, unrelated to the question.
     try:
+        sources, listing, source_words = question_scope(state, question)
+        # A source named in the question filters the search, so its words need not also match;
+        # a list question ("which tables ...") retrieves objects, not columns (DEC-7).
+        remaining = " ".join(
+            word
+            for word in re.findall(r"\w+", question, flags=re.UNICODE)
+            if word.casefold() not in source_words
+        )
         results = search(
-            state, SearchRequest(query=question, limit=config.retrieval_limit, match="any")
+            state,
+            SearchRequest(
+                query=remaining,
+                limit=config.retrieval_limit,
+                match="any",
+                source_ids=sources or None,
+                objects_only=listing,
+            ),
         )
     except StaleIndexError as error:
         # The same code the search route reports; the remedy is `dbig-requester index`.

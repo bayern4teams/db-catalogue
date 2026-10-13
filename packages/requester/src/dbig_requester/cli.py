@@ -42,7 +42,7 @@ def main() -> None:
 )
 def index(config_path: Path) -> None:
     config = load_config(config_path)
-    click.echo(index_snapshot(config.snapshot_dir, config.state_dir))
+    click.echo(index_snapshot(config.snapshot_dir, config.state_dir, config.exclude_objects))
 
 
 @main.command("search")

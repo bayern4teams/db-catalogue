@@ -64,6 +64,10 @@ class RequesterConfig(BaseModel):
     api_key_env: str = Field(pattern=r"^[A-Z][A-Z0-9_]*$")
     max_request_bytes: int = Field(default=65_536, ge=1)
     max_requests_per_minute: int = Field(default=60, ge=1)
+    # Per source ID, case-insensitive globs on an object name or `namespace.name` that search
+    # leaves out of the index (DEC-8), for collections that describe a schema rather than hold
+    # data. Default none. Re-run `dbig-requester index` after changing it.
+    exclude_objects: dict[str, list[str]] = Field(default_factory=dict)
     answer: AnswerConfig | None = None
     scan: ScanConfig | None = None
 

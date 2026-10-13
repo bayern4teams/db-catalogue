@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import fnmatch
 import hashlib
 import json
 import os
@@ -14,7 +15,7 @@ from typing import Any, Literal
 
 from dbig_contracts.artifact import read_artifact
 from dbig_contracts.errors import OperatorError
-from dbig_contracts.models import Edge, Field, Object
+from dbig_contracts.models import Edge, Field, Object, Source
 from pydantic import BaseModel, ConfigDict
 from pydantic import Field as PydanticField
 
@@ -36,7 +37,7 @@ WEIGHTS = (10.0, 4.0, 1.0)
 # Bump when what `index_snapshot` writes into the full-text table changes meaning. An index
 # written under another version is refused with STALE_INDEX instead of answering from words it
 # does not hold (a search would return nothing, as if the catalogue lacked the column).
-INDEX_VERSION = "4"
+INDEX_VERSION = "5"
 
 
 class StaleIndexError(OperatorError):
@@ -121,6 +122,10 @@ class SearchRequest(BaseModel):
 
     query: str = PydanticField(default="", max_length=256)
     source_id: str | None = None
+    # Several sources at once, set by `ask` when a question names an engine or a source.
+    source_ids: list[str] | None = None
+    # Only tables, collections and views, set by `ask` for a list question.
+    objects_only: bool = False
     kind: str | None = None
     data_type: str | None = None
     tag: str | None = None
@@ -139,7 +144,22 @@ def _database(state: Path) -> Path:
     return state / "catalog.sqlite3"
 
 
-def index_snapshot(snapshot: Path, state: Path) -> str:
+def _excluded(source_id: str, object_item: Object, exclude: dict[str, list[str]]) -> bool:
+    """Whether an operator's per-source exclude pattern (DEC-8) hides this object from search.
+    Patterns are case-insensitive globs on the object name or `namespace.name`."""
+    names = {object_item.name.casefold()}
+    if object_item.namespace:
+        names.add(f"{object_item.namespace}.{object_item.name}".casefold())
+    return any(
+        fnmatch.fnmatchcase(name, pattern.casefold())
+        for pattern in exclude.get(source_id, [])
+        for name in names
+    )
+
+
+def index_snapshot(
+    snapshot: Path, state: Path, exclude: dict[str, list[str]] | None = None
+) -> str:
     manifest, tables = read_artifact(snapshot)
     if manifest.content_type != "catalog-snapshot":
         raise ValueError("expected catalog snapshot")
@@ -162,6 +182,8 @@ def index_snapshot(snapshot: Path, state: Path) -> str:
             "capabilities TEXT, evidence_status TEXT, object_name TEXT, namespace TEXT, "
             "description TEXT)"
         )
+        connection.execute("CREATE TABLE sources(id TEXT PRIMARY KEY, kind TEXT, name TEXT)")
+        exclude = exclude or {}
         statuses: dict[str, set[str]] = {}
         for record in tables["edges.jsonl"]:
             edge = Edge.model_validate(record.model_dump(mode="json"))
@@ -172,7 +194,27 @@ def index_snapshot(snapshot: Path, state: Path) -> str:
             for record in tables["nodes.jsonl"]
             if record.record_type == "object"
         }
+        skipped = {
+            object_id
+            for object_id, item in owners.items()
+            if _excluded(item.source_id, item, exclude)
+        }
+        # What a source is called is searchable on every one of its entries, so "ClickHouse
+        # tables" finds the tables of the source whose engine kind is `clickhouse` (DEC-7).
+        source_words: dict[str, str] = {}
         for record in tables["nodes.jsonl"]:
+            if record.record_type == "source":
+                source_item = Source.model_validate(record.model_dump(mode="json"))
+                connection.execute(
+                    "INSERT INTO sources VALUES (?,?,?)",
+                    (source_item.id, source_item.kind, source_item.name),
+                )
+                source_words[source_item.id] = " ".join(
+                    {source_item.id, source_item.kind, source_item.name}
+                )
+        for record in tables["nodes.jsonl"]:
+            if record.id in skipped or getattr(record, "object_id", None) in skipped:
+                continue
             row: tuple[str, str, str, str, str | None, str | None, str, str, str, str]
             extra: tuple[str | None, str | None, str | None]
             if record.record_type == "object":
@@ -220,7 +262,11 @@ def index_snapshot(snapshot: Path, state: Path) -> str:
                 (
                     row[0],
                     _indexed_text(row[3]),
-                    " ".join(_indexed_text(part) for part in extra[:2] if part),
+                    " ".join(
+                        _indexed_text(part)
+                        for part in (*extra[:2], source_words.get(row[1]))
+                        if part
+                    ),
                     _indexed_text(extra[2]),
                 ),
             )
@@ -270,9 +316,11 @@ def search(state: Path, request: SearchRequest) -> dict:
                 and term.casefold() not in STOPWORDS
                 and not STOPWORDS.intersection(_singulars(term.casefold()))
             ]
-            if not terms:
+            if not terms and not (request.objects_only and request.source_ids):
                 # A question made only of common words has nothing to look up. Returning every
-                # entry instead would hand a model an arbitrary slice of the catalogue.
+                # entry instead would hand a model an arbitrary slice of the catalogue. A list
+                # question scoped to a named source is the exception: its answer is that
+                # source's objects.
                 return _empty(manifest, digest, request)
         sql = "SELECT e.* FROM entries e"
         conditions = []
@@ -295,9 +343,26 @@ def search(state: Path, request: SearchRequest) -> dict:
             if value is not None:
                 conditions.append(condition)
                 parameters.append(value)
+        if request.source_ids:
+            conditions.append(f"e.source_id IN ({','.join('?' * len(request.source_ids))})")
+            parameters.extend(request.source_ids)
+        if request.objects_only:
+            conditions.append("e.kind != 'field'")
         if conditions:
             sql += " WHERE " + " AND ".join(conditions)
-        if terms:
+        if terms and request.match == "any":
+            # A question that names a table or a topic gets that object before any column that
+            # merely mentions it (DEC-7): the object's own name is one of the question's words.
+            named = sorted(
+                {*(term.casefold() for term in terms)}
+                | {single for term in terms for single in _singulars(term.casefold())}
+            )
+            sql += (
+                f" ORDER BY (e.kind != 'field' AND lower(e.name) IN ({','.join('?' * len(named))}))"
+                " DESC, e.name = ? COLLATE NOCASE DESC, rank, e.name COLLATE NOCASE, e.id"
+            )
+            parameters.extend([*named, request.query.strip()])
+        elif terms:
             # An entry named exactly as asked comes first: a plural query also matches its
             # singular, and `invoices` must not rank below `invoice` for `invoices`.
             sql += " ORDER BY e.name = ? COLLATE NOCASE DESC, rank, e.name COLLATE NOCASE, e.id"
@@ -337,6 +402,36 @@ def search(state: Path, request: SearchRequest) -> dict:
         "limit": request.limit,
         "offset": request.offset,
     }
+
+
+# Words that ask for a list of objects when plural ("which tables ...", "list the collections").
+OBJECT_WORDS = frozenset("table collection view".split())
+
+
+def question_scope(state: Path, question: str) -> tuple[list[str], bool, set[str]]:
+    """What a natural-language question names: the sources it mentions by ID, engine kind or
+    name, whether it asks for a list of objects, and the words that named the sources, which
+    filter the search and so need not also match (DEC-7). Reads the index only."""
+    database = _database(state)
+    if not database.is_file():
+        return [], False, set()
+    words = [word.casefold() for word in re.findall(r"\w+", question, flags=re.UNICODE)]
+    forms = {word: {word, *_singulars(word)} for word in words}
+    with closing(sqlite3.connect(database)) as connection:
+        try:
+            rows = connection.execute("SELECT id, kind, name FROM sources").fetchall()
+        except sqlite3.OperationalError:
+            return [], False, set()  # an old index: `search` refuses it with STALE_INDEX
+    named = {word for word, alternatives in forms.items() if alternatives & {
+        value.casefold() for row in rows for value in row
+    }}
+    sources = sorted(
+        row[0] for row in rows if {value.casefold() for value in row} & named
+    )
+    listing = any(
+        word.endswith("s") and OBJECT_WORDS.intersection(_singulars(word)) for word in words
+    )
+    return sources, listing, named if sources else set()
 
 
 def _term_query(term: str) -> str:
