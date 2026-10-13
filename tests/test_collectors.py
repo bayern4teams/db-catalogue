@@ -182,6 +182,24 @@ def test_clickhouse_uses_uuid_identity():
     assert "toYYYYMM" not in str(records["objects.jsonl"][0].attributes)
 
 
+def test_clickhouse_reports_a_one_column_key_as_a_weak_claim_by_name_only():
+    records = discover_clickhouse(ChClient(), config("clickhouse"), Budget(2))
+    claims = records["constraints.jsonl"]
+    assert [(c.kind, c.field_names, c.native_id) for c in claims] == [
+        ("index", ["id"], "uuid-42:primary_key")
+    ]
+
+
+def test_clickhouse_skips_expression_and_multi_column_keys():
+    class Composite(ChClient):
+        tables_row = (
+            *ChClient.tables_row[:4], "toDate(day), id", "a, id", *ChClient.tables_row[6:]
+        )
+
+    records = discover_clickhouse(Composite(), config("clickhouse"), Budget(2))
+    assert records["constraints.jsonl"] == []
+
+
 def test_clickhouse_omits_unavailable_count():
     class UnknownCount(ChClient):
         tables_row = (*ChClient.tables_row[:-2], None, "")

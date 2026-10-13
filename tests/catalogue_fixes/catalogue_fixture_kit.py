@@ -84,7 +84,8 @@ def write_bundle(path: Path, source_id: str, kind: str, tables: dict[str, dict])
     `unique` {field: measured uniqueness} (a planner statistic), `values` {field: [values]}
     (planted ground truth, tokenised), `token_key` (key id, default run-1), `profiles` {field:
     {Profile kwargs}}, `descriptions` {field: text}, `kind` (default table), `foreign`
-    [(child field, parent table, parent field)] (a declared foreign key within this source).
+    [(child field, parent table, parent field)] (a declared foreign key within this source),
+    `weak_key` field (a ClickHouse-style one-column sorting key, reported as an `index` constraint).
     """
     common = _common(source_id)
     objects, fields, constraints, profiles, tokens = [], [], [], [], []
@@ -166,6 +167,18 @@ def write_bundle(path: Path, source_id: str, kind: str, tables: dict[str, dict])
                     "kind": "primary",
                     "object_id": item.id,
                     "field_names": spec["key"],
+                    **common,
+                }
+            )
+        if spec.get("weak_key"):
+            constraints.append(
+                {
+                    "record_type": "constraint",
+                    "id": stable_id(source_id, "constraint", f"{table}:sorting_key"),
+                    "native_id": f"{table}:sorting_key",
+                    "kind": "index",
+                    "object_id": item.id,
+                    "field_names": [spec["weak_key"]],
                     **common,
                 }
             )

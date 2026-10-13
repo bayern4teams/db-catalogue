@@ -90,6 +90,8 @@ REFERENCE_SUFFIXES = ("_uuid", "_code", "_num", "_ref", "_key", "_id", "_fk", "_
 # A field measured this unique is treated as a possible parent key even with no declared
 # constraint, which is how a table that never declared a primary key can still be referenced.
 MEASURED_UNIQUE = 0.99
+# Native ID suffixes the ClickHouse collector gives a one-column key it reports as a key claim.
+WEAK_KEY_SUFFIXES = (":sorting_key", ":primary_key")
 
 
 def _measure(profiles: list[Profile] | None, name: str) -> float | None:
@@ -465,10 +467,21 @@ def assemble(
     # together and in sequence, so the order the source declared is preserved throughout.
     composite_keys: list[tuple[str, list[Field]]] = []
     declared_pairs: set[tuple[str, str]] = set()
+    # ClickHouse keeps no unique constraint; a one-column sorting or primary key is only a weak
+    # claim of a parent key (user decision 2026-10-13, DEC-2), labelled as such in the evidence.
+    weak_key_ids: set[str] = set()
     for constraint in constraints:
         kind = constraint.kind
         owner = constraint.object_id
         ordinals = constraint.field_ordinals
+        if (
+            kind == "index"
+            and constraint.native_id.endswith(WEAK_KEY_SUFFIXES)
+            and len(constraint.field_names) == 1
+        ):
+            weak_field = by_object_name.get(owner, {}).get(constraint.field_names[0])
+            if weak_field:
+                weak_key_ids.add(weak_field.id)
         if kind in {"primary", "unique"} and len(ordinals) == 1:
             unique_field = by_object.get(owner, {}).get(ordinals[0])
             if unique_field:
@@ -539,9 +552,9 @@ def assemble(
     for candidate_parent in fields.values():
         if candidate_parent.id in declared_unique or candidate_parent.object_id in keyed_objects:
             continue
-        if (_measure(field_profiles.get(candidate_parent.id), "uniqueness") or 0.0) >= (
-            MEASURED_UNIQUE
-        ):
+        if candidate_parent.id in weak_key_ids or (
+            _measure(field_profiles.get(candidate_parent.id), "uniqueness") or 0.0
+        ) >= MEASURED_UNIQUE:
             unique_fields.append(candidate_parent)
     dropped_zero_overlap = 0
     known_objects = frozenset(
@@ -639,6 +652,15 @@ def assemble(
             if parent.id in declared_unique:
                 key = _evidence(parent, "catalog_key", child.id, f"unique:{child.id}")
                 key_claim = "declared unique key"
+            elif parent.id in weak_key_ids:
+                key = _evidence(
+                    parent,
+                    "weak_key_claim",
+                    child.id,
+                    f"weak-key:{child.id}",
+                    explanation="the source's sorting or primary key; not a uniqueness guarantee",
+                )
+                key_claim = "weak key claim (source sorting or primary key, uniqueness unproven)"
             else:
                 # A measurement, not a catalog assertion. Kept as a separate evidence kind so the
                 # two are never read as the same strength of claim.

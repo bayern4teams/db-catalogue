@@ -377,6 +377,12 @@ can tell a fuzzy suffix match from an exact bare-name match without re-deriving 
    are excluded, since every table has an `id`. This links `AccountID` in ClickHouse and MongoDB
    to PostgreSQL's `"Customer Accounts"."AccountID"`, which rule 1 cannot (`account` is too far
    from `customer account`).
+7. **Weak key claim (2026-10-13, DEC-2).** The ClickHouse collector reports a table's
+   one-column plain sorting or primary key as an `index` constraint whose `native_id` ends in
+   `:primary_key` or `:sorting_key` (column names only; expressions and multi-column keys are
+   skipped). The builder admits that column as a parent with evidence kind `weak_key_claim` and
+   the explanation "uniqueness unproven"; it is never a declared key, and with sampling on the
+   overlap check still applies.
 
 **Type families (corrected 2026-10-04).** A pair is compared only within one type family. The
 families used to be the type name with its parameters cut off, so ClickHouse `String`,

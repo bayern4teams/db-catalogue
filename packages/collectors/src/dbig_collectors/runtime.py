@@ -538,6 +538,7 @@ def discover_clickhouse(
             listed.add(database)
         identities: dict[str, str] = {}
         row_counts: dict[str, int] = {}
+        key_expressions: dict[str, dict[str, str]] = {}
         for (
             name,
             uuid,
@@ -574,6 +575,7 @@ def discover_clickhouse(
             if total_rows is not None:
                 attributes["row_count_estimate"] = int(total_rows)
                 attributes["row_count_method"] = "system.tables.total_rows"
+            key_expressions[name] = {"primary_key": primary_key, "sorting_key": sorting_key}
             for key, expression in (
                 ("partition", partition_key),
                 ("sort", sorting_key),
@@ -618,6 +620,7 @@ def discover_clickhouse(
         ).result_set
         if len(columns) > config.max_fields:
             raise BudgetExhausted
+        column_names: dict[str, set[str]] = defaultdict(set)
         for table, name, data_type, position, uncompressed, comment in columns:
             if table not in identities:
                 continue
@@ -636,6 +639,7 @@ def discover_clickhouse(
                     **common,
                 )
             )
+            column_names[table].add(name)
             width = _average_width(uncompressed, row_counts.get(table))
             if width is not None:
                 tables["profiles.jsonl"].append(
@@ -648,6 +652,31 @@ def discover_clickhouse(
                         method="source_statistic",
                         average_width_bytes=width,
                         **common,
+                    )
+                )
+        # A sorting or primary key that is one plain column is a weak parent claim (DEC-2): schema
+        # metadata, not values, and not a uniqueness guarantee. `index` is the existing kind that
+        # carries column names; the native ID suffix says it is a key claim, not a skip index.
+        # ponytail: expressions and multi-column keys are skipped; upgrade is parsing them.
+        for table, expressions in key_expressions.items():
+            for claim, expression in expressions.items():
+                column = (expression or "").strip().strip("`")
+                if not _PLAIN_COLUMN.fullmatch(column) or column not in column_names[table]:
+                    continue
+                if claim == "sorting_key" and expressions["primary_key"] == expression:
+                    continue
+                native = f"{identities[table]}:{claim}"
+                tables["constraints.jsonl"].append(
+                    Record.model_validate(
+                        {
+                            "record_type": "constraint",
+                            "id": stable_id(config.source_id, "constraint", native),
+                            "native_id": native,
+                            "kind": "index",
+                            "object_id": stable_id(config.source_id, "object", identities[table]),
+                            "field_names": [column],
+                            **common,
+                        }
                     )
                 )
     empty = [item for item in config.namespaces if item not in listed]
@@ -668,6 +697,9 @@ def discover_clickhouse(
             config, [item for item in empty if item not in existing], "database"
         )
     return tables
+
+
+_PLAIN_COLUMN = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 
 
 def _average_width(uncompressed: Any, rows: int | None) -> int | None:
