@@ -51,3 +51,11 @@ Every proposal and check sentence mapped to a commit and a test, or to why it is
 - G1 (A1(3)): the planner warns only when no edge carries value evidence. A candidate whose sample was below the drop threshold is kept and labelled "sample too small" and the plan does not name it. No choice needed to review; recorded, not changed.
 - G2 (B5(1)): MongoDB collections still never become parents and composite ClickHouse keys give no claim. Needs the DEC-14 choice (statistics) to be useful.
 - DEC-14 and DEC-15 added to HANDOFF.md as open Decisions; they block nothing else.
+
+## H2 regression (final code of 2026-10-13)
+- Full suite: 663 passed, 68 skipped. `ruff`, `mypy packages` clean. `pip-audit --skip-editable`: no known vulnerabilities; `supply_chain.py`: 113 components, 0 unresolved licences. Phase 0 fixtures: no leftover strict `xfail` (the only mentions are docstrings).
+- Attack files run by path (all pass unless listed). Failures are known and each has a cause, not a regression:
+  - `attack2_d3_lowercase.py` (27): its fixture parent column `rowkey` does not resemble the child name; DEC-1 (user: "propose nothing if none resembles") now refuses it on purpose. The same cases with a resembling parent column pass in `test_d3_lowercase_refs.py`.
+  - `attack3_a_dec12_noise.py` (12): ordinary shared names link on a measured-unique parent -> DEC-16 (open).
+  - `attack3_a_dec1.py` (1, two near-identical unique parent columns both become candidates), `attack3_a_dec2.py` (1, a weak ClickHouse key beats a measured 0.2 uniqueness), `attack3_a_dec4.py` (1, a path with a same-source middle hop does not warn; the Decision says "every hop"): open policy points in HANDOFF.md.
+  - `attack3_b_answering_retrieval.py` (6): five paraphrased lineage claims (documented `ponytail:` ceiling) and a source id that is also a word prefix; `attack_search.py` (1): `pos` is a prefix of the engine word `postgresql`, now searchable by DEC-7.

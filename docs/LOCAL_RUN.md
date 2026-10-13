@@ -343,6 +343,12 @@ Use the same key and ID for every source in a run and a new key for each run. On
 leave the collector; the key never enters any file, and digests from different runs cannot be
 compared.
 
+### What the overlap does to candidates
+
+With sampling on, a cross-source candidate whose child values were compared and found **0 of N** (N at least `min_token_support`, default 4, in the `[builder]` file) is dropped. A candidate with some overlap, even 21 % to 27 %, stays and shows its number and sample size: overlap ranks and warns, it never decides alone. A sample smaller than `min_token_support` keeps the candidate, marked "sample too small". With sampling off every candidate says "values not compared". Two optional `[builder]` lists restrict candidates by source: `source_groups` (sources in different groups are not linked) and `forbidden_source_pairs`; both default to empty. See `examples/local/builder.toml`.
+
+Other settings added after the live test, all optional, with defaults in the example files: `[builder.review] batch_size = 5` (candidates per model call); `[requester] exclude_objects` (per source glob list, hides schema-description collections; re-run `dbig-requester index`); `[requester.answer] relationship_limit = 20` (relationships given to the model, 0 turns them off); planner `cross_source_candidate_weight = 4` (how much longer a cross-source path must be to lose against a same-source one). `ask` can reply `NOT_ESTABLISHED_BY_CATALOGUE`: that is an answer ("the catalogue does not show this"), not an error.
+
 ## 9. Optional: your own vLLM, for review and for questions
 
 Start vLLM bound to loopback with an API key. `--host` defaults to all interfaces, so set it:
@@ -447,6 +453,7 @@ A failed scan's receipt carries `error`, the same one-line message `collect` wou
 | `signature key unavailable` / `invalid artifact signature` | `DBIG_SIGNING_KEY` differs between `collect` and `assemble`; use one key per run. |
 | `bundle ... was not assembled into this snapshot` | Pass `render` the same bundles you passed `assemble`. |
 | `no search index at ...` | Run `dbig-requester index` for this run first. |
+| `DBIG_SIGNING_KEY ... must hold at least 32 bytes` | Generate a longer key, for example `python -c 'import secrets; print(secrets.token_urlsafe(48))'`. The message never prints the key. |
 | `STALE_INDEX` | The snapshot changed after indexing; run `dbig-requester index` again. |
 | `STALE_PATH` | The path came from another graph; run `join-paths` again against this one. |
 

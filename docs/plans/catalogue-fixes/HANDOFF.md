@@ -3,14 +3,14 @@
 Overwrite this file at every commit. A fresh session reads it first, then
 [the plan](../CATALOGUE_FIXES_IMPLEMENTATION_PLAN.md). Git is the memory; a session's context is not.
 
-**Lock:** 2026-10-13T08:55:42Z · **Autonomy:** unattended-through-phase-5 · **Last heartbeat:** 2026-10-13T08:55:42Z
+**Lock:** 2026-10-13T09:03:07Z · **Autonomy:** unattended-through-phase-5 · **Last heartbeat:** 2026-10-13T09:03:07Z
 
 (Lock/heartbeat protocol: plan §7. A session sets `Lock: <ISO time>`, pushes it, and refreshes it at
 every commit; a lock older than 75 min is stale. `Autonomy` is `off`, `dryrun` (a tick only records
 what works and exits) or `unattended-through-phase-N` (authorises the supervisor to chain phases).
 Only the user changes it.)
 
-**Branch:** `feat/catalogue-fixes` (from `claude/gracious-bardeen-x1y6he` at `2e87fa7`, plus the report commit) · **Current phase:** done
+**Branch:** `feat/catalogue-fixes` (from `claude/gracious-bardeen-x1y6he` at `2e87fa7`, plus the report commit) · **Current phase:** 5
 
 | item | phase | state | commit | lead verdict |
 |---|---|---|---|---|
@@ -40,10 +40,10 @@ Only the user changes it.)
 | Final integration, ponytail audit/debt/gain, final report | 4 | accepted-cloud (FINAL_REPORT.md, CI 38364522034 green on `c01d115`) | | |
 | H0 coverage audit of engineer-fixes.md against the built work | 5 | accepted-cloud | | lead: table in PHASE5_REPORT.md; gaps G1, G2; DEC-14 and DEC-15 opened (block nothing else) |
 | H1 independent attack with mutation proof on every Phase 3 item and C2 | 5 | accepted-cloud | | lead: three verifier groups done with mutation proof; defects fixed by lead: DEC-3 composite, DEC-4 max_paths, DEC-5 edge order, DEC-6 whitespace, DEC-7 source-scoped lists, E1 scan signing + non-UTF-8 key; see Open escalations; DEC-16 opened |
-| H2 regression: all attack files, Phase 0 fixtures, full suite, pip-audit | 5 | todo | | |
+| H2 regression: all attack files, Phase 0 fixtures, full suite, pip-audit | 5 | accepted-cloud | | lead: see PHASE5_REPORT.md H2; failing attack probes explained, none a regression |
 | H3 report-shaped synthetic end-to-end scenario, counts before/after | 5 | todo | | |
 | H4 privacy canaries across the new code paths | 5 | todo | | |
-| H5 documentation and example audit, cloud-runnable commands run | 5 | todo | | |
+| H5 documentation and example audit, cloud-runnable commands run | 5 | in-progress | | config keys in examples and LOCAL_RUN.md done; waiting for H3/H4 findings |
 | H6 LOCAL_VERIFY.md as one ordered run with a send-back template | 5 | todo | | |
 | H7 final gate: full check, CI, ponytail review/debt | 5 | todo | | |
 | H8 hand-over: READY FOR LOCAL VERIFY | 5 | todo | | |

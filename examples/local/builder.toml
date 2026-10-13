@@ -2,3 +2,14 @@
 # environment variable that holds the key.
 [builder]
 signing_keys = { local = "DBIG_SIGNING_KEY" }
+
+# Optional inference settings (defaults shown; remove the leading # to change one).
+# A measured value overlap of 0 found out of at least this many compared values drops a
+# cross-source candidate; below it the candidate stays, marked "sample too small". Only
+# applies when the source files set sample_rows and value_token_key_env.
+# min_token_support = 4
+# Optional operator knowledge. Cross-source candidates are proposed only between sources of
+# the same group (a source in no group is unrestricted) and never between a forbidden pair.
+# Default: none, so nothing is restricted.
+# source_groups = [["postgres_main", "mongo_main"]]
+# forbidden_source_pairs = [["postgres_main", "clickhouse_main"]]

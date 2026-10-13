@@ -14,3 +14,6 @@ model_digest = "replace-with-the-revision-you-pinned"  # recorded as provenance,
 api_key_env = "VLLM_API_KEY"           # the same token you passed to `vllm serve --api-key`
 timeout_seconds = 60
 max_candidates = 20
+# Candidates sent per model call. A reasoning model that runs out of max_tokens on 20 at once
+# usually finishes 5; the first failing batch ends the review and keeps earlier decisions.
+# batch_size = 5
