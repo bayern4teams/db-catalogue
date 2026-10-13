@@ -369,10 +369,10 @@
     "evidence": "spdx-expression",
     "release_url": "https://pypi.org/pypi/pygments/2.21.0/json"
   },
-  "pymongo==4.18.1": {
+  "pymongo==4.18.2": {
     "declaration": "Apache-2.0",
     "evidence": "spdx-expression",
-    "release_url": "https://pypi.org/pypi/pymongo/4.18.1/json"
+    "release_url": "https://pypi.org/pypi/pymongo/4.18.2/json"
   },
   "pyparsing==3.3.3": {
     "declaration": "MIT",
