@@ -241,9 +241,9 @@ dry-run tick fails, fall back to an attended session with the same protocol).
   action is "done" or "waiting for the user"; or `Lock` is younger than 75 minutes (another
   session is alive). Otherwise it takes the lock and acts as **lead** for as long as it can.
   An idle tick costs almost nothing, so hourly resumes soon after each window reset.
-- **Phases chain automatically** once the user sets `Autonomy: unattended-through-phase-4`:
+- **Phases chain automatically** once the user sets `Autonomy: unattended-through-phase-5`:
   the phase gate (§8) must pass, including a green CI run on the pushed head, before
-  `HANDOFF.md` advances to the next phase. After Phase 4 the supervisor stops and never merges.
+  `HANDOFF.md` advances to the next phase. After the last authorised phase the supervisor stops and never merges.
 - **Never lose an item.** Commit `WIP <id>` before any long operation. A session that finds
   uncommitted work or a stale lock inspects `git status`, finishes or discards it deliberately,
   and records which in `HANDOFF.md`.
@@ -300,6 +300,11 @@ Then push and start CI: `gh workflow run ci.yml --ref feat/catalogue-fixes`; the
   whole branch diff, `/ponytail-audit`, `/ponytail-debt`, `/ponytail-gain`; every `HANDOFF.md` row has a lead verdict; finalise `LOCAL_VERIFY.md`;
   update `TECHNICAL_IMPLEMENTATION.md`, `docs/` and `TODO.md` for changed behaviour; purge `.handoff/` after folding its verdicts into a short final
   report; `[Catalogue fixes COMPLETE]`. **Stop. Never merge.**
+
+- **Phase 5 — cloud hardening and hand-over to local (added 2026-10-13 at the user's request).** Everything the cloud can still test or implement, then a clear hand-over.
+  Items H0 to H8 (§9). Starts when Phase 4 is done and the user has set `Autonomy: unattended-through-phase-5`. It ends in `READY FOR LOCAL VERIFY`, not in
+  "complete": the Next action becomes `READY FOR LOCAL VERIFY - waiting for the user`, and the commit and the Notifications entry start with
+  `[READY FOR LOCAL VERIFY]`. Never merge.
 
 ### Phase gate (end of every phase)
 
@@ -372,6 +377,41 @@ what B1 fixed, that a reasoning model needs a larger `max_tokens` and a longer `
 | DEC-12 | B5, X1 | Extend the `key_name` rule to a **measured-unique** parent column (identical, non-generic column name), so `companyindustry.classificationid` links to `industryclassification.classificationid`; the user's 2026-10-05 decision admitted it only for **declared** keys. With sampling on, the A1 overlap check guards it | `builder.py` | yes |
 
 *Accept for every Phase 3 item:* the Decision's check from `engineer-fixes.md` as a synthetic test that fails on the old code; the 20 harder questions re-run is `unverified-live`.
+
+### Phase 5 (cloud hardening; lead chain, verifiers in parallel up to the cap)
+
+**H0 — coverage audit.** Map every sentence of the *Proposal* and *Check* of each item A1 to D9 in `artifacts/engineer-fixes.md`, and each Decision's built scope, to a
+commit and a test, or to an explicit "not built because <Decision answer / ceiling / needs live>". Write the table to `PHASE5_REPORT.md`. Any gap that the cloud can implement and
+that needs no choice from the user is implemented now (with its test); a gap that needs a choice becomes a Decision row and `blocked` (plan §2.9) while the rest continues.
+
+**H1 — independent attack on every Phase 3 item** (C2, DEC-1, DEC-2, DEC-3, DEC-4, DEC-5, DEC-6, DEC-7, DEC-8, DEC-9, DEC-10, DEC-12, E1; they had only the lead's own tests). One
+`catalogue-fixes-verifier` per group, at most two at a time: (a) inference and planner: DEC-12, DEC-2, DEC-1, DEC-3, DEC-4, C2; (b) answering and retrieval: DEC-5, DEC-6, DEC-7, DEC-8, DEC-9;
+(c) DEC-10, E1 and the error codes. The verifier derives its checks **from `engineer-fixes.md` and the Decision text only, before opening the implementation**, writes them under
+`tests/catalogue_fixes/` (attack files stay not collected by default; the lead runs them by path), then attacks the result. For every item it also shows, by reverting the item's
+change on a scratch copy, that its negative case fails without the change (mutation proof). Lead decides ACCEPT or REJECT; a rejected item is corrected and re-attacked, at most two rounds, then the lead takes over.
+
+**H2 — regression of everything earlier.** Run all attack files of Phases 0 to 2 and 5 by path, the Phase 0 fixtures (no leftover strict `xfail` that now passes, none removed without a note),
+the full suite, and `pip-audit`; all green on the final code.
+
+**H3 — report-shaped synthetic end-to-end scenario with planted ground truth** (counts only). Three synthetic sources mirroring the report's failure shapes: two datasets whose key columns share no values; a
+PostgreSQL-like schema with no declared keys and lowercase names without separators; a ClickHouse-like schema with camelCase columns and a declared sorting key; a MongoDB-like schema with a
+schema-description collection. Run it through assemble, render, index, search, `ask` against the recording stub, `join-paths` and `plan`, with value sampling on and off. Report in `PHASE5_REPORT.md`: candidates true/false/missed against the planted
+truth (before = the behaviour recorded in `PHASE0_REPORT.md`), join paths found for the analogues of J1 to J4 and X1, retrieval recall in the top 10 for planted analogues of the 20 questions, and every `partial` reason shown. If it needs
+real containers, say so and use the CI `source-integration` jobs only through an existing test file; changing `ci.yml` is a Decision.
+
+**H4 — privacy canaries.** Plant a canary string as a sampled value, SQL literal, secret and prompt text. Assert it appears in no artifact, log, diagnostic, error message, `partial_reasons` entry, trace,
+`cited` field, or request body sent to the stub model (only names, types and evidence numbers are allowed there), across the review batches (DEC-10), the relationship context (DEC-5), resolved cited names
+(DEC-9), the weak key claim (DEC-2) and the new error codes.
+
+**H5 — documentation and example audit.** Every changed or new config key, error code (`NOT_ESTABLISHED_BY_CATALOGUE`, the C1 codes, `STALE_INDEX`), CLI behaviour and schema field appears, with its default, in `docs/LOCAL_RUN.md`,
+`docs/LIVE_TEST.md`, `examples/local/*.toml` (commented) and `TECHNICAL_IMPLEMENTATION.md`. Run every documented command that can run in the cloud against fixtures; list the rest in `LOCAL_VERIFY.md`. Fix the "Final integration" row and any other stale text in `HANDOFF.md` and `TODO.md`.
+
+**H6 — `LOCAL_VERIFY.md` as one ordered run for the user.** Top section "Start here": pull, `uv sync` with the pinned graph tools note, `dbig-requester index`, the exact sampling config snippet to turn on value overlap in all three source configs, the recommended `max_tokens` and
+`timeout_seconds` for the reasoning model from the report's measurements, then one numbered list of live checks, each with its command, the report's *before* value and the expected *after*. End with a "send back" template (counts and names only, no values, no secrets) shaped like the live report's section 13.
+
+**H7 — final gate.** Full check, CI dispatched on the final head and green in every job, `/ponytail-review` of the Phase 5 diff, `/ponytail-debt`, graphs refreshed, `FINAL_REPORT.md` updated with Phase 5 results and the coverage table.
+
+**H8 — hand-over.** Next action `READY FOR LOCAL VERIFY - waiting for the user`; the Notifications entry and the commit start with `[READY FOR LOCAL VERIFY]` and say, in at most ten lines: what the cloud proved, what is `unverified-live`, any Decision still open, and the first three commands to run locally. Clear the lock, push, try the push-notification tool (it may not reach the user). Stop.
 
 ## 10. After the final phase
 

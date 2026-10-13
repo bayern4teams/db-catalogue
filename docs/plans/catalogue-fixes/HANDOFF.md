@@ -37,7 +37,16 @@ Only the user changes it.)
 | B2 review in batches (DEC-10) | 3 | unverified-live | | lead: `batch_size` (default 5) in ReviewConfig; first failing batch ends the review and keeps earlier decisions; 6 tests |
 | B5/X1 `key_name` for measured-unique parents (DEC-12) | 3 | accepted-cloud | | lead: identical non-generic name on a measured-unique parent links (tests flipped on purpose: test_inference_decisions, test_d3); 613 passed |
 | E1 `DBIG_SIGNING_KEY` under 32 bytes: one-line operator error instead of a ValueError traceback (user approved 2026-10-13; found by the lead, outside engineer-fixes.md) | 3 | accepted-cloud | | lead: `key_from_env` in dbig_contracts.security (SecretReferenceError, names the variable, never the key) used by collect, token key and builder; scan signing error is an OperatorError; 2 tests |
-| Final integration, ponytail audit/debt/gain, final report | 4 | todo | | |
+| Final integration, ponytail audit/debt/gain, final report | 4 | accepted-cloud (FINAL_REPORT.md, CI 38364522034 green on `c01d115`) | | |
+| H0 coverage audit of engineer-fixes.md against the built work | 5 | todo | | |
+| H1 independent attack with mutation proof on every Phase 3 item and C2 | 5 | todo | | |
+| H2 regression: all attack files, Phase 0 fixtures, full suite, pip-audit | 5 | todo | | |
+| H3 report-shaped synthetic end-to-end scenario, counts before/after | 5 | todo | | |
+| H4 privacy canaries across the new code paths | 5 | todo | | |
+| H5 documentation and example audit, cloud-runnable commands run | 5 | todo | | |
+| H6 LOCAL_VERIFY.md as one ordered run with a send-back template | 5 | todo | | |
+| H7 final gate: full check, CI, ponytail review/debt | 5 | todo | | |
+| H8 hand-over: READY FOR LOCAL VERIFY | 5 | todo | | |
 
 States: `todo` · `in-progress` · `accepted-cloud` (lead accepted, cloud-verifiable parts proven)
 · `unverified-live` (accepted but needs the real environment — see LOCAL_VERIFY.md) · `blocked` (needs a user Decision or a missing tool) · `deferred-by-user` (the user answered "no" or "later").
@@ -81,7 +90,7 @@ Phase 0 table (file -> sole owner while its items are open; plan §8/§9 DAG; gr
 Phase 1: lane R and lane D concurrent (disjoint files); lead does C1 builder half, C2, D1b. Phase 2: lead chain only.
 
 ## Next action
-Catalogue fixes complete - waiting for the user. Read `FINAL_REPORT.md`, then run `LOCAL_VERIFY.md` locally and merge to `main` yourself.
+Phase 5 (cloud hardening), items H0 to H8 in plan section 9, **only when `Autonomy` is `unattended-through-phase-5`** (the user sets it; at `phase-4` exit without doing anything). Start with H0 and H1 in parallel (verifiers, at most 2 at a time), then H2 to H7. Finish with H8: Next action `READY FOR LOCAL VERIFY - waiting for the user`.
 
 ## Notifications
 - [Catalogue fixes COMPLETE] 2026-10-13: Phase 4 done (final report, LOCAL_VERIFY finalised, `.handoff/` purged, ponytail review/debt recorded in FINAL_REPORT.md). Never merged.

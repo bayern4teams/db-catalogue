@@ -19,7 +19,7 @@ carry a repo — cloud re-check #2): repo `bayern4teams/db-catalogue`, that dedi
 GitHub connector, cron `0 * * * *`, Opus 5.5, high effort, and the fenced block below as its
 prompt. The routine is the user's standing authorisation to schedule and to chain phases; nothing
 else is. Set `Autonomy: dryrun` in HANDOFF.md first (step 1b), confirm one tick, then switch to
-`unattended-through-phase-4`.
+`unattended-through-phase-5`.
 
 ```
 You are the lead engineer's supervisor tick for Catalogue fixes. Work on branch feat/catalogue-fixes only;
@@ -51,7 +51,8 @@ never check out, merge, rebase or delete another branch.
      "allowed_warning"; the warning band is NOT a reason to stop: work, commit per step, and let
      the limit end the session);
    - HANDOFF.md says "Autonomy: off";
-   - the Next action says Catalogue fixes is complete or "waiting for the user";
+   - the Next action says Catalogue fixes is complete, `READY FOR LOCAL VERIFY` or "waiting for the user";
+   - the next phase is higher than N in `Autonomy: unattended-through-phase-N` (the user has not authorised it);
    - HANDOFF.md "Lock" is younger than 75 minutes (another session is alive).
 3. Otherwise take the lock: set "Lock: <current ISO time>" in HANDOFF.md, commit, push. If that push
    is rejected, another session got there first: git pull --rebase, re-read "Lock"; if it is now
@@ -75,8 +76,9 @@ never check out, merge, rebase or delete another branch.
 6. At a phase end: the project's full check command (the "Full check" in plan section 8) green, push, wait for CI on the pushed head to be green
    (gh run list/watch), run /ponytail-review on the phase diff, then advance HANDOFF.md and
    record "[PHASE n DONE]" under Notifications. Continue into the next phase.
-7. After Phase 4: write the final report, set Next action to "Catalogue fixes complete - waiting for the
-   user", clear the Lock, commit "[Catalogue fixes COMPLETE]", push, and stop. Never merge.
+7. After the last phase: in Phase 4 write the final report, set the Next action to "Catalogue fixes complete - waiting for the user", clear the Lock, commit
+   "[Catalogue fixes COMPLETE]", push, and stop. In Phase 5 (when authorised) finish with plan item H8 instead: Next action "READY FOR LOCAL VERIFY - waiting for the user",
+   commit and Notifications entry starting "[READY FOR LOCAL VERIFY]", then stop. Never merge.
 8. If you are blocked (CI red you cannot fix, an item rejected twice by yourself, a missing
    tool), write it under Notifications as "[BLOCKED]", clear the Lock, push, and stop.
    Do not work around a denied permission.

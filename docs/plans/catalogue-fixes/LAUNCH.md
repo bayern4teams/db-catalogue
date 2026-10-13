@@ -52,7 +52,7 @@ work. Send the line back if anything fails; the line also records the setup log.
 ## 5. Go live
 ```bash
 git pull --ff-only
-sed -i 's/\*\*Autonomy:\*\* dryrun/**Autonomy:** unattended-through-phase-4/' docs/plans/catalogue-fixes/HANDOFF.md
+sed -i 's/\*\*Autonomy:\*\* dryrun/**Autonomy:** unattended-through-phase-5/' docs/plans/catalogue-fixes/HANDOFF.md
 git add docs/plans/catalogue-fixes/HANDOFF.md && git commit -m "handoff: unattended" && git push origin feat/catalogue-fixes
 ```
 Do not work on `feat/catalogue-fixes` locally while it runs.
