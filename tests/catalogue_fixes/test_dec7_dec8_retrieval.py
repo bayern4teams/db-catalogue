@@ -227,3 +227,27 @@ def test_the_answer_schema_has_the_outcome_and_no_length_bounds(linked, monkeypa
     _, stub = _ask_with(linked, monkeypatch, "What is the lineage of shipment?", "{}")
     schema = stub.schemas[-1]
     assert "outcome" in schema["properties"] and schema_bounds(schema) == []
+
+
+# --- DEC-9: cited IDs resolve to names in the reply ---------------------------------------------
+
+
+def test_cited_ids_are_resolved_to_names_app_side(linked, monkeypatch):
+    reply, payload = _ask_payload(linked, monkeypatch, "How does shipment relate to vendor?")
+    [cited] = reply["cited"]
+    first = payload["items"][0]
+    assert cited["id"] == first["id"] == reply["citations"][0]
+    assert cited["name"] == first["name"]
+
+
+def test_a_cited_relationship_resolves_to_its_tables_and_columns(linked, monkeypatch):
+    import json as _json
+
+    _, payload = _ask_payload(linked, monkeypatch, "How does shipment relate to vendor?")
+    edge_id = payload["relationships"][0]["id"]
+    content = _json.dumps({"answer": "a tentative link", "citations": [edge_id]})
+    reply, _ = _ask_with(linked, monkeypatch, "How does shipment relate to vendor?", content)
+    assert reply["cited"] == [{
+        "id": edge_id, "kind": "relationship",
+        "name": "shipment -> vendor (vendor_id -> id)", "status": "tentative",
+    }]

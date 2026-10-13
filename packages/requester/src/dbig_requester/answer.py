@@ -113,6 +113,26 @@ def _trace(config: AnswerConfig, retrieval_count: int) -> Any:
     )
 
 
+def _resolved(cited: str, entries: list[dict], relationships: list[dict]) -> dict:
+    for item in entries:
+        if item["id"] == cited:
+            return {
+                key: item[key]
+                for key in ("id", "kind", "name", "object_name", "namespace", "source_id")
+                if item.get(key) is not None
+            }
+    for edge in relationships:
+        if edge["id"] == cited:
+            pairs = ", ".join(f"{left} -> {right}" for left, right in edge["columns"])
+            return {
+                "id": cited,
+                "kind": "relationship",
+                "name": f"{edge['from']} -> {edge['to']}" + (f" ({pairs})" if pairs else ""),
+                "status": edge["status"],
+            }
+    return {"id": cited}
+
+
 def answer_question(
     state: Path, question: str, config: AnswerConfig, *, client: Any | None = None
 ) -> dict:
@@ -241,5 +261,10 @@ def answer_question(
         **({"code": NOT_ESTABLISHED} if not_established else {}),
         "answer": parsed.answer,
         "citations": parsed.citations,
+        # Each cited ID resolved to its name, app-side, so a reply is never a list of bare IDs
+        # (DEC-9). Taken from the retrieved metadata, never from the model's text.
+        "cited": [
+            _resolved(cited, results["results"], relationships) for cited in parsed.citations
+        ],
         "model_digest": config.model_digest,
     }
