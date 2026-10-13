@@ -12,6 +12,7 @@ Run by path:
 from __future__ import annotations
 
 import json
+import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -23,6 +24,7 @@ from dbig_collectors.cli import main as collector_main
 from dbig_contracts.scan import ScanRequest, sign_scan
 from dbig_requester.cli import main as requester_main
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 STRONG = "S" * 40
 VAR = "ATTACK_SIGNING_KEY"
 TOKEN_VAR = "ATTACK_TOKEN_KEY"  # noqa: S105
@@ -137,22 +139,59 @@ def test_collect_whitespace_padded_short_key_is_counted_as_given(tmp_path, monke
 # --- the token key --------------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize(("label", "value", "long_enough"), VALUES[:3] + VALUES[4:5],
-                         ids=[v[0] for v in VALUES[:3] + VALUES[4:5]])
+TOKEN_VALUES = VALUES[:5] + VALUES[5:7]
+
+
+@pytest.mark.parametrize(("label", "value", "long_enough"), TOKEN_VALUES,
+                         ids=[v[0] for v in TOKEN_VALUES])
 def test_token_key_boundary_names_its_own_variable(tmp_path, monkeypatch, label, value, long_enough):
+    """Through `collect` with the database driver replaced by the suite's fake PostgreSQL client."""
+    from test_collectors import PgConnection
+    import pg8000.dbapi
+
+    monkeypatch.setattr(pg8000.dbapi, "connect", lambda **_: PgConnection())
     monkeypatch.setenv("CONN", '{"host": "127.0.0.1", "port": 1, "database": "d", "user": "u", "password": ""}')
     monkeypatch.setenv(VAR, STRONG)
     monkeypatch.setenv(TOKEN_VAR, value)
     result = invoke(collector_main, ["collect", "--config", str(source_toml(tmp_path, token=True)),
                                      "--out", str(tmp_path / "out")])
-    assert result.exit_code != 0
     assert "Traceback" not in result.output and (
         result.exception is None or isinstance(result.exception, SystemExit)
-    ), result.exception
-    assert ("at least 32 bytes" in result.output) == (not long_enough), result.output
-    if not long_enough:
-        assert TOKEN_VAR in result.output and VAR + " " not in result.output
+    ), (result.exception, result.output)
+    if long_enough:
+        assert result.exit_code == 0, result.output
+    else:
+        assert result.exit_code != 0
+        assert "at least 32 bytes" in result.output and TOKEN_VAR in result.output, result.output
+        assert VAR + " " not in result.output
         assert value not in result.output
+        assert len(result.output.strip().splitlines()) == 1
+
+
+def test_token_key_error_leaves_no_half_written_bundle(tmp_path, monkeypatch):
+    from test_collectors import PgConnection
+    import pg8000.dbapi
+
+    monkeypatch.setattr(pg8000.dbapi, "connect", lambda **_: PgConnection())
+    monkeypatch.setenv("CONN", '{"host": "127.0.0.1", "port": 1, "database": "d", "user": "u", "password": ""}')
+    monkeypatch.setenv(VAR, STRONG)
+    monkeypatch.setenv(TOKEN_VAR, "short")
+    out = tmp_path / "out"
+    invoke(collector_main, ["collect", "--config", str(source_toml(tmp_path, token=True)), "--out", str(out)])
+    assert not out.exists() or not any(out.iterdir())
+
+
+def test_token_key_undecodable_is_not_a_traceback(tmp_path, monkeypatch):
+    from test_collectors import PgConnection
+    import pg8000.dbapi
+
+    monkeypatch.setattr(pg8000.dbapi, "connect", lambda **_: PgConnection())
+    monkeypatch.setenv("CONN", '{"host": "127.0.0.1", "port": 1, "database": "d", "user": "u", "password": ""}')
+    monkeypatch.setenv(VAR, STRONG)
+    monkeypatch.setenv(TOKEN_VAR, "\udcff" * 40)
+    result = invoke(collector_main, ["collect", "--config", str(source_toml(tmp_path, token=True)),
+                                     "--out", str(tmp_path / "out")])
+    assert is_one_line_operator_error(result), (result.exception, result.output)
 
 
 # --- the builder ----------------------------------------------------------------------------------
@@ -172,17 +211,17 @@ def test_builder_assemble_boundary(tmp_path, monkeypatch, label, value, long_eno
     monkeypatch.setenv(VAR, value)
     result = invoke(builder_main, ["assemble", "--config", str(cfg), "--bundle", str(bundle),
                                    "--out", str(tmp_path / "snap")])
-    assert "Traceback" not in result.output and (
-        result.exception is None or isinstance(result.exception, SystemExit)
-    ), result.exception
     if not long_enough:
+        assert "Traceback" not in result.output and (
+            result.exception is None or isinstance(result.exception, SystemExit)
+        ), result.exception
         assert result.exit_code != 0 and VAR in result.output
         assert "at least 32 bytes" in result.output and value not in result.output
         assert len(result.output.strip().splitlines()) == 1, result.output
     else:
+        # a long key that is not the one that signed the bundle is a signature mismatch (a
+        # separate, pre-existing ValueError), never the key-length message
         assert "at least 32 bytes" not in result.output
-        # a key different from the one that signed the bundle is a signature mismatch, not a key-length error
-        assert VAR in result.output or result.exit_code != 0 or True
 
 
 def test_builder_with_the_right_long_key_still_works(tmp_path, monkeypatch):

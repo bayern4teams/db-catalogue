@@ -9,7 +9,7 @@ from pathlib import Path
 
 from dbig_contracts.errors import OperatorError
 from dbig_contracts.scan import ScanReceipt, ScanRequest, SignedScanRequest, verify_scan
-from dbig_contracts.security import secret_from_env
+from dbig_contracts.security import key_from_env
 
 from .config import SourceConfig
 from .runtime import collect
@@ -37,9 +37,9 @@ def accept_scan(envelope: SignedScanRequest, config: SourceConfig, queue_path: P
         raise OperatorError("UNKNOWN_SIGNING_KEY")
     verify_scan(
         envelope,
-        secret_from_env(
+        key_from_env(
             config.signing_key_env, purpose="scan request signature verification"
-        ).encode("utf-8"),
+        ),
     )
     request = envelope.request
     if request.expires_at.timestamp() - request.issued_at.timestamp() > (

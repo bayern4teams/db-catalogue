@@ -340,7 +340,7 @@ def test_first_failing_batch_ends_the_review_and_keeps_earlier_decisions(
     else:
         assert result["status"] != "OK" and result["status"] in result["reasons"]
     # the failing batch's candidates have no suggestion; earlier ones do
-    cited = json.dumps(result["suggestions"])
+    cited = json.dumps(result["suggestions"], default=str)
     for failed in result["ids"][fail_at - 1]:
         assert failed not in cited
 
@@ -380,7 +380,7 @@ def test_a_batch_answer_about_the_wrong_candidates_is_not_silently_accepted(
     clean OK review of all candidates must be visible (partial) and never invent a suggestion for
     a candidate that is not in the batch."""
     result = run_review(tmp_path, monkeypatch, 12, lambda n, c: quirk if n == 2 else "ok")
-    text = json.dumps(result["suggestions"])
+    text = json.dumps(result["suggestions"], default=str)
     assert "not-in-this-batch" not in text
     if quirk == "foreign":
         assert result["completeness"] == "partial", result["status"]

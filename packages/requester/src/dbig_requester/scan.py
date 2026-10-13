@@ -13,7 +13,7 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 from dbig_contracts.artifact import canonical
 from dbig_contracts.errors import OperatorError
 from dbig_contracts.scan import ScanReceipt, ScanRequest, sign_scan
-from dbig_contracts.security import secret_from_env
+from dbig_contracts.security import key_from_env, secret_from_env
 
 from .config import ScanConfig
 
@@ -61,9 +61,9 @@ def dispatch_scan(
         raise OperatorError("UNAUTHORIZED_CAPABILITY")
     if request.expires_at <= datetime.now(UTC):
         raise OperatorError("EXPIRED_REQUEST")
-    key = secret_from_env(
+    key = key_from_env(
         config.signing_key_env, purpose="scan request signing"
-    ).encode("utf-8")
+    )
     envelope = sign_scan(request, config.key_id, key)
     payload = canonical(envelope)
     previous = scan_status(state, request.id)

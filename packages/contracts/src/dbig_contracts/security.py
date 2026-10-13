@@ -84,7 +84,12 @@ def key_from_env(reference: str | None, *, purpose: str) -> bytes:
     A key that is too short is an operator mistake, so it is a one-line `SecretReferenceError`
     that names the variable and the length needed, never the key (user-approved item E1).
     """
-    key = secret_from_env(reference, purpose=purpose).encode("utf-8")
+    try:
+        key = secret_from_env(reference, purpose=purpose).encode("utf-8")
+    except UnicodeEncodeError:
+        raise SecretReferenceError(
+            f"environment variable {reference} for {purpose} is not valid text"
+        ) from None
     if len(key) < MIN_KEY_BYTES:
         raise SecretReferenceError(
             f"environment variable {reference} for {purpose} must hold at least "

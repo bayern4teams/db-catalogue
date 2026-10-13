@@ -3,7 +3,7 @@
 Overwrite this file at every commit. A fresh session reads it first, then
 [the plan](../CATALOGUE_FIXES_IMPLEMENTATION_PLAN.md). Git is the memory; a session's context is not.
 
-**Lock:** 2026-10-13T08:25:12Z · **Autonomy:** unattended-through-phase-5 · **Last heartbeat:** 2026-10-13T08:25:12Z
+**Lock:** 2026-10-13T08:55:42Z · **Autonomy:** unattended-through-phase-5 · **Last heartbeat:** 2026-10-13T08:55:42Z
 
 (Lock/heartbeat protocol: plan §7. A session sets `Lock: <ISO time>`, pushes it, and refreshes it at
 every commit; a lock older than 75 min is stale. `Autonomy` is `off`, `dryrun` (a tick only records
@@ -39,7 +39,7 @@ Only the user changes it.)
 | E1 `DBIG_SIGNING_KEY` under 32 bytes: one-line operator error instead of a ValueError traceback (user approved 2026-10-13; found by the lead, outside engineer-fixes.md) | 3 | accepted-cloud | | lead: `key_from_env` in dbig_contracts.security (SecretReferenceError, names the variable, never the key) used by collect, token key and builder; scan signing error is an OperatorError; 2 tests |
 | Final integration, ponytail audit/debt/gain, final report | 4 | accepted-cloud (FINAL_REPORT.md, CI 38364522034 green on `c01d115`) | | |
 | H0 coverage audit of engineer-fixes.md against the built work | 5 | accepted-cloud | | lead: table in PHASE5_REPORT.md; gaps G1, G2; DEC-14 and DEC-15 opened (block nothing else) |
-| H1 independent attack with mutation proof on every Phase 3 item and C2 | 5 | in-progress | | verifiers (a) and (b) running |
+| H1 independent attack with mutation proof on every Phase 3 item and C2 | 5 | accepted-cloud | | lead: three verifier groups done with mutation proof; defects fixed by lead: DEC-3 composite, DEC-4 max_paths, DEC-5 edge order, DEC-6 whitespace, DEC-7 source-scoped lists, E1 scan signing + non-UTF-8 key; see Open escalations; DEC-16 opened |
 | H2 regression: all attack files, Phase 0 fixtures, full suite, pip-audit | 5 | todo | | |
 | H3 report-shaped synthetic end-to-end scenario, counts before/after | 5 | todo | | |
 | H4 privacy canaries across the new code paths | 5 | todo | | |
@@ -103,6 +103,7 @@ Phase 5 (cloud hardening), items H0 to H8 in plan section 9, **only when `Autono
 - [PHASE 1 DONE] 2026-10-12: B1, B3/D6a, D6b, B4, C1/D7, C3, D1b accepted (unverified-live); C2 blocked on DEC-11b. Full check green locally except `pip-audit` (DEC-13, new pymongo CVEs); CI run 38283628671 green in all 7 jobs on the pushed head; ponytail-review of the phase diff: no deletions required, minor `_singulars`/`_ies_singular` overlap left deliberately (readability).
 
 ## Open escalations (worker/verifier results that passed only written tests or one case)
+- H1c (2026-10-13): B2/DEC-10 and C1/D7 accepted. E1 was rejected once (scan signing error did not name the variable; non-UTF-8 key gave a traceback): fixed by the lead (`key_from_env` in requester and collector scan and `validate-bundle`). Left: HTTP 408/429 map to MODEL_REJECTED_REQUEST and 503 to the umbrella code; a batch reply that omits a candidate counts as reviewed; `batch_size` missing from example TOML and docs (H5 does it).
 - H1b (2026-10-13): fixed by the lead with the verifier's tests: DEC-5 relationship ordering (an edge between two retrieved objects now comes first), DEC-6 `LINEAGE_CLAIM` whitespace variants, DEC-7 source-scoped list questions with unmatched leftover words (e.g. the report's C3 question) now list the source's objects. Left on purpose: paraphrased lineage claims (documented ponytail ceiling); a source id equal to an ordinary word is a hard filter with no fallback (low). The openai library logs prompts at DEBUG; the app sets no logging (privacy note for H4).
 - H1a (2026-10-13): DEC-3 composite candidates ignored `forbidden_source_pairs` and DEC-4's same-source preference only filtered the first `max_paths` results: both fixed by the lead with the verifier's attack tests as proof. Open policy points: DEC-4 warns only when EVERY hop is unverified cross-source (a path with a same-source middle hop is silent; matches the Decision text); a weak ClickHouse key still wins over a measured 0.2 uniqueness (D-3); two near-identical unique parent columns both become candidates (D-4); DEC-12 noise on ordinary shared names is DEC-16. Not verifiable in the cloud: real ClickHouse key strings, DEC-12 noise on real PostgreSQL statistics.
 - A1: the 0-of-N drop on a first-rows sample could drop a real FK whose parent ids lie outside the sampled rows (live risk, needs the user's sampling setup); a capped parent never drops. Attack files `tests/catalogue_fixes/attack*_*.py` are not collected by default; run them by path.
