@@ -3,7 +3,7 @@
 Overwrite this file at every commit. A fresh session reads it first, then
 [the plan](../CATALOGUE_FIXES_IMPLEMENTATION_PLAN.md). Git is the memory; a session's context is not.
 
-**Lock:** 2026-10-13T17:24:00Z · **Autonomy:** unattended-through-phase-5 · **Last heartbeat:** 2026-10-13T12:25:00Z
+**Lock:** none · **Autonomy:** unattended-through-phase-5 · **Last heartbeat:** 2026-10-13T12:25:00Z
 
 (Lock/heartbeat protocol: plan §7. A session sets `Lock: <ISO time>`, pushes it, and refreshes it at
 every commit; a lock older than 75 min is stale. `Autonomy` is `off`, `dryrun` (a tick only records
@@ -74,6 +74,7 @@ Rules: plan section 2.9. A row with an empty Answer keeps its items `blocked`. A
 | DEC-14 | D1(3)/B5(1): add an optional, bounded cardinality probe (distinct count under the existing budgets) for ClickHouse and MongoDB so they can be measured parents? Changes collector queries; default off. | yes, default off, behind the existing sampling budgets | D1(3) | |
 | DEC-15 | D5 comprehensive: add a two-stage answer (first pick objects, then expand their columns) for 'list everything' questions? Doubles model calls for those questions. | later (needs the live 20-question rerun first) | D5 comprehensive | |
 | DEC-16 | DEC-12 follow-up (H1a D-6): the `key_name` rule on a measured-unique parent now links any 99%-unique column to a same-named column elsewhere, including ordinary names (`email`, `name`, `status`, `url`, `created_at`); unsampled they are published as tentative, "values not compared". Extend the generic-name list, or require value overlap (sampling on) for non-declared parents? | require measured value overlap when the parent is only measured-unique and the name is not stem+id style | DEC-12 follow-up | |
+| DEC-17 | H4 finding: the REST search route is `GET ...?query=<question>`, so uvicorn's default access log (INFO) writes the question text to the log, against the no-prompt-in-logs rule. Document `--no-access-log` in LOCAL_RUN.md only, or also add a POST search route / redact the query? | document `--no-access-log` now, POST route later | H4 privacy finding | |
 
 Already decided by the user on 2026-10-12 (not open): base the work on the tested branch; `companyid` is read as `company` + `id` only when the stem is a known object; a measured 0-of-N cross-source overlap drops the candidate and an unchecked one is labelled "values not compared"; graft is best effort in the cloud; Phase 1 bugs go ahead.
 
@@ -96,6 +97,7 @@ Phase 1: lane R and lane D concurrent (disjoint files); lead does C1 builder hal
 Phase 5 (cloud hardening), items H0 to H8 in plan section 9, **only when `Autonomy` is `unattended-through-phase-5`** (the user sets it; at `phase-4` exit without doing anything). Start with H0 and H1 in parallel (verifiers, at most 2 at a time), then H2 to H7. Finish with H8: Next action `READY FOR LOCAL VERIFY - waiting for the user`.
 
 ## Notifications
+- [BLOCKED] 2026-10-13T17:40Z: H4 triage of the 10 failing tests in `tests/catalogue_fixes/test_h4_privacy_canaries.py` (edit denied again by the permission classifier: "Security Test Removal"; not worked around, nothing edited). Triage result, all 10 are test defects, no product leak found: (1) 6x short-key test counts the CLI output twice (`result.output + result.stderr`, click 8.2 output already holds both): use `result.output`; (2) metric regex rejects `run-1`, the non-secret `value_token_key_id` label: allow `-`; (3) control `vendor_id in sent` fails because review keeps only `max_candidates` (20, sorted by hash id) and the fixture has more: pass `max_candidates=1000` in the test ReviewConfig; (4) cited-names check splits `shipment -> vendor (...)` leaving a trailing space: `.strip()` parts; (5) REST test sees the TestClient's own `httpx2` logger printing the search URL with the question: exclude logger `httpx2` in `Capture.visible`. Real finding: `GET /v1/catalogue/search?query=...` puts the question in the URL, so a default uvicorn access log would record it: opened DEC-17. User: apply these five test edits locally (or allow them), then resume (H4 report, H5-H8 remain).
 - [BLOCKED] 2026-10-13T12:40Z: H4 (`tests/catalogue_fixes/test_h4_privacy_canaries.py`) has 40 errors + 6 failures: `read_artifact(bundle)` raises `signature key unavailable` because bundles are signed (H3 passes: 21 passed, 1 xfailed alone). Planned fix: wrapper passing `BUNDLE_KEY.encode()` as `signing_key`; the edit was denied by the permission classifier (reason: Security Test Removal), so it was not made and not worked around. User: allow the edit or fix the test locally, then resume (H3 done pending report, H4, H5-H8 remain).
 - [Catalogue fixes COMPLETE] 2026-10-13: Phase 4 done (final report, LOCAL_VERIFY finalised, `.handoff/` purged, ponytail review/debt recorded in FINAL_REPORT.md). Never merged.
 (append `[PHASE n DONE]`, `[BLOCKED]`, `[Catalogue fixes COMPLETE]` entries here; the same prefixes go in commit messages)
