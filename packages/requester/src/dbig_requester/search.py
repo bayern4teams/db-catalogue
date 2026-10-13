@@ -453,11 +453,15 @@ def relationships_for(state: Path, object_ids: set[str], limit: int) -> list[dic
         marks = ",".join("?" * len(object_ids))
         query = (
             f"SELECT body FROM relationships WHERE from_id IN ({marks}) "  # noqa: S608
-            f"OR to_id IN ({marks}) ORDER BY rank, id LIMIT ?"
+            f"OR to_id IN ({marks}) "
+            f"ORDER BY (from_id IN ({marks}) AND to_id IN ({marks})) DESC, rank, id LIMIT ?"
         )
+        ordered = sorted(object_ids)
+        # An edge between two retrieved objects is what the question is about; a hub's other
+        # links must not push it past the limit.
         rows = connection.execute(
             query,
-            [*sorted(object_ids), *sorted(object_ids), limit],
+            [*ordered, *ordered, *ordered, *ordered, limit],
         ).fetchall()
     return [json.loads(row[0]) for row in rows]
 

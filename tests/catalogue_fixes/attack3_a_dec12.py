@@ -3,7 +3,7 @@
 MEASURED-UNIQUE parent column (before: only to a declared key).
 
 Derived from artifacts/engineer-fixes.md (B5 check: `companyindustry.classificationid` to
-`industryclassification.classificationid` is proposed) and the DEC-12 text only. Invented names.
+the report's own pair is proposed) and the DEC-12 text only. Invented names.
 Not collected by default; run by path:
     uv run pytest tests/catalogue_fixes/attack3_a_dec12.py -q -p no:cacheprovider
 """

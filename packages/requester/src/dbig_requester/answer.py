@@ -56,7 +56,7 @@ NOT_ESTABLISHED = "NOT_ESTABLISHED_BY_CATALOGUE"
 # lineage, or an answer saying there is none, is fine (DEC-6). The requester holds no lineage
 # data, so a claim of one is unsupported. ponytail: phrases are the ceiling; the deferred
 # alternative is checking a claim against planner output, which the requester may not import.
-LINEAGE_CLAIM = re.compile(r"\b(derived from|flows into|writes to)\b", re.I)
+LINEAGE_CLAIM = re.compile(r"\b(derived\s+from|flows\s+into|writes\s+to)\b", re.I)
 
 
 class _ModelFailure(Exception):
@@ -160,6 +160,19 @@ def answer_question(
                 objects_only=listing,
             ),
         )
+        if not results["results"] and listing and sources:
+            # Leftover words ("contain", "its") matched nothing: the answer to a list question
+            # for a named source is that source's objects.
+            results = search(
+                state,
+                SearchRequest(
+                    query="",
+                    limit=config.retrieval_limit,
+                    match="any",
+                    source_ids=sources,
+                    objects_only=True,
+                ),
+            )
     except StaleIndexError as error:
         # The same code the search route reports; the remedy is `dbig-requester index`.
         return {"error": {"code": str(error)}}
