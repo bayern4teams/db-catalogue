@@ -382,6 +382,12 @@ can tell a fuzzy suffix match from an exact bare-name match without re-deriving 
    and separators), is within the name-similarity threshold, or is a generic key name; and a
    generic one is dropped when another column of the same parent is named like the child. A
    declared key is exempt. This removes `location.companyid` as the parent of a `locationid`.
+10. **Planner path choice (2026-10-13, DEC-4).** In a join path an unverified candidate between
+   two sources costs `cross_source_candidate_weight` (default 4, planner config) against 2 for a
+   same-source candidate and 1 for a declared or observed link, and when both ends are in one
+   source only same-source paths are returned if any exist. A path whose every hop is a
+   cross-source candidate with no value-overlap evidence carries
+   `warnings: ["CROSS_SOURCE_CANDIDATES_UNVERIFIED"]`, repeated in the plan's warnings.
 9. **Source groups (2026-10-13, DEC-3).** `[builder]` accepts `source_groups` (lists of source
    IDs that hold one dataset) and `forbidden_source_pairs` (pairs never linked). Both default to
    none, which changes nothing. With groups set, two sources are paired only when they share a

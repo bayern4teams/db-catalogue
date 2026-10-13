@@ -16,6 +16,10 @@ class PlannerConfig(BaseModel):
     max_request_bytes: int = Field(default=65_536, ge=1)
     max_hops: int = Field(default=4, ge=1, le=10)
     max_paths: int = Field(default=20, ge=1, le=100)
+    # Path cost of an unverified candidate that links two sources, against 2 for a same-source
+    # candidate and 1 for a declared or observed link (DEC-4): a roundabout cross-source path
+    # loses to a same-source one.
+    cross_source_candidate_weight: int = Field(default=4, ge=1, le=100)
     max_plan_rows: int = Field(default=1000, ge=1, le=100_000)
     max_observation_bytes: int = Field(default=1_048_576, ge=1)
     max_observations: int = Field(default=10_000, ge=1)

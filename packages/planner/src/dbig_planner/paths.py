@@ -45,6 +45,20 @@ def _strength(edge: dict) -> int:
     return {"declared": 3, "executed": 3, "observed": 2}.get(edge["status"], 1)
 
 
+def _crosses_sources(edge: dict, objects: dict) -> bool:
+    left, right = objects.get(edge["from_id"]), objects.get(edge["to_id"])
+    return bool(left and right and left["source_id"] != right["source_id"])
+
+
+def _unverified_cross_source(edge: dict, objects: dict) -> bool:
+    """A candidate between two sources whose values were never compared."""
+    return (
+        edge["status"] == "tentative"
+        and _crosses_sources(edge, objects)
+        and not edge.get("value_evidence", False)
+    )
+
+
 def find_paths(directory: Path, request: PathRequest, kind: str, config: PlannerConfig) -> dict:
     graph = load_graph(directory)
     if kind not in {"lineage", "join"}:
@@ -92,9 +106,13 @@ def find_paths(directory: Path, request: PathRequest, kind: str, config: Planner
         if key in selected and _strength(selected[key]) >= _strength(edge):
             continue
         selected[key] = edge
-        network.add_edge(
-            left, right, weight=1 if edge["status"] in {"declared", "executed", "observed"} else 2
-        )
+        if edge["status"] in {"declared", "executed", "observed"}:
+            weight = 1
+        elif _crosses_sources(edge, objects):
+            weight = config.cross_source_candidate_weight
+        else:
+            weight = 2
+        network.add_edge(left, right, weight=weight)
     found: list[dict] = []
     if network.has_node(request.from_id) and network.has_node(request.to_id):
         try:
@@ -117,6 +135,10 @@ def find_paths(directory: Path, request: PathRequest, kind: str, config: Planner
                 partial = graph["completeness"] == "partial" or any(
                     link.get("limitations") for link in links
                 )
+                unverified = kind == "join" and all(
+                    _unverified_cross_source(link, objects) for link in links
+                )
+                warnings = ["CROSS_SOURCE_CANDIDATES_UNVERIFIED"] if unverified else []
                 item = {
                     "path_id": digest,
                     "kind": kind,
@@ -140,12 +162,24 @@ def find_paths(directory: Path, request: PathRequest, kind: str, config: Planner
                     "limitations": sorted(
                         {limit for link in links for limit in link.get("limitations", [])}
                     ),
+                    **({"warnings": warnings} if warnings else {}),
                 }
                 found.append(item)
                 if len(found) >= max_paths:
                     break
         except nx.NetworkXNoPath:
             pass
+    # Both ends in one source: a path that leaves it is the roundabout one, so a same-source
+    # path wins whenever there is one (DEC-4).
+    if kind == "join" and found:
+        home = objects[request.from_id]["source_id"]
+        if objects[request.to_id]["source_id"] == home:
+            inside = [
+                item
+                for item in found
+                if all(objects[node]["source_id"] == home for node in item["object_ids"])
+            ]
+            found = inside or found
     with closing(_cache(directory)) as connection:
         connection.executemany(
             "INSERT OR REPLACE INTO paths VALUES (?,?)",
