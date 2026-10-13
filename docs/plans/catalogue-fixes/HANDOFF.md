@@ -3,7 +3,7 @@
 Overwrite this file at every commit. A fresh session reads it first, then
 [the plan](../CATALOGUE_FIXES_IMPLEMENTATION_PLAN.md). Git is the memory; a session's context is not.
 
-**Lock:** 2026-10-13T07:22:34Z · **Autonomy:** unattended-through-phase-4 · **Last heartbeat:** 2026-10-13T07:22:34Z
+**Lock:** 2026-10-13T07:26:25Z · **Autonomy:** unattended-through-phase-4 · **Last heartbeat:** 2026-10-13T07:26:25Z
 
 (Lock/heartbeat protocol: plan §7. A session sets `Lock: <ISO time>`, pushes it, and refreshes it at
 every commit; a lock older than 75 min is stale. `Autonomy` is `off`, `dryrun` (a tick only records
@@ -29,7 +29,7 @@ Only the user changes it.)
 | D1a ClickHouse key names, weak parent claim (DEC-2) | 3 | unverified-live | | lead: collector emits `index` constraint (`:primary_key`/`:sorting_key`, one plain column, names only); builder evidence `weak_key_claim`; no schema change needed (existing kind); CI live ClickHouse job must confirm; 618 passed |
 | D2(3) dataset groups / forbidden source pairs config (DEC-3) | 3 | accepted-cloud | | lead: `source_groups`, `forbidden_source_pairs` in BuilderConfig, default none; `pair_allowed`; 10 tests |
 | D4 + A1(3) planner prefers same-source, warns on unverified edges (DEC-4) | 3 | accepted-cloud | | lead: weight `cross_source_candidate_weight` (planner config, default 4) + same-source filter + `CROSS_SOURCE_CANDIDATES_UNVERIFIED` warning; graph edges gain `value_evidence`; 3 tests; 635 passed |
-| D5a relationships and evidence in the model context (DEC-5) | 3 | todo (DEC answered 2026-10-13) | | |
+| D5a relationships and evidence in the model context (DEC-5) | 3 | unverified-live | | lead: `relationships` table in the index (INDEX_VERSION 6), `relationship_limit` (20), relationship IDs citable; 4 tests; 648 passed |
 | D5b answer rules: `lineage`, uncited "not established" (DEC-6) | 3 | todo (DEC answered 2026-10-13) | | |
 | D6c source/engine words, object retrieval, ranking (DEC-7) | 3 | unverified-live | | lead: source id/kind/name in context (INDEX_VERSION 5), `question_scope`, objects_only for plural table words, named-object ranking; 9 tests; `tables` alone works again when a source is named |
 | C4 exclude schema-description collections (DEC-8) | 3 | unverified-live | | lead: `[requester] exclude_objects` per source, glob, applied at index time, default none |
@@ -81,7 +81,7 @@ Phase 0 table (file -> sole owner while its items are open; plan §8/§9 DAG; gr
 Phase 1: lane R and lane D concurrent (disjoint files); lead does C1 builder half, C2, D1b. Phase 2: lead chain only.
 
 ## Next action
-Phase 3. DEC-13 DONE (pymongo 4.18.2, uv.lock + supply-chain/licenses.json only; pip-audit clean). C2 DONE (accepted-cloud). DEC-12 DONE (key_name rule drops the declared-only condition; 613 passed). DEC-2 DONE (unverified-live; CI source-integration to confirm). DEC-1 DONE. DEC-3 DONE. DEC-4 DONE. DEC-7/8 DONE. Next: DEC-5, DEC-6, DEC-9, then DEC-10, E1. The user answered DEC-1 to DEC-10, DEC-11b, DEC-12 and DEC-13 on 2026-10-13 (all as recommended; STALE_INDEX stays as built, 503 on the question route and 409 on search) and approved a new item E1. Build in DAG order: DEC-13 first (lockfile-only pymongo 4.18.2 so `pip-audit` is green; record the `uv.lock` diff), then C2 with the `partial_reasons` field (DEC-11b), then the builder chain DEC-12, DEC-2, DEC-1, DEC-3, DEC-4, then the requester chain DEC-7 (with DEC-8), DEC-5, DEC-6, DEC-9, then DEC-10 and E1. Then Phase 4. Remember the `tables` word retrieves again only after DEC-7.
+Phase 3. DEC-13 DONE (pymongo 4.18.2, uv.lock + supply-chain/licenses.json only; pip-audit clean). C2 DONE (accepted-cloud). DEC-12 DONE (key_name rule drops the declared-only condition; 613 passed). DEC-2 DONE (unverified-live; CI source-integration to confirm). DEC-1 DONE. DEC-3 DONE. DEC-4 DONE. DEC-7/8 DONE. DEC-5 DONE. Next: DEC-6, DEC-9, then DEC-10, E1. The user answered DEC-1 to DEC-10, DEC-11b, DEC-12 and DEC-13 on 2026-10-13 (all as recommended; STALE_INDEX stays as built, 503 on the question route and 409 on search) and approved a new item E1. Build in DAG order: DEC-13 first (lockfile-only pymongo 4.18.2 so `pip-audit` is green; record the `uv.lock` diff), then C2 with the `partial_reasons` field (DEC-11b), then the builder chain DEC-12, DEC-2, DEC-1, DEC-3, DEC-4, then the requester chain DEC-7 (with DEC-8), DEC-5, DEC-6, DEC-9, then DEC-10 and E1. Then Phase 4. Remember the `tables` word retrieves again only after DEC-7.
 
 ## Notifications
 (append `[PHASE n DONE]`, `[BLOCKED]`, `[Catalogue fixes COMPLETE]` entries here; the same prefixes go in commit messages)

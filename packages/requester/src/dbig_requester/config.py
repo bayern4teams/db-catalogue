@@ -20,6 +20,9 @@ class AnswerConfig(BaseModel):
     timeout_seconds: int = Field(default=20, ge=1)
     max_tokens: int = Field(default=512, ge=1)
     retrieval_limit: int = Field(default=10, ge=1, le=100)
+    # Most relationship edges, with their evidence status, passed to the model beside the
+    # retrieved entries (DEC-5). 0 passes none.
+    relationship_limit: int = Field(default=20, ge=0, le=200)
     langfuse_url: str | None = None
     langfuse_public_key_env: str | None = None
     langfuse_secret_key_env: str | None = None

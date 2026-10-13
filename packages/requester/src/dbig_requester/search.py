@@ -37,7 +37,7 @@ WEIGHTS = (10.0, 4.0, 1.0)
 # Bump when what `index_snapshot` writes into the full-text table changes meaning. An index
 # written under another version is refused with STALE_INDEX instead of answering from words it
 # does not hold (a search would return nothing, as if the catalogue lacked the column).
-INDEX_VERSION = "5"
+INDEX_VERSION = "6"
 
 
 class StaleIndexError(OperatorError):
@@ -183,6 +183,10 @@ def index_snapshot(
             "description TEXT)"
         )
         connection.execute("CREATE TABLE sources(id TEXT PRIMARY KEY, kind TEXT, name TEXT)")
+        connection.execute(
+            "CREATE TABLE relationships(id TEXT PRIMARY KEY, from_id TEXT, to_id TEXT, "
+            "rank INTEGER, body TEXT)"
+        )
         exclude = exclude or {}
         statuses: dict[str, set[str]] = {}
         for record in tables["edges.jsonl"]:
@@ -212,6 +216,37 @@ def index_snapshot(
                 source_words[source_item.id] = " ".join(
                     {source_item.id, source_item.kind, source_item.name}
                 )
+        names = {
+            record.id: str(record.model_dump()["name"])
+            for record in tables["nodes.jsonl"]
+            if record.record_type in {"object", "field"}
+        }
+        for record in tables["edges.jsonl"]:
+            edge = Edge.model_validate(record.model_dump(mode="json"))
+            if edge.kind not in RELATIONSHIP_KINDS or {edge.from_id, edge.to_id} & skipped:
+                continue
+            body = {
+                "id": edge.id,
+                "kind": edge.kind,
+                "status": edge.status,
+                "from": names.get(edge.from_id),
+                "to": names.get(edge.to_id),
+                "columns": [
+                    [names.get(left), names.get(right)]
+                    for left, right in edge.model_dump().get("field_pairs", [])
+                ],
+                "evidence": edge.explanation,
+            }
+            connection.execute(
+                "INSERT INTO relationships VALUES (?,?,?,?,?)",
+                (
+                    edge.id,
+                    edge.from_id,
+                    edge.to_id,
+                    STATUS_RANK.get(edge.status, len(STATUS_RANK)),
+                    json.dumps(body, ensure_ascii=False),
+                ),
+            )
         for record in tables["nodes.jsonl"]:
             if record.id in skipped or getattr(record, "object_id", None) in skipped:
                 continue
@@ -402,6 +437,29 @@ def search(state: Path, request: SearchRequest) -> dict:
         "limit": request.limit,
         "offset": request.offset,
     }
+
+
+RELATIONSHIP_KINDS = frozenset({"DECLARES_FK", "REFERENCE_CANDIDATE"})
+# Strongest claim first, so a bounded list of relationships keeps the declared ones.
+STATUS_RANK = {"declared": 0, "executed": 0, "observed": 1, "tentative": 2}
+
+
+def relationships_for(state: Path, object_ids: set[str], limit: int) -> list[dict]:
+    """Relationships touching these objects, strongest claim first, at most `limit`: metadata
+    only (names, status and the builder's evidence sentence), for the answering model (DEC-5)."""
+    if not object_ids or limit < 1:
+        return []
+    with closing(sqlite3.connect(_database(state))) as connection:
+        marks = ",".join("?" * len(object_ids))
+        query = (
+            f"SELECT body FROM relationships WHERE from_id IN ({marks}) "  # noqa: S608
+            f"OR to_id IN ({marks}) ORDER BY rank, id LIMIT ?"
+        )
+        rows = connection.execute(
+            query,
+            [*sorted(object_ids), *sorted(object_ids), limit],
+        ).fetchall()
+    return [json.loads(row[0]) for row in rows]
 
 
 # Words that ask for a list of objects when plural ("which tables ...", "list the collections").

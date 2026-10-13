@@ -99,3 +99,69 @@ def test_a_per_source_exclude_list_hides_schema_collections_and_their_fields(
     names = _names(tmp_path / "state", query="website", limit=50)
     assert names == ["website"], names  # only pgmain.company.website remains
     assert "notes" in _names(tmp_path / "state", query="notes")
+
+
+# --- DEC-5: relationships and their evidence status reach the model -------------------------
+
+
+def _ask_payload(state, monkeypatch, question, **config_kwargs):
+    monkeypatch.setenv("MODEL_KEY", MODEL_KEY)
+    with ModelStub(cite_first) as stub:
+        config = AnswerConfig(
+            base_url=stub.url, model="m", model_digest="d", api_key_env="MODEL_KEY",
+            timeout_seconds=5, **config_kwargs,
+        )
+        reply = answer_question(state, question, config)
+        import json as _json
+
+        payload = _json.loads(stub.requests[-1]["body"]["messages"][-1]["content"])
+    return reply, payload
+
+
+@pytest.fixture
+def linked(tmp_path, monkeypatch):
+    snapshot = build_snapshot(tmp_path, monkeypatch, {"alpha": {"tables": {
+        "vendor": {"fields": [("id", "integer"), ("name", "text")], "key": ["id"]},
+        "shipment": {"fields": [("id", "integer"), ("vendor_id", "integer")], "key": ["id"]},
+        "unrelated": {"fields": [("note", "text")]},
+    }}})
+    index_snapshot(snapshot, tmp_path / "state")
+    return tmp_path / "state"
+
+
+def test_relationships_with_status_and_evidence_are_in_the_context(linked, monkeypatch):
+    reply, payload = _ask_payload(linked, monkeypatch, "How does shipment relate to vendor?")
+    assert "error" not in reply, reply
+    [edge] = payload["relationships"]
+    assert (edge["from"], edge["to"], edge["status"]) == ("shipment", "vendor", "tentative")
+    assert edge["columns"] == [["vendor_id", "id"]]
+    assert "values not compared" in edge["evidence"]
+
+
+def test_a_relationship_can_be_cited(linked, monkeypatch):
+    _, payload = _ask_payload(linked, monkeypatch, "How does shipment relate to vendor?")
+    edge_id = payload["relationships"][0]["id"]
+    monkeypatch.setenv("MODEL_KEY", MODEL_KEY)
+    import json as _json
+
+    with ModelStub(
+        content=_json.dumps({"answer": "a tentative link", "citations": [edge_id]})
+    ) as stub:
+        config = AnswerConfig(
+            base_url=stub.url, model="m", model_digest="d", api_key_env="MODEL_KEY",
+            timeout_seconds=5,
+        )
+        reply = answer_question(linked, "How does shipment relate to vendor?", config)
+    assert reply["citations"] == [edge_id], reply
+
+
+def test_relationships_are_bounded_and_can_be_turned_off(linked, monkeypatch):
+    _, payload = _ask_payload(
+        linked, monkeypatch, "How does shipment relate to vendor?", relationship_limit=0
+    )
+    assert payload["relationships"] == []
+
+
+def test_objects_with_no_relationship_add_none(linked, monkeypatch):
+    _, payload = _ask_payload(linked, monkeypatch, "What is the unrelated note?")
+    assert payload["relationships"] == []
