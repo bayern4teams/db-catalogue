@@ -3,7 +3,7 @@
 Overwrite this file at every commit. A fresh session reads it first, then
 [the plan](../CATALOGUE_FIXES_IMPLEMENTATION_PLAN.md). Git is the memory; a session's context is not.
 
-**Lock:** 2026-10-13T08:23:01Z · **Autonomy:** unattended-through-phase-5 · **Last heartbeat:** 2026-10-13T08:23:01Z
+**Lock:** 2026-10-13T08:25:12Z · **Autonomy:** unattended-through-phase-5 · **Last heartbeat:** 2026-10-13T08:25:12Z
 
 (Lock/heartbeat protocol: plan §7. A session sets `Lock: <ISO time>`, pushes it, and refreshes it at
 every commit; a lock older than 75 min is stale. `Autonomy` is `off`, `dryrun` (a tick only records
@@ -38,8 +38,8 @@ Only the user changes it.)
 | B5/X1 `key_name` for measured-unique parents (DEC-12) | 3 | accepted-cloud | | lead: identical non-generic name on a measured-unique parent links (tests flipped on purpose: test_inference_decisions, test_d3); 613 passed |
 | E1 `DBIG_SIGNING_KEY` under 32 bytes: one-line operator error instead of a ValueError traceback (user approved 2026-10-13; found by the lead, outside engineer-fixes.md) | 3 | accepted-cloud | | lead: `key_from_env` in dbig_contracts.security (SecretReferenceError, names the variable, never the key) used by collect, token key and builder; scan signing error is an OperatorError; 2 tests |
 | Final integration, ponytail audit/debt/gain, final report | 4 | accepted-cloud (FINAL_REPORT.md, CI 38364522034 green on `c01d115`) | | |
-| H0 coverage audit of engineer-fixes.md against the built work | 5 | todo | | |
-| H1 independent attack with mutation proof on every Phase 3 item and C2 | 5 | todo | | |
+| H0 coverage audit of engineer-fixes.md against the built work | 5 | accepted-cloud | | lead: table in PHASE5_REPORT.md; gaps G1, G2; DEC-14 and DEC-15 opened (block nothing else) |
+| H1 independent attack with mutation proof on every Phase 3 item and C2 | 5 | in-progress | | verifiers (a) and (b) running |
 | H2 regression: all attack files, Phase 0 fixtures, full suite, pip-audit | 5 | todo | | |
 | H3 report-shaped synthetic end-to-end scenario, counts before/after | 5 | todo | | |
 | H4 privacy canaries across the new code paths | 5 | todo | | |
@@ -71,6 +71,8 @@ Rules: plan section 2.9. A row with an empty Answer keeps its items `blocked`. A
 | DEC-12 | B5/X1: let the `key_name` rule apply to a measured-unique parent column with an identical non-generic name (so `classificationid` links to `industryclassification.classificationid`)? The 2026-10-05 decision admitted it only for declared keys. | yes | B5/X1 | yes (user, 2026-10-13, in chat) |
 | DEC-13 | Supply chain: `pip-audit` now reports 3 CVEs (CVE-2026-96747/8/9) in locked `pymongo 4.18.1`, fixed in 4.18.2; they were published after the lock and are not caused by this branch. Bump `pymongo` to 4.18.2 in `uv.lock` (patch-level, same `>=4.14,<5` range)? Plan §2.5 forbids dependency changes without approval. Until answered, the `pip-audit` step stays red on this branch and on `main`. | yes (lock-only patch bump) | pip-audit stage of the full check / CI | yes (lockfile-only patch bump to pymongo 4.18.2) (user, 2026-10-13, in chat) |
 | DEC-11b | C2: a snapshot manifest cannot list partial reasons in `diagnostics` without a contract change: `read_artifact` (artifact.py ~line 272) requires `manifest.diagnostics` to equal the counts of `diagnostics.jsonl`, and snapshots carry none, so an older reader would reject the new snapshot. Options: (a) new optional manifest field `partial_reasons: list[str]` (additive, `extra=allow`, old readers ignore it; regenerate schemas; golden unchanged for complete snapshots) and render/CLI count = page diagnostics + reasons; (b) reuse `diagnostics` and relax the reader check for snapshots (old readers reject new snapshots). | (a) new optional field `partial_reasons` | C2 | (a) new optional manifest field `partial_reasons` (user, 2026-10-13, in chat) |
+| DEC-14 | D1(3)/B5(1): add an optional, bounded cardinality probe (distinct count under the existing budgets) for ClickHouse and MongoDB so they can be measured parents? Changes collector queries; default off. | yes, default off, behind the existing sampling budgets | D1(3) | |
+| DEC-15 | D5 comprehensive: add a two-stage answer (first pick objects, then expand their columns) for 'list everything' questions? Doubles model calls for those questions. | later (needs the live 20-question rerun first) | D5 comprehensive | |
 
 Already decided by the user on 2026-10-12 (not open): base the work on the tested branch; `companyid` is read as `company` + `id` only when the stem is a known object; a measured 0-of-N cross-source overlap drops the candidate and an unchecked one is labelled "values not compared"; graft is best effort in the cloud; Phase 1 bugs go ahead.
 
