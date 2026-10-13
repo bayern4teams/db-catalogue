@@ -316,7 +316,7 @@ class _CollectorCursor(PgCursor):
 def _names_and_types(bundles: list[Path]) -> tuple[set[str], set[str], set[str]]:
     names, types_, ids = set(), set(), set()
     for bundle in bundles:
-        _, data = read_artifact(bundle)
+        _, data = read_artifact(bundle, signing_key=BUNDLE_KEY.encode())
         for table in ("objects.jsonl", "fields.jsonl"):
             for item in data[table]:
                 names.add(item.name)
