@@ -118,6 +118,21 @@
       "title": "Ir Version",
       "type": "string"
     },
+    "partial_reasons": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Partial Reasons"
+    },
     "producer": {
       "title": "Producer",
       "type": "string"

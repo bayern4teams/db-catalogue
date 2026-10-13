@@ -3,7 +3,7 @@
 Overwrite this file at every commit. A fresh session reads it first, then
 [the plan](../CATALOGUE_FIXES_IMPLEMENTATION_PLAN.md). Git is the memory; a session's context is not.
 
-**Lock:** 2026-10-13T06:55:19Z · **Autonomy:** unattended-through-phase-4 · **Last heartbeat:** 2026-10-13T06:55:19Z
+**Lock:** 2026-10-13T06:59:06Z · **Autonomy:** unattended-through-phase-4 · **Last heartbeat:** 2026-10-13T06:59:06Z
 
 (Lock/heartbeat protocol: plan §7. A session sets `Lock: <ISO time>`, pushes it, and refreshes it at
 every commit; a lock older than 75 min is stale. `Autonomy` is `off`, `dryrun` (a tick only records
@@ -20,7 +20,7 @@ Only the user changes it.)
 | D6b stemming in search | 1 | unverified-live | | |
 | B4 stopwords / no-match guard | 1 | unverified-live | | |
 | C1 + D7 distinct model error codes | 1 | unverified-live | | |
-| C2 `partial` diagnostics in manifest and CLI | 1 | todo (DEC-11b answered 2026-10-13) | | |
+| C2 `partial` diagnostics in manifest and CLI | 1 | accepted-cloud | | lead: manifest `partial_reasons` (DEC-11b a), render/CLI count = page diagnostics + reasons; schema regenerated (manifest only); 612 passed; golden unchanged |
 | C3 documentation gaps | 1 | unverified-live | | |
 | D1b reasons for empty statistic cells | 1 | unverified-live | | |
 | D3 + B5(2) lowercase names (`companyid`) when the stem is a known object | 2 | unverified-live | | |
@@ -81,7 +81,7 @@ Phase 0 table (file -> sole owner while its items are open; plan §8/§9 DAG; gr
 Phase 1: lane R and lane D concurrent (disjoint files); lead does C1 builder half, C2, D1b. Phase 2: lead chain only.
 
 ## Next action
-Phase 3. DEC-13 DONE (pymongo 4.18.2, uv.lock + supply-chain/licenses.json only; pip-audit clean). Next: C2. The user answered DEC-1 to DEC-10, DEC-11b, DEC-12 and DEC-13 on 2026-10-13 (all as recommended; STALE_INDEX stays as built, 503 on the question route and 409 on search) and approved a new item E1. Build in DAG order: DEC-13 first (lockfile-only pymongo 4.18.2 so `pip-audit` is green; record the `uv.lock` diff), then C2 with the `partial_reasons` field (DEC-11b), then the builder chain DEC-12, DEC-2, DEC-1, DEC-3, DEC-4, then the requester chain DEC-7 (with DEC-8), DEC-5, DEC-6, DEC-9, then DEC-10 and E1. Then Phase 4. Remember the `tables` word retrieves again only after DEC-7.
+Phase 3. DEC-13 DONE (pymongo 4.18.2, uv.lock + supply-chain/licenses.json only; pip-audit clean). C2 DONE (accepted-cloud). Next: DEC-12 (builder chain: DEC-12, DEC-2, DEC-1, DEC-3, DEC-4). The user answered DEC-1 to DEC-10, DEC-11b, DEC-12 and DEC-13 on 2026-10-13 (all as recommended; STALE_INDEX stays as built, 503 on the question route and 409 on search) and approved a new item E1. Build in DAG order: DEC-13 first (lockfile-only pymongo 4.18.2 so `pip-audit` is green; record the `uv.lock` diff), then C2 with the `partial_reasons` field (DEC-11b), then the builder chain DEC-12, DEC-2, DEC-1, DEC-3, DEC-4, then the requester chain DEC-7 (with DEC-8), DEC-5, DEC-6, DEC-9, then DEC-10 and E1. Then Phase 4. Remember the `tables` word retrieves again only after DEC-7.
 
 ## Notifications
 (append `[PHASE n DONE]`, `[BLOCKED]`, `[Catalogue fixes COMPLETE]` entries here; the same prefixes go in commit messages)

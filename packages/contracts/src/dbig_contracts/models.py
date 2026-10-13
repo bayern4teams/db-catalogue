@@ -269,6 +269,10 @@ class Manifest(BaseModel):
     # `_unsigned` excludes `None`: an absent summary keeps an older producer's signature valid,
     # and a reader that finds none treats the summary as unreported rather than as zero.
     diagnostics: dict[str, int] | None = None
+    # Why a snapshot is `partial`, as code names. A snapshot carries no `diagnostics.jsonl`, so its
+    # reasons cannot ride in `diagnostics` (the reader checks that against the file). Additive and
+    # `None` when absent, so an older reader ignores it and a complete snapshot is unchanged.
+    partial_reasons: list[str] | None = None
     signature: Signature | None = None
 
     @field_validator("diagnostics")

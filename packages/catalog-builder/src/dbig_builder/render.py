@@ -219,13 +219,15 @@ def render_catalog(
     builder_run = next(
         (item.model_dump() for item in records["runs.jsonl"] if item.source_id == "builder"), {}
     )
+    partial_reasons = builder_run.get("partial_reasons") or manifest.partial_reasons or []
     counts = {
         "sources": len(sources),
         "objects": len(objects),
         "fields": len(fields),
         "declared_fks": sum(1 for edge in edges if edge.kind == "DECLARES_FK"),
         "candidates": sum(1 for edge in edges if edge.kind == "REFERENCE_CANDIDATE"),
-        "diagnostics": sum(len(items) for items in diagnostics.values()),
+        "diagnostics": sum(len(items) for items in diagnostics.values())
+        + (len(partial_reasons) if manifest.completeness == "partial" else 0),
     }
 
     def label(record_id: str) -> str:
@@ -420,7 +422,7 @@ def render_catalog(
             else "<ul>"
             + "".join(
                 f"<li><code>{_e(reason)}</code></li>"
-                for reason in builder_run.get("partial_reasons")
+                for reason in partial_reasons
                 or ["reason not recorded by the producer of this snapshot"]
             )
             + "</ul>"

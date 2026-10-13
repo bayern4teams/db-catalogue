@@ -52,25 +52,22 @@ def test_a_failed_review_is_partial_and_the_page_says_why(failed, tmp_path):
     assert "MODEL_REVIEW_FAILED" in out.read_text(encoding="utf-8")
 
 
-@pytest.mark.xfail(strict=True, reason="C2 not implemented")
 def test_the_manifest_lists_the_codes_of_a_partial_snapshot(failed):
     manifest, _ = read_artifact(failed)
-    assert manifest.diagnostics, "a partial snapshot must not report a null summary"
-    assert "MODEL_REVIEW_FAILED" in json.dumps(manifest.diagnostics)
+    # DEC-11b (a): `diagnostics` stays unreported for snapshots; reasons ride in `partial_reasons`.
+    assert manifest.partial_reasons, "a partial snapshot must say why"
+    assert "MODEL_REVIEW_FAILED" in manifest.partial_reasons
 
 
-@pytest.mark.xfail(strict=True, reason="C2 not implemented")
 def test_render_reports_the_same_count_as_the_manifest_and_the_page(failed, tmp_path):
     manifest, _ = read_artifact(failed)
     out = tmp_path / "page.html"
     counts = render_catalog(failed, [], out, None)
     assert counts["diagnostics"] >= 1, counts
-    assert manifest.diagnostics
-    assert counts["diagnostics"] == sum(manifest.diagnostics.values())
+    assert counts["diagnostics"] == len(manifest.partial_reasons)
     assert "MODEL_REVIEW_FAILED" in out.read_text(encoding="utf-8")
 
 
-@pytest.mark.xfail(strict=True, reason="C2 not implemented")
 def test_the_render_command_summary_carries_the_diagnostics(failed, tmp_path):
     result = CliRunner().invoke(
         main, ["render", "--snapshot", str(failed), "--out", str(tmp_path / "cli.html")]
@@ -84,6 +81,7 @@ def test_a_complete_snapshot_still_shows_none(complete, tmp_path):
     manifest, _ = read_artifact(complete)
     assert manifest.completeness == "complete"
     assert not manifest.diagnostics
+    assert manifest.partial_reasons is None
     out = tmp_path / "page.html"
     counts = render_catalog(complete, [], out, None)
     assert counts["diagnostics"] == 0

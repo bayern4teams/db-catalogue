@@ -150,6 +150,7 @@ def write_artifact(
     producer: str,
     source_run_ids: list[str],
     completeness: str = "complete",
+    partial_reasons: list[str] | None = None,
     signing_key: bytes | None = None,
     key_id: str | None = None,
 ) -> Manifest:
@@ -199,6 +200,9 @@ def write_artifact(
             "completeness": completeness,
             "files": entries,
         }
+        if partial_reasons:
+            # Code names only, never content; absent when complete so those bytes are unchanged.
+            fields["partial_reasons"] = sorted(partial_reasons)
         if "diagnostics.jsonl" in expected:
             # Derived here rather than passed in, so a producer cannot under-report what it
             # dropped. Snapshots carry no diagnostics file and so report no summary at all.

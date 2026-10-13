@@ -739,4 +739,5 @@ def assemble(
         producer="dbig-builder/0.1.0",
         source_run_ids=[record.id for record in runs],
         completeness="partial" if partial else "complete",
+        partial_reasons=sorted(partial_reasons),
     )
