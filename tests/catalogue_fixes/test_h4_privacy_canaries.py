@@ -334,15 +334,31 @@ def _environment(monkeypatch):
     monkeypatch.setenv("BUNDLE_KEY", BUNDLE_KEY)
 
 
+def _pg8000_dbapi(patch: pytest.MonkeyPatch):
+    """The real `pg8000.dbapi`, or a stub module where the driver is not installed (CI's quality
+    job syncs without the collector extras); the collector only calls `connect`, replaced below."""
+    try:
+        import pg8000.dbapi as dbapi
+    except ImportError:
+        import sys
+        import types
+
+        dbapi = types.ModuleType("pg8000.dbapi")
+        parent = types.ModuleType("pg8000")
+        parent.dbapi = dbapi  # type: ignore[attr-defined]
+        patch.setitem(sys.modules, "pg8000", parent)
+        patch.setitem(sys.modules, "pg8000.dbapi", dbapi)
+    return dbapi
+
+
 @pytest.fixture(scope="module")
 def world(tmp_path_factory):
     """The collector run, the assembly with a batched review, and the index: once for the module.
 
     Everything the process logged or printed on the way is kept in `capture`."""
-    import pg8000.dbapi
-
     tmp = tmp_path_factory.mktemp("h4")
     with pytest.MonkeyPatch.context() as mp, Capture() as capture:
+        pg8000_dbapi = _pg8000_dbapi(mp)
         mp.setenv("BUNDLE_KEY", BUNDLE_KEY)
         mp.setenv("H4_TOKEN_KEY", TOKEN_MATERIAL)
         mp.setenv("MODEL_KEY", MODEL_KEY)
@@ -351,7 +367,7 @@ def world(tmp_path_factory):
         )
         connection = PgConnection()
         connection.fake_cursor = _CollectorCursor()
-        mp.setattr(pg8000.dbapi, "connect", lambda **_: connection)
+        mp.setattr(pg8000_dbapi, "connect", lambda **_: connection, raising=False)
         source = tmp / "coll.toml"
         source.write_text(
             '[source]\nsource_id = "coll"\nkind = "postgresql"\nconnection_env = "H4_CONN"\n'
@@ -1034,9 +1050,9 @@ def _scan_request() -> ScanRequest:
 
 def _short_key_invocations(tmp_path: Path, monkeypatch) -> dict[str, tuple[Any, list[str]]]:
     """Each command that resolves a key, wired to read SHORT_KEY from its variable."""
-    import pg8000.dbapi
-
-    monkeypatch.setattr(pg8000.dbapi, "connect", lambda **_: PgConnection())
+    monkeypatch.setattr(
+        _pg8000_dbapi(monkeypatch), "connect", lambda **_: PgConnection(), raising=False
+    )
     monkeypatch.setenv("H4_CONN", '{"host": "127.0.0.1", "port": 1, "database": "d", "user": "u", "password": ""}')
     source = tmp_path / "source.toml"
     source.write_text(

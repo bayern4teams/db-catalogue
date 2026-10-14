@@ -49,7 +49,7 @@ Only the user changes it.)
 | DEC-15 two-stage answer | 5 | deferred-by-user (later, after the live rerun) | | |
 | H5 documentation and example audit, cloud-runnable commands run | 5 | accepted-cloud | | lead: every new key/code/route grepped in LOCAL_RUN, LIVE_TEST, TECHNICAL_IMPLEMENTATION (added error-code and manifest-count paragraphs), examples (L1 keys added); CLI names checked with `--help`; LIVE_TEST branch name fixed; test_examples + policy pass |
 | H6 LOCAL_VERIFY.md as one ordered run with a send-back template | 5 | accepted-cloud | | lead: "Start here" (12 steps, sampling snippet, reasoning-model settings from the report) and send-back template at the top of LOCAL_VERIFY.md |
-| H7 final gate: full check, CI, ponytail review/debt | 5 | todo | | |
+| H7 final gate: full check, CI, ponytail review/debt | 5 | in-progress | | full check green locally on `ed0a08a`; CI 38524290097: 7 of 8 jobs green, application-quality red (H4 test imported `pg8000`, absent in the job that syncs without collector extras): fixed with a stub fallback in the test, no assertion changed; CI re-dispatch pending |
 | H8 hand-over: READY FOR LOCAL VERIFY | 5 | todo | | |
 
 States: `todo` · `in-progress` · `accepted-cloud` (lead accepted, cloud-verifiable parts proven)
