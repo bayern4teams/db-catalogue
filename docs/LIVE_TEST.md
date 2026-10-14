@@ -29,7 +29,7 @@ issue. Counts, names of tables and columns, error messages and timings are what 
 
 ```bash
 git clone https://github.com/bayern4teams/db-catalogue.git && cd db-catalogue
-git checkout claude/gracious-bardeen-x1y6he     # until it is merged into main
+git checkout feat/catalogue-fixes     # until it is merged into main
 uv sync --locked --all-packages --all-extras --python 3.12
 source .venv/bin/activate
 python --version                                # 3.12.x
@@ -332,7 +332,7 @@ needs your passwords: they are already in `.env`, which you fill in yourself.
 
 ```text
 You are testing the db-catalogue project live on this machine, in this repository, on branch
-claude/gracious-bardeen-x1y6he. Follow docs/LIVE_TEST.md sections 1 to 11 in order, and
+feat/catalogue-fixes. Follow docs/LIVE_TEST.md sections 1 to 11 in order, and
 docs/LOCAL_RUN.md where it points there. Read CLAUDE.md and AGENTS.md first and follow them.
 
 The databases to catalogue:

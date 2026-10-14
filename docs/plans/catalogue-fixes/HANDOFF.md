@@ -37,7 +37,7 @@ Only the user changes it.)
 | B2 review in batches (DEC-10) | 3 | unverified-live | | lead: `batch_size` (default 5) in ReviewConfig; first failing batch ends the review and keeps earlier decisions; 6 tests |
 | B5/X1 `key_name` for measured-unique parents (DEC-12) | 3 | accepted-cloud | | lead: identical non-generic name on a measured-unique parent links (tests flipped on purpose: test_inference_decisions, test_d3); 613 passed |
 | E1 `DBIG_SIGNING_KEY` under 32 bytes: one-line operator error instead of a ValueError traceback (user approved 2026-10-13; found by the lead, outside engineer-fixes.md) | 3 | accepted-cloud | | lead: `key_from_env` in dbig_contracts.security (SecretReferenceError, names the variable, never the key) used by collect, token key and builder; scan signing error is an OperatorError; 2 tests |
-| Final integration, ponytail audit/debt/gain, final report | 4 | accepted-cloud (FINAL_REPORT.md, CI 38364522034 green on `c01d115`) | | |
+| Final integration, ponytail audit/debt/gain, final report | 4 | accepted-cloud (FINAL_REPORT.md; Phase 5 results added at H7) | | |
 | H0 coverage audit of engineer-fixes.md against the built work | 5 | accepted-cloud | | lead: table in PHASE5_REPORT.md; gaps G1, G2; DEC-14 and DEC-15 opened (block nothing else) |
 | H1 independent attack with mutation proof on every Phase 3 item and C2 | 5 | accepted-cloud | | lead: three verifier groups done with mutation proof; defects fixed by lead: DEC-3 composite, DEC-4 max_paths, DEC-5 edge order, DEC-6 whitespace, DEC-7 source-scoped lists, E1 scan signing + non-UTF-8 key; see Open escalations; DEC-16 opened |
 | H2 regression: all attack files, Phase 0 fixtures, full suite, pip-audit | 5 | accepted-cloud | | lead: see PHASE5_REPORT.md H2; failing attack probes explained, none a regression |
@@ -47,8 +47,8 @@ Only the user changes it.)
 | L2 DEC-16: a measured-unique parent whose name is not stem+id style needs measured value overlap | 5 | accepted-cloud | | lead: `needs_overlap` in builder key_name branch, `_is_reference_style` (lexical; ceiling in `ponytail:`), manifest count `dropped_unmeasured_key_name_candidates`; 7 tests in test_dec16_name_only_keys.py, mutation proof (5 fail without the change); attack3_a_dec12_noise now passes; `AccountRef2` test renamed to `AccountRef`; 730 passed |
 | L3 DEC-17: POST search route plus `--no-access-log` documented | 5 | accepted-cloud | | lead: `POST /v1/catalogue/search` (body = SearchRequest, same errors as GET), `dbig-requester serve --no-access-log` (default unchanged), docs in LOCAL_RUN/LIVE_TEST/TECHNICAL_IMPLEMENTATION; 3 tests in test_requester.py (4 fail without the change) + H4 canary test for the POST route |
 | DEC-15 two-stage answer | 5 | deferred-by-user (later, after the live rerun) | | |
-| H5 documentation and example audit, cloud-runnable commands run | 5 | in-progress | | config keys in examples and LOCAL_RUN.md done; waiting for H3/H4 findings |
-| H6 LOCAL_VERIFY.md as one ordered run with a send-back template | 5 | todo | | |
+| H5 documentation and example audit, cloud-runnable commands run | 5 | accepted-cloud | | lead: every new key/code/route grepped in LOCAL_RUN, LIVE_TEST, TECHNICAL_IMPLEMENTATION (added error-code and manifest-count paragraphs), examples (L1 keys added); CLI names checked with `--help`; LIVE_TEST branch name fixed; test_examples + policy pass |
+| H6 LOCAL_VERIFY.md as one ordered run with a send-back template | 5 | accepted-cloud | | lead: "Start here" (12 steps, sampling snippet, reasoning-model settings from the report) and send-back template at the top of LOCAL_VERIFY.md |
 | H7 final gate: full check, CI, ponytail review/debt | 5 | todo | | |
 | H8 hand-over: READY FOR LOCAL VERIFY | 5 | todo | | |
 
