@@ -140,11 +140,18 @@ def request_scan(config_path: Path, request_path: Path, adapter: str) -> None:
 )
 @click.option("--host", required=True)
 @click.option("--port", type=int, required=True)
-def serve(config_path: Path, host: str, port: int) -> None:
+@click.option(
+    "--no-access-log",
+    is_flag=True,
+    help="Do not log request lines; the GET search route carries the query in the URL.",
+)
+def serve(config_path: Path, host: str, port: int, no_access_log: bool) -> None:
     if not is_loopback_literal(host):
         raise click.UsageError("requester API binds only to loopback; use a private TLS proxy")
     import uvicorn
 
     from .api import create_app
 
-    uvicorn.run(create_app(load_config(config_path)), host=host, port=port)
+    uvicorn.run(
+        create_app(load_config(config_path)), host=host, port=port, access_log=not no_access_log
+    )

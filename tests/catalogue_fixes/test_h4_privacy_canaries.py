@@ -844,6 +844,29 @@ def test_the_rest_surface_reports_the_same_codes_and_echoes_no_content(world, tm
         os.environ.pop("H4_REST_TOKEN", None)
 
 
+def test_the_post_search_route_keeps_the_question_out_of_the_url_and_the_logs(world):
+    """DEC-17: the question travels in the body; the request line holds no canary."""
+    import os
+
+    token = "cnry-post-token-not-a-model-secret"  # noqa: S105
+    os.environ["H4_POST_TOKEN"] = token
+    try:
+        config = RequesterConfig(
+            snapshot_dir=world.snapshot, state_dir=world.state, api_key_env="H4_POST_TOKEN"
+        )
+        with TestClient(create_app(config)) as client, Capture() as capture:
+            found = client.post(
+                "/v1/catalogue/search",
+                json={"query": QUESTION[:200]},
+                headers={"Authorization": f"Bearer {token}"},
+            )
+        assert found.status_code == 200
+        assert_clean("the POST search request line", str(found.request.url))
+        capture.assert_clean("the POST search route")
+    finally:
+        os.environ.pop("H4_POST_TOKEN", None)
+
+
 def test_the_cli_ask_prints_a_code_to_stdout_and_nothing_to_stderr(world, tmp_path):
     config = tmp_path / "requester.toml"
     with EchoingServer(400) as server:

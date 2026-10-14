@@ -366,3 +366,60 @@ def test_a_connect_timeout_is_unreachable_and_a_read_timeout_is_a_timeout(
 
     result = answer_question(state, "orders", _answer_config(), client=Slow())
     assert result["error"]["code"] == code
+
+
+def test_post_search_matches_get_and_keeps_the_query_out_of_the_url(tmp_path, monkeypatch):
+    """DEC-17: the question travels in the body, so a server access log never sees it."""
+    state = indexed(tmp_path, monkeypatch)
+    monkeypatch.setenv("REQUESTER_TOKEN", "synthetic-api-token")
+    config = RequesterConfig(
+        snapshot_dir=tmp_path / "snapshot", state_dir=state, api_key_env="REQUESTER_TOKEN"
+    )
+    headers = {"Authorization": "Bearer synthetic-api-token"}
+    with TestClient(create_app(config)) as client:
+        assert client.post("/v1/catalogue/search", json={"query": "orders"}).status_code == 401
+        got = client.get("/v1/catalogue/search?query=orders", headers=headers)
+        posted = client.post("/v1/catalogue/search", json={"query": "orders"}, headers=headers)
+        unknown = client.post("/v1/catalogue/search", json={"nope": 1}, headers=headers)
+    assert posted.status_code == 200 and posted.json() == got.json()
+    assert posted.request.url.query == b""
+    assert unknown.status_code == 422
+
+
+def test_post_search_reports_a_stale_index_like_get(tmp_path, monkeypatch):
+    state = indexed(tmp_path, monkeypatch)
+    database = sqlite3.connect(state / "catalog.sqlite3")
+    database.execute("DELETE FROM meta WHERE key='index_version'")
+    database.commit()
+    database.close()
+    monkeypatch.setenv("REQUESTER_TOKEN", "synthetic-api-token")
+    config = RequesterConfig(
+        snapshot_dir=tmp_path / "snapshot", state_dir=state, api_key_env="REQUESTER_TOKEN"
+    )
+    with TestClient(create_app(config)) as client:
+        response = client.post(
+            "/v1/catalogue/search",
+            json={"query": "orders"},
+            headers={"Authorization": "Bearer synthetic-api-token"},
+        )
+    assert response.status_code == 409 and response.json()["detail"] == {"code": "STALE_INDEX"}
+
+
+@pytest.mark.parametrize(("flags", "expected"), [([], True), (["--no-access-log"], False)])
+def test_serve_passes_the_access_log_choice_to_uvicorn(tmp_path, monkeypatch, flags, expected):
+    from click.testing import CliRunner
+    from dbig_requester.cli import main
+
+    seen = {}
+    monkeypatch.setitem(
+        sys.modules, "uvicorn", SimpleNamespace(run=lambda app, **kwargs: seen.update(kwargs))
+    )
+    monkeypatch.setattr("dbig_requester.api.create_app", lambda config: object())
+    monkeypatch.setattr("dbig_requester.cli.load_config", lambda path: object())
+    config = tmp_path / "requester.toml"
+    config.write_text("", encoding="utf-8")
+    result = CliRunner().invoke(
+        main, ["serve", "--config", str(config), "--host", "127.0.0.1", "--port", "8080", *flags]
+    )
+    assert result.exit_code == 0, result.output
+    assert seen["access_log"] is expected

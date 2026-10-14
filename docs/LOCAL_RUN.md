@@ -260,6 +260,9 @@ dbig-requester search --config "$out/requester.toml" --query "where is the custo
 - By default every word must match. `--match any` ranks entries by how well they match any
   meaningful word, which is what you want for a question in plain language.
 - Comments count: a column is found by what its comment says.
+- Over HTTP (`dbig-requester serve`), send a question with `POST /v1/catalogue/search` and a JSON body
+  (`{"query": "...", "match": "any"}`): the `GET` route puts the query in the URL, which a server
+  access log records. `dbig-requester serve ... --no-access-log` turns the request log off.
 - Narrow with `--source-id`, `--kind table|view|collection|field`, `--data-type`, `--limit`.
 
 Each result has an `id` such as `object:e970e074...`. Paths are asked between two object IDs:
