@@ -44,7 +44,7 @@ Only the user changes it.)
 | H3 report-shaped synthetic end-to-end scenario, counts before/after | 5 | todo | | |
 | H4 privacy canaries across the new code paths | 5 | todo | | |
 | L1 DEC-14: optional bounded cardinality probe for ClickHouse and MongoDB (default off) | 5 | todo (answered 2026-10-14) | | |
-| L2 DEC-16: a measured-unique parent whose name is not stem+id style needs measured value overlap | 5 | todo (answered 2026-10-14) | | |
+| L2 DEC-16: a measured-unique parent whose name is not stem+id style needs measured value overlap | 5 | accepted-cloud | | lead: `needs_overlap` in builder key_name branch, `_is_reference_style` (lexical; ceiling in `ponytail:`), manifest count `dropped_unmeasured_key_name_candidates`; 7 tests in test_dec16_name_only_keys.py, mutation proof (5 fail without the change); attack3_a_dec12_noise now passes; `AccountRef2` test renamed to `AccountRef`; 730 passed |
 | L3 DEC-17: POST search route plus `--no-access-log` documented | 5 | todo (answered 2026-10-14) | | |
 | DEC-15 two-stage answer | 5 | deferred-by-user (later, after the live rerun) | | |
 | H5 documentation and example audit, cloud-runnable commands run | 5 | in-progress | | config keys in examples and LOCAL_RUN.md done; waiting for H3/H4 findings |

@@ -153,6 +153,23 @@ def _reference_stem(name: str, known_objects: frozenset[str] = frozenset()) -> t
     return lowered, False
 
 
+def _is_reference_style(name: str) -> bool:
+    """Whether a name ends in a reference suffix after a stem, with no object lookup.
+
+    ponytail: a lowercase name with no separator (`valid`) passes when its stem has three or more
+    characters; a catalogue-aware test would need the parent's own table, so the ceiling is a
+    few ordinary words ending in `id`. Upgrade path: require `known_objects` for them.
+    """
+    folded = _snake(name)
+    if any(folded.endswith(suffix) and len(folded) > len(suffix) for suffix in REFERENCE_SUFFIXES):
+        return True
+    lowered = name.casefold()
+    return any(
+        lowered.endswith(suffix.removeprefix("_")) and len(lowered) - len(suffix) + 1 >= 3
+        for suffix in REFERENCE_SUFFIXES
+    )
+
+
 def _resembles(child: Field, parent: Field, config: BuilderConfig) -> bool:
     """Whether a parent column's name is the child's name (up to case and separators) or generic."""
     name = parent.name.casefold()
@@ -570,6 +587,7 @@ def assemble(
         ) >= MEASURED_UNIQUE:
             unique_fields.append(candidate_parent)
     dropped_zero_overlap = 0
+    dropped_unmeasured_key_name = 0
     known_objects = frozenset(
         form
         for item in objects.values()
@@ -592,6 +610,7 @@ def assemble(
             continue
         stem, suffixed = _reference_stem(child.name, known_objects)
         candidates = []
+        needs_overlap: set[str] = set()
         for parent in unique_fields:
             parent_object = objects.get(parent.object_id)
             if (
@@ -619,6 +638,15 @@ def assemble(
                 # is called (user decision 2026-10-05). A measured-unique parent column counts too
                 # (user decision 2026-10-13, DEC-12); the overlap check below guards that case.
                 candidates.append((100, parent, "key_name"))
+                if (
+                    parent.id not in declared_unique
+                    and parent.id not in weak_key_ids
+                    and not _is_reference_style(parent.name)
+                ):
+                    # A column that only measures unique and is not named like a reference
+                    # (`email`, `status`) matches on name alone far too often, so it needs
+                    # measured value overlap (user decision 2026-10-14, DEC-16).
+                    needs_overlap.add(parent.id)
                 continue
             if suffixed:
                 # The name announces itself as a reference, so a fuzzy match is justified.
@@ -671,6 +699,10 @@ def assemble(
                 # columns are unrelated (user decision 2026-10-12). Counted, never recorded by
                 # value. A non-zero overlap, however small, is shown and never drops.
                 dropped_zero_overlap += 1
+                continue
+            if parent.id in needs_overlap and overlap.kind != "value_containment":
+                # Counted, never recorded by value; nothing to say about it without a measurement.
+                dropped_unmeasured_key_name += 1
                 continue
             kept += 1
             lexical = _evidence(
@@ -782,6 +814,11 @@ def assemble(
                 **(
                     {"dropped_zero_overlap_candidates": dropped_zero_overlap}
                     if dropped_zero_overlap
+                    else {}
+                ),
+                **(
+                    {"dropped_unmeasured_key_name_candidates": dropped_unmeasured_key_name}
+                    if dropped_unmeasured_key_name
                     else {}
                 ),
                 # Only when partial, so a complete snapshot's bytes are unchanged.

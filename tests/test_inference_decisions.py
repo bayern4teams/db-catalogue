@@ -151,9 +151,9 @@ def test_the_key_name_rule_admits_a_measured_unique_parent(tmp_path, monkeypatch
     """DEC-12 (user, 2026-10-13) replaced the 2026-10-05 'declared key only' limit: an identical,
     non-generic name on a measured-unique parent column is enough."""
     found = _assemble(tmp_path, monkeypatch, {
-        "accounts_raw": {"fields": [("AccountRef2", "integer")], "unique": {"AccountRef2": 1.0}},
-        "events": {"fields": [("id", "integer"), ("AccountRef2", "integer")], "key": ["id"]},
+        "accounts_raw": {"fields": [("AccountRef", "integer")], "unique": {"AccountRef": 1.0}},
+        "events": {"fields": [("id", "integer"), ("AccountRef", "integer")], "key": ["id"]},
     })
     assert [item for item in found if item[4] == "key_name"] == [
-        ("events", "AccountRef2", "accounts_raw", "AccountRef2", "key_name")
+        ("events", "AccountRef", "accounts_raw", "AccountRef", "key_name")
     ], found
