@@ -59,3 +59,34 @@ Every proposal and check sentence mapped to a commit and a test, or to why it is
   - `attack3_a_dec12_noise.py` (12): ordinary shared names link on a measured-unique parent -> DEC-16 (open).
   - `attack3_a_dec1.py` (1, two near-identical unique parent columns both become candidates), `attack3_a_dec2.py` (1, a weak ClickHouse key beats a measured 0.2 uniqueness), `attack3_a_dec4.py` (1, a path with a same-source middle hop does not warn; the Decision says "every hop"): open policy points in HANDOFF.md.
   - `attack3_b_answering_retrieval.py` (6): five paraphrased lineage claims (documented `ponytail:` ceiling) and a source id that is also a word prefix; `attack_search.py` (1): `pos` is a prefix of the engine word `postgresql`, now searchable by DEC-7.
+
+## H3 report-shaped end-to-end scenario (2026-10-14, final code incl. L1 to L3)
+`tests/catalogue_fixes/test_h3_end_to_end.py`, four invented sources, planted truth: 10 true links, 7 false links (same names, disjoint value domains), 2 decoy columns (`valid`, `paid`). Counts only. The *before* column is **not re-measured**: the baseline runner from the earlier session was not kept, so the per-item before-behaviour in `PHASE0_REPORT.md` stays the reference.
+
+| measure | sampling on | sampling off |
+|---|---|---|
+| true links proposed / missed | 10 / 0 | 10 / 0 |
+| false links proposed | 0 (each dropped on 0 of 12 sampled values) | 7, each labelled "values not compared" (17 candidate rows, 51 page mentions) |
+| candidates with an overlap number | 10 | 0 |
+| a 25% overlap is kept and shows "25% of 8 sampled" | yes | n/a |
+| decoys / unplanned candidates | 0 / 0 | 0 / 0 |
+| join questions J1 to J4, X1 with a true path | 5 of 5 (0 through a false link) | same set (the false links exist but are labelled) |
+| questions answered with a citation | 8 of 8 | 8 of 8 |
+| retrieval recall in the stub's context | 15 of 15 | 15 of 15 |
+| relationship rows sent to the model | 37 | 70 |
+| unanswerable question | `NO_CATALOGUE_MATCH`, 0 model calls | same |
+| schema-description collections reaching the model | 0 (with `exclude_objects`) | 0 |
+| `partial` reasons shown (manifest = page) | `PREVIOUS_COMPLETE_BUNDLE_USED`, `SOURCE_BUNDLE_PARTIAL`, `MODEL_REJECTED_REQUEST` + `MODEL_REVIEW_FAILED`; complete = none | same |
+
+Plans: J1 `review_required`, J4 (cross-source) `unresolved` with `approved_staging_or_federated_target` and `final_cross_source_join` listed, Mongo plan `ready_for_review`. Not proved by this scenario: real PostgreSQL statistics, real ClickHouse key strings, a real model (`LOCAL_VERIFY.md`).
+
+## H4 privacy canaries (2026-10-14)
+`tests/catalogue_fixes/test_h4_privacy_canaries.py`: 49 passed, 1 xfailed (the documented lineage-claim paraphrase ceiling). A canary is planted as a sampled value, a SQL literal, a prompt and a secret, then searched for in: bundles, snapshot, search index, `partial_reasons`, diagnostics, every review batch request, the `ask` request and relationship context, the weak ClickHouse key claim, resolved `cited` names, the error codes of every model failure mode, the CLI output, the REST bodies, a log capture of the whole build and of every REST call, traces, and short-key errors. Result: no canary in any of them; the question is not echoed in a 422 body.
+- Real finding, fixed: `GET /v1/catalogue/search?query=...` carries the question in the URL, so a default uvicorn access log records it (DEC-17). Now: `POST /v1/catalogue/search` takes the query in the body (canary test added) and `dbig-requester serve --no-access-log` turns the request log off; documented in `LOCAL_RUN.md`, `LIVE_TEST.md`, `TECHNICAL_IMPLEMENTATION.md`.
+- Test-side corrections (five, applied by the user's session, none removed a privacy assertion) are in `HANDOFF.md` Notifications.
+- Left open on purpose: the `openai` library logs prompts at DEBUG if an operator turns that level on (the application sets no logging; a test asserts this).
+
+## L1 to L3 (the user's answers of 2026-10-14)
+- L1 DEC-14: `cardinality_probe` (default off) for ClickHouse and MongoDB; 9 tests, 5 fail without the change. Live behaviour: `LOCAL_VERIFY.md`.
+- L2 DEC-16: measured-unique parents with non-reference names need measured overlap; 7 tests, 5 fail without the change; the earlier noise probe `attack3_a_dec12_noise.py` now passes (12 of 12).
+- L3 DEC-17: POST search route and `--no-access-log`; 4 tests plus 1 canary test.
