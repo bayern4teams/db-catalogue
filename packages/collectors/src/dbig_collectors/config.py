@@ -34,6 +34,15 @@ class SourceConfig(BaseModel):
     read_timeout_seconds: int = Field(default=10, ge=1)
     sample_rows: int = Field(default=0, ge=0)
     max_sample_bytes: int = Field(default=1_048_576, ge=1)
+    # Optional bounded distinct count per column for ClickHouse and MongoDB, which keep no
+    # per-column statistics, so that a unique column can be measured as a parent key (DEC-14,
+    # user decision 2026-10-14). Off by default. Reads data (counts only, nothing is stored),
+    # so a scan request needs the `sample` capability for it. One extra query per table or
+    # collection, charged to `max_queries`; at most `cardinality_probe_max_columns` columns and
+    # `cardinality_probe_max_rows` rows are read each.
+    cardinality_probe: bool = False
+    cardinality_probe_max_columns: int = Field(default=20, ge=1, le=200)
+    cardinality_probe_max_rows: int = Field(default=100_000, ge=1)
     max_array_elements: int = Field(default=16, ge=1, le=256)
     max_path_depth: int = Field(default=4, ge=1)
     history_access: bool = False

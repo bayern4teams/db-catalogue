@@ -346,6 +346,18 @@ Use the same key and ID for every source in a run and a new key for each run. On
 leave the collector; the key never enters any file, and digests from different runs cannot be
 compared.
 
+### Optional: measure uniqueness on ClickHouse and MongoDB
+
+Those two keep no per-column statistics, so with the metadata alone none of their columns can be a
+measured-unique parent. Setting `cardinality_probe = true` in a source file (default off) adds one
+bounded query per table or collection (charged to `max_queries`) that returns only counts; the
+profile then carries a distinct count and a uniqueness over the first `cardinality_probe_max_rows`
+rows (default 100000) of up to `cardinality_probe_max_columns` columns (default 20). On a larger table
+that is uniqueness within those rows, and `sample_count` says how many. A failed probe is a
+`STATS_UNAVAILABLE` diagnostic, not a failed scan. Because it reads data, a scan request needs the
+`sample` capability for it. For MongoDB also set `sample_rows`, otherwise only validator paths are
+known. See the commented keys in `examples/local/clickhouse.toml` and `mongodb.toml`.
+
 ### What the overlap does to candidates
 
 With sampling on, a cross-source candidate whose child values were compared and found **0 of N** (N at least `min_token_support`, default 4, in the `[builder]` file) is dropped. A candidate with some overlap, even 21 % to 27 %, stays and shows its number and sample size: overlap ranks and warns, it never decides alone. A sample smaller than `min_token_support` keeps the candidate, marked "sample too small". With sampling off every candidate says "values not compared". Two optional `[builder]` lists restrict candidates by source: `source_groups` (sources in different groups are not linked) and `forbidden_source_pairs`; both default to empty. See `examples/local/builder.toml`.

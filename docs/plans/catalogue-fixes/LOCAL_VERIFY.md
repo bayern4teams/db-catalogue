@@ -76,3 +76,8 @@ All need the real databases and model (see "Restore the environment first"). Rer
 - E1: a `DBIG_SIGNING_KEY` under 32 bytes gives a one-line error naming the variable.
 - C2: `render` `diagnostics` equals the page count and the manifest has `partial_reasons` for a partial snapshot.
 - Result (filled in locally):
+
+### Phase 5 L1 to L3 — live checks (added 2026-10-14)
+- **L1 (DEC-14), cardinality probe, default off.** In the ClickHouse and MongoDB source files set `cardinality_probe = true` (MongoDB also `sample_rows`), re-run `collect`, `assemble`. Expect: `profiles.jsonl` gains `sample` profiles with `distinct_estimate`/`uniqueness`/`sample_count` and no value; a unique ClickHouse/MongoDB column can now be a measured-unique parent. Check the query count against `max_queries` (one extra per table or collection) and that no `STATS_UNAVAILABLE` "cardinality probe unavailable" diagnostic appears on a healthy server. Not provable in the cloud: the real `uniq`/`max_rows_to_read` behaviour on ClickHouse 26.8 and the `$facet` pipeline on MongoDB 7.0 (CI's live containers run no probe).
+- **L2 (DEC-16).** With sampling off, ordinary shared names (`email`, `status`, `url`, `created_at`) must no longer link to a same-named measured-unique column; stem+id names (`classificationid`) still link. With sampling on they link only with measured overlap. The manifest shows `dropped_unmeasured_key_name_candidates` when any were dropped.
+- **L3 (DEC-17).** `POST /v1/catalogue/search` with `{"query": "..."}` answers like the `GET`; start `dbig-requester serve ... --no-access-log` and confirm the server prints no request lines.

@@ -617,6 +617,7 @@ def discover_clickhouse(
         if len(columns) > config.max_fields:
             raise BudgetExhausted
         column_names: dict[str, set[str]] = defaultdict(set)
+        probe_columns: dict[str, list[tuple[str, str, str]]] = defaultdict(list)
         for table, name, data_type, position, uncompressed, comment in columns:
             if table not in identities:
                 continue
@@ -636,6 +637,7 @@ def discover_clickhouse(
                 )
             )
             column_names[table].add(name)
+            probe_columns[table].append((field_id, name, str(data_type)))
             width = _average_width(uncompressed, row_counts.get(table))
             if width is not None:
                 tables["profiles.jsonl"].append(
@@ -649,6 +651,20 @@ def discover_clickhouse(
                         average_width_bytes=width,
                         **common,
                     )
+                )
+        if config.cardinality_probe:
+            for table, probed in probe_columns.items():
+                _probe_clickhouse(
+                    client,
+                    config,
+                    budget,
+                    common,
+                    database,
+                    table,
+                    probed,
+                    stable_id(config.source_id, "object", identities[table]),
+                    tables["profiles.jsonl"],
+                    tables["diagnostics.jsonl"],
                 )
         # A sorting or primary key that is one plain column is a weak parent claim (DEC-2): schema
         # metadata, not values, and not a uniqueness guarantee. `index` is the existing kind that
@@ -696,6 +712,92 @@ def discover_clickhouse(
 
 
 _PLAIN_COLUMN = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+_NESTED_TYPE = re.compile(r"^(Nullable\(|LowCardinality\()*(Array|Map|Tuple|Nested|Object|JSON)")
+
+
+def _probe_profile(
+    config: SourceConfig,
+    common: dict[str, Any],
+    field_id: str,
+    object_id: str,
+    rows: int,
+    distinct: int,
+) -> Profile | None:
+    """A distinct count over the rows the probe read, as a uniqueness measure; counts only.
+
+    ponytail: the rows are the first `cardinality_probe_max_rows`, so on a larger table this is
+    uniqueness within that prefix, a lower bound on duplicates, not a table-wide measurement
+    (`sample_count` says how many rows). Upgrade path: a table-wide `uniqExact` behind its own
+    budget.
+    """
+    if rows <= 0 or distinct < 0:
+        return None
+    return Profile(
+        id=stable_id(config.source_id, "profile", f"{field_id}:cardinality_probe"),
+        field_id=field_id,
+        object_id=object_id,
+        method="sample",
+        sample_count=rows,
+        distinct_estimate=float(distinct),
+        uniqueness=min(distinct / rows, 1.0),
+        **common,
+    )
+
+
+def _probe_clickhouse(
+    client: Any,
+    config: SourceConfig,
+    budget: Budget,
+    common: dict[str, Any],
+    database: str,
+    table: str,
+    columns: list[tuple[str, str, str]],
+    object_id: str,
+    out: list[Record],
+    diagnostics: list[Record],
+) -> None:
+    """One query: `count()` and `uniq()` of up to N plain columns over a bounded row prefix.
+
+    `columns` holds (field_id, name, type). Identifiers come from the server's own catalog and
+    pass `_quoted`; the row bound is a server setting, not a SQL literal.
+    """
+    chosen = [
+        item
+        for item in columns
+        if _PLAIN_COLUMN.fullmatch(item[1]) and not _NESTED_TYPE.match(item[2])
+    ][: config.cardinality_probe_max_columns]
+    if not chosen or budget.used >= budget.max_queries:
+        return
+    budget.charge()
+    select = ", ".join(["count()", *(f"uniq({_quoted(name)})" for _, name, _ in chosen)])
+    try:
+        result = client.query(
+            f"SELECT {select} FROM {_quoted(database)}.{_quoted(table)}",  # noqa: S608
+            settings={
+                "max_execution_time": config.read_timeout_seconds,
+                "max_rows_to_read": config.cardinality_probe_max_rows,
+                "read_overflow_mode": "break",
+            },
+        ).result_set
+        row = result[0]
+        rows = int(row[0])
+    except Exception:  # noqa: BLE001 - an optional probe must not fail the metadata scan
+        diagnostics.append(
+            Record.model_validate(
+                {
+                    "record_type": "diagnostic",
+                    "id": stable_id(config.source_id, "diagnostic", f"{database}:{table}:probe"),
+                    "code": "STATS_UNAVAILABLE",
+                    "message": "cardinality probe unavailable",
+                    **common,
+                }
+            )
+        )
+        return
+    for (field_id, _, _), distinct in zip(chosen, row[1:], strict=True):
+        profile = _probe_profile(config, common, field_id, object_id, rows, int(distinct))
+        if profile is not None:
+            out.append(profile)
 
 
 def _average_width(uncompressed: Any, rows: int | None) -> int | None:
@@ -715,6 +817,70 @@ def _average_width(uncompressed: Any, rows: int | None) -> int | None:
         return None
     width = int(uncompressed) // rows
     return width if width >= 0 else None
+
+
+_MONGO_PATH = re.compile(r"[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*")
+
+
+def _probe_mongo(
+    collection: Any,
+    config: SourceConfig,
+    budget: Budget,
+    common: dict[str, Any],
+    object_id: str,
+    native: str,
+    paths: dict[str, set[str]],
+    out: list[Record],
+    diagnostics: list[Record],
+) -> None:
+    """One aggregation: a bounded document prefix, then a distinct count per scalar path.
+
+    Only counts leave the server (`$facet` of `$group` then `$count`); no value is returned. Paths
+    that are arrays or sub-documents, or whose names are not plain, are skipped.
+    """
+    chosen = [
+        path
+        for path, types in sorted(paths.items())
+        if _MONGO_PATH.fullmatch(path) and not types & {"list", "dict", "array", "object"}
+    ][: config.cardinality_probe_max_columns]
+    if not chosen or budget.used >= budget.max_queries:
+        return
+    budget.charge()
+    facets: dict[str, Any] = {
+        f"p{index}": [{"$group": {"_id": f"${path}"}}, {"$count": "n"}]
+        for index, path in enumerate(chosen)
+    }
+    pipeline = [
+        {"$limit": config.cardinality_probe_max_rows},
+        {"$facet": {"rows": [{"$count": "n"}], **facets}},
+    ]
+    try:
+        result = list(
+            collection.aggregate(pipeline, maxTimeMS=config.read_timeout_seconds * 1000)
+        )[0]
+        rows = int(result["rows"][0]["n"]) if result["rows"] else 0
+        counts = [
+            int(result[f"p{index}"][0]["n"]) if result[f"p{index}"] else 0
+            for index in range(len(chosen))
+        ]
+    except Exception:  # noqa: BLE001 - an optional probe must not fail the metadata scan
+        diagnostics.append(
+            Record.model_validate(
+                {
+                    "record_type": "diagnostic",
+                    "id": stable_id(config.source_id, "diagnostic", f"{native}:probe"),
+                    "code": "STATS_UNAVAILABLE",
+                    "message": "cardinality probe unavailable",
+                    **common,
+                }
+            )
+        )
+        return
+    for path, distinct in zip(chosen, counts, strict=True):
+        field_id = stable_id(config.source_id, "field", f"{native}:{path}")
+        profile = _probe_profile(config, common, field_id, object_id, rows, distinct)
+        if profile is not None:
+            out.append(profile)
 
 
 def _mongo_paths(
@@ -1035,6 +1201,18 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
                                     **common,
                                 )
                             )
+            if config.cardinality_probe and info.get("type", "collection") == "collection":
+                _probe_mongo(
+                    client[database][name],
+                    config,
+                    budget,
+                    common,
+                    object_id,
+                    native,
+                    paths,
+                    tables["profiles.jsonl"],
+                    tables["diagnostics.jsonl"],
+                )
             if info.get("type", "collection") == "collection" and budget.used < budget.max_queries:
                 budget.charge()
                 try:

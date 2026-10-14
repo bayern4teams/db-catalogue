@@ -3,7 +3,7 @@
 Overwrite this file at every commit. A fresh session reads it first, then
 [the plan](../CATALOGUE_FIXES_IMPLEMENTATION_PLAN.md). Git is the memory; a session's context is not.
 
-**Lock:** 2026-10-14T06:34:57Z · **Autonomy:** unattended-through-phase-5 · **Last heartbeat:** 2026-10-14T06:34:57Z
+**Lock:** 2026-10-14T06:40:27Z · **Autonomy:** unattended-through-phase-5 · **Last heartbeat:** 2026-10-14T06:40:27Z
 
 (Lock/heartbeat protocol: plan §7. A session sets `Lock: <ISO time>`, pushes it, and refreshes it at
 every commit; a lock older than 75 min is stale. `Autonomy` is `off`, `dryrun` (a tick only records
@@ -43,7 +43,7 @@ Only the user changes it.)
 | H2 regression: all attack files, Phase 0 fixtures, full suite, pip-audit | 5 | accepted-cloud | | lead: see PHASE5_REPORT.md H2; failing attack probes explained, none a regression |
 | H3 report-shaped synthetic end-to-end scenario, counts before/after | 5 | todo | | |
 | H4 privacy canaries across the new code paths | 5 | todo | | |
-| L1 DEC-14: optional bounded cardinality probe for ClickHouse and MongoDB (default off) | 5 | todo (answered 2026-10-14) | | |
+| L1 DEC-14: optional bounded cardinality probe for ClickHouse and MongoDB (default off) | 5 | unverified-live | | lead: config `cardinality_probe`, `_max_columns` (20), `_max_rows` (100000); ClickHouse one `count()/uniq()` query per table with `max_rows_to_read`+`break`, MongoDB one `$limit`+`$facet` per collection; `sample` profiles, counts only; failure = STATS_UNAVAILABLE; scan needs `sample` capability; no schema change; 9 tests (5 fail without the change); docs + example TOMLs |
 | L2 DEC-16: a measured-unique parent whose name is not stem+id style needs measured value overlap | 5 | accepted-cloud | | lead: `needs_overlap` in builder key_name branch, `_is_reference_style` (lexical; ceiling in `ponytail:`), manifest count `dropped_unmeasured_key_name_candidates`; 7 tests in test_dec16_name_only_keys.py, mutation proof (5 fail without the change); attack3_a_dec12_noise now passes; `AccountRef2` test renamed to `AccountRef`; 730 passed |
 | L3 DEC-17: POST search route plus `--no-access-log` documented | 5 | accepted-cloud | | lead: `POST /v1/catalogue/search` (body = SearchRequest, same errors as GET), `dbig-requester serve --no-access-log` (default unchanged), docs in LOCAL_RUN/LIVE_TEST/TECHNICAL_IMPLEMENTATION; 3 tests in test_requester.py (4 fail without the change) + H4 canary test for the POST route |
 | DEC-15 two-stage answer | 5 | deferred-by-user (later, after the live rerun) | | |

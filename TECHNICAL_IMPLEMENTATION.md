@@ -262,6 +262,7 @@ three-database snapshot:
 - **Limits.** Reaching `max_queries`, `max_objects` or `max_fields` keeps stopping with no
   bundle and an operator message.
 
+- **Cardinality probe (DEC-14, 2026-10-14).** Optional, default off: `cardinality_probe`, `cardinality_probe_max_columns` (20), `cardinality_probe_max_rows` (100000). ClickHouse: one `SELECT count(), uniq(col)...` per table with `max_rows_to_read` and `read_overflow_mode='break'`; MongoDB: one `$limit` + `$facet` of `$group`/`$count` per collection. Charged to `max_queries`, needs the `sample` scan capability, emits `sample` profiles with `distinct_estimate`, `uniqueness` and `sample_count` only; a failure is a `STATS_UNAVAILABLE` diagnostic.
 - **MongoDB collections (corrected 2026-10-04).** `sample_rows` is per collection, as it is per
   table for PostgreSQL; it was a total for the source, so after one collection that large every
   later collection was left unsampled and, having no validator, had no fields, with no

@@ -54,7 +54,7 @@ def accept_scan(envelope: SignedScanRequest, config: SourceConfig, queue_path: P
     if not set(request.scopes) <= set(config.namespaces):
         raise OperatorError("UNAUTHORIZED_SCOPE")
     allowed = {"metadata"}
-    if config.sample_rows:
+    if config.sample_rows or config.cardinality_probe:
         allowed.add("sample")
     if config.history_access:
         allowed.add("history")
@@ -144,6 +144,7 @@ def process_next(config: SourceConfig, queue_path: Path, output_root: Path) -> S
         update={
             "namespaces": request.scopes,
             "sample_rows": config.sample_rows if "sample" in request.capabilities else 0,
+            "cardinality_probe": config.cardinality_probe and "sample" in request.capabilities,
             "history_access": config.history_access and "history" in request.capabilities,
         }
     )

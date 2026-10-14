@@ -8,3 +8,11 @@ signing_key_env = "DBIG_SIGNING_KEY"
 signing_key_id = "local"
 namespaces = ["default"]               # ClickHouse databases to catalogue
 # tls_ca_file = "C:/certs/company-ca.pem"
+
+# Optional distinct-count probe (default off). ClickHouse keeps no per-column statistics, so
+# without it no column measures as a unique parent key. One extra query per table, charged to
+# max_queries; it reads data (counts only, nothing is stored), so a scan request needs the
+# `sample` capability. It reads at most this many rows and columns per table.
+# cardinality_probe = true
+# cardinality_probe_max_columns = 20
+# cardinality_probe_max_rows = 100000
