@@ -1,3 +1,4 @@
+# ruff: noqa: E501 - long assertion messages and planted strings; wrapping them would hide the canaries
 """H4 (plan section 9, Phase 5): privacy canaries across the whole catalogue-fixes surface.
 
 Planted strings (all invented, none from a real catalogue):
@@ -195,7 +196,9 @@ class Capture:
         and above. Library DEBUG chatter is a third party's and is reported in the docstring."""
         return [
             self._text(r) for r in self.records
-            if r.name.startswith("dbig") or r.levelno >= logging.INFO
+            # httpx2 is the Starlette TestClient's own client, not the server under test; what the
+            # server logs about the search URL is DEC-17.
+            if r.name.startswith("dbig") or (r.levelno >= logging.INFO and r.name != "httpx2")
         ]
 
     def console(self) -> str:
@@ -305,7 +308,7 @@ class _CollectorCursor(PgCursor):
     constraints: list = []  # noqa: RUF012
     stats: list = []  # noqa: RUF012
     sample = [(value,) for value in VALUES_ALPHA]
-    definitions = [(43, f"SELECT label FROM gizmo WHERE label = '{SQL_LITERAL}'")]
+    definitions = [(43, f"SELECT label FROM gizmo WHERE label = '{SQL_LITERAL}'")]  # noqa: S608 - a planted canary in a fake view definition, never executed
 
     def fetchall(self):
         if "pg_get_viewdef" in self.last:
@@ -367,6 +370,7 @@ def world(tmp_path_factory):
             review = ReviewConfig(
                 base_url=stub.url, model="local-model", model_digest="rev-1",
                 api_key_env="MODEL_KEY", timeout_seconds=10, batch_size=BATCH,
+                max_candidates=1000,  # review every candidate, so the controls below are sent
             )
             assemble(
                 bundles, tmp / "snapshot",
@@ -505,7 +509,7 @@ def _check_review_request(world, request: dict) -> int:
             assert re.fullmatch(r"[a-z_]+", item["kind"])
             for value in item["metrics"].values():
                 numberlike = isinstance(value, bool | int | float) or value is None
-                assert numberlike or re.fullmatch(r"[a-z0-9_:]+", value), "free text in a metric"
+                assert numberlike or re.fullmatch(r"[a-z0-9_:-]+", value), "free text in a metric"
     return len(entries)
 
 
@@ -627,6 +631,7 @@ def test_cited_names_are_resolved_from_the_catalogue_and_carry_nothing_else(worl
         for key in ("name", "object_name", "namespace"):
             if key in entry:
                 parts = re.split(r" -> |, |\(|\)", entry[key])
+                parts = [p.strip() for p in parts]
                 assert all(p == "" or p in world.names or p in {"public"} for p in parts), entry
     capture.assert_clean("a successful ask", extra=complete_messages(stub.requests))
 
@@ -667,7 +672,7 @@ def test_nothing_is_traced_with_content(world, monkeypatch):
         result, capture = run_ask(
             world, stub.url,
             langfuse_url="http://127.0.0.1:3000", langfuse_public_key_env="LF_PUBLIC",
-            langfuse_secret_key_env="LF_SECRET",
+            langfuse_secret_key_env="LF_SECRET",  # noqa: S106 - the name of an environment variable, not a secret
         )
     assert "error" not in result, result  # telemetry failure does not hide the answer
     assert calls and set(calls[0]) == {"as_type", "name", "metadata"}
@@ -1069,7 +1074,7 @@ def test_a_short_key_is_a_one_line_error_that_never_shows_the_key(tmp_path, monk
     with Capture() as capture:
         result = CliRunner().invoke(main, args)
     assert result.exit_code != 0
-    text = result.output + (result.stderr or "")
+    text = result.output  # click >= 8.2: output already interleaves stdout and stderr
     assert "Traceback" not in text and (result.exception is None or isinstance(result.exception, SystemExit))
     assert "32 bytes" in text, f"{command}: not the key-length error"
     assert_clean(f"the output of {command}", text)

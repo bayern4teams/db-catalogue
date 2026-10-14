@@ -29,7 +29,6 @@ from __future__ import annotations
 import json
 import os
 import re
-from contextlib import closing
 from pathlib import Path
 from typing import Any
 
@@ -132,7 +131,11 @@ def sources(sampling: bool) -> dict[str, dict]:
         },
     }
     mg_tables = {
-        "merchant": {"fields": [("_id", "str"), ("label", "str")], "key": ["_id"], "kind": "collection"},
+        "merchant": {
+            "fields": [("_id", "str"), ("label", "str")],
+            "key": ["_id"],
+            "kind": "collection",
+        },
         "merchantnote": {
             "fields": [("_id", "str"), ("merchantid", "str"), ("body", "str")],
             "key": ["_id"], "kind": "collection", "foreign": [("merchantid", "merchant", "_id")],
@@ -270,7 +273,9 @@ def score_links(snapshot: Path) -> dict[str, int]:
         "unplanned": len(links - TRUE_LINKS - FALSE_LINKS),
         "decoy_children": sum(1 for link in links if link[2] in DECOYS),
         "values_not_compared": sum("values not compared" in item["text"] for item in found),
-        "with_overlap_number": sum(bool(re.search(r"overlap \d+%", item["text"])) for item in found),
+        "with_overlap_number": sum(
+            bool(re.search(r"overlap \d+%", item["text"])) for item in found
+        ),
     }
 
 
