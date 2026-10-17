@@ -1,0 +1,1 @@
+{"collector_version":"0.1.0","id":"mongo-main","ir_version":"1.0","kind":"mongodb","name":"mongo-main","observed_at":"2026-10-17T05:53:15.783876Z","provenance":"source-catalog","record_type":"source","source_id":"mongo-main","transport":"plaintext-loopback"}
