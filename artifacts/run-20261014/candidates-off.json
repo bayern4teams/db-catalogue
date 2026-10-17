@@ -2,27 +2,22 @@
  "summary": {
   "candidates": 71,
   "by_mark": {
-   "#1": 11,
-   "#2": 2,
-   "#3": 1,
-   "#4": 1,
-   "#5": 1,
-   "#6": 1,
-   "#7": 1,
-   "#8": 1,
-   "M2": 1,
+   "#21": 19,
+   "M26": 1,
    "PG": 12,
-   "UNMARKED": 39
+   "U-ci": 19,
+   "U-inv": 1,
+   "U-loc": 19
   },
-  "true": 18,
-  "false": 14,
-  "unmarked": 39,
+  "true": 45,
+  "false": 26,
+  "unmarked": 0,
   "rules": {
    "key_name": 69,
    "suffix": 2
   },
   "all_not_compared": true,
-  "marked_pairs_missing": 31,
+  "marked_pairs_missing": 50,
   "missing_true": 27
  },
  "candidates": [
@@ -604,24 +599,6 @@
   },
   {
    "child": "ch.Company.companyID",
-   "parent": "pg.location.companyid",
-   "rule": "key_name",
-   "evidence": [
-    "compatible_type",
-    "measured_uniqueness",
-    "name_similarity",
-    "value_overlap_not_measured"
-   ],
-   "overlap": {
-    "reason": "no_value_tokens"
-   },
-   "status": "tentative",
-   "mark": "UNMARKED",
-   "true": null,
-   "not_compared": true
-  },
-  {
-   "child": "ch.Company.companyID",
    "parent": "pg.companyindustry.companyid",
    "rule": "key_name",
    "evidence": [
@@ -634,26 +611,8 @@
     "reason": "no_value_tokens"
    },
    "status": "tentative",
-   "mark": "UNMARKED",
-   "true": null,
-   "not_compared": true
-  },
-  {
-   "child": "ch.CompanyIndustry.companyID",
-   "parent": "pg.location.companyid",
-   "rule": "key_name",
-   "evidence": [
-    "compatible_type",
-    "measured_uniqueness",
-    "name_similarity",
-    "value_overlap_not_measured"
-   ],
-   "overlap": {
-    "reason": "no_value_tokens"
-   },
-   "status": "tentative",
-   "mark": "UNMARKED",
-   "true": null,
+   "mark": "U-ci",
+   "true": false,
    "not_compared": true
   },
   {
@@ -670,8 +629,8 @@
     "reason": "no_value_tokens"
    },
    "status": "tentative",
-   "mark": "UNMARKED",
-   "true": null,
+   "mark": "U-ci",
+   "true": false,
    "not_compared": true
   },
   {
@@ -688,44 +647,8 @@
     "reason": "no_value_tokens"
    },
    "status": "tentative",
-   "mark": "UNMARKED",
-   "true": null,
-   "not_compared": true
-  },
-  {
-   "child": "ch.Experience.companyID",
-   "parent": "pg.location.companyid",
-   "rule": "key_name",
-   "evidence": [
-    "compatible_type",
-    "measured_uniqueness",
-    "name_similarity",
-    "value_overlap_not_measured"
-   ],
-   "overlap": {
-    "reason": "no_value_tokens"
-   },
-   "status": "tentative",
-   "mark": "UNMARKED",
-   "true": null,
-   "not_compared": true
-  },
-  {
-   "child": "mongo.diffbot_Company.companyID",
-   "parent": "pg.location.companyid",
-   "rule": "key_name",
-   "evidence": [
-    "compatible_type",
-    "measured_uniqueness",
-    "name_similarity",
-    "value_overlap_not_measured"
-   ],
-   "overlap": {
-    "reason": "no_value_tokens"
-   },
-   "status": "tentative",
-   "mark": "UNMARKED",
-   "true": null,
+   "mark": "U-ci",
+   "true": false,
    "not_compared": true
   },
   {
@@ -742,8 +665,8 @@
     "reason": "no_value_tokens"
    },
    "status": "tentative",
-   "mark": "UNMARKED",
-   "true": null,
+   "mark": "U-ci",
+   "true": true,
    "not_compared": true
   },
   {
@@ -760,44 +683,8 @@
     "reason": "no_value_tokens"
    },
    "status": "tentative",
-   "mark": "UNMARKED",
-   "true": null,
-   "not_compared": true
-  },
-  {
-   "child": "mongo.diffbot_CompanyExperience.companyID",
-   "parent": "pg.location.companyid",
-   "rule": "key_name",
-   "evidence": [
-    "compatible_type",
-    "measured_uniqueness",
-    "name_similarity",
-    "value_overlap_not_measured"
-   ],
-   "overlap": {
-    "reason": "no_value_tokens"
-   },
-   "status": "tentative",
-   "mark": "UNMARKED",
-   "true": null,
-   "not_compared": true
-  },
-  {
-   "child": "mongo.diffbot_CompanyIndustry.companyID",
-   "parent": "pg.location.companyid",
-   "rule": "key_name",
-   "evidence": [
-    "compatible_type",
-    "measured_uniqueness",
-    "name_similarity",
-    "value_overlap_not_measured"
-   ],
-   "overlap": {
-    "reason": "no_value_tokens"
-   },
-   "status": "tentative",
-   "mark": "UNMARKED",
-   "true": null,
+   "mark": "U-ci",
+   "true": true,
    "not_compared": true
   },
   {
@@ -814,8 +701,8 @@
     "reason": "no_value_tokens"
    },
    "status": "tentative",
-   "mark": "UNMARKED",
-   "true": null,
+   "mark": "U-ci",
+   "true": true,
    "not_compared": true
   },
   {
@@ -832,44 +719,8 @@
     "reason": "no_value_tokens"
    },
    "status": "tentative",
-   "mark": "UNMARKED",
-   "true": null,
-   "not_compared": true
-  },
-  {
-   "child": "mongo.diffbot_CompanyInvestmentRound.companyID",
-   "parent": "pg.location.companyid",
-   "rule": "key_name",
-   "evidence": [
-    "compatible_type",
-    "measured_uniqueness",
-    "name_similarity",
-    "value_overlap_not_measured"
-   ],
-   "overlap": {
-    "reason": "no_value_tokens"
-   },
-   "status": "tentative",
-   "mark": "UNMARKED",
-   "true": null,
-   "not_compared": true
-  },
-  {
-   "child": "mongo.diffbot_CompanyInvestmentRound.investmentID",
-   "parent": "pg.companyinvestmentround.investmentid",
-   "rule": "key_name",
-   "evidence": [
-    "compatible_type",
-    "measured_uniqueness",
-    "name_similarity",
-    "value_overlap_not_measured"
-   ],
-   "overlap": {
-    "reason": "no_value_tokens"
-   },
-   "status": "tentative",
-   "mark": "UNMARKED",
-   "true": null,
+   "mark": "U-ci",
+   "true": true,
    "not_compared": true
   },
   {
@@ -886,26 +737,8 @@
     "reason": "no_value_tokens"
    },
    "status": "tentative",
-   "mark": "UNMARKED",
-   "true": null,
-   "not_compared": true
-  },
-  {
-   "child": "mongo.zoominfo_Company.companyID",
-   "parent": "pg.location.companyid",
-   "rule": "key_name",
-   "evidence": [
-    "compatible_type",
-    "measured_uniqueness",
-    "name_similarity",
-    "value_overlap_not_measured"
-   ],
-   "overlap": {
-    "reason": "no_value_tokens"
-   },
-   "status": "tentative",
-   "mark": "UNMARKED",
-   "true": null,
+   "mark": "U-ci",
+   "true": false,
    "not_compared": true
   },
   {
@@ -922,26 +755,8 @@
     "reason": "no_value_tokens"
    },
    "status": "tentative",
-   "mark": "UNMARKED",
-   "true": null,
-   "not_compared": true
-  },
-  {
-   "child": "mongo.zoominfo_CompanyIndustry.companyID",
-   "parent": "pg.location.companyid",
-   "rule": "key_name",
-   "evidence": [
-    "compatible_type",
-    "measured_uniqueness",
-    "name_similarity",
-    "value_overlap_not_measured"
-   ],
-   "overlap": {
-    "reason": "no_value_tokens"
-   },
-   "status": "tentative",
-   "mark": "UNMARKED",
-   "true": null,
+   "mark": "U-ci",
+   "true": false,
    "not_compared": true
   },
   {
@@ -958,26 +773,8 @@
     "reason": "no_value_tokens"
    },
    "status": "tentative",
-   "mark": "UNMARKED",
-   "true": null,
-   "not_compared": true
-  },
-  {
-   "child": "mongo.zoominfo_Experience.companyID",
-   "parent": "pg.location.companyid",
-   "rule": "key_name",
-   "evidence": [
-    "compatible_type",
-    "measured_uniqueness",
-    "name_similarity",
-    "value_overlap_not_measured"
-   ],
-   "overlap": {
-    "reason": "no_value_tokens"
-   },
-   "status": "tentative",
-   "mark": "UNMARKED",
-   "true": null,
+   "mark": "U-ci",
+   "true": false,
    "not_compared": true
   },
   {
@@ -994,26 +791,8 @@
     "reason": "no_value_tokens"
    },
    "status": "tentative",
-   "mark": "UNMARKED",
-   "true": null,
-   "not_compared": true
-  },
-  {
-   "child": "pg.company.companyid",
-   "parent": "pg.location.companyid",
-   "rule": "key_name",
-   "evidence": [
-    "compatible_type",
-    "measured_uniqueness",
-    "name_similarity",
-    "value_overlap_not_measured"
-   ],
-   "overlap": {
-    "reason": "no_value_tokens"
-   },
-   "status": "tentative",
-   "mark": "UNMARKED",
-   "true": null,
+   "mark": "U-ci",
+   "true": true,
    "not_compared": true
   },
   {
@@ -1030,44 +809,8 @@
     "reason": "no_value_tokens"
    },
    "status": "tentative",
-   "mark": "UNMARKED",
-   "true": null,
-   "not_compared": true
-  },
-  {
-   "child": "pg.companycontact.companyid",
-   "parent": "pg.location.companyid",
-   "rule": "key_name",
-   "evidence": [
-    "compatible_type",
-    "measured_uniqueness",
-    "name_similarity",
-    "value_overlap_not_measured"
-   ],
-   "overlap": {
-    "reason": "no_value_tokens"
-   },
-   "status": "tentative",
-   "mark": "UNMARKED",
-   "true": null,
-   "not_compared": true
-  },
-  {
-   "child": "pg.companyemployeecategory.companyid",
-   "parent": "pg.location.companyid",
-   "rule": "key_name",
-   "evidence": [
-    "compatible_type",
-    "measured_uniqueness",
-    "name_similarity",
-    "value_overlap_not_measured"
-   ],
-   "overlap": {
-    "reason": "no_value_tokens"
-   },
-   "status": "tentative",
-   "mark": "UNMARKED",
-   "true": null,
+   "mark": "U-ci",
+   "true": true,
    "not_compared": true
   },
   {
@@ -1084,26 +827,8 @@
     "reason": "no_value_tokens"
    },
    "status": "tentative",
-   "mark": "UNMARKED",
-   "true": null,
-   "not_compared": true
-  },
-  {
-   "child": "pg.companyexperience.companyid",
-   "parent": "pg.location.companyid",
-   "rule": "key_name",
-   "evidence": [
-    "compatible_type",
-    "measured_uniqueness",
-    "name_similarity",
-    "value_overlap_not_measured"
-   ],
-   "overlap": {
-    "reason": "no_value_tokens"
-   },
-   "status": "tentative",
-   "mark": "UNMARKED",
-   "true": null,
+   "mark": "U-ci",
+   "true": true,
    "not_compared": true
   },
   {
@@ -1120,26 +845,8 @@
     "reason": "no_value_tokens"
    },
    "status": "tentative",
-   "mark": "UNMARKED",
-   "true": null,
-   "not_compared": true
-  },
-  {
-   "child": "pg.companyfinancials.companyid",
-   "parent": "pg.location.companyid",
-   "rule": "key_name",
-   "evidence": [
-    "compatible_type",
-    "measured_uniqueness",
-    "name_similarity",
-    "value_overlap_not_measured"
-   ],
-   "overlap": {
-    "reason": "no_value_tokens"
-   },
-   "status": "tentative",
-   "mark": "UNMARKED",
-   "true": null,
+   "mark": "U-ci",
+   "true": true,
    "not_compared": true
   },
   {
@@ -1156,26 +863,8 @@
     "reason": "no_value_tokens"
    },
    "status": "tentative",
-   "mark": "UNMARKED",
-   "true": null,
-   "not_compared": true
-  },
-  {
-   "child": "pg.companyindustry.companyid",
-   "parent": "pg.location.companyid",
-   "rule": "key_name",
-   "evidence": [
-    "compatible_type",
-    "measured_uniqueness",
-    "name_similarity",
-    "value_overlap_not_measured"
-   ],
-   "overlap": {
-    "reason": "no_value_tokens"
-   },
-   "status": "tentative",
-   "mark": "UNMARKED",
-   "true": null,
+   "mark": "U-ci",
+   "true": true,
    "not_compared": true
   },
   {
@@ -1192,26 +881,8 @@
     "reason": "no_value_tokens"
    },
    "status": "tentative",
-   "mark": "UNMARKED",
-   "true": null,
-   "not_compared": true
-  },
-  {
-   "child": "pg.companyinvestmentround.companyid",
-   "parent": "pg.location.companyid",
-   "rule": "key_name",
-   "evidence": [
-    "compatible_type",
-    "measured_uniqueness",
-    "name_similarity",
-    "value_overlap_not_measured"
-   ],
-   "overlap": {
-    "reason": "no_value_tokens"
-   },
-   "status": "tentative",
-   "mark": "UNMARKED",
-   "true": null,
+   "mark": "U-ci",
+   "true": true,
    "not_compared": true
   },
   {
@@ -1228,26 +899,8 @@
     "reason": "no_value_tokens"
    },
    "status": "tentative",
-   "mark": "UNMARKED",
-   "true": null,
-   "not_compared": true
-  },
-  {
-   "child": "pg.companyrelation.companyid",
-   "parent": "pg.location.companyid",
-   "rule": "key_name",
-   "evidence": [
-    "compatible_type",
-    "measured_uniqueness",
-    "name_similarity",
-    "value_overlap_not_measured"
-   ],
-   "overlap": {
-    "reason": "no_value_tokens"
-   },
-   "status": "tentative",
-   "mark": "UNMARKED",
-   "true": null,
+   "mark": "U-ci",
+   "true": true,
    "not_compared": true
   },
   {
@@ -1264,26 +917,8 @@
     "reason": "no_value_tokens"
    },
    "status": "tentative",
-   "mark": "UNMARKED",
-   "true": null,
-   "not_compared": true
-  },
-  {
-   "child": "pg.companytechnographics.companyid",
-   "parent": "pg.location.companyid",
-   "rule": "key_name",
-   "evidence": [
-    "compatible_type",
-    "measured_uniqueness",
-    "name_similarity",
-    "value_overlap_not_measured"
-   ],
-   "overlap": {
-    "reason": "no_value_tokens"
-   },
-   "status": "tentative",
-   "mark": "UNMARKED",
-   "true": null,
+   "mark": "U-ci",
+   "true": true,
    "not_compared": true
   },
   {
@@ -1300,8 +935,368 @@
     "reason": "no_value_tokens"
    },
    "status": "tentative",
-   "mark": "UNMARKED",
-   "true": null,
+   "mark": "U-ci",
+   "true": true,
+   "not_compared": true
+  },
+  {
+   "child": "mongo.diffbot_CompanyInvestmentRound.investmentID",
+   "parent": "pg.companyinvestmentround.investmentid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "U-inv",
+   "true": true,
+   "not_compared": true
+  },
+  {
+   "child": "ch.Company.companyID",
+   "parent": "pg.location.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "U-loc",
+   "true": false,
+   "not_compared": true
+  },
+  {
+   "child": "ch.CompanyIndustry.companyID",
+   "parent": "pg.location.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "U-loc",
+   "true": false,
+   "not_compared": true
+  },
+  {
+   "child": "ch.Experience.companyID",
+   "parent": "pg.location.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "U-loc",
+   "true": false,
+   "not_compared": true
+  },
+  {
+   "child": "mongo.diffbot_Company.companyID",
+   "parent": "pg.location.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "U-loc",
+   "true": true,
+   "not_compared": true
+  },
+  {
+   "child": "mongo.diffbot_CompanyExperience.companyID",
+   "parent": "pg.location.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "U-loc",
+   "true": true,
+   "not_compared": true
+  },
+  {
+   "child": "mongo.diffbot_CompanyIndustry.companyID",
+   "parent": "pg.location.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "U-loc",
+   "true": true,
+   "not_compared": true
+  },
+  {
+   "child": "mongo.diffbot_CompanyInvestmentRound.companyID",
+   "parent": "pg.location.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "U-loc",
+   "true": true,
+   "not_compared": true
+  },
+  {
+   "child": "mongo.zoominfo_Company.companyID",
+   "parent": "pg.location.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "U-loc",
+   "true": false,
+   "not_compared": true
+  },
+  {
+   "child": "mongo.zoominfo_CompanyIndustry.companyID",
+   "parent": "pg.location.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "U-loc",
+   "true": false,
+   "not_compared": true
+  },
+  {
+   "child": "mongo.zoominfo_Experience.companyID",
+   "parent": "pg.location.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "U-loc",
+   "true": false,
+   "not_compared": true
+  },
+  {
+   "child": "pg.company.companyid",
+   "parent": "pg.location.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "U-loc",
+   "true": true,
+   "not_compared": true
+  },
+  {
+   "child": "pg.companycontact.companyid",
+   "parent": "pg.location.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "U-loc",
+   "true": true,
+   "not_compared": true
+  },
+  {
+   "child": "pg.companyemployeecategory.companyid",
+   "parent": "pg.location.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "U-loc",
+   "true": true,
+   "not_compared": true
+  },
+  {
+   "child": "pg.companyexperience.companyid",
+   "parent": "pg.location.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "U-loc",
+   "true": true,
+   "not_compared": true
+  },
+  {
+   "child": "pg.companyfinancials.companyid",
+   "parent": "pg.location.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "U-loc",
+   "true": true,
+   "not_compared": true
+  },
+  {
+   "child": "pg.companyindustry.companyid",
+   "parent": "pg.location.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "U-loc",
+   "true": true,
+   "not_compared": true
+  },
+  {
+   "child": "pg.companyinvestmentround.companyid",
+   "parent": "pg.location.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "U-loc",
+   "true": true,
+   "not_compared": true
+  },
+  {
+   "child": "pg.companyrelation.companyid",
+   "parent": "pg.location.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "U-loc",
+   "true": true,
+   "not_compared": true
+  },
+  {
+   "child": "pg.companytechnographics.companyid",
+   "parent": "pg.location.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "U-loc",
+   "true": true,
    "not_compared": true
   }
  ],
@@ -1491,6 +1486,120 @@
    "true": true,
    "child": "mongo.zoominfo_industry.industryID",
    "parent": "ch.Industry.industryID"
+  },
+  {
+   "mark": "W-A",
+   "true": false,
+   "child": "mongo.diffbot_Company.companyID",
+   "parent": "ch.Company.companyID"
+  },
+  {
+   "mark": "W-A",
+   "true": false,
+   "child": "mongo.diffbot_CompanyExperience.companyID",
+   "parent": "ch.Company.companyID"
+  },
+  {
+   "mark": "W-A",
+   "true": false,
+   "child": "mongo.diffbot_CompanyIndustry.companyID",
+   "parent": "ch.Company.companyID"
+  },
+  {
+   "mark": "W-A",
+   "true": false,
+   "child": "mongo.diffbot_CompanyInvestmentRound.companyID",
+   "parent": "ch.Company.companyID"
+  },
+  {
+   "mark": "W-A",
+   "true": false,
+   "child": "pg.company.companyid",
+   "parent": "ch.Company.companyID"
+  },
+  {
+   "mark": "W-A",
+   "true": false,
+   "child": "pg.companycontact.companyid",
+   "parent": "ch.Company.companyID"
+  },
+  {
+   "mark": "W-A",
+   "true": false,
+   "child": "pg.companyemployeecategory.companyid",
+   "parent": "ch.Company.companyID"
+  },
+  {
+   "mark": "W-A",
+   "true": false,
+   "child": "pg.companyexperience.companyid",
+   "parent": "ch.Company.companyID"
+  },
+  {
+   "mark": "W-A",
+   "true": false,
+   "child": "pg.companyfinancials.companyid",
+   "parent": "ch.Company.companyID"
+  },
+  {
+   "mark": "W-A",
+   "true": false,
+   "child": "pg.companyindustry.companyid",
+   "parent": "ch.Company.companyID"
+  },
+  {
+   "mark": "W-A",
+   "true": false,
+   "child": "pg.companyinvestmentround.companyid",
+   "parent": "ch.Company.companyID"
+  },
+  {
+   "mark": "W-A",
+   "true": false,
+   "child": "pg.companyrelation.companyid",
+   "parent": "ch.Company.companyID"
+  },
+  {
+   "mark": "W-A",
+   "true": false,
+   "child": "pg.companytechnographics.companyid",
+   "parent": "ch.Company.companyID"
+  },
+  {
+   "mark": "W-A",
+   "true": false,
+   "child": "pg.location.companyid",
+   "parent": "ch.Company.companyID"
+  },
+  {
+   "mark": "W-B",
+   "true": false,
+   "child": "mongo.diffbot_CompanyExperience.personID",
+   "parent": "ch.Person.personID"
+  },
+  {
+   "mark": "W-B",
+   "true": false,
+   "child": "pg.companyexperience.personid",
+   "parent": "ch.Person.personID"
+  },
+  {
+   "mark": "W-B",
+   "true": false,
+   "child": "pg.person.personid",
+   "parent": "ch.Person.personID"
+  },
+  {
+   "mark": "W-B",
+   "true": false,
+   "child": "pg.location.locationid",
+   "parent": "ch.Location.locationID"
+  },
+  {
+   "mark": "W-B",
+   "true": false,
+   "child": "mongo.zoominfo_contact_information.freeMails",
+   "parent": "ch.PersonContact.freeMails"
   }
  ]
 }
