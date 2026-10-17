@@ -1,0 +1,190 @@
+{
+ "J1": {
+  "status": "review_required",
+  "warnings": [
+   "candidate relationship requires human review"
+  ],
+  "steps": [
+   {
+    "source_id": "pg-main",
+    "rows": 1000,
+    "bound_keys": {},
+    "columns": [
+     "company___version",
+     "company__alldescriptions",
+     "company__ceoname",
+     "company__companyid",
+     "company__created_at",
+     "company__description",
+     "company__descriptors",
+     "company__entityname",
+     "company__explicit_origins",
+     "company__foundername",
+     "company__foundingdate",
+     "company__fullname",
+     "company__isacquired",
+     "company__isdissolved",
+     "company__isnonprofit",
+     "company__ispublic",
+     "company__logo",
+     "company__metadata_confidence",
+     "company__motto",
+     "company__sourcecategory",
+     "company__summary",
+     "company__totalinvestment",
+     "company__totalinvestmentcurrency",
+     "company__types",
+     "company__website",
+     "companyexperience___version",
+     "companyexperience__companyid",
+     "companyexperience__confidence",
+     "companyexperience__created_at",
+     "companyexperience__personid",
+     "companyexperience__personname",
+     "companyexperience__role",
+     "companyexperience__types"
+    ]
+   }
+  ]
+ },
+ "J2": {
+  "status": "review_required",
+  "warnings": [
+   "candidate relationship requires human review"
+  ],
+  "steps": [
+   {
+    "source_id": "pg-main",
+    "rows": 1000,
+    "bound_keys": {},
+    "columns": [
+     "companyexperience___version",
+     "companyexperience__companyid",
+     "companyexperience__confidence",
+     "companyexperience__created_at",
+     "companyexperience__personid",
+     "companyexperience__personname",
+     "companyexperience__role",
+     "companyexperience__types",
+     "person___version",
+     "person__confidence",
+     "person__created_at",
+     "person__name",
+     "person__personid",
+     "person__role",
+     "person__summary",
+     "person__types"
+    ]
+   }
+  ]
+ },
+ "J3": {
+  "status": "review_required",
+  "warnings": [
+   "candidate relationship requires human review"
+  ],
+  "steps": [
+   {
+    "source_id": "ch-main",
+    "rows": 1000,
+    "bound_keys": {},
+    "columns": [
+     "Company___version",
+     "Company__companyDescription",
+     "Company__companyDomain",
+     "Company__companyEmployeeCountRange",
+     "Company__companyEmployees",
+     "Company__companyID",
+     "Company__companyName",
+     "Company__companyPhone",
+     "Company__companyRevenue",
+     "Company__companyRevenueIn000s",
+     "Company__companyRevenueRange",
+     "Company__companyRevenue_currency",
+     "Company__companyTicker",
+     "Company__companyType",
+     "Company__website",
+     "Experience___version",
+     "Experience__companyID",
+     "Experience__jobTitle",
+     "Experience__personHashtags",
+     "Experience__personID",
+     "Experience__title"
+    ]
+   }
+  ]
+ },
+ "X1": {
+  "status": "review_required",
+  "warnings": [
+   "candidate relationship requires human review"
+  ],
+  "steps": [
+   {
+    "source_id": "pg-main",
+    "rows": 1000,
+    "bound_keys": {},
+    "columns": [
+     "companyindustry___version",
+     "companyindustry__classificationid",
+     "companyindustry__companyid",
+     "companyindustry__created_at",
+     "industryclassification___version",
+     "industryclassification__classificationid",
+     "industryclassification__confidence",
+     "industryclassification__created_at",
+     "industryclassification__isprimary",
+     "industryclassification__name"
+    ]
+   }
+  ]
+ },
+ "J4": {
+  "status": "unresolved",
+  "warnings": [
+   "each read returns at most 1000 rows; a later read that returns exactly that many may be incomplete, so raise max_rows",
+   "candidate relationship requires human review",
+   "every hop is a candidate between different sources and no value overlap was compared; the columns may hold unrelated data"
+  ],
+  "steps": [
+   {
+    "source_id": "ch-main",
+    "rows": 1000,
+    "bound_keys": {},
+    "columns": [
+     "Company___version",
+     "Company__companyDescription",
+     "Company__companyDomain",
+     "Company__companyEmployeeCountRange",
+     "Company__companyEmployees",
+     "Company__companyID",
+     "Company__companyName",
+     "Company__companyPhone",
+     "Company__companyRevenue",
+     "Company__companyRevenueIn000s",
+     "Company__companyRevenueRange",
+     "Company__companyRevenue_currency",
+     "Company__companyTicker",
+     "Company__companyType",
+     "Company__website"
+    ]
+   },
+   {
+    "source_id": "pg-main",
+    "rows": 0,
+    "bound_keys": {
+     "keys_1_1": 1000
+    },
+    "columns": []
+   }
+  ],
+  "joins": [
+   {
+    "left_rows": 1000,
+    "right_rows": 0,
+    "joined_rows": 0,
+    "left_rows_without_a_match": 1000
+   }
+  ]
+ }
+}
