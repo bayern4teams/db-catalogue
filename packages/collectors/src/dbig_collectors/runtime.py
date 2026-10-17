@@ -672,7 +672,12 @@ def discover_clickhouse(
         # ponytail: expressions and multi-column keys are skipped; upgrade is parsing them.
         for table, expressions in key_expressions.items():
             for claim, expression in expressions.items():
-                column = (expression or "").strip().strip("`")
+                column = (expression or "").strip()
+                # ClickHouse 26.8 reports `ORDER BY (companyID)` as "(companyID)" (live run
+                # 2026-10-17); one outer pair is not part of the name. "(a, b)" still fails below.
+                if column.startswith("(") and column.endswith(")"):
+                    column = column[1:-1].strip()
+                column = column.strip("`")
                 if not _PLAIN_COLUMN.fullmatch(column) or column not in column_names[table]:
                     continue
                 if claim == "sorting_key" and expressions["primary_key"] == expression:

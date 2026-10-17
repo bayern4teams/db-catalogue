@@ -1,0 +1,25 @@
+# Connection JSON in MONGODB_CONNECTION: {"uri": "mongodb://user:pass@host:27017/?authSource=appdb"}
+[source]
+source_id = "mongo-main"
+kind = "mongodb"
+connection_env = "MONGODB_CONNECTION"
+signing_key_env = "DBIG_SIGNING_KEY"
+signing_key_id = "local"
+namespaces = ["enrichment_engine"]                 # MongoDB databases to catalogue
+tls = false
+# tls_ca_file = "C:/certs/company-ca.pem"
+
+# MongoDB has no declared columns: fields come from a collection's validator and from sampled
+# documents. Without sampling, a collection with no validator shows no fields at all. Only
+# field paths and types are kept, never values. Up to this many documents per collection;
+# max_sample_bytes (default 1 MiB) bounds the whole source and is reported if reached.
+
+# Query budget. MongoDB charges one query per database, one per collection, and one more per
+# sampled collection, so allow about 3 x collections + databases. The run stops with no bundle
+# and says so if this is too low.
+max_queries = 500
+
+# Gate 2 (sampling on): same key and id in all three sources
+sample_rows = 100
+value_token_key_env = "DBIG_TOKEN_KEY"
+value_token_key_id = "run-20261014"

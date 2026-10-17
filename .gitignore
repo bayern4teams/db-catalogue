@@ -60,5 +60,19 @@ artifacts/run-20261006-035124/*
 !artifacts/run-20261006-035124/snapshot-reviewed-small/
 !artifacts/run-20261006-035124/snapshot-no-model/
 
+# Live verification of feat/catalogue-fixes (2026-10-14): evidence only, counts and names.
+# Value-token files (keyed digests of sampled values), search indexes and graphs stay ignored.
+!artifacts/run-20261014/
+artifacts/run-20261014/*
+!artifacts/run-20261014/*.md
+!artifacts/run-20261014/*.json
+!artifacts/run-20261014/*.toml
+!artifacts/run-20261014/*.txt
+!artifacts/run-20261014/*.html
+!artifacts/run-20261014/bundle-*/
+!artifacts/run-20261014/snapshot*/
+!artifacts/run-20261014/config/
+artifacts/run-20261014/**/tokens.jsonl
+
 # Scratch for cloud agents (the tracked handoff files live in .handoff/)
 .tmp/

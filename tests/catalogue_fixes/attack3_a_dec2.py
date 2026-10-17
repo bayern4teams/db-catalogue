@@ -203,7 +203,9 @@ def test_collector_quoting_whitespace_and_case(expr):
         assert got and got[0].field_names == ["id"]
 
 
-@pytest.mark.parametrize("expr", ["", "tuple()", "(id)", "id, ownerKey", "cityHash64(id)", "nosuchcolumn", "id; DROP"])
+# "(id)" removed 2026-10-17 (user): live ClickHouse 26.8.2.7 reports `ORDER BY (id)` that way, and it is
+# one plain column; tests/test_collectors.py covers it and the parenthesised multi-column case.
+@pytest.mark.parametrize("expr", ["", "tuple()", "id, ownerKey", "cityHash64(id)", "nosuchcolumn", "id; DROP"])
 def test_collector_skips_anything_but_one_known_plain_column_and_never_stores_the_expression(expr):
     records = _claims(_row(expr, expr), COLS)
     assert records["constraints.jsonl"] == []
