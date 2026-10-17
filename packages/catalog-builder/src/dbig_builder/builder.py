@@ -638,14 +638,11 @@ def assemble(
                 # is called (user decision 2026-10-05). A measured-unique parent column counts too
                 # (user decision 2026-10-13, DEC-12); the overlap check below guards that case.
                 candidates.append((100, parent, "key_name"))
-                if (
-                    parent.id not in declared_unique
-                    and parent.id not in weak_key_ids
-                    and not _is_reference_style(parent.name)
-                ):
-                    # A column that only measures unique and is not named like a reference
-                    # (`email`, `status`) matches on name alone far too often, so it needs
-                    # measured value overlap (user decision 2026-10-14, DEC-16).
+                if parent.id not in declared_unique and not _is_reference_style(parent.name):
+                    # A column that only measures unique, or is only a weak key claim, and is not
+                    # named like a reference (`email`, `status`, `freeMails`) matches on name alone
+                    # far too often, so it needs measured value overlap (user decisions
+                    # 2026-10-14, DEC-16, and 2026-10-17 for weak keys after the live run).
                     needs_overlap.add(parent.id)
                 continue
             if suffixed:

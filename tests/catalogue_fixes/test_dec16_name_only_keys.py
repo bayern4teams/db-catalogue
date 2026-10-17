@@ -45,3 +45,25 @@ def test_stem_plus_id_style_names_still_link_without_sampling(tmp_path, monkeypa
     sources = _tables("classificationid", typ="integer")
     found = _found(tmp_path, monkeypatch, sources)
     assert ("gadgetpart", "classificationid", "gadgetkind", "classificationid") in found, found
+
+
+def test_a_weak_key_with_an_ordinary_name_needs_overlap_too(tmp_path, monkeypatch):
+    # Live run 2026-10-17: `freeMails`, a ClickHouse sorting key, linked a same-named Mongo field.
+    tables = {
+        "contact": {"fields": [("rowid", "integer"), ("email", "text")], "weak_key": "email"},
+        "staff": {"fields": [("rowid", "integer"), ("email", "text")]},
+    }
+    assert _found(tmp_path, monkeypatch, {"alpha": {"tables": tables}}) == []
+
+
+def test_a_weak_key_with_a_reference_name_still_links_unsampled(tmp_path, monkeypatch):
+    tables = {
+        "contact": {
+            "fields": [("rowid", "integer"), ("contactID", "text")],
+            "weak_key": "contactID",
+        },
+        "staff": {"fields": [("rowid", "integer"), ("contactID", "text")]},
+    }
+    assert ("staff", "contactID", "contact", "contactID") in _found(
+        tmp_path, monkeypatch, {"alpha": {"tables": tables}}
+    )
