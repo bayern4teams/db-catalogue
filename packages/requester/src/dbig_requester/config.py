@@ -18,7 +18,9 @@ class AnswerConfig(BaseModel):
     model_digest: str = Field(min_length=1)
     api_key_env: str = Field(pattern=r"^[A-Z][A-Z0-9_]*$")
     timeout_seconds: int = Field(default=20, ge=1)
-    max_tokens: int = Field(default=512, ge=1)
+    # Unset sends no `max_tokens`, so the server's own maximum applies; a reasoning model can
+    # spend a small budget before it answers (user decision 2026-10-17, live run).
+    max_tokens: int | None = Field(default=None, ge=1)
     retrieval_limit: int = Field(default=10, ge=1, le=100)
     # Most relationship edges, with their evidence status, passed to the model beside the
     # retrieved entries (DEC-5). 0 passes none.

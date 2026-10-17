@@ -410,7 +410,8 @@ A reasoning model spends tokens thinking before it answers. In one test with the
 `max_tokens = 512` it used all 512 and returned an empty reply (`MODEL_TRUNCATED`); 20 review
 candidates did not finish in 8192 tokens (72 s), while 5 candidates with `max_tokens = 24000` and
 `timeout_seconds = 900` completed in 14.9 s using 1858 tokens. Raise `max_tokens` and
-`timeout_seconds` for such a model, and review fewer candidates. A shared server queues
+`timeout_seconds` for such a model, and review fewer candidates. `[requester.answer] max_tokens`
+is unset by default: `ask` then sends no limit and the server's own maximum applies. A shared server queues
 requests: a reply that took 19 s idle took over 60 s when the server was busy, so the timeout must
 cover the queue (`MODEL_TIMEOUT` says this, not "unavailable"). These numbers come from one
 model on one shared server; measure your own.

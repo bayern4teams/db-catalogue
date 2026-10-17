@@ -246,7 +246,7 @@ def answer_question(
                     "strict": True,
                 },
             },
-            max_tokens=config.max_tokens,
+            **({} if config.max_tokens is None else {"max_tokens": config.max_tokens}),
         )
         choice = response.choices[0]
         if choice.finish_reason == FINISH_REASON_LENGTH:

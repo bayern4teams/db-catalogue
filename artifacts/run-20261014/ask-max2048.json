@@ -1,0 +1,411 @@
+{
+ "D1": {
+  "question": "Which column holds a person's role in PostgreSQL?",
+  "exit": 0,
+  "seconds": 12.87,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "grade": "Right",
+  "answer": "In the pg-main PostgreSQL catalogue, the `role` column in the `public.person` table holds a person's role; its data type is `text`. There is also a `role` column in the `public.companyexperience` table, but the person-table role column is `public.person.role`.",
+  "cited": [
+   {
+    "id": "object:a304cb9932fe92f0dc604f4fcbf4e156",
+    "kind": "table",
+    "name": "person",
+    "namespace": "public",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:5e6cab3f3d0f18ecd1720ee376af56d4",
+    "kind": "field",
+    "name": "role",
+    "namespace": "public",
+    "object_name": "person",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:8353045f95517fb5445f62e204c75d78",
+    "kind": "field",
+    "name": "role",
+    "namespace": "public",
+    "object_name": "companyexperience",
+    "source_id": "pg-main"
+   }
+  ]
+ },
+ "D2": {
+  "question": "Where is a company's ticker symbol stored, and what type is it?",
+  "exit": 0,
+  "seconds": 18.92,
+  "stderr_bytes": 0,
+  "error_code": "MODEL_TRUNCATED",
+  "grade": "error (no answer)",
+  "answer": null,
+  "cited": null
+ },
+ "D3": {
+  "question": "Which PostgreSQL column stores the postal code of a location?",
+  "exit": 0,
+  "seconds": 4.61,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "grade": "Right",
+  "answer": "The PostgreSQL column that stores the postal code of a location is `postalcode` in the `public.location` table.",
+  "cited": [
+   {
+    "id": "object:46db43985f4307a123288605607dc896",
+    "kind": "table",
+    "name": "location",
+    "namespace": "public",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:07881a985e5af07193a5165f89d2df8c",
+    "kind": "field",
+    "name": "postalcode",
+    "namespace": "public",
+    "object_name": "location",
+    "source_id": "pg-main"
+   }
+  ]
+ },
+ "D4": {
+  "question": "Which ClickHouse columns hold company revenue, and what are their types?",
+  "exit": 0,
+  "seconds": 11.14,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "grade": "Right",
+  "answer": "In the ClickHouse table `testzoominfo_clone2.Company` (id: object:b3653bad92366ef20567af26b5ca7ce6), the columns that hold company revenue values are:\n\n- `companyRevenue`, type `Nullable(String)` \u2014 id: field:675640b0bb67f300bc70991ae573177b\n- `companyRevenueIn000s`, type `Nullable(Int64)` \u2014 id: field:1181504f836ac21be205c52fd26c49e2\n\nAdditional revenue-related columns in the same table are:\n\n- `companyRevenueRange`, type `Nullable(String)` \u2014 id: field:2abb66ab3fd3bd1218585e396a26a6d4\n- `companyRevenue_currency`, type `Nullable(String)` \u2014 id: field:bea678fd1330ff63ec0d9a74225453c9\n\nThe catalogue names these as revenue-related, but `companyRevenueRange` appears to be a range value and `companyRevenue_currency` appears to be a currency identifier rather than the revenue amount itself.",
+  "cited": [
+   {
+    "id": "object:b3653bad92366ef20567af26b5ca7ce6",
+    "kind": "table",
+    "name": "Company",
+    "namespace": "testzoominfo_clone2",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:675640b0bb67f300bc70991ae573177b",
+    "kind": "field",
+    "name": "companyRevenue",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Company",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:1181504f836ac21be205c52fd26c49e2",
+    "kind": "field",
+    "name": "companyRevenueIn000s",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Company",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:2abb66ab3fd3bd1218585e396a26a6d4",
+    "kind": "field",
+    "name": "companyRevenueRange",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Company",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:bea678fd1330ff63ec0d9a74225453c9",
+    "kind": "field",
+    "name": "companyRevenue_currency",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Company",
+    "source_id": "ch-main"
+   }
+  ]
+ },
+ "D5": {
+  "question": "Where are the names of industries stored?",
+  "exit": 0,
+  "seconds": 19.23,
+  "stderr_bytes": 0,
+  "error_code": "MODEL_TRUNCATED",
+  "grade": "error (no answer)",
+  "answer": null,
+  "cited": null
+ },
+ "S1": {
+  "question": "In PostgreSQL, which tables and columns do I use to get the industry names of a company?",
+  "exit": 0,
+  "seconds": 29.91,
+  "stderr_bytes": 0,
+  "error_code": "MODEL_TRUNCATED",
+  "grade": "error (no answer)",
+  "answer": null,
+  "cited": null
+ },
+ "S2": {
+  "question": "In PostgreSQL, how do I get from a person's name to the companies that person worked at?",
+  "exit": 0,
+  "seconds": 27.15,
+  "stderr_bytes": 0,
+  "error_code": "MODEL_TRUNCATED",
+  "grade": "error (no answer)",
+  "answer": null,
+  "cited": null
+ },
+ "S3": {
+  "question": "In ClickHouse, how do I get the industry names for a company?",
+  "exit": 0,
+  "seconds": 27.5,
+  "stderr_bytes": 0,
+  "error_code": "MODEL_TRUNCATED",
+  "grade": "error (no answer)",
+  "answer": null,
+  "cited": null
+ },
+ "S4": {
+  "question": "In the MongoDB zoominfo collections, how do I get from a staff member to the company?",
+  "exit": 0,
+  "seconds": 22.97,
+  "stderr_bytes": 0,
+  "error_code": "MODEL_TRUNCATED",
+  "grade": "error (no answer)",
+  "answer": null,
+  "cited": null
+ },
+ "S5": {
+  "question": "In PostgreSQL, which tables do I join to list the investment rounds of a company together with the investor rows?",
+  "exit": 0,
+  "seconds": 19.66,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "grade": "Right",
+  "answer": "To list investment rounds of a company together with investor rows, use the tables company, companyinvestmentround, and companyinvestor. Based on the retrieved metadata, join company to companyinvestmentround on companyid, and join companyinvestor to companyinvestmentround on investmentid. Both relationships are tentative reference candidates, not declared relationships.",
+  "cited": [
+   {
+    "id": "object:cdbf59a0739bcf46a9eef890233bf217",
+    "kind": "table",
+    "name": "company",
+    "namespace": "public",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "object:4e2bb69e0519d5b05463e40fd0f1ce9c",
+    "kind": "table",
+    "name": "companyinvestmentround",
+    "namespace": "public",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "object:82313514b51848e2a799c8c9a5a6cf11",
+    "kind": "table",
+    "name": "companyinvestor",
+    "namespace": "public",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "edge:c2252cd3cecef1923d011523990768d3",
+    "kind": "relationship",
+    "name": "companyinvestmentround -> company (companyid -> companyid)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:8f48a6d84d61d8a4b8d620599f8bbfc9",
+    "kind": "relationship",
+    "name": "companyinvestor -> companyinvestmentround (investmentid -> investmentid)",
+    "status": "tentative"
+   }
+  ]
+ },
+ "C1": {
+  "question": "List every place in the catalogue where a company's website is stored.",
+  "exit": 0,
+  "seconds": 29.56,
+  "stderr_bytes": 0,
+  "error_code": "MODEL_TRUNCATED",
+  "grade": "error (no answer)",
+  "answer": null,
+  "cited": null
+ },
+ "C2": {
+  "question": "Which tables in all three databases describe industries, and how do they relate to companies?",
+  "exit": 0,
+  "seconds": 62.41,
+  "stderr_bytes": 0,
+  "error_code": "MODEL_TRUNCATED",
+  "grade": "error (no answer)",
+  "answer": null,
+  "cited": null
+ },
+ "C3": {
+  "question": "What does the ClickHouse database contain? List its tables.",
+  "exit": 0,
+  "seconds": 11.88,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "grade": "Right",
+  "answer": "The retrieved catalogue metadata lists the following ClickHouse tables under source `ch-main` in namespace `testzoominfo_clone2`: Company, CompanyIndustry, Experience, Industry, Location, Person, and PersonContact.",
+  "cited": [
+   {
+    "id": "object:b3653bad92366ef20567af26b5ca7ce6",
+    "kind": "table",
+    "name": "Company",
+    "namespace": "testzoominfo_clone2",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "object:f37ce30dcd148e51240474edda54b24f",
+    "kind": "table",
+    "name": "CompanyIndustry",
+    "namespace": "testzoominfo_clone2",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "object:da196e6ffaff4ffc6d6ee39dd5090883",
+    "kind": "table",
+    "name": "Experience",
+    "namespace": "testzoominfo_clone2",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "object:b37e592e35d7e306355ee5ca2c79ccbd",
+    "kind": "table",
+    "name": "Industry",
+    "namespace": "testzoominfo_clone2",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "object:50cd5e5900edd832934fb32887fcce5e",
+    "kind": "table",
+    "name": "Location",
+    "namespace": "testzoominfo_clone2",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "object:364d20537dea8b3c54c5c93685285687",
+    "kind": "table",
+    "name": "Person",
+    "namespace": "testzoominfo_clone2",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "object:5696f20c5f1a765ab463bd4aaa930e13",
+    "kind": "table",
+    "name": "PersonContact",
+    "namespace": "testzoominfo_clone2",
+    "source_id": "ch-main"
+   }
+  ]
+ },
+ "C4": {
+  "question": "In every source, which tables hold personal contact or identity details of people?",
+  "exit": 0,
+  "seconds": 42.5,
+  "stderr_bytes": 0,
+  "error_code": "MODEL_TRUNCATED",
+  "grade": "error (no answer)",
+  "answer": null,
+  "cited": null
+ },
+ "C5": {
+  "question": "Which columns identify a company across the catalogue?",
+  "exit": 0,
+  "seconds": 26.63,
+  "stderr_bytes": 0,
+  "error_code": "MODEL_TRUNCATED",
+  "grade": "error (no answer)",
+  "answer": null,
+  "cited": null
+ },
+ "I1": {
+  "question": "Can I join PostgreSQL company and ClickHouse Company directly on their company ids?",
+  "exit": 0,
+  "seconds": 55.3,
+  "stderr_bytes": 0,
+  "error_code": "MODEL_TRUNCATED",
+  "grade": "error (no answer)",
+  "answer": null,
+  "cited": null
+ },
+ "I2": {
+  "question": "Which ClickHouse tables do the MongoDB zoominfo_* collections correspond to?",
+  "exit": 0,
+  "seconds": 51.47,
+  "stderr_bytes": 0,
+  "error_code": "MODEL_TRUNCATED",
+  "grade": "error (no answer)",
+  "answer": null,
+  "cited": null
+ },
+ "I3": {
+  "question": "Is companyrelation.relatedcompanyid a reference to company?",
+  "exit": 0,
+  "seconds": 36.04,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "grade": "Right (NOT_ESTABLISHED as a normal reply)",
+  "answer": "Not established. The retrieved metadata identifies `companyrelation` as table object:d5f2735a9a250bd27b6aa437997b18a9 and `relatedcompanyid` as field field:401a1c792968a2ca378dc86a63994c4b, but it does not show a declared reference from that field to the `company` table object:cdbf59a0739bcf46a9eef890233bf217. The returned relationship candidates involving `companyrelation` and company use `companyid`, not `relatedcompanyid`. For example, edge edge:f4a07bf2a888068903e05a843fbda6b9 is a tentative candidate from `companyrelation` to `company` on columns [[\"companyid\", \"companyid\"]] with evidence: \"name, compatible type, and uniqueness measured from source statistics, not declared; value overlap 21% of 19 sampled child values\". Edge edge:f651bc7a8701e90bd91041bae8576a3a is also tentative, from `companyrelation` to `Company` on columns [[\"companyid\", \"companyID\"]] with evidence: \"name, compatible type, and weak key claim (source sorting or primary key, uniqueness unproven); values not compared (value overlap not measured: no value tokens for one side (sampling is off or unconfigured))\". Therefore, based only on the returned catalogue metadata, `companyrelation.relatedcompanyid` is not shown to be a reference to `company`.",
+  "cited": [
+   {
+    "id": "object:d5f2735a9a250bd27b6aa437997b18a9",
+    "kind": "table",
+    "name": "companyrelation",
+    "namespace": "public",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "object:cdbf59a0739bcf46a9eef890233bf217",
+    "kind": "table",
+    "name": "company",
+    "namespace": "public",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:401a1c792968a2ca378dc86a63994c4b",
+    "kind": "field",
+    "name": "relatedcompanyid",
+    "namespace": "public",
+    "object_name": "companyrelation",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "edge:f4a07bf2a888068903e05a843fbda6b9",
+    "kind": "relationship",
+    "name": "companyrelation -> company (companyid -> companyid)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:f651bc7a8701e90bd91041bae8576a3a",
+    "kind": "relationship",
+    "name": "companyrelation -> Company (companyid -> companyID)",
+    "status": "tentative"
+   }
+  ]
+ },
+ "I4": {
+  "question": "Which column should I use to count a company's employees?",
+  "exit": 0,
+  "seconds": 70.9,
+  "stderr_bytes": 0,
+  "error_code": "MODEL_TRUNCATED",
+  "grade": "error (no answer)",
+  "answer": null,
+  "cited": null
+ },
+ "I5": {
+  "question": "Where would I look for the relationships between companies, such as subsidiaries or partners?",
+  "exit": 0,
+  "seconds": 24.5,
+  "stderr_bytes": 0,
+  "error_code": "MODEL_TRUNCATED",
+  "grade": "error (no answer)",
+  "answer": null,
+  "cited": null
+ },
+ "CC": {
+  "question": "Which column holds a customer's credit card number?",
+  "exit": 0,
+  "seconds": 0.57,
+  "stderr_bytes": 0,
+  "error_code": "NO_CATALOGUE_MATCH",
+  "grade": "PASS (NO_CATALOGUE_MATCH, model not called)",
+  "answer": null,
+  "cited": null
+ }
+}
