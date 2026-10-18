@@ -124,7 +124,7 @@ So 4 of its 14 "supports" are on false candidates.
 **Extra query count:** not measured, because the bundle records none.
 
 ### Step 10. Report, commit, push, CI
-This file. Every step's evidence is committed. Only `verify/live-20261014` is pushed. CI result: see the section at the end.
+This file. Every step's evidence is committed. Only `verify/live-20261014` is pushed (owner yes; `origin` Reza-Sh83/db-catalogue now redirects to bayern4teams/db-catalogue). CI (`workflow_dispatch`): run 39128114190 **failed** in `application-quality` (mypy `call-overload` at `answer.py:211`, caused by the F3 change's `**{...}` unpacking); fixed with the OpenAI SDK `omit` sentinel (same behaviour; the test still proves no `max_tokens` is sent); run 39128510898 **passed**, all 8 jobs.
 
 ## 3. Limitations of this run
 - **Sampling is biased:** it takes the first 100 rows, not a random sample. The independent overlap read up to 5000 distinct child values and the whole parent column, in memory only.
@@ -158,4 +158,4 @@ Tracebacks: none
 ```
 
 ## 6. Open decisions for the owner
-F5 (0-of-N drop), F6, F7 (ClickHouse tokens), F8 (example review config), F9 (soft row cap), F10 (probe effects), F11 (relationship entries without a source), F12 (outcome mismatch), F13 (retrieval coverage). The unrelated ticket: `origin` still points at Reza-Sh83/db-catalogue. Nothing was merged and no PR was opened.
+F5 (0-of-N drop), F6, F7 (ClickHouse tokens), F8 (example review config), F9 (soft row cap), F10 (probe effects), F11 (relationship entries without a source), F12 (outcome mismatch), F13 (retrieval coverage). Nothing was merged and no PR was opened.
