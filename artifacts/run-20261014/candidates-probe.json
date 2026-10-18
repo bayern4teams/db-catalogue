@@ -1,0 +1,3047 @@
+{
+ "summary": {
+  "candidates": 162,
+  "by_mark": {
+   "#21": 9,
+   "CH": 3,
+   "M26": 1,
+   "MG": 5,
+   "PG": 11,
+   "U-ci": 13,
+   "U-loc": 8,
+   "W-A": 14,
+   "W-B": 4,
+   "Z1": 1,
+   "Z10": 1,
+   "Z11": 1,
+   "Z2": 1,
+   "Z3": 1,
+   "Z5": 1,
+   "Z6": 1,
+   "Z7": 1,
+   "Z8": 1,
+   "Z9": 1,
+   "UNMARKED": 84
+  },
+  "true": 50,
+  "false": 28,
+  "unmarked": 84,
+  "rules": {
+   "key_name": 160,
+   "suffix": 2
+  },
+  "all_not_compared": false,
+  "marked_pairs_missing": 43,
+  "missing_true": 22
+ },
+ "candidates": [
+  {
+   "child": "mongo.zoominfo_Experience.companyID",
+   "parent": "pg.company.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "sample_too_small"
+   },
+   "status": "tentative",
+   "mark": "#1",
+   "true": false,
+   "not_compared": true
+  },
+  {
+   "child": "mongo.diffbot_Company.companyID",
+   "parent": "pg.company.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "#11",
+   "true": true,
+   "not_compared": false
+  },
+  {
+   "child": "ch.Company.companyID",
+   "parent": "pg.company.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "#13",
+   "true": false,
+   "not_compared": true
+  },
+  {
+   "child": "ch.Person.personID",
+   "parent": "pg.person.personid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "#14",
+   "true": false,
+   "not_compared": true
+  },
+  {
+   "child": "mongo.diffbot_CompanyExperience.personID",
+   "parent": "pg.person.personid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "#2",
+   "true": true,
+   "not_compared": false
+  },
+  {
+   "child": "ch.Experience.companyID",
+   "parent": "pg.company.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "#3",
+   "true": false,
+   "not_compared": true
+  },
+  {
+   "child": "ch.Experience.personID",
+   "parent": "pg.person.personid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "#4",
+   "true": false,
+   "not_compared": true
+  },
+  {
+   "child": "ch.CompanyIndustry.companyID",
+   "parent": "pg.company.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "#5",
+   "true": false,
+   "not_compared": true
+  },
+  {
+   "child": "mongo.diffbot_CompanyIndustry.companyID",
+   "parent": "pg.company.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "#8",
+   "true": true,
+   "not_compared": false
+  },
+  {
+   "child": "ch.CompanyIndustry.industryID",
+   "parent": "ch.Industry.industryID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_overlap_not_measured",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "CH",
+   "true": true,
+   "not_compared": true
+  },
+  {
+   "child": "ch.Experience.personID",
+   "parent": "ch.Person.personID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_overlap_not_measured",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "CH",
+   "true": true,
+   "not_compared": true
+  },
+  {
+   "child": "ch.PersonContact.personID",
+   "parent": "ch.Person.personID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_overlap_not_measured",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "CH",
+   "true": true,
+   "not_compared": true
+  },
+  {
+   "child": "mongo.diffbot_CompanyIndustry.classificationID",
+   "parent": "pg.industryclassification.classificationid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "M26",
+   "true": true,
+   "not_compared": false
+  },
+  {
+   "child": "mongo.diffbot_CompanyExperience.companyID",
+   "parent": "mongo.diffbot_Company.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "MG",
+   "true": true,
+   "not_compared": false
+  },
+  {
+   "child": "mongo.diffbot_CompanyIndustry.companyID",
+   "parent": "mongo.diffbot_Company.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "MG",
+   "true": true,
+   "not_compared": false
+  },
+  {
+   "child": "mongo.diffbot_CompanyInvestmentRound.companyID",
+   "parent": "mongo.diffbot_Company.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "MG",
+   "true": true,
+   "not_compared": false
+  },
+  {
+   "child": "mongo.zoominfo_CompanyIndustry.companyID",
+   "parent": "mongo.zoominfo_Company.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "MG",
+   "true": true,
+   "not_compared": false
+  },
+  {
+   "child": "mongo.zoominfo_Experience.companyID",
+   "parent": "mongo.zoominfo_Company.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "sample_too_small"
+   },
+   "status": "tentative",
+   "mark": "MG",
+   "true": true,
+   "not_compared": true
+  },
+  {
+   "child": "pg.companycontact.companyid",
+   "parent": "pg.company.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "PG",
+   "true": true,
+   "not_compared": false
+  },
+  {
+   "child": "pg.companyemployeecategory.companyid",
+   "parent": "pg.company.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "PG",
+   "true": true,
+   "not_compared": false
+  },
+  {
+   "child": "pg.companyexperience.companyid",
+   "parent": "pg.company.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "PG",
+   "true": true,
+   "not_compared": false
+  },
+  {
+   "child": "pg.companyexperience.personid",
+   "parent": "pg.person.personid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "PG",
+   "true": true,
+   "not_compared": false
+  },
+  {
+   "child": "pg.companyindustry.classificationid",
+   "parent": "pg.industryclassification.classificationid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "PG",
+   "true": true,
+   "not_compared": false
+  },
+  {
+   "child": "pg.companyindustry.companyid",
+   "parent": "pg.company.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "PG",
+   "true": true,
+   "not_compared": false
+  },
+  {
+   "child": "pg.companyinvestmentround.companyid",
+   "parent": "pg.company.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "PG",
+   "true": true,
+   "not_compared": false
+  },
+  {
+   "child": "pg.companyinvestor.investmentid",
+   "parent": "pg.companyinvestmentround.investmentid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "PG",
+   "true": true,
+   "not_compared": false
+  },
+  {
+   "child": "pg.companyrelation.companyid",
+   "parent": "pg.company.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "PG",
+   "true": true,
+   "not_compared": false
+  },
+  {
+   "child": "pg.companytechnographics.companyid",
+   "parent": "pg.company.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "PG",
+   "true": true,
+   "not_compared": false
+  },
+  {
+   "child": "pg.location.companyid",
+   "parent": "pg.company.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "PG",
+   "true": true,
+   "not_compared": false
+  },
+  {
+   "child": "ch.Company.companyID",
+   "parent": "pg.companyindustry.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "U-ci",
+   "true": false,
+   "not_compared": true
+  },
+  {
+   "child": "ch.CompanyIndustry.companyID",
+   "parent": "pg.companyindustry.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "U-ci",
+   "true": false,
+   "not_compared": true
+  },
+  {
+   "child": "ch.Experience.companyID",
+   "parent": "pg.companyindustry.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "U-ci",
+   "true": false,
+   "not_compared": true
+  },
+  {
+   "child": "mongo.zoominfo_Experience.companyID",
+   "parent": "pg.companyindustry.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "sample_too_small"
+   },
+   "status": "tentative",
+   "mark": "U-ci",
+   "true": false,
+   "not_compared": true
+  },
+  {
+   "child": "pg.company.companyid",
+   "parent": "pg.companyindustry.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "U-ci",
+   "true": true,
+   "not_compared": false
+  },
+  {
+   "child": "pg.companycontact.companyid",
+   "parent": "pg.companyindustry.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "U-ci",
+   "true": true,
+   "not_compared": false
+  },
+  {
+   "child": "pg.companyemployeecategory.companyid",
+   "parent": "pg.companyindustry.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "U-ci",
+   "true": true,
+   "not_compared": false
+  },
+  {
+   "child": "pg.companyexperience.companyid",
+   "parent": "pg.companyindustry.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "U-ci",
+   "true": true,
+   "not_compared": false
+  },
+  {
+   "child": "pg.companyfinancials.companyid",
+   "parent": "pg.companyindustry.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "U-ci",
+   "true": true,
+   "not_compared": false
+  },
+  {
+   "child": "pg.companyinvestmentround.companyid",
+   "parent": "pg.companyindustry.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "U-ci",
+   "true": true,
+   "not_compared": false
+  },
+  {
+   "child": "pg.companyrelation.companyid",
+   "parent": "pg.companyindustry.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "U-ci",
+   "true": true,
+   "not_compared": false
+  },
+  {
+   "child": "pg.companytechnographics.companyid",
+   "parent": "pg.companyindustry.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "U-ci",
+   "true": true,
+   "not_compared": false
+  },
+  {
+   "child": "pg.location.companyid",
+   "parent": "pg.companyindustry.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "U-ci",
+   "true": true,
+   "not_compared": false
+  },
+  {
+   "child": "pg.company.companyid",
+   "parent": "pg.location.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "U-loc",
+   "true": true,
+   "not_compared": false
+  },
+  {
+   "child": "pg.companycontact.companyid",
+   "parent": "pg.location.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "U-loc",
+   "true": true,
+   "not_compared": false
+  },
+  {
+   "child": "pg.companyemployeecategory.companyid",
+   "parent": "pg.location.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "U-loc",
+   "true": true,
+   "not_compared": false
+  },
+  {
+   "child": "pg.companyfinancials.companyid",
+   "parent": "pg.location.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "U-loc",
+   "true": true,
+   "not_compared": false
+  },
+  {
+   "child": "pg.companyindustry.companyid",
+   "parent": "pg.location.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "U-loc",
+   "true": true,
+   "not_compared": false
+  },
+  {
+   "child": "pg.companyinvestmentround.companyid",
+   "parent": "pg.location.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "U-loc",
+   "true": true,
+   "not_compared": false
+  },
+  {
+   "child": "pg.companyrelation.companyid",
+   "parent": "pg.location.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "U-loc",
+   "true": true,
+   "not_compared": false
+  },
+  {
+   "child": "pg.companytechnographics.companyid",
+   "parent": "pg.location.companyid",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "U-loc",
+   "true": true,
+   "not_compared": false
+  },
+  {
+   "child": "mongo.diffbot_Company.companyID",
+   "parent": "ch.Company.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_overlap_not_measured",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "W-A",
+   "true": false,
+   "not_compared": true
+  },
+  {
+   "child": "mongo.diffbot_CompanyExperience.companyID",
+   "parent": "ch.Company.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_overlap_not_measured",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "W-A",
+   "true": false,
+   "not_compared": true
+  },
+  {
+   "child": "mongo.diffbot_CompanyIndustry.companyID",
+   "parent": "ch.Company.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_overlap_not_measured",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "W-A",
+   "true": false,
+   "not_compared": true
+  },
+  {
+   "child": "mongo.diffbot_CompanyInvestmentRound.companyID",
+   "parent": "ch.Company.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_overlap_not_measured",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "W-A",
+   "true": false,
+   "not_compared": true
+  },
+  {
+   "child": "pg.company.companyid",
+   "parent": "ch.Company.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_overlap_not_measured",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "W-A",
+   "true": false,
+   "not_compared": true
+  },
+  {
+   "child": "pg.companycontact.companyid",
+   "parent": "ch.Company.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_overlap_not_measured",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "W-A",
+   "true": false,
+   "not_compared": true
+  },
+  {
+   "child": "pg.companyemployeecategory.companyid",
+   "parent": "ch.Company.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_overlap_not_measured",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "W-A",
+   "true": false,
+   "not_compared": true
+  },
+  {
+   "child": "pg.companyexperience.companyid",
+   "parent": "ch.Company.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_overlap_not_measured",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "W-A",
+   "true": false,
+   "not_compared": true
+  },
+  {
+   "child": "pg.companyfinancials.companyid",
+   "parent": "ch.Company.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_overlap_not_measured",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "W-A",
+   "true": false,
+   "not_compared": true
+  },
+  {
+   "child": "pg.companyindustry.companyid",
+   "parent": "ch.Company.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_overlap_not_measured",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "W-A",
+   "true": false,
+   "not_compared": true
+  },
+  {
+   "child": "pg.companyinvestmentround.companyid",
+   "parent": "ch.Company.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_overlap_not_measured",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "W-A",
+   "true": false,
+   "not_compared": true
+  },
+  {
+   "child": "pg.companyrelation.companyid",
+   "parent": "ch.Company.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_overlap_not_measured",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "W-A",
+   "true": false,
+   "not_compared": true
+  },
+  {
+   "child": "pg.companytechnographics.companyid",
+   "parent": "ch.Company.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_overlap_not_measured",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "W-A",
+   "true": false,
+   "not_compared": true
+  },
+  {
+   "child": "pg.location.companyid",
+   "parent": "ch.Company.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_overlap_not_measured",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "W-A",
+   "true": false,
+   "not_compared": true
+  },
+  {
+   "child": "mongo.diffbot_CompanyExperience.personID",
+   "parent": "ch.Person.personID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_overlap_not_measured",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "W-B",
+   "true": false,
+   "not_compared": true
+  },
+  {
+   "child": "pg.companyexperience.personid",
+   "parent": "ch.Person.personID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_overlap_not_measured",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "W-B",
+   "true": false,
+   "not_compared": true
+  },
+  {
+   "child": "pg.location.locationid",
+   "parent": "ch.Location.locationID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_overlap_not_measured",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "W-B",
+   "true": false,
+   "not_compared": true
+  },
+  {
+   "child": "pg.person.personid",
+   "parent": "ch.Person.personID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_overlap_not_measured",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "W-B",
+   "true": false,
+   "not_compared": true
+  },
+  {
+   "child": "mongo.zoominfo_Company.companyID",
+   "parent": "ch.Company.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_overlap_not_measured",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "Z1",
+   "true": true,
+   "not_compared": true
+  },
+  {
+   "child": "mongo.zoominfo_contracts.company_id",
+   "parent": "ch.Company.companyID",
+   "rule": "suffix",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_overlap_not_measured",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "Z10",
+   "true": true,
+   "not_compared": true
+  },
+  {
+   "child": "mongo.zoominfo_industry.industryID",
+   "parent": "ch.Industry.industryID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_overlap_not_measured",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "Z11",
+   "true": true,
+   "not_compared": true
+  },
+  {
+   "child": "mongo.zoominfo_CompanyIndustry.companyID",
+   "parent": "ch.Company.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_overlap_not_measured",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "Z2",
+   "true": true,
+   "not_compared": true
+  },
+  {
+   "child": "mongo.zoominfo_CompanyIndustry.industryID",
+   "parent": "ch.Industry.industryID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_overlap_not_measured",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "Z3",
+   "true": true,
+   "not_compared": true
+  },
+  {
+   "child": "mongo.zoominfo_Experience.personID",
+   "parent": "ch.Person.personID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_overlap_not_measured",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "Z5",
+   "true": true,
+   "not_compared": true
+  },
+  {
+   "child": "mongo.zoominfo_staff.personID",
+   "parent": "ch.Person.personID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_overlap_not_measured",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "Z6",
+   "true": true,
+   "not_compared": true
+  },
+  {
+   "child": "mongo.zoominfo_contact_information.personID",
+   "parent": "ch.Person.personID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_overlap_not_measured",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "Z7",
+   "true": true,
+   "not_compared": true
+  },
+  {
+   "child": "mongo.zoominfo_location.locationID",
+   "parent": "ch.Location.locationID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_overlap_not_measured",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "Z8",
+   "true": true,
+   "not_compared": true
+  },
+  {
+   "child": "mongo.zoominfo_evidence.company_id",
+   "parent": "ch.Company.companyID",
+   "rule": "suffix",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_overlap_not_measured",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "Z9",
+   "true": true,
+   "not_compared": true
+  },
+  {
+   "child": "ch.Company.companyID",
+   "parent": "mongo.diffbot_CompanyIndustry.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": true
+  },
+  {
+   "child": "ch.Company.companyID",
+   "parent": "mongo.zoominfo_Company.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": true
+  },
+  {
+   "child": "ch.Company.companyID",
+   "parent": "mongo.diffbot_Company.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": true
+  },
+  {
+   "child": "ch.CompanyIndustry.companyID",
+   "parent": "mongo.diffbot_Company.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": true
+  },
+  {
+   "child": "ch.CompanyIndustry.companyID",
+   "parent": "mongo.zoominfo_Company.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": true
+  },
+  {
+   "child": "ch.CompanyIndustry.companyID",
+   "parent": "mongo.diffbot_CompanyIndustry.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": true
+  },
+  {
+   "child": "ch.Experience.companyID",
+   "parent": "mongo.zoominfo_Company.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": true
+  },
+  {
+   "child": "ch.Experience.companyID",
+   "parent": "mongo.diffbot_CompanyIndustry.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": true
+  },
+  {
+   "child": "ch.Experience.companyID",
+   "parent": "mongo.diffbot_Company.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": true
+  },
+  {
+   "child": "ch.Experience.personID",
+   "parent": "mongo.zoominfo_staff.personID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": true
+  },
+  {
+   "child": "ch.Experience.personID",
+   "parent": "mongo.diffbot_CompanyExperience.personID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": true
+  },
+  {
+   "child": "ch.Experience.personID",
+   "parent": "mongo.zoominfo_Experience.personID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": true
+  },
+  {
+   "child": "ch.Location.locationID",
+   "parent": "mongo.zoominfo_location.locationID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": true
+  },
+  {
+   "child": "ch.Person.personID",
+   "parent": "mongo.zoominfo_staff.personID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": true
+  },
+  {
+   "child": "ch.Person.personID",
+   "parent": "mongo.diffbot_CompanyExperience.personID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": true
+  },
+  {
+   "child": "ch.Person.personID",
+   "parent": "mongo.zoominfo_Experience.personID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": true
+  },
+  {
+   "child": "ch.Person.personID",
+   "parent": "ch.Experience.personID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": true
+  },
+  {
+   "child": "ch.PersonContact.personID",
+   "parent": "mongo.zoominfo_staff.personID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": true
+  },
+  {
+   "child": "ch.PersonContact.personID",
+   "parent": "mongo.zoominfo_Experience.personID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": true
+  },
+  {
+   "child": "ch.PersonContact.personID",
+   "parent": "ch.Experience.personID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": true
+  },
+  {
+   "child": "ch.PersonContact.personID",
+   "parent": "mongo.diffbot_CompanyExperience.personID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": true
+  },
+  {
+   "child": "mongo.diffbot_Company.companyID",
+   "parent": "mongo.diffbot_CompanyIndustry.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "mongo.diffbot_Company.description",
+   "parent": "mongo.diffbot_entities.description",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "mongo.diffbot_Company.run_timestamp",
+   "parent": "mongo.diffbot_CompanyIndustry.run_timestamp",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "mongo.diffbot_CompanyExperience.companyID",
+   "parent": "mongo.diffbot_CompanyIndustry.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "mongo.diffbot_CompanyExperience.main_entity_id",
+   "parent": "mongo.diffbot_CompanyIndustry.main_entity_id",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "mongo.diffbot_CompanyExperience.personID",
+   "parent": "ch.PersonContact.personID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": true
+  },
+  {
+   "child": "mongo.diffbot_CompanyExperience.personID",
+   "parent": "ch.Experience.personID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": true
+  },
+  {
+   "child": "mongo.diffbot_CompanyExperience.run_timestamp",
+   "parent": "mongo.diffbot_CompanyIndustry.run_timestamp",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "mongo.diffbot_CompanyInvestmentRound.companyID",
+   "parent": "mongo.diffbot_CompanyIndustry.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "mongo.diffbot_CompanyInvestmentRound.main_entity_id",
+   "parent": "mongo.diffbot_CompanyIndustry.main_entity_id",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "mongo.diffbot_CompanyInvestmentRound.run_timestamp",
+   "parent": "mongo.diffbot_CompanyIndustry.run_timestamp",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "mongo.diffbot__schemas.collection",
+   "parent": "mongo.zoominfo__schemas.collection",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "mongo.diffbot_entities.description",
+   "parent": "mongo.diffbot_Company.description",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "mongo.diffbot_entities.dispatched_name",
+   "parent": "mongo.zoominfo_entities.dispatched_name",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "mongo.diffbot_entities.name",
+   "parent": "mongo.zoominfo_entities.name",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "mongo.diffbot_entities.run_timestamp",
+   "parent": "mongo.diffbot_CompanyIndustry.run_timestamp",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "mongo.diffbot_event.event_name",
+   "parent": "mongo.zoominfo_event.event_name",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "mongo.diffbot_event.provenance.snippet_text",
+   "parent": "mongo.diffbot_evidence.provenance.snippet_text",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "mongo.diffbot_event.provenance.snippet_text",
+   "parent": "mongo.diffbot_contracts.provenance.snippet_text",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "mongo.diffbot_event.run_timestamp",
+   "parent": "mongo.diffbot_CompanyIndustry.run_timestamp",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "mongo.diffbot_evidence.run_timestamp",
+   "parent": "mongo.diffbot_CompanyIndustry.run_timestamp",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "mongo.diffbot_institution.provenance.snippet_text",
+   "parent": "mongo.diffbot_contracts.provenance.snippet_text",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "mongo.diffbot_institution.provenance.snippet_text",
+   "parent": "mongo.diffbot_evidence.provenance.snippet_text",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "mongo.diffbot_institution.run_timestamp",
+   "parent": "mongo.diffbot_CompanyIndustry.run_timestamp",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "mongo.diffbot_products.provenance.snippet_text",
+   "parent": "mongo.diffbot_contracts.provenance.snippet_text",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "mongo.diffbot_products.provenance.snippet_text",
+   "parent": "mongo.diffbot_evidence.provenance.snippet_text",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "mongo.diffbot_products.run_timestamp",
+   "parent": "mongo.diffbot_CompanyIndustry.run_timestamp",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "mongo.zoominfo_Experience.companyID",
+   "parent": "mongo.diffbot_Company.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "sample_too_small"
+   },
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": true
+  },
+  {
+   "child": "mongo.zoominfo_Experience.companyID",
+   "parent": "mongo.diffbot_CompanyIndustry.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "sample_too_small"
+   },
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": true
+  },
+  {
+   "child": "mongo.zoominfo_Experience.personID",
+   "parent": "ch.PersonContact.personID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": true
+  },
+  {
+   "child": "mongo.zoominfo_Experience.personID",
+   "parent": "ch.Experience.personID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": true
+  },
+  {
+   "child": "mongo.zoominfo_Experience.personID",
+   "parent": "mongo.zoominfo_staff.personID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "mongo.zoominfo_Experience.personID",
+   "parent": "mongo.zoominfo_contact_information.personID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "mongo.zoominfo__schemas.collection",
+   "parent": "mongo.diffbot__schemas.collection",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "mongo.zoominfo_contact_information.personID",
+   "parent": "mongo.zoominfo_staff.personID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "mongo.zoominfo_contact_information.personID",
+   "parent": "ch.Experience.personID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": true
+  },
+  {
+   "child": "mongo.zoominfo_contact_information.personID",
+   "parent": "mongo.zoominfo_Experience.personID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "mongo.zoominfo_contact_information.personID",
+   "parent": "ch.PersonContact.personID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": true
+  },
+  {
+   "child": "mongo.zoominfo_entities.dispatched_name",
+   "parent": "mongo.diffbot_entities.dispatched_name",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "mongo.zoominfo_entities.name",
+   "parent": "mongo.diffbot_entities.name",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "mongo.zoominfo_event.event_name",
+   "parent": "mongo.diffbot_event.event_name",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "mongo.zoominfo_location.companyID",
+   "parent": "ch.Location.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": true
+  },
+  {
+   "child": "mongo.zoominfo_staff.personID",
+   "parent": "ch.PersonContact.personID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": true
+  },
+  {
+   "child": "mongo.zoominfo_staff.personID",
+   "parent": "mongo.zoominfo_Experience.personID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "mongo.zoominfo_staff.personID",
+   "parent": "mongo.zoominfo_contact_information.personID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "mongo.zoominfo_staff.personID",
+   "parent": "ch.Experience.personID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": true
+  },
+  {
+   "child": "pg.company.companyid",
+   "parent": "mongo.diffbot_CompanyIndustry.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "pg.company.companyid",
+   "parent": "mongo.diffbot_Company.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "pg.company.description",
+   "parent": "mongo.diffbot_entities.description",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "pg.company.description",
+   "parent": "mongo.diffbot_Company.description",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "pg.company.descriptors",
+   "parent": "mongo.diffbot_Company.descriptors",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "pg.company.entityname",
+   "parent": "mongo.diffbot_Company.entityName",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "pg.company.fullname",
+   "parent": "mongo.diffbot_Company.fullName",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "pg.companyexperience.companyid",
+   "parent": "mongo.diffbot_Company.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "pg.companyexperience.companyid",
+   "parent": "mongo.diffbot_CompanyIndustry.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "pg.companyexperience.personid",
+   "parent": "mongo.diffbot_CompanyExperience.personID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "pg.companyexperience.personid",
+   "parent": "ch.Experience.personID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": true
+  },
+  {
+   "child": "pg.companyexperience.personid",
+   "parent": "ch.PersonContact.personID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": true
+  },
+  {
+   "child": "pg.companyfinancials.companyid",
+   "parent": "mongo.diffbot_CompanyIndustry.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "pg.companyfinancials.companyid",
+   "parent": "mongo.diffbot_Company.companyID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "pg.person.personid",
+   "parent": "mongo.diffbot_CompanyExperience.personID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {},
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": false
+  },
+  {
+   "child": "pg.person.personid",
+   "parent": "ch.Experience.personID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": true
+  },
+  {
+   "child": "pg.person.personid",
+   "parent": "ch.PersonContact.personID",
+   "rule": "key_name",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_overlap_not_measured"
+   ],
+   "overlap": {
+    "reason": "no_value_tokens"
+   },
+   "status": "tentative",
+   "mark": "UNMARKED",
+   "true": null,
+   "not_compared": true
+  }
+ ],
+ "missing_marked": [
+  {
+   "mark": "#7",
+   "true": true,
+   "child": "mongo.diffbot_CompanyInvestmentRound.companyID",
+   "parent": "pg.company.companyid"
+  },
+  {
+   "mark": "#10",
+   "true": false,
+   "child": "mongo.zoominfo_Company.companyID",
+   "parent": "pg.company.companyid"
+  },
+  {
+   "mark": "#12",
+   "true": true,
+   "child": "mongo.diffbot_CompanyExperience.companyID",
+   "parent": "pg.company.companyid"
+  },
+  {
+   "mark": "#17",
+   "true": false,
+   "child": "mongo.zoominfo_evidence.company_id",
+   "parent": "pg.company.companyid"
+  },
+  {
+   "mark": "#18",
+   "true": false,
+   "child": "mongo.zoominfo_contracts.company_id",
+   "parent": "pg.company.companyid"
+  },
+  {
+   "mark": "#19",
+   "true": false,
+   "child": "mongo.zoominfo_CompanyIndustry.companyID",
+   "parent": "pg.company.companyid"
+  },
+  {
+   "mark": "#6",
+   "true": false,
+   "child": "mongo.zoominfo_Experience.personID",
+   "parent": "pg.person.personid"
+  },
+  {
+   "mark": "#15",
+   "true": false,
+   "child": "mongo.zoominfo_contact_information.personID",
+   "parent": "pg.person.personid"
+  },
+  {
+   "mark": "#21",
+   "true": false,
+   "child": "mongo.zoominfo_staff.personID",
+   "parent": "pg.person.personid"
+  },
+  {
+   "mark": "#16",
+   "true": false,
+   "child": "ch.PersonContact.personID",
+   "parent": "pg.person.personid"
+  },
+  {
+   "mark": "#9",
+   "true": false,
+   "child": "ch.Location.locationID",
+   "parent": "pg.location.companyid"
+  },
+  {
+   "mark": "#20",
+   "true": false,
+   "child": "mongo.zoominfo_location.locationID",
+   "parent": "pg.location.companyid"
+  },
+  {
+   "mark": "PG",
+   "true": true,
+   "child": "pg.companyfinancials.companyid",
+   "parent": "pg.company.companyid"
+  },
+  {
+   "mark": "M9",
+   "true": false,
+   "child": "pg.companyinvestor.investorcompanyid",
+   "parent": "pg.company.companyid"
+  },
+  {
+   "mark": "M10",
+   "true": false,
+   "child": "pg.companyrelation.relatedcompanyid",
+   "parent": "pg.company.companyid"
+  },
+  {
+   "mark": "CH",
+   "true": true,
+   "child": "ch.CompanyIndustry.companyID",
+   "parent": "ch.Company.companyID"
+  },
+  {
+   "mark": "CH",
+   "true": true,
+   "child": "ch.Experience.companyID",
+   "parent": "ch.Company.companyID"
+  },
+  {
+   "mark": "CH",
+   "true": true,
+   "child": "ch.Location.companyID",
+   "parent": "ch.Company.companyID"
+  },
+  {
+   "mark": "MG",
+   "true": true,
+   "child": "mongo.zoominfo_location.companyID",
+   "parent": "mongo.zoominfo_Company.companyID"
+  },
+  {
+   "mark": "MG",
+   "true": true,
+   "child": "mongo.zoominfo_contracts.company_id",
+   "parent": "mongo.zoominfo_Company.companyID"
+  },
+  {
+   "mark": "MG",
+   "true": true,
+   "child": "mongo.zoominfo_evidence.company_id",
+   "parent": "mongo.zoominfo_Company.companyID"
+  },
+  {
+   "mark": "MG",
+   "true": true,
+   "child": "mongo.zoominfo_CompanyIndustry.industryID",
+   "parent": "mongo.zoominfo_industry.industryID"
+  },
+  {
+   "mark": "MG",
+   "true": true,
+   "child": "mongo.zoominfo_products.industryID",
+   "parent": "mongo.zoominfo_industry.industryID"
+  },
+  {
+   "mark": "Z4",
+   "true": true,
+   "child": "mongo.zoominfo_Experience.companyID",
+   "parent": "ch.Company.companyID"
+  },
+  {
+   "mark": "U-inv",
+   "true": true,
+   "child": "mongo.diffbot_CompanyInvestmentRound.investmentID",
+   "parent": "pg.companyinvestmentround.investmentid"
+  },
+  {
+   "mark": "U-loc",
+   "true": false,
+   "child": "ch.Company.companyID",
+   "parent": "pg.location.companyid"
+  },
+  {
+   "mark": "U-loc",
+   "true": false,
+   "child": "ch.CompanyIndustry.companyID",
+   "parent": "pg.location.companyid"
+  },
+  {
+   "mark": "U-loc",
+   "true": false,
+   "child": "ch.Experience.companyID",
+   "parent": "pg.location.companyid"
+  },
+  {
+   "mark": "U-loc",
+   "true": true,
+   "child": "mongo.diffbot_Company.companyID",
+   "parent": "pg.location.companyid"
+  },
+  {
+   "mark": "U-loc",
+   "true": true,
+   "child": "mongo.diffbot_CompanyExperience.companyID",
+   "parent": "pg.location.companyid"
+  },
+  {
+   "mark": "U-loc",
+   "true": true,
+   "child": "mongo.diffbot_CompanyIndustry.companyID",
+   "parent": "pg.location.companyid"
+  },
+  {
+   "mark": "U-loc",
+   "true": true,
+   "child": "mongo.diffbot_CompanyInvestmentRound.companyID",
+   "parent": "pg.location.companyid"
+  },
+  {
+   "mark": "U-loc",
+   "true": false,
+   "child": "mongo.zoominfo_Company.companyID",
+   "parent": "pg.location.companyid"
+  },
+  {
+   "mark": "U-loc",
+   "true": false,
+   "child": "mongo.zoominfo_CompanyIndustry.companyID",
+   "parent": "pg.location.companyid"
+  },
+  {
+   "mark": "U-loc",
+   "true": false,
+   "child": "mongo.zoominfo_Experience.companyID",
+   "parent": "pg.location.companyid"
+  },
+  {
+   "mark": "U-loc",
+   "true": true,
+   "child": "pg.companyexperience.companyid",
+   "parent": "pg.location.companyid"
+  },
+  {
+   "mark": "U-ci",
+   "true": true,
+   "child": "mongo.diffbot_Company.companyID",
+   "parent": "pg.companyindustry.companyid"
+  },
+  {
+   "mark": "U-ci",
+   "true": true,
+   "child": "mongo.diffbot_CompanyExperience.companyID",
+   "parent": "pg.companyindustry.companyid"
+  },
+  {
+   "mark": "U-ci",
+   "true": true,
+   "child": "mongo.diffbot_CompanyIndustry.companyID",
+   "parent": "pg.companyindustry.companyid"
+  },
+  {
+   "mark": "U-ci",
+   "true": true,
+   "child": "mongo.diffbot_CompanyInvestmentRound.companyID",
+   "parent": "pg.companyindustry.companyid"
+  },
+  {
+   "mark": "U-ci",
+   "true": false,
+   "child": "mongo.zoominfo_Company.companyID",
+   "parent": "pg.companyindustry.companyid"
+  },
+  {
+   "mark": "U-ci",
+   "true": false,
+   "child": "mongo.zoominfo_CompanyIndustry.companyID",
+   "parent": "pg.companyindustry.companyid"
+  },
+  {
+   "mark": "W-B",
+   "true": false,
+   "child": "mongo.zoominfo_contact_information.freeMails",
+   "parent": "ch.PersonContact.freeMails"
+  }
+ ]
+}
