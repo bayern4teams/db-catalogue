@@ -1,0 +1,162 @@
+{
+ "N-D1": {
+  "question": "Which PostgreSQL column holds the fiscal year of a company's financial record, and what is its type?",
+  "expected": "pg.companyfinancials.year (integer)"
+ },
+ "N-D2": {
+  "question": "Which ClickHouse column holds a person's first name, and what is its type?",
+  "expected": "ch.Person.firstName (Nullable(String))"
+ },
+ "N-D3": {
+  "question": "Which PostgreSQL column holds the latitude of a company location, and what type is it?",
+  "expected": "pg.location.latitude (text)"
+ },
+ "N-D4": {
+  "question": "In ClickHouse, which table and column hold the free email addresses of people?",
+  "expected": "ch.PersonContact.freeMails (String), linked to a person by ch.PersonContact.personID"
+ },
+ "N-D5": {
+  "question": "Which PostgreSQL column stores the name of a technology a company uses?",
+  "expected": "pg.companytechnographics.technologyname (text); related: technologytype, categories, techid"
+ },
+ "N-D6": {
+  "question": "Which ClickHouse columns hold a person's job title in the work-history table?",
+  "expected": "ch.Experience.jobTitle (Nullable(String)) and ch.Experience.title (Nullable(String))"
+ },
+ "N-D7": {
+  "question": "Which PostgreSQL columns record the amount and currency of an investment round, and what are their types?",
+  "expected": "pg.companyinvestmentround.amount (bigint), pg.companyinvestmentround.currency (text)"
+ },
+ "N-D8": {
+  "question": "Which ClickHouse column holds a company's phone number?",
+  "expected": "ch.Company.companyPhone (Nullable(String))"
+ },
+ "N-D9": {
+  "question": "Which PostgreSQL column holds the founding date of a company, and is it a date type?",
+  "expected": "pg.company.foundingdate (text); not a date or timestamp type"
+ },
+ "N-D10": {
+  "question": "Which ClickHouse column holds the country code of a location, and what is its type?",
+  "expected": "ch.Location.CountryCode (Nullable(String))"
+ },
+ "N-S1": {
+  "question": "In PostgreSQL, how do I list the financial amounts per year together with the name of the company?",
+  "expected": "Join pg.companyfinancials.companyid -> pg.company.companyid. Final: pg.companyfinancials.year, pg.companyfinancials.amount, pg.companyfinancials.currency, and pg.company.fullname and pg.company.entityname (owner 2026-10-18: either is fine; a good answer mentions both)"
+ },
+ "N-S2": {
+  "question": "In PostgreSQL, how do I get the technologies used by a company together with the company website?",
+  "expected": "Join pg.companytechnographics.companyid -> pg.company.companyid. Final: pg.companytechnographics.technologyname, pg.company.website"
+ },
+ "N-S3": {
+  "question": "In ClickHouse, how do I get from a person's name to the job titles and the names of the companies they hold them at?",
+  "expected": "Join ch.Experience.personID -> ch.Person.personID and ch.Experience.companyID -> ch.Company.companyID. Final: ch.Person.name, ch.Experience.jobTitle and ch.Experience.title (owner: mention both), ch.Company.companyName"
+ },
+ "N-S4": {
+  "question": "In ClickHouse, how do I get the free email column for the people who worked at a given company?",
+  "expected": "Join ch.Experience.companyID -> ch.Company.companyID, then ch.Experience.personID -> ch.PersonContact.personID. Final: ch.PersonContact.freeMails, ch.Company.companyName"
+ },
+ "N-S5": {
+  "question": "In ClickHouse, how do I list the city of each company location together with the industry names of that company?",
+  "expected": "Join ch.Location.companyID -> ch.Company.companyID; ch.CompanyIndustry.companyID -> ch.Company.companyID; ch.CompanyIndustry.industryID -> ch.Industry.industryID. Final: ch.Location.City, ch.Industry.name (or displayName)"
+ },
+ "N-S6": {
+  "question": "In PostgreSQL, how do I get the contact strings of companies together with the industry names of those companies?",
+  "expected": "Join pg.companycontact.companyid -> pg.companyindustry.companyid, then pg.companyindustry.classificationid -> pg.industryclassification.classificationid. Final: pg.companycontact.contactstring, pg.companycontact.contacttype, pg.industryclassification.name"
+ },
+ "N-S7": {
+  "question": "In PostgreSQL, how do I list the people with a company experience record together with the company name?",
+  "expected": "Join pg.companyexperience.personid -> pg.person.personid and pg.companyexperience.companyid -> pg.company.companyid. Final: pg.person.name, pg.companyexperience.role, pg.company.fullname and pg.company.entityname (owner: mention both)"
+ },
+ "N-S8": {
+  "question": "In PostgreSQL, how do I get the relation type of each company relation together with the industry names of the company?",
+  "expected": "Join pg.companyrelation.companyid -> pg.companyindustry.companyid, then pg.companyindustry.classificationid -> pg.industryclassification.classificationid. Final: pg.companyrelation.relationtype, pg.industryclassification.name"
+ },
+ "N-S9": {
+  "question": "In PostgreSQL, how do I list the investors of each investment round of a company with the company name and round amount?",
+  "expected": "Join pg.companyinvestmentround.companyid -> pg.company.companyid and pg.companyinvestor.investmentid -> pg.companyinvestmentround.investmentid. Final: pg.company.fullname, pg.companyinvestmentround.amount, pg.companyinvestor.surfaceform and pg.companyinvestor.summary (owner: both describe the investor). The investor company id column (investorcompanyid) must NOT be joined to pg.company.companyid (listed FALSE)"
+ },
+ "N-S10": {
+  "question": "In PostgreSQL, how do I get the employee category of companies located in a given city?",
+  "expected": "Join pg.companyemployeecategory.companyid -> pg.location.companyid. Final: pg.location.city, pg.companyemployeecategory.category (optionally pg.companyemployeecategory.empcatid)"
+ },
+ "N-C1": {
+  "question": "List every column in both databases that holds a part of a postal address.",
+  "expected": "pg.location: street, city, region, country, postalcode, addressfull (all text; latitude, longitude, precision are coordinates, not address parts). ch.Location: Street, City, State, CountryCode, Zip (all Nullable(String))"
+ },
+ "N-C2": {
+  "question": "Which PostgreSQL tables have a confidence column?",
+  "expected": "pg.companycontact, companyemployeecategory, companyexperience, companyfinancials, companyinvestmentround, companyinvestor, companyrelation, companytechnographics, industryclassification, person (all text). pg.company has metadata_confidence, not confidence. companyindustry and location have none"
+ },
+ "N-C3": {
+  "question": "List every column in the catalogue that holds a person's name or a part of it.",
+  "expected": "pg.person.name; pg.companyexperience.personname; pg.company.foundername; pg.company.ceoname; ch.Person.name, firstName, middleInitial, lastName"
+ },
+ "N-C4": {
+  "question": "Which columns in the catalogue have a timestamp or datetime type, and in which tables?",
+  "expected": "pg: created_at (timestamp without time zone) in all 13 tables. ch: _version (Nullable(DateTime)) in all 7 tables. pg._version is integer, not a timestamp"
+ },
+ "N-C5": {
+  "question": "List every column in both databases that holds a money amount or the currency of one.",
+  "expected": "pg.company.totalinvestment (bigint), pg.company.totalinvestmentcurrency (text), pg.companyfinancials.amount (bigint), pg.companyfinancials.currency (text), pg.companyinvestmentround.amount (bigint), pg.companyinvestmentround.currency (text); ch.Company.companyRevenueIn000s (Nullable(Int64)), companyRevenue (Nullable(String)), companyRevenueRange (Nullable(String)), companyRevenue_currency (Nullable(String))"
+ },
+ "N-C6": {
+  "question": "Which columns, other than version columns, have a numeric type in PostgreSQL?",
+  "expected": "pg.company.totalinvestment (bigint), pg.companyfinancials.year (integer), pg.companyfinancials.amount (bigint), pg.companyinvestmentround.amount (bigint). Everything else is text or timestamp"
+ },
+ "N-C7": {
+  "question": "Which ClickHouse columns are not nullable, and what do they have in common?",
+  "expected": "ch.Company.companyID, ch.CompanyIndustry.companyID, ch.CompanyIndustry.industryID, ch.Experience.personID, ch.Experience.companyID, ch.Industry.industryID, ch.Location.locationID, ch.Person.personID, ch.PersonContact.freeMails; all String; mostly ids"
+ },
+ "N-C8": {
+  "question": "List every column in both databases that links people to companies or to person records.",
+  "expected": "pg.companyexperience.personid, pg.companyexperience.companyid; pg.person.personid; ch.Experience.personID, ch.Experience.companyID; ch.Person.personID; ch.PersonContact.personID. Confirmed TRUE: pg.companyexperience.personid -> pg.person.personid; ch.Experience.personID -> ch.Person.personID and -> ch.PersonContact.personID; ch.Experience.companyID -> ch.Company.companyID"
+ },
+ "N-C9": {
+  "question": "In every source, which tables hold a role, title or category of a person or employees?",
+  "expected": "pg.person.role; pg.companyexperience.role; pg.companyemployeecategory.category; ch.Experience.jobTitle, title"
+ },
+ "N-C10": {
+  "question": "Which tables in both databases describe locations of companies, and which columns carry the company id?",
+  "expected": "pg.location (companyid, locationid); ch.Location (companyID Nullable(Int64), locationID String). Confirmed TRUE: pg.location.companyid -> pg.company.companyid, ch.Location.companyID -> ch.Company.companyID"
+ },
+ "N-I1": {
+  "question": "Can I match PostgreSQL location rows to ClickHouse Location rows on their location ids?",
+  "expected": "No. pg.location.locationid -> ch.Location.locationID is listed FALSE; the two databases share no ids"
+ },
+ "N-I2": {
+  "question": "Is pg.companyinvestor.investorcompanyid a reference to pg.company.companyid?",
+  "expected": "No. Listed FALSE; the catalogue cannot say which table the investor company id refers to (no investor company table)"
+ },
+ "N-I3": {
+  "question": "Can I find the ClickHouse person for a PostgreSQL company experience record via personid?",
+  "expected": "No. pg.companyexperience.personid -> ch.Person.personID (and ch.Experience, ch.PersonContact) is listed FALSE; use pg.person within PostgreSQL only"
+ },
+ "N-I4": {
+  "question": "Between ch.Experience.jobTitle and ch.Experience.title, which should I use for a person's job title?",
+  "expected": "Both are Nullable(String) in the same table; the catalogue does not state the difference. A good answer lists both, says the difference cannot be established from names and types, and suggests title might be a shorter or alternate form only as a guess"
+ },
+ "N-I5": {
+  "question": "Between pg.company.entityname, fullname and description, which column holds the company's name?",
+  "expected": "entityname and fullname are both text name candidates; description is a free-text description, not a name. Which is canonical cannot be established"
+ },
+ "N-I6": {
+  "question": "In the pg.company and pg.location relationship on companyid, which table is the parent?",
+  "expected": "Cannot be established. Both pg.company.companyid -> pg.location.companyid and pg.location.companyid -> pg.company.companyid are listed TRUE; companyid is the shared key. pg.company is the natural entity table by its columns"
+ },
+ "N-I7": {
+  "question": "Does the catalogue tell me which company is the parent and which is the subsidiary in pg.companyrelation?",
+  "expected": "Cannot be established. The columns are companyid, relatedcompanyid, relationtype (text), types, summary. Direction is not stated. Also pg.companyrelation.relatedcompanyid -> pg.company.companyid is listed FALSE, so that column is not a confirmed reference to pg.company"
+ },
+ "N-I8": {
+  "question": "Which PostgreSQL column holds a person's email address?",
+  "expected": "No dedicated person email column exists: pg.person has name, role, summary, types, confidence only. pg.companycontact.contactstring with contacttype is attached to companies, not to persons. The catalogue cannot establish that either holds a person's email"
+ },
+ "N-I9": {
+  "question": "Can I tell which ClickHouse Location row is a company's current location?",
+  "expected": "No. ch.Location has no current or primary flag (columns: Zip, companyID, Street, CountryCode, locationID, State, City, _version). Only pg.location has iscurrent and isprimary (text), and those cannot be applied to ClickHouse because the databases share no ids"
+ },
+ "N-I10": {
+  "question": "In ClickHouse, how can I find the company name for a row in PersonContact?",
+  "expected": "PersonContact has no company id (columns: freeMails, personID, _version). Go two hops: ch.PersonContact.personID -> ch.Experience.personID, then ch.Experience.companyID -> ch.Company.companyID; final ch.Company.companyName. A person may have several experience rows"
+ }
+}
