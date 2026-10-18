@@ -21,6 +21,9 @@ class AnswerConfig(BaseModel):
     # Unset sends no `max_tokens`, so the server's own maximum applies; a reasoning model can
     # spend a small budget before it answers (user decision 2026-10-17, live run).
     max_tokens: int | None = Field(default=None, ge=1)
+    # Longest answer text accepted, in characters; longer is `MODEL_ANSWER_TOO_LONG`. Unset accepts
+    # any length (user decision 2026-10-18: list answers ran to 6243 characters in the live run).
+    max_answer_chars: int | None = Field(default=None, ge=1)
     retrieval_limit: int = Field(default=10, ge=1, le=100)
     # Most relationship edges, with their evidence status, passed to the model beside the
     # retrieved entries (DEC-5). 0 passes none.

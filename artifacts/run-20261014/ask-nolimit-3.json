@@ -1,0 +1,184 @@
+{
+ "S3": {
+  "question": "In ClickHouse, how do I get the industry names for a company?",
+  "exit": 0,
+  "seconds": 44.33,
+  "stderr_bytes": 0,
+  "error_code": "MODEL_UNAVAILABLE_OR_INVALID",
+  "grade": "error",
+  "answer": null,
+  "cited": null
+ },
+ "C1": {
+  "question": "List every place in the catalogue where a company's website is stored.",
+  "exit": 0,
+  "seconds": 61.0,
+  "stderr_bytes": 0,
+  "error_code": "MODEL_UNAVAILABLE_OR_INVALID",
+  "grade": "error",
+  "answer": null,
+  "cited": null
+ },
+ "C2": {
+  "question": "Which tables in all three databases describe industries, and how do they relate to companies?",
+  "exit": 0,
+  "seconds": 144.47,
+  "stderr_bytes": 0,
+  "error_code": "MODEL_UNAVAILABLE_OR_INVALID",
+  "grade": "error",
+  "answer": null,
+  "cited": null
+ },
+ "I2": {
+  "question": "Which ClickHouse tables do the MongoDB zoominfo_* collections correspond to?",
+  "exit": 0,
+  "seconds": 101.31,
+  "stderr_bytes": 0,
+  "error_code": "MODEL_UNAVAILABLE_OR_INVALID",
+  "grade": "error",
+  "answer": null,
+  "cited": null
+ },
+ "I4": {
+  "question": "Which column should I use to count a company's employees?",
+  "exit": 0,
+  "seconds": 54.39,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "grade": "Partial (user mark 2026-10-18: expected both companyEmployees = exact count and companyEmployeeCountRange = size band; found only the range)",
+  "answer": "The retrieved metadata does not establish an exact employee-count column. I checked the returned table and field entries for employee-count-related columns. The only employee-size-related fields are named companyEmployeeCountRange in zoominfo_Company (mongo-main) [field:f7a8d0167f2ac5ded7487d5e922c4244] and Company (ch-main) [field:8126e587c1b3189126d40ee66d28b07c], along with related nested/raw/schema entries [field:da0c93c104b62e7c05c530f7e8be4b99], [field:4cb85d5fa9dfa68ff84bd5339945693c], [field:4511c1443c576394bed6c197bfa9aa85], [field:dcc4b7d3c23b142b084c33aabc34e066]. Their names and string-based types indicate an employee-count range or schema metadata, not a direct employee count. If the goal is to use employee-size bands, companyEmployeeCountRange is the closest available field; for an exact employee count, no suitable column is shown.",
+  "cited": [
+   {
+    "id": "object:cdbf59a0739bcf46a9eef890233bf217",
+    "kind": "table",
+    "name": "company",
+    "namespace": "public",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "object:b3653bad92366ef20567af26b5ca7ce6",
+    "kind": "table",
+    "name": "Company",
+    "namespace": "testzoominfo_clone2",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:f7a8d0167f2ac5ded7487d5e922c4244",
+    "kind": "field",
+    "name": "companyEmployeeCountRange",
+    "namespace": "enrichment_engine",
+    "object_name": "zoominfo_Company",
+    "source_id": "mongo-main"
+   },
+   {
+    "id": "field:8126e587c1b3189126d40ee66d28b07c",
+    "kind": "field",
+    "name": "companyEmployeeCountRange",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Company",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:da0c93c104b62e7c05c530f7e8be4b99",
+    "kind": "field",
+    "name": "properties.companyEmployeeCountRange",
+    "namespace": "enrichment_engine",
+    "object_name": "zoominfo__schemas",
+    "source_id": "mongo-main"
+   },
+   {
+    "id": "field:4cb85d5fa9dfa68ff84bd5339945693c",
+    "kind": "field",
+    "name": "raw_data.companyEmployeeCountRange",
+    "namespace": "enrichment_engine",
+    "object_name": "zoominfo_entities",
+    "source_id": "mongo-main"
+   },
+   {
+    "id": "field:4511c1443c576394bed6c197bfa9aa85",
+    "kind": "field",
+    "name": "db_schema.Company.columns.companyEmployeeCountRange",
+    "namespace": "enrichment_engine",
+    "object_name": "zoominfo_source_profiles",
+    "source_id": "mongo-main"
+   },
+   {
+    "id": "field:dcc4b7d3c23b142b084c33aabc34e066",
+    "kind": "field",
+    "name": "db_schema.Company.sample_row.companyEmployeeCountRange",
+    "namespace": "enrichment_engine",
+    "object_name": "zoominfo_source_profiles",
+    "source_id": "mongo-main"
+   }
+  ]
+ },
+ "I5": {
+  "question": "Where would I look for the relationships between companies, such as subsidiaries or partners?",
+  "exit": 0,
+  "seconds": 26.08,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "grade": "Partial (user mark 2026-10-18: diffbot_institution.relationship_type is a correct place, not listed before; reasoning poor, the column names Customer, Partnership; misses companyrelation, companyinvestor, company.description/summary/alldescriptions)",
+  "answer": "Look first for relationship-type fields in the `enrichment_engine` Mongo metadata, especially the relationship fields on `diffbot_institution` and the corresponding schema definitions in `diffbot__schemas`.\n\n- `relationship_type` in `diffbot_institution`, namespace `enrichment_engine`, source `mongo-main`, data type `str`: field:54092347b429d5aeec6eb61673c02186\n- `properties.relationship_type` in `diffbot__schemas`, namespace `enrichment_engine`, source `mongo-main`, data type `dict`: field:d446b64177f0d301208ec373e5df85e8\n- `properties.relationship_type.bsonType` in `diffbot__schemas`: field:ba9bb54175f2e11c10e77eb5605b616f\n- `properties.relationship_type.bsonType[]` in `diffbot__schemas`: field:9e35e0a7e1055b6339f27c47b33682a4\n\nThe company tables themselves are `company` in PostgreSQL namespace `public`: object:cdbf59a0739bcf46a9eef890233bf217, and `Company` in ClickHouse namespace `testzoominfo_clone2`: object:b3653bad92366ef20567af26b5ca7ce6.\n\nHowever, the retrieved relationship metadata does not show any declared subsidiary- or partner-specific relationship. It only shows tentative candidate joins between company tables. For example:\n\n- edge:6f0b6a69d7202f13bf860bb994661d7d, `Company` -> `company`, columns `companyID` -> `companyid`, status tentative, evidence: \"name, compatible type, and uniqueness measured from source statistics, not declared; values not compared (value overlap not measured: no value tokens for one side (sampling is off or unconfigured))\"\n- edge:7bdf8607b90723c8dff428c160d3f2f8, `company` -> `Company`, columns `companyid` -> `companyID`, status tentative, evidence: \"name, compatible type, and weak key claim (source sorting or primary key, uniqueness unproven); values not compared (value overlap not measured: no value tokens for one side (sampling is off or unconfigured))\"\n\nThese are candidates based on names/types and incomplete source evidence, not confirmed subsidiaries or partners relationships.",
+  "cited": [
+   {
+    "id": "field:54092347b429d5aeec6eb61673c02186",
+    "kind": "field",
+    "name": "relationship_type",
+    "namespace": "enrichment_engine",
+    "object_name": "diffbot_institution",
+    "source_id": "mongo-main"
+   },
+   {
+    "id": "field:d446b64177f0d301208ec373e5df85e8",
+    "kind": "field",
+    "name": "properties.relationship_type",
+    "namespace": "enrichment_engine",
+    "object_name": "diffbot__schemas",
+    "source_id": "mongo-main"
+   },
+   {
+    "id": "field:ba9bb54175f2e11c10e77eb5605b616f",
+    "kind": "field",
+    "name": "properties.relationship_type.bsonType",
+    "namespace": "enrichment_engine",
+    "object_name": "diffbot__schemas",
+    "source_id": "mongo-main"
+   },
+   {
+    "id": "field:9e35e0a7e1055b6339f27c47b33682a4",
+    "kind": "field",
+    "name": "properties.relationship_type.bsonType[]",
+    "namespace": "enrichment_engine",
+    "object_name": "diffbot__schemas",
+    "source_id": "mongo-main"
+   },
+   {
+    "id": "object:cdbf59a0739bcf46a9eef890233bf217",
+    "kind": "table",
+    "name": "company",
+    "namespace": "public",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "object:b3653bad92366ef20567af26b5ca7ce6",
+    "kind": "table",
+    "name": "Company",
+    "namespace": "testzoominfo_clone2",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "edge:6f0b6a69d7202f13bf860bb994661d7d",
+    "kind": "relationship",
+    "name": "Company -> company (companyID -> companyid)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:7bdf8607b90723c8dff428c160d3f2f8",
+    "kind": "relationship",
+    "name": "company -> Company (companyid -> companyID)",
+    "status": "tentative"
+   }
+  ]
+ }
+}

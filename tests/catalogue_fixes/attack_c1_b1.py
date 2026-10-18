@@ -32,10 +32,9 @@ from dbig_requester import answer as _answer_module
 from dbig_requester.answer import Answer, answer_question
 from dbig_requester.config import AnswerConfig
 from dbig_requester.search import index_snapshot
-from pydantic import ValidationError
 
 CANARIES = ("zorblax", "quokka-canary", "sprocket", MODEL_KEY)
-# the named constant exists only after B1; the old code had the same 2000 inline
+# the report's 2000: a constant from B1 until 2026-10-18, now the probes' `max_answer_chars`
 ANSWER_MAX_CHARS = getattr(_answer_module, "ANSWER_MAX_CHARS", 2000)
 QUESTION = "which sprocket column is the zorblax?"
 REVIEWED = {
@@ -54,10 +53,11 @@ def state(tmp_path, monkeypatch):
     return tmp_path / "state"
 
 
-def _ask(state, base_url, *, timeout=2, client=None):
+def _ask(state, base_url, *, timeout=2, client=None, max_answer_chars=ANSWER_MAX_CHARS):
+    # The limit is `max_answer_chars`, unset by default since 2026-10-18; these probes set it.
     config = AnswerConfig(
         base_url=base_url, model="m", model_digest="d", api_key_env="MODEL_KEY",
-        timeout_seconds=timeout,
+        timeout_seconds=timeout, max_answer_chars=max_answer_chars,
     )
     return answer_question(state, QUESTION, config, client=client)
 
@@ -78,16 +78,21 @@ def _review(tmp_path, monkeypatch, base_url, *, timeout=2, name="r"):
 # --- B1 -------------------------------------------------------------------------------------------
 
 
-def test_the_answer_limit_is_exact_and_counts_characters_not_bytes():
-    ok = {"answer": "x" * ANSWER_MAX_CHARS, "citations": ["i"]}
-    assert Answer.model_validate(ok)
-    with pytest.raises(ValidationError):
-        Answer.model_validate({**ok, "answer": "x" * (ANSWER_MAX_CHARS + 1)})
+@pytest.mark.parametrize(("text", "accepted"), [
+    ("x" * ANSWER_MAX_CHARS, True), ("x" * (ANSWER_MAX_CHARS + 1), False),
     # characters outside the BMP are one character each, however many bytes
-    assert Answer.model_validate({**ok, "answer": "\U0001f600" * ANSWER_MAX_CHARS})
-    assert Answer.model_validate({**ok, "answer": "é" * ANSWER_MAX_CHARS})
-    with pytest.raises(ValidationError):
-        Answer.model_validate({**ok, "answer": "\U0001f600" * (ANSWER_MAX_CHARS + 1)})
+    ("\U0001f600" * ANSWER_MAX_CHARS, True), ("é" * ANSWER_MAX_CHARS, True),
+    ("\U0001f600" * (ANSWER_MAX_CHARS + 1), False),
+])
+def test_the_answer_limit_is_exact_and_counts_characters_not_bytes(state, text, accepted):
+    def reply(payload):
+        return json.dumps({"answer": text, "citations": [payload["items"][0]["id"]]})
+
+    with ModelStub(reply) as stub:
+        result = _ask(state, stub.url)
+    assert ("answer" in result) is accepted, result
+    if not accepted:
+        assert result["error"]["code"] == "MODEL_ANSWER_TOO_LONG"
 
 
 def test_the_limit_comes_from_one_constant_and_the_json_schema_names_no_number():

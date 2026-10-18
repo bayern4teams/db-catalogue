@@ -21,8 +21,7 @@ from dbig_requester.config import AnswerConfig
 from dbig_requester.search import index_snapshot
 
 QUESTION = "which column holds the gadget website?"
-# The report names this limit (2000, `answer.py` line 22). The fix keeps it in one named constant;
-# the test states the number the report gives so a silent change of the limit shows up here.
+# The report's limit (2000). Since 2026-10-18 it is `max_answer_chars`, unset by default.
 ANSWER_LIMIT = 2000
 
 
@@ -65,8 +64,8 @@ def test_the_schema_sent_carries_no_bound_keyword(tmp_path, monkeypatch):
         assert schema_bounds(schema) == []
 
 
-def ask(state, stub: ModelStub, monkeypatch, question: str = QUESTION) -> dict:
-    return answer_question(state, question, _config(stub, monkeypatch))
+def ask(state, stub: ModelStub, monkeypatch, question: str = QUESTION, **overrides) -> dict:
+    return answer_question(state, question, _config(stub, monkeypatch, **overrides))
 
 
 def test_a_schema_is_still_sent_and_names_the_two_answer_fields(tmp_path, monkeypatch):
@@ -89,8 +88,9 @@ def test_an_answer_over_the_limit_is_rejected_after_parsing(tmp_path, monkeypatc
                            "citations": [payload["items"][0]["id"]]})
 
     with ModelStub(too_long) as stub:
-        result = ask(state, stub, monkeypatch)
-    assert "error" in result and "answer" not in result, "over-limit text must not be returned"
+        result = ask(state, stub, monkeypatch, max_answer_chars=ANSWER_LIMIT)
+    assert "answer" not in result, "over-limit text must not be returned"
+    assert result["error"]["code"] == "MODEL_ANSWER_TOO_LONG", result
     assert "x" * 50 not in json.dumps(result), "the refused text must not be echoed"
 
 
@@ -102,6 +102,19 @@ def test_an_answer_at_the_limit_is_accepted(tmp_path, monkeypatch):
                            "citations": [payload["items"][0]["id"]]})
 
     with ModelStub(at_limit) as stub:
-        result = ask(state, stub, monkeypatch)
+        result = ask(state, stub, monkeypatch, max_answer_chars=ANSWER_LIMIT)
     assert "error" not in result, result
     assert len(result["answer"]) == ANSWER_LIMIT
+
+
+def test_no_limit_is_set_by_default_so_a_long_list_answer_is_returned(tmp_path, monkeypatch):
+    """User decision 2026-10-18: live list answers of 3972 and 6243 characters were refused."""
+    state = _state(tmp_path, monkeypatch)
+
+    def long(payload: dict) -> str:
+        return json.dumps({"answer": "x" * 6243, "citations": [payload["items"][0]["id"]]})
+
+    with ModelStub(long) as stub:
+        result = ask(state, stub, monkeypatch)
+    assert "error" not in result, result
+    assert len(result["answer"]) == 6243

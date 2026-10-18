@@ -403,7 +403,8 @@ The JSON schema sent to the server no longer carries length or item bounds (`max
 `minLength`, `maxItems`, `minItems`): llama.cpp refuses them ("failed to parse grammar"), and the
 limits are checked after the reply is parsed instead. Failures now have their own code:
 `MODEL_UNREACHABLE` (host down or firewalled), `MODEL_TIMEOUT`, `MODEL_REJECTED_REQUEST` (an HTTP 4xx),
-`MODEL_TRUNCATED` (the server stopped on `max_tokens`) and `MODEL_INVALID_CITATION`. Other causes keep
+`MODEL_TRUNCATED` (the server stopped on `max_tokens`), `MODEL_INVALID_CITATION` and `MODEL_ANSWER_TOO_LONG` (longer than
+`max_answer_chars`, unset by default). Other causes keep
 `MODEL_UNAVAILABLE_OR_INVALID`.
 
 A reasoning model spends tokens thinking before it answers. In one test with the default

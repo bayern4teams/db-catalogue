@@ -1,0 +1,300 @@
+{
+ "D2": {
+  "question": "Where is a company's ticker symbol stored, and what type is it?",
+  "exit": 0,
+  "seconds": 43.1,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "grade": "Right (also lists Mongo schema-description entries)",
+  "answer": "Outcome: answered\n\nFrom the supplied catalogue metadata, a company's ticker symbol is represented by fields named `companyTicker`.\n\n**Direct value storage in the relational table:**\n- It is stored in the table **`Company`** in source **`ch-main`**, namespace **`testzoominfo_clone2`**\n  - Table ID: `object:b3653bad92366ef20567af26b5ca7ce6`\n- The field is **`companyTicker`**\n  - Type: **`Nullable(String)`**\n  - Field ID: `field:f3e4096bc1f1df3dd82a584e30e8a6eb`\n\n**Related Mongo / schema-storage entries also present:**\n- `zoominfo_Company.companyTicker`\n  - Source: `mongo-main`, namespace: `enrichment_engine`\n  - Type: `NoneType|str`\n  - Field ID: `field:41991502add1ed6af44be914545093b5`\n- `zoominfo_entities.raw_data.companyTicker`\n  - Source: `mongo-main`, namespace: `enrichment_engine`\n  - Type: `NoneType|str`\n  - Field ID: `field:fff202e6d327502ef35666ab86640e95`\n\n**Schema/profile metadata about the ticker field:**\n- `zoominfo__schemas.properties.companyTicker`\n  - Type: `dict`\n  - Field ID: `field:d09cc01d4d180cccbca8ba966956f070`\n- `zoominfo__schemas.properties.companyTicker.bsonType`\n  - Type: `list`\n  - Field ID: `field:14f66b463ec76eb270dd237903e89314`\n- `zoominfo__schemas.properties.companyTicker.bsonType[]`\n  - Type: `str`\n  - Field ID: `field:bea259455c77840834ae9c9216e652b0`\n- `zoominfo_source_profiles.db_schema.Company.columns.companyTicker`\n  - Type: `dict`\n  - Field ID: `field:21818da11502e6bb90c0615568701663`\n- `zoominfo_source_profiles.db_schema.Company.sample_row.companyTicker`\n  - Type: `NoneType`\n  - Field ID: `field:ae429411ffd4c6b5a0f537c85e7364a8`\n\nIf you mean the actual stored ticker in the listed company table, the answer is:\n- **`Company.companyTicker`**, type **`Nullable(String)`**  \n  - Field ID: `field:f3e4096bc1f1df3dd82a584e30e8a6eb`",
+  "cited": [
+   {
+    "id": "object:b3653bad92366ef20567af26b5ca7ce6",
+    "kind": "table",
+    "name": "Company",
+    "namespace": "testzoominfo_clone2",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:f3e4096bc1f1df3dd82a584e30e8a6eb",
+    "kind": "field",
+    "name": "companyTicker",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Company",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:41991502add1ed6af44be914545093b5",
+    "kind": "field",
+    "name": "companyTicker",
+    "namespace": "enrichment_engine",
+    "object_name": "zoominfo_Company",
+    "source_id": "mongo-main"
+   },
+   {
+    "id": "field:fff202e6d327502ef35666ab86640e95",
+    "kind": "field",
+    "name": "raw_data.companyTicker",
+    "namespace": "enrichment_engine",
+    "object_name": "zoominfo_entities",
+    "source_id": "mongo-main"
+   },
+   {
+    "id": "field:d09cc01d4d180cccbca8ba966956f070",
+    "kind": "field",
+    "name": "properties.companyTicker",
+    "namespace": "enrichment_engine",
+    "object_name": "zoominfo__schemas",
+    "source_id": "mongo-main"
+   },
+   {
+    "id": "field:14f66b463ec76eb270dd237903e89314",
+    "kind": "field",
+    "name": "properties.companyTicker.bsonType",
+    "namespace": "enrichment_engine",
+    "object_name": "zoominfo__schemas",
+    "source_id": "mongo-main"
+   },
+   {
+    "id": "field:bea259455c77840834ae9c9216e652b0",
+    "kind": "field",
+    "name": "properties.companyTicker.bsonType[]",
+    "namespace": "enrichment_engine",
+    "object_name": "zoominfo__schemas",
+    "source_id": "mongo-main"
+   },
+   {
+    "id": "field:21818da11502e6bb90c0615568701663",
+    "kind": "field",
+    "name": "db_schema.Company.columns.companyTicker",
+    "namespace": "enrichment_engine",
+    "object_name": "zoominfo_source_profiles",
+    "source_id": "mongo-main"
+   },
+   {
+    "id": "field:ae429411ffd4c6b5a0f537c85e7364a8",
+    "kind": "field",
+    "name": "db_schema.Company.sample_row.companyTicker",
+    "namespace": "enrichment_engine",
+    "object_name": "zoominfo_source_profiles",
+    "source_id": "mongo-main"
+   }
+  ]
+ },
+ "D5": {
+  "question": "Where are the names of industries stored?",
+  "exit": 0,
+  "seconds": 198.49,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "grade": "Partial (mongo zoominfo_industry.name; ch Industry table, not Industry.name; no pg industryclassification.name)",
+  "answer": "Based on the returned catalogue metadata, industry names are most directly indicated by the `name` field in `zoominfo_industry`. The metadata also shows an `Industry` table object and other name-like industry-name fields, including `industry_name` in `zoominfo_products` and schema/profile fields under `properties.industry_name` and `db_schema.Industry`.\n\nMost direct storage location:\n- Field `name` in object `zoominfo_industry` [field:0bc58c3d0236b8b04ca980d4d1f25ba9].\n\nRelated entity/table:\n- Table `Industry` [object:b37e592e35d7e306355ee5ca2c79ccbd].\n\nAdditional industry-name-related fields returned:\n- Field `industry_name` in object `zoominfo_products` [field:3a7b35ce760cf244ef0c1e296310286f].\n- Field `properties.industry_name` in object `zoominfo__schemas` [field:8cfe14893255c2d75fae754e0100b19b].\n- Field `properties.industry_name.bsonType` in object `zoominfo__schemas` [field:4dd8961cef783c0e6dec924287a6a5e3].\n- Field `properties.industry_name.bsonType[]` in object `zoominfo__schemas` [field:e69df9042f2a668b9dc2ea3c64f3feac].\n- Field `db_schema.Industry.columns.name` in object `zoominfo_source_profiles` [field:5a5455ad1dfd9db8954140be53206329].\n- Field `db_schema.Industry.columns.displayName` in object `zoominfo_source_profiles` [field:2ace82a3b72c0564e825dc7ad10eeb41].\n- Field `db_schema.Industry.sample_row.name` in object `zoominfo_source_profiles` [field:b0bb7fd75735ab5fe363cf9657c2ee5f].\n- Field `db_schema.Industry.sample_row.displayName` in object `zoominfo_source_profiles` [field:9e06b9df502e11e6ffaad9d45e6b24f3].\n\nThere is a tentative reference candidate connecting `zoominfo_industry` to `Industry` through `industryID`. Status: tentative. Evidence: \"name, compatible type, and weak key claim (source sorting or primary key, uniqueness unproven); values not compared (value overlap not measured: no value tokens for one side (sampling is off or unconfigured))\" [edge:9311459e5c26425a87cfbec6d41acdb4].",
+  "cited": [
+   {
+    "id": "object:b37e592e35d7e306355ee5ca2c79ccbd",
+    "kind": "table",
+    "name": "Industry",
+    "namespace": "testzoominfo_clone2",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:0bc58c3d0236b8b04ca980d4d1f25ba9",
+    "kind": "field",
+    "name": "name",
+    "namespace": "enrichment_engine",
+    "object_name": "zoominfo_industry",
+    "source_id": "mongo-main"
+   },
+   {
+    "id": "field:3a7b35ce760cf244ef0c1e296310286f",
+    "kind": "field",
+    "name": "industry_name",
+    "namespace": "enrichment_engine",
+    "object_name": "zoominfo_products",
+    "source_id": "mongo-main"
+   },
+   {
+    "id": "field:8cfe14893255c2d75fae754e0100b19b",
+    "kind": "field",
+    "name": "properties.industry_name",
+    "namespace": "enrichment_engine",
+    "object_name": "zoominfo__schemas",
+    "source_id": "mongo-main"
+   },
+   {
+    "id": "field:4dd8961cef783c0e6dec924287a6a5e3",
+    "kind": "field",
+    "name": "properties.industry_name.bsonType",
+    "namespace": "enrichment_engine",
+    "object_name": "zoominfo__schemas",
+    "source_id": "mongo-main"
+   },
+   {
+    "id": "field:e69df9042f2a668b9dc2ea3c64f3feac",
+    "kind": "field",
+    "name": "properties.industry_name.bsonType[]",
+    "namespace": "enrichment_engine",
+    "object_name": "zoominfo__schemas",
+    "source_id": "mongo-main"
+   },
+   {
+    "id": "field:5a5455ad1dfd9db8954140be53206329",
+    "kind": "field",
+    "name": "db_schema.Industry.columns.name",
+    "namespace": "enrichment_engine",
+    "object_name": "zoominfo_source_profiles",
+    "source_id": "mongo-main"
+   },
+   {
+    "id": "field:2ace82a3b72c0564e825dc7ad10eeb41",
+    "kind": "field",
+    "name": "db_schema.Industry.columns.displayName",
+    "namespace": "enrichment_engine",
+    "object_name": "zoominfo_source_profiles",
+    "source_id": "mongo-main"
+   },
+   {
+    "id": "field:b0bb7fd75735ab5fe363cf9657c2ee5f",
+    "kind": "field",
+    "name": "db_schema.Industry.sample_row.name",
+    "namespace": "enrichment_engine",
+    "object_name": "zoominfo_source_profiles",
+    "source_id": "mongo-main"
+   },
+   {
+    "id": "field:9e06b9df502e11e6ffaad9d45e6b24f3",
+    "kind": "field",
+    "name": "db_schema.Industry.sample_row.displayName",
+    "namespace": "enrichment_engine",
+    "object_name": "zoominfo_source_profiles",
+    "source_id": "mongo-main"
+   },
+   {
+    "id": "edge:9311459e5c26425a87cfbec6d41acdb4",
+    "kind": "relationship",
+    "name": "zoominfo_industry -> Industry (industryID -> industryID)",
+    "status": "tentative"
+   }
+  ]
+ },
+ "S1": {
+  "question": "In PostgreSQL, which tables and columns do I use to get the industry names of a company?",
+  "exit": 0,
+  "seconds": 6.02,
+  "stderr_bytes": 0,
+  "error_code": "MODEL_UNREACHABLE",
+  "grade": "not run: model server went down",
+  "answer": null,
+  "cited": null
+ },
+ "S2": {
+  "question": "In PostgreSQL, how do I get from a person's name to the companies that person worked at?",
+  "exit": 0,
+  "seconds": 1.09,
+  "stderr_bytes": 0,
+  "error_code": "MODEL_UNREACHABLE",
+  "grade": "not run: model server went down",
+  "answer": null,
+  "cited": null
+ },
+ "S3": {
+  "question": "In ClickHouse, how do I get the industry names for a company?",
+  "exit": 0,
+  "seconds": 1.0,
+  "stderr_bytes": 0,
+  "error_code": "MODEL_UNREACHABLE",
+  "grade": "not run: model server went down",
+  "answer": null,
+  "cited": null
+ },
+ "S4": {
+  "question": "In the MongoDB zoominfo collections, how do I get from a staff member to the company?",
+  "exit": 0,
+  "seconds": 1.02,
+  "stderr_bytes": 0,
+  "error_code": "MODEL_UNREACHABLE",
+  "grade": "not run: model server went down",
+  "answer": null,
+  "cited": null
+ },
+ "C1": {
+  "question": "List every place in the catalogue where a company's website is stored.",
+  "exit": 0,
+  "seconds": 1.23,
+  "stderr_bytes": 0,
+  "error_code": "MODEL_UNREACHABLE",
+  "grade": "not run: model server went down",
+  "answer": null,
+  "cited": null
+ },
+ "C2": {
+  "question": "Which tables in all three databases describe industries, and how do they relate to companies?",
+  "exit": 0,
+  "seconds": 1.3,
+  "stderr_bytes": 0,
+  "error_code": "MODEL_UNREACHABLE",
+  "grade": "not run: model server went down",
+  "answer": null,
+  "cited": null
+ },
+ "C4": {
+  "question": "In every source, which tables hold personal contact or identity details of people?",
+  "exit": 0,
+  "seconds": 1.23,
+  "stderr_bytes": 0,
+  "error_code": "MODEL_UNREACHABLE",
+  "grade": "not run: model server went down",
+  "answer": null,
+  "cited": null
+ },
+ "C5": {
+  "question": "Which columns identify a company across the catalogue?",
+  "exit": 0,
+  "seconds": 1.27,
+  "stderr_bytes": 0,
+  "error_code": "MODEL_UNREACHABLE",
+  "grade": "not run: model server went down",
+  "answer": null,
+  "cited": null
+ },
+ "I1": {
+  "question": "Can I join PostgreSQL company and ClickHouse Company directly on their company ids?",
+  "exit": 0,
+  "seconds": 1.05,
+  "stderr_bytes": 0,
+  "error_code": "MODEL_UNREACHABLE",
+  "grade": "not run: model server went down",
+  "answer": null,
+  "cited": null
+ },
+ "I2": {
+  "question": "Which ClickHouse tables do the MongoDB zoominfo_* collections correspond to?",
+  "exit": 0,
+  "seconds": 1.17,
+  "stderr_bytes": 0,
+  "error_code": "MODEL_UNREACHABLE",
+  "grade": "not run: model server went down",
+  "answer": null,
+  "cited": null
+ },
+ "I4": {
+  "question": "Which column should I use to count a company's employees?",
+  "exit": 0,
+  "seconds": 1.03,
+  "stderr_bytes": 0,
+  "error_code": "MODEL_UNREACHABLE",
+  "grade": "not run: model server went down",
+  "answer": null,
+  "cited": null
+ },
+ "I5": {
+  "question": "Where would I look for the relationships between companies, such as subsidiaries or partners?",
+  "exit": 0,
+  "seconds": 0.93,
+  "stderr_bytes": 0,
+  "error_code": "MODEL_UNREACHABLE",
+  "grade": "not run: model server went down",
+  "answer": null,
+  "cited": null
+ }
+}

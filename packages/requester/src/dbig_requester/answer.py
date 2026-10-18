@@ -11,15 +11,13 @@ from typing import Any, Literal
 
 from dbig_contracts.security import secret_from_env
 from openai import APIConnectionError, APIStatusError, APITimeoutError, OpenAI
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict
 
 from .config import AnswerConfig
 from .search import SearchRequest, StaleIndexError, question_scope, relationships_for, search
 
-# The longest answer accepted. It is enforced after parsing and not in the schema sent to the
-# server: llama.cpp refuses a JSON schema that carries a length or item bound ("failed to parse
-# grammar"), so the schema must stay free of every such keyword.
-ANSWER_MAX_CHARS = 2000
+# The schema sent to the server carries no length or item bound: llama.cpp refuses one ("failed
+# to parse grammar"). `max_answer_chars` is enforced after parsing instead.
 
 
 class Answer(BaseModel):
@@ -31,13 +29,6 @@ class Answer(BaseModel):
     # (DEC-6); what was checked may still be cited, and every citation must be a retrieved ID.
     outcome: Literal["answered", "not_established"] = "answered"
 
-    @field_validator("answer")
-    @classmethod
-    def _within_limit(cls, value: str) -> str:
-        if len(value) > ANSWER_MAX_CHARS:
-            raise ValueError("answer too long")
-        return value
-
 
 # What went wrong with the model, by cause. Each is derived from the type of the exception or the
 # shape of the response, never from text the model, the question or the catalogue supplied, so a
@@ -47,6 +38,8 @@ REJECTED = "MODEL_REJECTED_REQUEST"
 TIMEOUT = "MODEL_TIMEOUT"
 TRUNCATED = "MODEL_TRUNCATED"
 INVALID_CITATION = "MODEL_INVALID_CITATION"
+# The answer text is longer than `max_answer_chars` (checked after parsing, never in the schema).
+ANSWER_TOO_LONG = "MODEL_ANSWER_TOO_LONG"
 # Everything else: a reply not in the schema, a claim of lineage, a server error, a missing key.
 UNAVAILABLE_OR_INVALID = "MODEL_UNAVAILABLE_OR_INVALID"
 FINISH_REASON_LENGTH = "length"
@@ -252,6 +245,8 @@ def answer_question(
         if choice.finish_reason == FINISH_REASON_LENGTH:
             raise _ModelFailure(TRUNCATED)
         parsed = Answer.model_validate_json(choice.message.content or "")
+        if config.max_answer_chars is not None and len(parsed.answer) > config.max_answer_chars:
+            raise _ModelFailure(ANSWER_TOO_LONG)
         not_established = parsed.outcome == "not_established"
         if not set(parsed.citations) <= allowed or not (parsed.citations or not_established):
             raise _ModelFailure(INVALID_CITATION)

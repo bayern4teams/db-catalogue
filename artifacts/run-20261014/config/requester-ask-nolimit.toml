@@ -3,11 +3,11 @@ snapshot_dir = "artifacts/run-20261014/snapshot-on"
 state_dir = "artifacts/run-20261014/requester-on"
 api_key_env = "REQUESTER_TOKEN"
 
-# As requester-ask.toml without max_tokens (no limit; user decision 2026-10-17).
+# As requester-ask.toml without max_tokens (no limit) and timeout 900 (user decisions 2026-10-17).
 [requester.answer]
 base_url = "http://127.0.0.1:8000/v1"
 model = "Qwen3.8-Flash-Next"
 model_digest = "178b998806b7b406c311a3e6174aa99cf6304eaf"
 api_key_env = "VLLM_API_KEY"
-timeout_seconds = 300
+timeout_seconds = 900
 retrieval_limit = 10
