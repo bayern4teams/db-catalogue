@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from dbig_contracts.security import secret_from_env
-from openai import APIConnectionError, APIStatusError, APITimeoutError, OpenAI
+from openai import APIConnectionError, APIStatusError, APITimeoutError, OpenAI, omit
 from pydantic import BaseModel, ConfigDict
 
 from .config import AnswerConfig
@@ -239,7 +239,7 @@ def answer_question(
                     "strict": True,
                 },
             },
-            **({} if config.max_tokens is None else {"max_tokens": config.max_tokens}),
+            max_tokens=omit if config.max_tokens is None else config.max_tokens,
         )
         choice = response.choices[0]
         if choice.finish_reason == FINISH_REASON_LENGTH:
