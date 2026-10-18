@@ -1,0 +1,1 @@
+{"collector_version":"0.1.0","id":"ch-main","ir_version":"1.0","kind":"clickhouse","name":"ch-main","observed_at":"2026-10-18T09:41:49.738754Z","provenance":"source-catalog","record_type":"source","source_id":"ch-main","transport":"plaintext-loopback"}

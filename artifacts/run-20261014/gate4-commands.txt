@@ -1,0 +1,12 @@
+### collect ch
+artifacts/run-20261014/bundle-ch-probe
+exit 0 seconds 0.99
+### collect mongo
+Error: mongodb source 'mongo-main': the server refused the login; check the user and password in MONGODB_CONNECTION and that the account exists on that server
+exit 1 seconds 0.74
+### assemble
+Usage: dbig-builder assemble [OPTIONS]
+Try 'dbig-builder assemble --help' for help.
+
+Error: Invalid value for '--bundle': Path 'artifacts/run-20261014/bundle-mongo-probe' does not exist.
+exit 2 seconds 1.01
