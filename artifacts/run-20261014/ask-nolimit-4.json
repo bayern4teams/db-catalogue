@@ -1,0 +1,481 @@
+{
+ "S3": {
+  "question": "In ClickHouse, how do I get the industry names for a company?",
+  "exit": 0,
+  "seconds": 50.19,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "outcome_code": null,
+  "answer_chars": 2287,
+  "grade": "Right",
+  "answer": "Outcome: answered.\n\nIn the retrieved ClickHouse catalogue metadata, `Industry` and `Company` are linked through the `CompanyIndustry` table:\n\n- `CompanyIndustry.companyID` [field:17907f716e27452061865ef443023636] is the candidate link to `Company.companyID` via the tentative relationship [edge:18ea37a0eab0ce91684291b2d4f5a846]. Evidence: \"name, compatible type, and weak key claim (source sorting or primary key, uniqueness unproven); values not compared (value overlap not measured: no value tokens for one side (sampling is off or unconfigured))\".\n- `CompanyIndustry.industryID` [field:4b2a14ef22d83ecba13065e76cef3edc] is the candidate link to `Industry.industryID` [field:0268a310bcc97fd2334a62632d0bcb13] via the tentative relationship [edge:f58e79a3131be25ecebd264e7374168c]. Evidence: \"name, compatible type, and weak key claim (source sorting or primary key, uniqueness unproven); values not compared (value overlap not measured: no value tokens for one side (sampling is off or unconfigured))\".\n\nThe industry-name fields are in `Industry` [object:b37e592e35d7e306355ee5ca2c79ccbd]:\n- `Industry.name` [field:11b0b540b0c621d5f9c5da3b8c36683f]\n- `Industry.displayName` [field:d16e92950ecacf0c00b41fd00ca4b519]\n\nSo, if you already have a company ID, you can retrieve industry names by joining `CompanyIndustry` to `Industry`:\n\n```sql\nSELECT DISTINCT\n  ci.companyID,\n  i.displayName AS industryDisplayName,\n  i.name AS industryName\nFROM CompanyIndustry AS ci\nINNER JOIN Industry AS i\n  ON ci.industryID = i.industryID\nWHERE ci.companyID = {companyID:String};\n```\n\nIf you want to identify the company by its `companyName` in the `Company` table [object:b3653bad92366ef20567af26b5ca7ce6], the metadata shows `Company.companyName` [field:acb560e6086a0d2545806ce87102ef28], and the same candidate `CompanyIndustry` link to `Company` can be used:\n\n```sql\nSELECT DISTINCT\n  c.companyName,\n  i.displayName AS industryDisplayName,\n  i.name AS industryName\nFROM Company AS c\nINNER JOIN CompanyIndustry AS ci\n  ON c.companyID = ci.companyID\nINNER JOIN Industry AS i\n  ON ci.industryID = i.industryID\nWHERE c.companyName = {companyName:String};\n```\n\nThese joins are based on tentative candidate relationships, not declared relationships, so the keys should be verified before relying on them.",
+  "cited": [
+   {
+    "id": "object:b37e592e35d7e306355ee5ca2c79ccbd",
+    "kind": "table",
+    "name": "Industry",
+    "namespace": "testzoominfo_clone2",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "object:b3653bad92366ef20567af26b5ca7ce6",
+    "kind": "table",
+    "name": "Company",
+    "namespace": "testzoominfo_clone2",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "object:f37ce30dcd148e51240474edda54b24f",
+    "kind": "table",
+    "name": "CompanyIndustry",
+    "namespace": "testzoominfo_clone2",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:11b0b540b0c621d5f9c5da3b8c36683f",
+    "kind": "field",
+    "name": "name",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Industry",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:d16e92950ecacf0c00b41fd00ca4b519",
+    "kind": "field",
+    "name": "displayName",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Industry",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:0268a310bcc97fd2334a62632d0bcb13",
+    "kind": "field",
+    "name": "industryID",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Industry",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:4b2a14ef22d83ecba13065e76cef3edc",
+    "kind": "field",
+    "name": "industryID",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "CompanyIndustry",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:17907f716e27452061865ef443023636",
+    "kind": "field",
+    "name": "companyID",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "CompanyIndustry",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:acb560e6086a0d2545806ce87102ef28",
+    "kind": "field",
+    "name": "companyName",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Company",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "edge:18ea37a0eab0ce91684291b2d4f5a846",
+    "kind": "relationship",
+    "name": "CompanyIndustry -> Company (companyID -> companyID)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:f58e79a3131be25ecebd264e7374168c",
+    "kind": "relationship",
+    "name": "CompanyIndustry -> Industry (industryID -> industryID)",
+    "status": "tentative"
+   }
+  ]
+ },
+ "C1": {
+  "question": "List every place in the catalogue where a company's website is stored.",
+  "exit": 0,
+  "seconds": 234.92,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "outcome_code": null,
+  "answer_chars": 348,
+  "grade": "Partial (user mark 2026-10-18: places only in citations, text names none, misses companyDomain)",
+  "answer": "The catalogue shows the following places with fields named `website`. The entries under company-like tables/objects are the direct company-website field locations. The `sample_row.website` field is a website-looking sample-row value, and the remaining `website`-named fields appear to store schema/type metadata rather than a company website value.",
+  "cited": [
+   {
+    "id": "field:993113c9f005c4cf0a5817df3a4fb11f",
+    "kind": "field",
+    "name": "website",
+    "namespace": "public",
+    "object_name": "company",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "object:cdbf59a0739bcf46a9eef890233bf217",
+    "kind": "table",
+    "name": "company",
+    "namespace": "public",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:ef648f1cce9bba8901324ec8da091195",
+    "kind": "field",
+    "name": "website",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Company",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "object:b3653bad92366ef20567af26b5ca7ce6",
+    "kind": "table",
+    "name": "Company",
+    "namespace": "testzoominfo_clone2",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:47f03fa901a9bfdf26762dfe8b105be3",
+    "kind": "field",
+    "name": "website",
+    "namespace": "enrichment_engine",
+    "object_name": "zoominfo_Company",
+    "source_id": "mongo-main"
+   },
+   {
+    "id": "field:8ca82f72ee83e7b663657d6d548cdead",
+    "kind": "field",
+    "name": "website",
+    "namespace": "enrichment_engine",
+    "object_name": "diffbot_Company",
+    "source_id": "mongo-main"
+   },
+   {
+    "id": "field:181c67aaa48b89c5a629ac17e885ba71",
+    "kind": "field",
+    "name": "db_schema.Company.sample_row.website",
+    "namespace": "enrichment_engine",
+    "object_name": "zoominfo_source_profiles",
+    "source_id": "mongo-main"
+   },
+   {
+    "id": "field:c2a3269a7b613dd833d5071252abdd6a",
+    "kind": "field",
+    "name": "db_schema.Company.columns.website",
+    "namespace": "enrichment_engine",
+    "object_name": "zoominfo_source_profiles",
+    "source_id": "mongo-main"
+   },
+   {
+    "id": "field:1e0bca4b8e9592d7edcb288026ae044c",
+    "kind": "field",
+    "name": "properties.website.bsonType",
+    "namespace": "enrichment_engine",
+    "object_name": "zoominfo__schemas",
+    "source_id": "mongo-main"
+   },
+   {
+    "id": "field:ea96c00c95df052b513bfde6260953c4",
+    "kind": "field",
+    "name": "properties.website.bsonType",
+    "namespace": "enrichment_engine",
+    "object_name": "diffbot__schemas",
+    "source_id": "mongo-main"
+   }
+  ]
+ },
+ "C2": {
+  "question": "Which tables in all three databases describe industries, and how do they relate to companies?",
+  "exit": 0,
+  "seconds": 154.78,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "outcome_code": null,
+  "answer_chars": 7002,
+  "grade": "Partial (user mark: ch and mongo right with links, PostgreSQL missing)",
+  "answer": "outcome: not_established\n\nThe returned catalogue metadata does **not** establish that there is an industry-describing table in **all three** databases. I checked the returned items and relationship candidates for industry-like objects and for company-industry references.\n\n## What the metadata shows\n\n### Industry-related objects by database\n\n- **ch-main**: There is a table named **`Industry`** [object:b37e592e35d7e306355ee5ca2c79ccbd].\n- **mongo-main**: There is a collection named **`zoominfo_industry`** [object:02a8357e7c688cc6bd4c007f52693cd2]. This is catalogued as a collection, not a table.\n- **pg-main**: No industry-like table is present among the returned metadata. The only pg-main item returned is the table **`company`** [object:cdbf59a0739bcf46a9eef890233bf217].\n\nAdditional industry/company-associated objects returned:\n\n- **ch-main**: table **`CompanyIndustry`** [object:f37ce30dcd148e51240474edda54b24f]\n- **mongo-main**: collection **`diffbot_CompanyIndustry`** [object:08c76f479b8f1cadc286473d595cd882]\n- **mongo-main**: collection **`zoominfo_CompanyIndustry`** [object:efbbd660498803c533a4b608593c1ba3]\n\n## Company-industry relationship candidates\n\nAll relationship edges shown below have status `tentative`. They are candidates inferred from names, types, and sometimes sampled values; they are not declared confirmed relationships.\n\n### Industry object to industry table\n\n- **`zoominfo_industry` \u2192 `Industry`** [edge:9311459e5c26425a87cfbec6d41acdb4]\n  - Columns: `industryID` \u2192 `industryID`\n  - Evidence: \"name, compatible type, and weak key claim (source sorting or primary key, uniqueness unproven); values not compared (value overlap not measured: no value tokens for one side (sampling is off or unconfigured))\"\n\n### ch-main company-industry table references\n\n- **`CompanyIndustry` \u2192 `Industry`** [edge:f58e79a3131be25ecebd264e7374168c]\n  - Columns: `industryID` \u2192 `industryID`\n  - Evidence: \"name, compatible type, and weak key claim (source sorting or primary key, uniqueness unproven); values not compared (value overlap not measured: no value tokens for one side (sampling is off or unconfigured))\"\n\n- **`CompanyIndustry` \u2192 `Company`** [edge:18ea37a0eab0ce91684291b2d4f5a846]\n  - Columns: `companyID` \u2192 `companyID`\n  - Evidence: \"name, compatible type, and weak key claim (source sorting or primary key, uniqueness unproven); values not compared (value overlap not measured: no value tokens for one side (sampling is off or unconfigured))\"\n\n- **`CompanyIndustry` \u2192 `company`** [edge:4846eff37d9fec6c67f8cb8c45ac382f]\n  - Columns: `companyID` \u2192 `companyid`\n  - Evidence: \"name, compatible type, and uniqueness measured from source statistics, not declared; values not compared (value overlap not measured: no value tokens for one side (sampling is off or unconfigured))\"\n\n### mongo-main company-industry collection references\n\n- **`zoominfo_CompanyIndustry` \u2192 `Company`** [edge:b3c654d6dd352f921b317d5162162c43]\n  - Columns: `companyID` \u2192 `companyID`\n  - Evidence: \"name, compatible type, and weak key claim (source sorting or primary key, uniqueness unproven); values not compared (value overlap not measured: no value tokens for one side (sampling is off or unconfigured))\"\n\n- **`zoominfo_CompanyIndustry` \u2192 `Industry`** [edge:c99eea78e1e84ce25877a4135ee735e1]\n  - Columns: `industryID` \u2192 `industryID`\n  - Evidence: \"name, compatible type, and weak key claim (source sorting or primary key, uniqueness unproven); values not compared (value overlap not measured: no value tokens for one side (sampling is off or unconfigured))\"\n\n- **`diffbot_CompanyIndustry` \u2192 `Company`** [edge:9f435f67b9a73dadd821b9093e9b98a5]\n  - Columns: `companyID` \u2192 `companyID`\n  - Evidence: \"name, compatible type, and weak key claim (source sorting or primary key, uniqueness unproven); values not compared (value overlap not measured: no value tokens for one side (sampling is off or unconfigured))\"\n\n- **`diffbot_CompanyIndustry` \u2192 `company`** [edge:4f638d68c7d69534a1cb0ce74d1865cb]\n  - Columns: `companyID` \u2192 `companyid`\n  - Evidence: \"name, compatible type, and uniqueness measured from source statistics, not declared; value overlap 5% of 22 sampled child values\"\n\n- **`diffbot_CompanyIndustry` \u2192 `industryclassification`** [edge:32cad8e89f231f42993dc41ce20744e6]\n  - Columns: `classificationID` \u2192 `classificationid`\n  - Evidence: \"name, compatible type, and uniqueness measured from source statistics, not declared; value overlap 43% of 14 sampled child values\"\n\n## Company object relationship candidates\n\nThe metadata also shows candidate company-to-company relationships across databases:\n\n- **`Company` \u2192 `company`** [edge:6f0b6a69d7202f13bf860bb994661d7d]\n  - Columns: `companyID` \u2192 `companyid`\n  - Evidence: \"name, compatible type, and uniqueness measured from source statistics, not declared; values not compared (value overlap not measured: no value tokens for one side (sampling is off or unconfigured))\"\n\n- **`company` \u2192 `Company`** [edge:7bdf8607b90723c8dff428c160d3f2f8]\n  - Columns: `companyid` \u2192 `companyID`\n  - Evidence: \"name, compatible type, and weak key claim (source sorting or primary key, uniqueness unproven); values not compared (value overlap not measured: no value tokens for one side (sampling is off or unconfigured))\"\n\n- **`diffbot_Company` \u2192 `Company`** [edge:062f317725cd656c02bca047bf2a2fa5]\n  - Columns: `companyID` \u2192 `companyID`\n  - Evidence: \"name, compatible type, and weak key claim (source sorting or primary key, uniqueness unproven); values not compared (value overlap not measured: no value tokens for one side (sampling is off or unconfigured))\"\n\n- **`diffbot_Company` \u2192 `company`** [edge:5a749bea34021af1bf5c9edd6933be33]\n  - Columns: `companyID` \u2192 `companyid`\n  - Evidence: \"name, compatible type, and uniqueness measured from source statistics, not declared; value overlap 5% of 22 sampled child values\"\n\n- **`zoominfo_Company` \u2192 `Company`** [edge:d87c51a847336cb9c8dc98b6b12f498f]\n  - Columns: `companyID` \u2192 `companyID`\n  - Evidence: \"name, compatible type, and weak key claim (source sorting or primary key, uniqueness unproven); values not compared (value overlap not measured: no value tokens for one side (sampling is off or unconfigured))\"\n\n## Bottom line\n\nFrom the retrieved metadata only:\n\n- An industry table is explicitly present only in **ch-main** as **`Industry`** [object:b37e592e35d7e306355ee5ca2c79ccbd].\n- An industry-named collection is present in **mongo-main** as **`zoominfo_industry`** [object:02a8357e7c688cc6bd4c007f52693cd2].\n- No industry table is shown in **pg-main** among the returned metadata [object:cdbf59a0739bcf46a9eef890233bf217].\n\nCompanies are connected to industries only through `tentative` reference candidates involving **`companyID`/`companyid`** and **`industryID`**, primarily via **`CompanyIndustry`** [object:f37ce30dcd148e51240474edda54b24f], **`diffbot_CompanyIndustry`** [object:08c76f479b8f1cadc286473d595cd882], and **`zoominfo_CompanyIndustry`** [object:efbbd660498803c533a4b608593c1ba3].",
+  "cited": [
+   {
+    "id": "object:b37e592e35d7e306355ee5ca2c79ccbd",
+    "kind": "table",
+    "name": "Industry",
+    "namespace": "testzoominfo_clone2",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "object:02a8357e7c688cc6bd4c007f52693cd2",
+    "kind": "collection",
+    "name": "zoominfo_industry",
+    "namespace": "enrichment_engine",
+    "source_id": "mongo-main"
+   },
+   {
+    "id": "object:cdbf59a0739bcf46a9eef890233bf217",
+    "kind": "table",
+    "name": "company",
+    "namespace": "public",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "object:f37ce30dcd148e51240474edda54b24f",
+    "kind": "table",
+    "name": "CompanyIndustry",
+    "namespace": "testzoominfo_clone2",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "object:08c76f479b8f1cadc286473d595cd882",
+    "kind": "collection",
+    "name": "diffbot_CompanyIndustry",
+    "namespace": "enrichment_engine",
+    "source_id": "mongo-main"
+   },
+   {
+    "id": "object:efbbd660498803c533a4b608593c1ba3",
+    "kind": "collection",
+    "name": "zoominfo_CompanyIndustry",
+    "namespace": "enrichment_engine",
+    "source_id": "mongo-main"
+   },
+   {
+    "id": "edge:9311459e5c26425a87cfbec6d41acdb4",
+    "kind": "relationship",
+    "name": "zoominfo_industry -> Industry (industryID -> industryID)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:f58e79a3131be25ecebd264e7374168c",
+    "kind": "relationship",
+    "name": "CompanyIndustry -> Industry (industryID -> industryID)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:18ea37a0eab0ce91684291b2d4f5a846",
+    "kind": "relationship",
+    "name": "CompanyIndustry -> Company (companyID -> companyID)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:4846eff37d9fec6c67f8cb8c45ac382f",
+    "kind": "relationship",
+    "name": "CompanyIndustry -> company (companyID -> companyid)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:b3c654d6dd352f921b317d5162162c43",
+    "kind": "relationship",
+    "name": "zoominfo_CompanyIndustry -> Company (companyID -> companyID)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:c99eea78e1e84ce25877a4135ee735e1",
+    "kind": "relationship",
+    "name": "zoominfo_CompanyIndustry -> Industry (industryID -> industryID)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:9f435f67b9a73dadd821b9093e9b98a5",
+    "kind": "relationship",
+    "name": "diffbot_CompanyIndustry -> Company (companyID -> companyID)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:4f638d68c7d69534a1cb0ce74d1865cb",
+    "kind": "relationship",
+    "name": "diffbot_CompanyIndustry -> company (companyID -> companyid)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:32cad8e89f231f42993dc41ce20744e6",
+    "kind": "relationship",
+    "name": "diffbot_CompanyIndustry -> industryclassification (classificationID -> classificationid)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:6f0b6a69d7202f13bf860bb994661d7d",
+    "kind": "relationship",
+    "name": "Company -> company (companyID -> companyid)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:7bdf8607b90723c8dff428c160d3f2f8",
+    "kind": "relationship",
+    "name": "company -> Company (companyid -> companyID)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:062f317725cd656c02bca047bf2a2fa5",
+    "kind": "relationship",
+    "name": "diffbot_Company -> Company (companyID -> companyID)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:5a749bea34021af1bf5c9edd6933be33",
+    "kind": "relationship",
+    "name": "diffbot_Company -> company (companyID -> companyid)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:d87c51a847336cb9c8dc98b6b12f498f",
+    "kind": "relationship",
+    "name": "zoominfo_Company -> Company (companyID -> companyID)",
+    "status": "tentative"
+   }
+  ]
+ },
+ "I2": {
+  "question": "Which ClickHouse tables do the MongoDB zoominfo_* collections correspond to?",
+  "exit": 0,
+  "seconds": 155.27,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "outcome_code": "NOT_ESTABLISHED_BY_CATALOGUE",
+  "answer_chars": 1260,
+  "grade": "Wrong (user mark: cited links show the mapping, still NOT_ESTABLISHED)",
+  "answer": "Not established. The retrieved catalogue metadata does not show which ClickHouse tables the MongoDB zoominfo_* collections correspond to. All listed objects are MongoDB collections from source_id \"mongo-main\" in namespace \"enrichment_engine\" (IDs: object:efbbd660498803c533a4b608593c1ba3, object:d893b70b9247c2c2be994c2181e7871e, object:141072960070f46d03b841a90b7d1498, object:6c1043d2a74d13d9885d0a89c006d83f, object:d681253ec289385206efe54ff8596eb7, object:f2b0a62f11b3e15b40bee193539116e0, object:7a8e731805eaf3ea82e09581cd997dd7, object:02a8357e7c688cc6bd4c007f52693cd2, object:3d09673b10e35e2790aceb72f05c0cc1, object:9c866ff8fdcd380a8f7d5b10d997a692). The only relationship metadata are tentative REFERENCE_CANDIDATE edges (IDs: edge:11c4c84dabf615c04bd5659e1459b724, edge:2545c262dfa7a01486026a00b1cabcd8, edge:5e270b623ed8ac6f485b90e4e302c921, edge:92eef06b7fef322ce7509da9f87b85b9, edge:9311459e5c26425a87cfbec6d41acdb4, edge:9f6be1dbdb8e7db44d0ea545591c68b3, edge:a79e5a026bd401461033bd758e3560c4, edge:b3c654d6dd352f921b317d5162162c43, edge:b465f086b084550e7df01e8c6f97f2d8, edge:c99eea78e1e84ce25877a4135ee735e1, edge:d87c51a847336cb9c8dc98b6b12f498f, edge:e317d722bdc889efb462d8b6a7420c46); they do not declare these targets as ClickHouse tables.",
+  "cited": [
+   {
+    "id": "object:efbbd660498803c533a4b608593c1ba3",
+    "kind": "collection",
+    "name": "zoominfo_CompanyIndustry",
+    "namespace": "enrichment_engine",
+    "source_id": "mongo-main"
+   },
+   {
+    "id": "object:d893b70b9247c2c2be994c2181e7871e",
+    "kind": "collection",
+    "name": "zoominfo__schemas",
+    "namespace": "enrichment_engine",
+    "source_id": "mongo-main"
+   },
+   {
+    "id": "object:141072960070f46d03b841a90b7d1498",
+    "kind": "collection",
+    "name": "zoominfo_Company",
+    "namespace": "enrichment_engine",
+    "source_id": "mongo-main"
+   },
+   {
+    "id": "object:6c1043d2a74d13d9885d0a89c006d83f",
+    "kind": "collection",
+    "name": "zoominfo_contracts",
+    "namespace": "enrichment_engine",
+    "source_id": "mongo-main"
+   },
+   {
+    "id": "object:d681253ec289385206efe54ff8596eb7",
+    "kind": "collection",
+    "name": "zoominfo_event",
+    "namespace": "enrichment_engine",
+    "source_id": "mongo-main"
+   },
+   {
+    "id": "object:f2b0a62f11b3e15b40bee193539116e0",
+    "kind": "collection",
+    "name": "zoominfo_evidence",
+    "namespace": "enrichment_engine",
+    "source_id": "mongo-main"
+   },
+   {
+    "id": "object:7a8e731805eaf3ea82e09581cd997dd7",
+    "kind": "collection",
+    "name": "zoominfo_Experience",
+    "namespace": "enrichment_engine",
+    "source_id": "mongo-main"
+   },
+   {
+    "id": "object:02a8357e7c688cc6bd4c007f52693cd2",
+    "kind": "collection",
+    "name": "zoominfo_industry",
+    "namespace": "enrichment_engine",
+    "source_id": "mongo-main"
+   },
+   {
+    "id": "object:3d09673b10e35e2790aceb72f05c0cc1",
+    "kind": "collection",
+    "name": "zoominfo_institution",
+    "namespace": "enrichment_engine",
+    "source_id": "mongo-main"
+   },
+   {
+    "id": "object:9c866ff8fdcd380a8f7d5b10d997a692",
+    "kind": "collection",
+    "name": "zoominfo_location",
+    "namespace": "enrichment_engine",
+    "source_id": "mongo-main"
+   },
+   {
+    "id": "edge:11c4c84dabf615c04bd5659e1459b724",
+    "kind": "relationship",
+    "name": "zoominfo_Experience -> company (companyID -> companyid)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:2545c262dfa7a01486026a00b1cabcd8",
+    "kind": "relationship",
+    "name": "zoominfo_Experience -> companyindustry (companyID -> companyid)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:5e270b623ed8ac6f485b90e4e302c921",
+    "kind": "relationship",
+    "name": "zoominfo_Experience -> Person (personID -> personID)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:92eef06b7fef322ce7509da9f87b85b9",
+    "kind": "relationship",
+    "name": "zoominfo_evidence -> Company (company_id -> companyID)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:9311459e5c26425a87cfbec6d41acdb4",
+    "kind": "relationship",
+    "name": "zoominfo_industry -> Industry (industryID -> industryID)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:9f6be1dbdb8e7db44d0ea545591c68b3",
+    "kind": "relationship",
+    "name": "zoominfo_location -> Location (locationID -> locationID)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:a79e5a026bd401461033bd758e3560c4",
+    "kind": "relationship",
+    "name": "zoominfo_Experience -> location (companyID -> companyid)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:b3c654d6dd352f921b317d5162162c43",
+    "kind": "relationship",
+    "name": "zoominfo_CompanyIndustry -> Company (companyID -> companyID)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:b465f086b084550e7df01e8c6f97f2d8",
+    "kind": "relationship",
+    "name": "zoominfo_contracts -> Company (company_id -> companyID)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:c99eea78e1e84ce25877a4135ee735e1",
+    "kind": "relationship",
+    "name": "zoominfo_CompanyIndustry -> Industry (industryID -> industryID)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:d87c51a847336cb9c8dc98b6b12f498f",
+    "kind": "relationship",
+    "name": "zoominfo_Company -> Company (companyID -> companyID)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:e317d722bdc889efb462d8b6a7420c46",
+    "kind": "relationship",
+    "name": "zoominfo_Experience -> Company (companyID -> companyID)",
+    "status": "tentative"
+   }
+  ]
+ }
+}

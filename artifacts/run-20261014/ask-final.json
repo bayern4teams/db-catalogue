@@ -1,0 +1,63 @@
+{
+ "final_grade": {
+  "D1": "Right",
+  "D2": "Right",
+  "D3": "Right",
+  "D4": "Right",
+  "D5": "Partial",
+  "S1": "Partial",
+  "S2": "Partial",
+  "S3": "Right",
+  "S4": "NOT_ESTABLISHED",
+  "S5": "Right",
+  "C1": "Partial",
+  "C2": "Partial",
+  "C3": "Right",
+  "C4": "Partial",
+  "C5": "Partial",
+  "I1": "Wrong",
+  "I2": "Wrong",
+  "I3": "Right",
+  "I4": "Partial",
+  "I5": "Partial"
+ },
+ "graded_from": {
+  "ask-max2048.json": [
+   "D1",
+   "D3",
+   "D4",
+   "S5",
+   "C3",
+   "I3"
+  ],
+  "ask-nolimit.json": [
+   "D2",
+   "D5"
+  ],
+  "ask-nolimit-2.json": [
+   "S1",
+   "S2",
+   "S4",
+   "C4",
+   "C5",
+   "I1"
+  ],
+  "ask-nolimit-3.json": [
+   "I4",
+   "I5"
+  ],
+  "ask-nolimit-4.json": [
+   "S3",
+   "C1",
+   "C2",
+   "I2"
+  ]
+ },
+ "tally": {
+  "Right": 8,
+  "Partial": 9,
+  "NOT_ESTABLISHED": 1,
+  "Wrong": 2
+ },
+ "credit_card": "NO_CATALOGUE_MATCH (PASS)"
+}
