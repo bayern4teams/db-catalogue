@@ -1,0 +1,161 @@
+# Live verification of `feat/catalogue-fixes` (2026-10-14 to 2026-10-18)
+
+Branch `verify/live-20261014`, based on `3d1505f`. Run on the owner's PostgreSQL 16.15, ClickHouse 26.8.2.7 and MongoDB 7.0.41, and the owner's private model server (`Qwen3.8-Flash-Next`, revision `178b998806b7b406c311a3e6174aa99cf6304eaf`). Every check was confirmed by an independent route (direct driver queries, file inspection, an outside wrapper around the model client), never by the app's own success message. Evidence is counts and names only; no row value, key, password or token is in any file here. Seconds are one run each, not a benchmark.
+
+## 1. Failures first
+
+Defects found live. Four were fixed on this branch by the owner's decision, each with a test that fails without the fix. The others are open for the owner's decision.
+
+| # | Where | Failure | Status |
+|---|---|---|---|
+| F1 | DEC-2, collector | ClickHouse 26.8 reports a one-column key as `(companyID)`; the collector stripped only spaces and backticks, so 0 weak key claims | **fixed** `8ed4c87` (owner); then 5 claims, Z1-Z11 11/11 proposed |
+| F2 | L2 / DEC-16, builder | an ordinary name (`freeMails`) linked by `key_name` to a weak ClickHouse key with no overlap | **fixed** `444ff9c` (owner) |
+| F3 | requester `ask` | fixed `max_tokens` (512 default, 2048 in LOCAL_VERIFY): a reasoning model ended 14 of 20 with `MODEL_TRUNCATED` | **fixed** `309e6bc` (owner): `max_tokens` optional, unset sends none |
+| F4 | requester `ask` | a fixed 2000-character answer limit rejected list answers (3972 and 6243 characters) and reported them as `MODEL_UNAVAILABLE_OR_INVALID` | **fixed** `7704a97` (owner): `max_answer_chars` optional, unset = no limit; own code `MODEL_ANSWER_TOO_LONG` |
+| F5 | Gate 2, builder (A1/D2/D9) | 12 relationships the owner marked true were dropped by the 0-of-N rule; independent overlap 95-100%. Cause: both sides take the first 100 rows, and `parent_truncated` is false for a row-limited sample | open, owner decides at the end |
+| F6 | Gate 2 | 7 of the 16 known-wrong candidates remain (6 ClickHouse children: no tokens; #1 sample too small); 2 of the 5 known-right dropped (#7, #12) | open (follows from F5 and F7) |
+| F7 | collectors | ClickHouse produces no value tokens, so no ClickHouse pair has an overlap number; LOCAL_VERIFY step 5 assumed all three sources do | open, reported as a gap only (owner) |
+| F8 | Step 8, shipped example config | the builder review with the example values (timeout 60, `max_tokens` 512) times out on the first batch: `MODEL_TIMEOUT`, 0 suggestions | open; with LOCAL_VERIFY's settings it completes (largest batch 10,322 completion tokens) |
+| F9 | Gate 4 (L1), ClickHouse | the probe's row cap is soft: 42 of 46 probes read 163,696-229,376 rows against `cardinality_probe_max_rows` 100,000 (`read_overflow_mode = break` finishes the block); the config comment says "at most" | open, owner decides at the end |
+| F10 | Gate 4 with MongoDB | the probe makes child columns look unique (they become parents), links ordinary names with real overlap (`description`, `run_timestamp`, `name`, 31 pairs), and pushes 3 true pairs out at `top_k_per_field` 5 | open, owner decides at the end; MongoDB then left out of Step 9 and later (owner) |
+| F11 | requester `ask` | relationship entries passed to the model carry only bare table names (no source, no namespace) and the prompt does not say a candidate between two sources cannot be joined in one query: the model built joins across PostgreSQL and ClickHouse (N-S5, N-C8, N-C10, N-I1, N-I3, and I1 of the first 20) | open, owner decides at the end |
+| F12 | requester `ask` | the answer text sometimes says "not_established" while the structured outcome is "answered" (N-S8, N-C2, N-I9, N-I10) | open |
+| F13 | requester search | retrieval (`retrieval_limit` 10) often misses a needed column (company name, `technologyname`); questions about a type or nullability find nothing (`NO_CATALOGUE_MATCH`, N-C4, N-C7) | open |
+
+**Tracebacks:** none. Every command's stderr was empty, apart from the error lines the app printed on purpose (MongoDB login refused once; F1-F4 codes).
+
+**Incidents:**
+- **2026-10-14, `.env`:** three `.env` lines with unquoted spaces failed under zsh, and their values were echoed into the session transcript. The owner regenerated those three values. `.env` has since been loaded only under bash with output discarded.
+- **2026-10-18, MongoDB login:** refused once. The owner updated `.env`, and the retry succeeded.
+- **Model server:** it dropped three times during Step 7. Each time the affected questions were recorded as `MODEL_UNREACHABLE` (the correct code) and rerun.
+
+## 2. Step by step
+
+### Step 0-2. Reading, preconditions, branch: PASS
+Branch `verify/live-20261014`. Narrow `.gitignore` for `artifacts/run-20261014/`; `tokens.jsonl` stays ignored. Tests under `ulimit -v 16777216`, Python 3.12.
+
+### Step 3. Questions first: PASS
+- **Database facts:** unchanged (owner).
+- **Token key:** generated by the owner; key id `run-20261014`.
+- **Model and tunnel:** the owner set them up.
+
+### Step 4. Gate 1, metadata only: PASS after F1 and F2 (`gate1-summary.md`)
+| Check | Before (live-test-report 2026-10-06) | After |
+|---|---|---|
+| counts vs direct queries | equal | equal: PG 13 tables / 124 columns, CH 7 / 46, Mongo 28 collections |
+| "values not compared" on every candidate (A1/D2) | not shown | 71/71, then 106/106 |
+| D1b empty statistic cells | blank cells | 0 blank of 4140 |
+| D3 / DEC-12 (J1, J2, X1 edges) | no edge | all 12 true PG pairs proposed |
+| DEC-1 (`locationID` names `location.locationid`, never `location.companyid`) | #9, #20 present | gone |
+| DEC-2 weak ClickHouse key | key stored as a hash only | FAIL (F1), fixed: 5 claims, Z1-Z11 11/11 |
+| L2 ordinary names | `email`, `status` linked | none, after F2 |
+| owner marks | 21 candidates marked | 105 candidates: 61 true, 44 false, 0 unmarked |
+
+### Step 5. Gate 2, sampling on: FAIL (F5, F6, F7) (`gate2-summary.md`)
+| Check | Result |
+|---|---|
+| pipeline, `complete`, 0 diagnostics | PASS |
+| the 16 wrong 0% candidates gone | FAIL: 9 of 16 |
+| the 5 right kept | FAIL: 3 of 5 |
+| no true relationship dropped | FAIL: 12 dropped, independent overlap 95-100% |
+| dropped-and-false | correct: independent overlap 0 for all 11 |
+| `dropped_zero_overlap_candidates` counter | PASS: 23 + 2 = 25, proved with `top_k_per_field = 100` |
+| 21-27% ClickHouse pairs kept with numbers | FAIL: kept, but no number (F7) |
+| no ordinary shared names | PASS |
+
+### Step 6. Planner and Gate 3: PASS (`gate3-summary.md`)
+| Join | Before | After |
+|---|---|---|
+| J1 pg `companyexperience` to `company` | `unavailable` | direct path, marked true |
+| J2 pg `companyexperience` to `person` | `unavailable` | direct path, marked true |
+| J3 ch `Experience` to `Company` | 3 detours via pg on false #3, #13 | 1 direct ClickHouse path (DEC-4) |
+| J4 ch `Company` to pg `company` | false #13, no warning | false #13 with `CROSS_SOURCE_CANDIDATES_UNVERIFIED` |
+| X1 pg `companyindustry` to `industryclassification` | `unavailable` | direct path, marked true |
+
+`run_plan.py`, read-only, no `--show`: J1, J2, J3 and X1 each returned 1000 rows, equal to the hand count of 1000. The full joins have 1230, 1229, 3,465,441 and 3939 rows. J4 joined 0 rows, equal to the hand count of 0, with 0 shared ids. The ClickHouse code 497 of the last run did not recur.
+
+### Step 7. Search and `ask`: PASS for search and REST; `ask` improved, not at the target "no Wrong"
+| Check | Before | After |
+|---|---|---|
+| `search revenue` / `industries` / `tables` | 0 / 0 / 0 | 25 / 50 / 13 |
+| `exclude_objects` for the Mongo schema-description collections | not available | revenue 25 -> 10, all real columns; 0 entries from the excluded collections (was 100) |
+| credit-card question | `MODEL_UNAVAILABLE_OR_INVALID` | `NO_CATALOGUE_MATCH`, 0.57 s, model not called |
+| REST `POST /v1/catalogue/search` (L3) | not available | 200 with 10 hits; 401 without the token |
+| `serve --no-access-log` (real log inspected) | n/a | 0 request lines (control without the flag: 4, and the GET URL shows the query) |
+| 20 questions (`ask-final.json`) | 0 answered (17 `MODEL_UNAVAILABLE_OR_INVALID`, 3 `NO_CATALOGUE_MATCH`) | Right 8, Partial 9, NOT_ESTABLISHED 1, **Wrong 2** (I1, I2), errors 0 |
+
+The final grades needed F3 and F4, the timeout raised from 300 s to 900 s, and reruns after the server outages. At LOCAL_VERIFY's own settings (`max_tokens` 2048) the result was 6 answered (all Right) and 14 `MODEL_TRUNCATED` (`ask-max2048.json`). Seconds: 4.6 to 582 per question. The owner marked I1, I2, I4, I5, C1 and C2 by hand.
+
+**40 new questions** (owner request): drafted by a Sonnet subagent from names and types only, checked by the lead against the snapshot, and approved by the owner with corrections (`q40-draft.md`). They were run on PostgreSQL + ClickHouse only (owner: MongoDB left out), sampling on, probe off.
+
+Results (`q40-grades.json`): **Right 17, Partial 13, Wrong 6, NOT_ESTABLISHED 2, `NO_CATALOGUE_MATCH` 2.**
+- **Direct:** 10/10 Right.
+- **Steps:** 2 Right, 7 Partial, 1 Wrong.
+- **Comprehensive:** 4 Partial, 2 Wrong, 2 NOT_ESTABLISHED, 2 no match.
+- **Inference:** 5 Right, 2 Partial, 3 Wrong.
+
+Patterns behind the misses: F11, F12, F13.
+
+### Step 8. Model review: FAIL with the shipped example settings, PASS with LOCAL_VERIFY's (F8)
+| Settings | Result |
+|---|---|
+| example (`builder-review-shipped.toml`: timeout 60, `max_tokens` 512, batch 5) | `partial`, `MODEL_REVIEW_FAILED` + `MODEL_TIMEOUT`, 61.6 s, 0 suggestions; the deterministic catalogue is still published |
+| LOCAL_VERIFY (`builder-review-lv.toml`: 24000, 900, 5) | `complete`, `review_status` OK, 20 suggestions in 4 batches, 457 s; prompt 1976/1674/2105/2104 tokens, completion 2508/6966/10322/8755 (28,551 total), all `finish_reason` stop; the owner's server accepted the builder review schema |
+
+The model's decisions compared with the owner's marks (`review-lv-vs-marks.json`):
+- **11 true:** supports 10, unknown 1.
+- **9 false:** supports 4, unknown 4, opposes 1.
+
+So 4 of its 14 "supports" are on false candidates.
+
+### Step 9. Gate 4, cardinality probe (L1): PASS for ClickHouse collection; findings F9, F10 (`gate4-summary.md`)
+**ClickHouse:**
+- 46 new `sample` profiles, counts only, with 0 diagnostics.
+- 10 columns measure unique.
+- Tokens: still 0.
+- The row cap is soft (F9).
+
+**MongoDB:**
+- 295 new profiles, with 0 diagnostics.
+- Candidates go from 82 to 162 (F10).
+
+**Without MongoDB:** 59 to 67 candidates, 8 added and 0 lost. The owner marked the 4 ClickHouse person links true and the 4 PostgreSQL → ClickHouse ones false.
+
+**Extra query count:** not measured, because the bundle records none.
+
+### Step 10. Report, commit, push, CI
+This file. Every step's evidence is committed. Only `verify/live-20261014` is pushed. CI result: see the section at the end.
+
+## 3. Limitations of this run
+- **Sampling is biased:** it takes the first 100 rows, not a random sample. The independent overlap read up to 5000 distinct child values and the whole parent column, in memory only.
+- **Marks are the owner's:** every true/false mark on a candidate and every grade of a model answer comes from the owner, or from the lead against expected answers the owner approved. The 84 MongoDB candidates from the probe snapshot are unmarked and not judged.
+- **Model answers vary between runs:** C1 and I2 answered in one run and not in another. The grades are of one run each.
+- **The model server was shared and unstable:** seconds include queueing, and three outages forced reruns.
+- **No query logs were provided:** the optional observation test (lineage edges `observed`) was not run.
+- **Not counted:** extra probe queries against `max_queries`.
+
+## 4. What neither the cloud run nor this run could prove
+- **Overlap on ClickHouse pairs:** there are no ClickHouse tokens (F7), so containment is never measured for any pair with a ClickHouse side.
+- **Whole-table uniqueness:** the probe measures uniqueness only within the rows it reads (`sample_count` up to 229,376 on ClickHouse and 13,518 on MongoDB).
+- **Whether `ask` reaches "no Wrong":** not with this model and retrieval; F11-F13 remain.
+- **Behaviour with declared keys:** the PostgreSQL schema declares no FK, PK or UNIQUE constraints, and MongoDB has no schema.
+
+## 5. Send-back template (LOCAL_VERIFY)
+
+```
+Environment: PostgreSQL 16.15, ClickHouse 26.8.2.7, MongoDB 7.0.41; model Qwen3.8-Flash-Next/178b998806b7b406c311a3e6174aa99cf6304eaf, server: owner's private OpenAI-compatible server; pytest: 757 passed, 69 skipped, 1 xfailed (attack files: 37 failed, the known set)
+Sampling: off run / on run (sample_rows 100); probe: off / on (Gate 4)
+Build: completeness complete; partial_reasons none (review run with example config: MODEL_REVIEW_FAILED, MODEL_TIMEOUT); dropped_zero_overlap 25; dropped_unmeasured_key_name 1 (off run 3); seconds assemble 0.97-1.62
+Candidates: 82 sampling on (all marked; 105 sampling off: true 61, false 44, unsure 0, missing 0); the 16 wrong 0% gone: no (9 of 16); the 5 right kept: no (3 of 5); 21-27% pairs kept: yes, without numbers
+Wrong blocking_rule values (names only): key_name on freeMails (fixed, F2); key_name on ordinary names with the probe on MongoDB (F10)
+Joins: J1 path J2 path J3 first hop same-source: yes J4 path (false #13) X1 path; warnings CROSS_SOURCE_CANDIDATES_UNVERIFIED (J4)
+Search: revenue 25; plurals (industries, tables) 50, 13; credit-card -> NO_CATALOGUE_MATCH: yes
+Ask: answered 20/20 after F3/F4 (6/20 at max_tokens 2048); Wrong 2; NOT_ESTABLISHED_BY_CATALOGUE 1; error codes seen MODEL_TRUNCATED, MODEL_UNREACHABLE, MODEL_UNAVAILABLE_OR_INVALID (F4); seconds per question min 4.6 / median 43 / max 582. 40 new: Right 17, Partial 13, Wrong 6
+Review: batches 4, completed yes (LOCAL_VERIFY settings; example settings no), seconds 457, tokens 28,551 completion / 7,859 prompt
+Probe (L1): profiles added 46 ClickHouse, 295 MongoDB; STATS_UNAVAILABLE diagnostics 0; extra queries not measured
+REST (L3): POST search ok yes; access log silent with --no-access-log yes
+Tracebacks: none
+```
+
+## 6. Open decisions for the owner
+F5 (0-of-N drop), F6, F7 (ClickHouse tokens), F8 (example review config), F9 (soft row cap), F10 (probe effects), F11 (relationship entries without a source), F12 (outcome mismatch), F13 (retrieval coverage). The unrelated ticket: `origin` still points at Reza-Sh83/db-catalogue. Nothing was merged and no PR was opened.
