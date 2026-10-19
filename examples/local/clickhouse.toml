@@ -12,7 +12,14 @@ namespaces = ["default"]               # ClickHouse databases to catalogue
 # Optional distinct-count probe (default off). ClickHouse keeps no per-column statistics, so
 # without it no column measures as a unique parent key. One extra query per table, charged to
 # max_queries; it reads data (counts only, nothing is stored), so a scan request needs the
-# `sample` capability. It reads at most this many rows and columns per table.
+# `sample` capability. It reads up to this many columns and counts exactly this many rows per
+# table (the server may read about one block more).
 # cardinality_probe = true
 # cardinality_probe_max_columns = 20
 # cardinality_probe_max_rows = 100000
+
+# Optional value hashes for cross-source overlap (default off; reads the first sample_rows rows of
+# each table, plain columns only). Same key and id as the other sources in this run.
+# sample_rows = 100
+# value_token_key_env = "DBIG_TOKEN_KEY"
+# value_token_key_id = "run-1"

@@ -328,7 +328,7 @@ directory empty, lineage paths are empty; relationships between tables still com
 
 Name matching alone proposes candidates; measured overlap tells you whether a child column's
 values really appear in the parent key. It needs sampling, which reads rows, so it is off by
-default. To enable it on PostgreSQL and MongoDB sources (ClickHouse does not produce tokens):
+default. To enable it on PostgreSQL, ClickHouse and MongoDB sources:
 
 ```bash
 export DBIG_TOKEN_KEY="$(python -c 'import secrets; print(secrets.token_urlsafe(48))')"
@@ -346,13 +346,20 @@ Use the same key and ID for every source in a run and a new key for each run. On
 leave the collector; the key never enters any file, and digests from different runs cannot be
 compared.
 
+A measured zero overlap removes a candidate only when the parent's read was complete (fewer rows
+than `sample_rows`); against a sampled parent the candidate stays, marked "parent sampled, a zero
+is not a measurement". So `sample_rows` should cover your parent tables: the owner's live run uses
+`sample_rows = 25000`, `max_value_tokens = 4096` and, for MongoDB, `max_sample_bytes = 16777216`
+(the first 25,000 documents of all collections measured about 10 MB). These are run settings, not
+code defaults; each read costs up to `sample_rows` rows per table per collect.
+
 ### Optional: measure uniqueness on ClickHouse and MongoDB
 
 Those two keep no per-column statistics, so with the metadata alone none of their columns can be a
 measured-unique parent. Setting `cardinality_probe = true` in a source file (default off) adds one
 bounded query per table or collection (charged to `max_queries`) that returns only counts; the
 profile then carries a distinct count and a uniqueness over the first `cardinality_probe_max_rows`
-rows (default 100000) of up to `cardinality_probe_max_columns` columns (default 20). On a larger table
+rows (default 100000; ClickHouse counts exactly that many and reads about one block more) of up to `cardinality_probe_max_columns` columns (default 20). On a larger table
 that is uniqueness within those rows, and `sample_count` says how many. A failed probe is a
 `STATS_UNAVAILABLE` diagnostic, not a failed scan. Because it reads data, a scan request needs the
 `sample` capability for it. For MongoDB also set `sample_rows`, otherwise only validator paths are
@@ -407,12 +414,13 @@ limits are checked after the reply is parsed instead. Failures now have their ow
 `max_answer_chars`, unset by default). Other causes keep
 `MODEL_UNAVAILABLE_OR_INVALID`.
 
-A reasoning model spends tokens thinking before it answers. In one test with the default
+A reasoning model spends tokens thinking before it answers. In one test with the then-default
 `max_tokens = 512` it used all 512 and returned an empty reply (`MODEL_TRUNCATED`); 20 review
 candidates did not finish in 8192 tokens (72 s), while 5 candidates with `max_tokens = 24000` and
-`timeout_seconds = 900` completed in 14.9 s using 1858 tokens. Raise `max_tokens` and
-`timeout_seconds` for such a model, and review fewer candidates. `[requester.answer] max_tokens`
-is unset by default: `ask` then sends no limit and the server's own maximum applies. A shared server queues
+`timeout_seconds = 900` completed in 14.9 s using 1858 tokens. Both `[builder.review] max_tokens`
+and `[requester.answer] max_tokens` are now unset by default (owner decision 2026-10-19): no limit
+is sent and the server's own maximum applies. Give such a model a long `timeout_seconds` (the
+example uses 900; the largest measured review batch took 243 s) and review fewer candidates. A shared server queues
 requests: a reply that took 19 s idle took over 60 s when the server was busy, so the timeout must
 cover the queue (`MODEL_TIMEOUT` says this, not "unavailable"). These numbers come from one
 model on one shared server; measure your own.

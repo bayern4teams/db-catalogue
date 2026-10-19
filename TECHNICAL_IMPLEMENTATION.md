@@ -262,9 +262,10 @@ three-database snapshot:
 - **Limits.** Reaching `max_queries`, `max_objects` or `max_fields` keeps stopping with no
   bundle and an operator message.
 
-- **Model and index error codes (catalogue fixes).** Derived from exception types and structure, never from content: `MODEL_UNREACHABLE`, `MODEL_REJECTED_REQUEST`, `MODEL_TIMEOUT`, `MODEL_TRUNCATED` (`finish_reason: length`), `MODEL_INVALID_CITATION`, `MODEL_ANSWER_TOO_LONG` (answer text over the optional `[requester.answer] max_answer_chars`, unset = no limit; `max_tokens` is likewise optional, unset = none sent; user decisions 2026-10-17/18); the builder keeps `MODEL_REVIEW_FAILED` as the partial reason beside the specific code. `STALE_INDEX` (index version or snapshot changed since `dbig-requester index`): `search` raises it, `ask` returns it, REST answers 409 on search and 503 on questions. `NOT_ESTABLISHED_BY_CATALOGUE` is an answer outcome, not an error.
-- **Manifest counts (catalogue fixes).** Optional, written only when non-zero so other snapshots' bytes are unchanged: `partial_reasons` (codes), `dropped_zero_overlap_candidates` (measured 0-of-N, A1/D2) and `dropped_unmeasured_key_name_candidates` (DEC-16: a measured-unique parent with a non-reference name and no measured overlap). Counts only, never values. A `key_name` candidate on a weak ClickHouse key carries `weak_key_claim` evidence.
-- **Cardinality probe (DEC-14, 2026-10-14).** Optional, default off: `cardinality_probe`, `cardinality_probe_max_columns` (20), `cardinality_probe_max_rows` (100000). ClickHouse: one `SELECT count(), uniq(col)...` per table with `max_rows_to_read` and `read_overflow_mode='break'`; MongoDB: one `$limit` + `$facet` of `$group`/`$count` per collection. Charged to `max_queries`, needs the `sample` scan capability, emits `sample` profiles with `distinct_estimate`, `uniqueness` and `sample_count` only; a failure is a `STATS_UNAVAILABLE` diagnostic.
+- **Model and index error codes (catalogue fixes).** Derived from exception types and structure, never from content: `MODEL_UNREACHABLE`, `MODEL_REJECTED_REQUEST`, `MODEL_TIMEOUT`, `MODEL_TRUNCATED` (`finish_reason: length`), `MODEL_INVALID_CITATION`, `MODEL_ANSWER_TOO_LONG` (answer text over the optional `[requester.answer] max_answer_chars`, unset = no limit; `max_tokens` is likewise optional, unset = none sent, for `ask` and since P6-5 for the builder review `[builder.review] max_tokens` too; user decisions 2026-10-17/18 and 2026-10-19, DEC-18); the builder keeps `MODEL_REVIEW_FAILED` as the partial reason beside the specific code. `STALE_INDEX` (index version or snapshot changed since `dbig-requester index`): `search` raises it, `ask` returns it, REST answers 409 on search and 503 on questions. `NOT_ESTABLISHED_BY_CATALOGUE` is an answer outcome, not an error.
+- **Manifest counts (catalogue fixes).** Optional, written only when non-zero so other snapshots' bytes are unchanged: `partial_reasons` (codes), `dropped_zero_overlap_candidates` (measured 0-of-N against a complete parent, A1/D2, DEC-19) and `dropped_ordinary_name_candidates` (DEC-20: a same-name pair whose parent is not a declared key and whose name is not reference-style, counted per child-parent pair; renamed in P6-4 from `dropped_unmeasured_key_name_candidates`, which counted DEC-16's unmeasured pairs). Counts only, never values. A `key_name` candidate on a weak ClickHouse key carries `weak_key_claim` evidence.
+- **Cardinality probe (DEC-14, 2026-10-14).** Optional, default off: `cardinality_probe`, `cardinality_probe_max_columns` (20), `cardinality_probe_max_rows` (100000). ClickHouse: one `SELECT count(), uniq(col)... FROM (SELECT cols FROM db.table LIMIT n)` per table with `max_threads = 1` (F9, 2026-10-19: the count covers exactly n rows and the server reads about one block more, measured about 2x on 26.8 against 7.8x for the earlier `max_rows_to_read`/`break` query); MongoDB: one `$limit` + `$facet` of `$group`/`$count` per collection. Charged to `max_queries`, needs the `sample` scan capability, emits `sample` profiles with `distinct_estimate`, `uniqueness` and `sample_count` only; a failure is a `STATS_UNAVAILABLE` diagnostic.
+- **Same-name keys and ties (DEC-20, F10, 2026-10-19).** A child whose name equals a parent column's links by `key_name` when the parent is a declared key, or when the parent is only measured-unique or a weak ClickHouse key claim and its name is reference-style (stem plus `id`/`_ref`/... suffix). An ordinary name (`email`, `description`, `freeMails`) on an undeclared parent never links, whatever the measured overlap (replaces DEC-16's overlap allowance). Candidates with equal scores are cut to `top_k_per_field` by evidence: same source first, then declared key, weak key claim, measured uniqueness, then id.
 - **MongoDB collections (corrected 2026-10-04).** `sample_rows` is per collection, as it is per
   table for PostgreSQL; it was a total for the source, so after one collection that large every
   later collection was left unsampled and, having no validator, had no fields, with no
@@ -320,6 +321,18 @@ the alternatives that would look fairer: `ORDER BY random()` and unbounded scans
 that hurt a production source, and `TABLESAMPLE` plus `LIMIT` guarantees neither a cheap nor an
 unbiased fixed-size sample.
 
+ClickHouse sampling (F7, 2026-10-19) is the same: one `SELECT <columns> FROM db.table LIMIT n` per
+table, plain non-nested columns only, the limit a bound parameter, `max_execution_time` set and the
+read charged to `max_queries`. A materialized view is read (stored rows, as PostgreSQL reads
+matviews); a View or LiveView is not, since reading one runs its query. A read the server refuses
+costs that table its tokens and leaves a code-only `STATS_UNAVAILABLE` diagnostic, never the
+server's text.
+
+Every token set records `complete` (P6-1, owner decision 2026-10-19, DEC-19): true when the read
+returned fewer rows than `sample_rows` (and, for MongoDB, no byte budget and no `max_array_elements`
+cut it), so the set holds every value of the column. An older bundle without the field counts as a
+sample.
+
 The assembler measures **containment**, not similarity: a reference means the child's values are
 drawn from the parent's key, so the question is one-directional and the denominator is the child's
 distinct count. Jaccard overlap is reported alongside it, because a high containment on a tiny
@@ -329,7 +342,16 @@ and `lower_bound_only` when either token set was capped.
 
 It **abstains** rather than reporting a meaningless number in four cases: either side has no
 tokens, the two were keyed under different key IDs, the two were normalised differently, or either
-distinct count is below `MIN_TOKEN_SUPPORT`. The different-key case matters most: those tokens are
+distinct count is below `MIN_TOKEN_SUPPORT`.
+
+A capped token set keeps the smallest keyed hashes, so two capped sets are coordinated bottom-k
+sketches. When either side is capped, both are compared only at or below the smaller of the
+capped sides' largest kept hash, where each side holds every hash it saw; the child's support is
+what that range holds (DEC-19). A measured zero drops a candidate only when the parent is
+`complete`; a zero against a sampled parent is kept as `value_containment` with reason
+`parent_sampled` and the sentence "parent sampled, a zero is not a measurement", and the planner
+does not count it as value evidence. A ClickHouse parent larger than `sample_rows` is therefore
+never a source of a trusted zero; a full-column sketch read is the upgrade path. The different-key case matters most: those tokens are
 unrelated byte strings, so their zero overlap would read as a counterexample rather than as
 ignorance.
 
