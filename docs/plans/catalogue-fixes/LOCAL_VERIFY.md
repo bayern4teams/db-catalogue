@@ -28,8 +28,8 @@ Each step gives its command, its "before" value from `artifacts/run-20261014/lea
    ```
 
    Run once with sampling off (to see "values not compared") and once on.
-6. **Model settings for a reasoning model on a shared llama.cpp server** (measured in the report): builder `[builder.review]` `max_tokens = 24000`, `timeout_seconds = 900`, `batch_size = 5` (5 candidates took 14.9 s and 1858 tokens; 20 at once did not finish in 8192 tokens); requester `[requester.answer]` `max_tokens` at least 2048 and `timeout_seconds = 300` (a reply that took 19 s idle took over 60 s when the server was busy). Use the API key the server should have.
-7. **Collect, assemble, render, index.** `dbig collect`, `dbig-builder assemble`, `dbig-builder render`, `dbig-requester index` (the index version is 6: an old index answers `STALE_INDEX`). Check the builder run's completeness and `partial_reasons`, `dropped_zero_overlap_candidates`, `dropped_unmeasured_key_name_candidates`.
+6. **Model settings for a reasoning model on a shared llama.cpp server** (measured in the report): builder `[builder.review]` `timeout_seconds = 900`, `batch_size = 5`, `max_tokens` unset (owner decision 2026-10-19, DEC-18: no limit; the largest measured batch took 243 s); requester `[requester.answer]` `max_tokens` unset and `timeout_seconds = 300` (a reply that took 19 s idle took over 60 s when the server was busy). Use the API key the server should have.
+7. **Collect, assemble, render, index.** `dbig collect`, `dbig-builder assemble`, `dbig-builder render`, `dbig-requester index` (the index version is 7: an old index answers `STALE_INDEX`). Check the builder run's completeness and `partial_reasons`, `dropped_zero_overlap_candidates`, `dropped_unmeasured_key_name_candidates`.
 8. **Relationships (A1, D2, D3, DEC-1/2/3/12, DEC-16).** Compare with `artifacts/candidate-trace.md`: the 16 wrong 0% candidates gone, the 5 right at 100% kept, the 21% to 27% ClickHouse pairs kept with numbers, J1 and J2 return a path, no ordinary shared name (`email`, `status`) links.
 9. **Planner (DEC-4).** `dbig-planner build` then `dbig-planner join-paths` for J1 to J4 and X1; J3 offers the direct ClickHouse join first.
 10. **Search and `ask` (B1, B3, B4, D6, DEC-5 to DEC-9).** `search --query revenue`; the 20 questions in `artifacts/model-questions.md` with `ask` (target: no Wrong); the credit-card question gives `NO_CATALOGUE_MATCH`; set `exclude_objects` for the Mongo schema-description collections and re-index. Serve the REST API and use `POST /v1/catalogue/search` (L3) with `--no-access-log`.
@@ -41,7 +41,7 @@ Each step gives its command, its "before" value from `artifacts/run-20261014/lea
 ```
 Environment: PostgreSQL <ver>, ClickHouse <ver>, MongoDB <ver>; model <name/revision>, server <llama.cpp|vLLM>; pytest: <summary line>
 Sampling: off run / on run (sample_rows <n>); probe: off / on
-Build: completeness <complete|partial>; partial_reasons <codes>; dropped_zero_overlap <n>; dropped_unmeasured_key_name <n>; seconds <n>
+Build: completeness <complete|partial>; partial_reasons <codes>; dropped_zero_overlap <n>; dropped_ordinary_name <n>; seconds <n>
 Candidates: <total> (true <n>, false <n>, unsure <n>, missing <n>); the 16 wrong 0% gone: yes/no; the 5 right kept: yes/no; 21-27% pairs kept: yes/no
 Wrong blocking_rule values (names only): <list>
 Joins: J1 <path|none> J2 <path|none> J3 <first hop same-source?> J4 <path|none> X1 <path|none>; warnings <codes>
@@ -114,7 +114,7 @@ configs, TLS preflight, collect, assemble, render) using the configs in `artifac
 - Result (filled in locally):
 
 ### Phase 2 and Phase 3 — live checks (added 2026-10-13)
-All need the real databases and model (see "Restore the environment first"). Rerun `dbig-requester index` first: the index version is now 6.
+All need the real databases and model (see "Restore the environment first"). Rerun `dbig-requester index` first: the index version is now 7.
 - D3 / DEC-12: `companyexperience.companyid` and `companyindustry.classificationid` are proposed; J1 and J2 return a path. DEC-1: `locationID` names `location.locationid`, never `location.companyid`.
 - A1 / D2 / D9 (needs sampling on): the 16 candidates with 0% overlap disappear, the 5 with 100% stay, the 21% to 27% ClickHouse pairs stay with their numbers; with sampling off every candidate says "values not compared".
 - DEC-2: the Z1 to Z11 `zoominfo_*` to ClickHouse pairs are proposed; check the key claim reads "weak key claim" and that ClickHouse sorting keys are single plain columns (expression keys are skipped).

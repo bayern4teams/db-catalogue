@@ -398,7 +398,11 @@ dbig-requester ask --config "$out/requester.toml" --question "Which column holds
 ```
 
 The requester finds the most relevant catalogue entries for the question (up to
-`retrieval_limit`) and gives the model their names, types, table and comments. The answer must
+`retrieval_limit`), adds every column of each table it found, and gives the model their names,
+types, table and comments. Each relationship it passes names the source and namespace of both
+ends, so the model can say that two tables in different databases cannot be joined in one query.
+After upgrading, run `dbig-requester index` again (index version 7; an older index answers
+`STALE_INDEX`). The answer must
 cite only those entries, and is refused if it cites anything else or claims lineage. If nothing
 in the catalogue matches the question, you get `NO_CATALOGUE_MATCH` and the model is not asked.
 Comments are free text written by your database owners and are given to the model by your
