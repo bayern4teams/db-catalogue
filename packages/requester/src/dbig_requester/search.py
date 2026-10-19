@@ -37,7 +37,7 @@ WEIGHTS = (10.0, 4.0, 1.0)
 # Bump when what `index_snapshot` writes into the full-text table changes meaning. An index
 # written under another version is refused with STALE_INDEX instead of answering from words it
 # does not hold (a search would return nothing, as if the catalogue lacked the column).
-INDEX_VERSION = "6"
+INDEX_VERSION = "7"
 
 
 class StaleIndexError(OperatorError):
@@ -221,6 +221,13 @@ def index_snapshot(
             for record in tables["nodes.jsonl"]
             if record.record_type in {"object", "field"}
         }
+        # Where each end lives, so the model can see a relationship crosses two sources (F11).
+        # A field's namespace is its object's; an object without one stays None.
+        places = {}
+        for record in tables["nodes.jsonl"]:
+            if record.record_type in {"object", "field"}:
+                owner = owners.get(getattr(record, "object_id", record.id))
+                places[record.id] = (record.source_id, owner.namespace if owner else None)
         for record in tables["edges.jsonl"]:
             edge = Edge.model_validate(record.model_dump(mode="json"))
             if edge.kind not in RELATIONSHIP_KINDS or {edge.from_id, edge.to_id} & skipped:
@@ -231,6 +238,10 @@ def index_snapshot(
                 "status": edge.status,
                 "from": names.get(edge.from_id),
                 "to": names.get(edge.to_id),
+                "from_source": places.get(edge.from_id, (None, None))[0],
+                "from_namespace": places.get(edge.from_id, (None, None))[1],
+                "to_source": places.get(edge.to_id, (None, None))[0],
+                "to_namespace": places.get(edge.to_id, (None, None))[1],
                 "columns": [
                     [names.get(left), names.get(right)]
                     for left, right in edge.model_dump().get("field_pairs", [])
@@ -464,6 +475,23 @@ def relationships_for(state: Path, object_ids: set[str], limit: int) -> list[dic
             [*ordered, *ordered, *ordered, *ordered, limit],
         ).fetchall()
     return [json.loads(row[0]) for row in rows]
+
+
+def fields_of(state: Path, object_ids: set[str]) -> list[dict]:
+    """Every field of these objects, in the shape `search` returns, by name. Not capped (DEC-18).
+    ponytail: a very wide table can exceed the model context; the upgrade path is a cap behind
+    config or indexing type text (LEAD_REVIEW F13 option C)."""
+    if not object_ids:
+        return []
+    with closing(sqlite3.connect(_database(state))) as connection:
+        connection.row_factory = sqlite3.Row
+        rows = connection.execute(
+            f"SELECT * FROM entries WHERE kind='field' "  # noqa: S608
+            f"AND object_id IN ({','.join('?' * len(object_ids))}) "
+            "ORDER BY name COLLATE NOCASE, id",
+            sorted(object_ids),
+        ).fetchall()
+    return [dict(row) for row in rows]
 
 
 # Words that ask for a list of objects when plural ("which tables ...", "list the collections").

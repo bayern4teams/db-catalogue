@@ -121,7 +121,6 @@ def _relationships(state, monkeypatch, question=QUESTION, **overrides) -> list[d
     return payload["relationships"]
 
 
-@NO_P6_7
 def test_a_cross_source_relationship_carries_both_sources_and_namespaces(
     cross_state, monkeypatch
 ):
@@ -134,7 +133,6 @@ def test_a_cross_source_relationship_carries_both_sources_and_namespaces(
     assert by_name == {"shipment": ("beta", "ns_beta"), "vendor": ("alpha", "ns_alpha")}
 
 
-@NO_P6_7
 def test_a_same_source_relationship_names_one_source_on_both_sides(
     tmp_path, monkeypatch, namespaced
 ):
@@ -144,7 +142,6 @@ def test_a_same_source_relationship_names_one_source_on_both_sides(
     assert (edge["from_namespace"], edge["to_namespace"]) == ("ns_alpha", "ns_alpha")
 
 
-@NO_P6_7
 def test_an_object_without_a_namespace_gives_none_not_a_made_up_value(tmp_path, monkeypatch):
     state = _index(tmp_path, monkeypatch, SAME)
     [edge] = _relationships(state, monkeypatch)
@@ -152,7 +149,6 @@ def test_an_object_without_a_namespace_gives_none_not_a_made_up_value(tmp_path, 
     assert edge["from_namespace"] is None and edge["to_namespace"] is None
 
 
-@NO_P6_7
 def test_the_relationship_body_gains_only_the_four_fields_and_no_text(
     cross_state, tmp_path, monkeypatch
 ):
@@ -174,7 +170,6 @@ def test_the_old_relationship_fields_are_unchanged(cross_state, monkeypatch):
     assert edge["columns"] == [["vendor_id", "vendor_id"]]
 
 
-@NO_P6_7
 def test_the_system_prompt_has_the_cross_source_sentence_exactly_once(
     cross_state, monkeypatch
 ):
@@ -202,7 +197,6 @@ def _set_version(state: Path, version: str) -> None:
         connection.commit()
 
 
-@NO_P6_7
 def test_a_freshly_built_index_is_version_seven(cross_state):
     assert search_module.INDEX_VERSION == "7"
     with closing(sqlite3.connect(search_module._database(cross_state))) as connection:
@@ -210,7 +204,6 @@ def test_a_freshly_built_index_is_version_seven(cross_state):
     assert stored == "7"
 
 
-@NO_P6_7
 def test_a_version_six_index_answers_stale_index_and_calls_no_model(cross_state, monkeypatch):
     _set_version(cross_state, "6")
     result, _, _, stub = _ask(cross_state, monkeypatch, QUESTION)
@@ -268,7 +261,6 @@ def test_fixture_the_needed_column_is_outside_the_top_hit_but_its_table_is_in(wi
     assert [(h["kind"], h["name"]) for h in hits] == [("table", "gadget")]
 
 
-@NO_P6_9
 def test_every_column_of_a_retrieved_table_reaches_the_model_uncapped(wide, monkeypatch):
     result, _, payload, _ = _ask(wide, monkeypatch, "Tell me about the gadget", retrieval_limit=1)
     assert "error" not in result, result
@@ -279,7 +271,6 @@ def test_every_column_of_a_retrieved_table_reaches_the_model_uncapped(wide, monk
     assert len(payload["items"]) == 1 + len(_gadget_columns())  # the table, then its columns
 
 
-@NO_P6_9
 def test_an_expanded_column_has_the_same_keys_as_a_retrieved_one(wide, monkeypatch):
     _, _, payload, _ = _ask(wide, monkeypatch, "Tell me about the gadget", retrieval_limit=1)
     expanded = next(item for item in payload["items"] if item["name"] == "attr_007")
@@ -294,7 +285,6 @@ def test_an_expanded_column_has_the_same_keys_as_a_retrieved_one(wide, monkeypat
     assert direct["items"][0] == expanded
 
 
-@NO_P6_9
 def test_the_needed_column_can_be_cited_and_is_resolved_app_side(wide, monkeypatch):
     needed = _entry(wide, "attr_007")["id"]
     result, _, _, _ = _ask(
@@ -318,7 +308,6 @@ def test_a_column_of_a_table_that_was_not_retrieved_is_still_not_citable(wide, m
     assert result["error"]["code"] == "MODEL_INVALID_CITATION"
 
 
-@NO_P6_9
 def test_only_retrieved_tables_are_expanded_and_retrieval_limit_is_unchanged(
     wide, monkeypatch
 ):
@@ -335,7 +324,6 @@ def test_only_retrieved_tables_are_expanded_and_retrieval_limit_is_unchanged(
     assert {"attr_007", "sprocket_extra", "sprocket_label"} <= both_names
 
 
-@NO_P6_9
 def test_a_column_found_alone_pulls_in_the_other_columns_of_its_table(wide, monkeypatch):
     # Only `sprocket_extra` matches this question; its sibling must still reach the model.
     result, _, payload, _ = _ask(wide, monkeypatch, "sprocket_extra", retrieval_limit=1)
@@ -353,7 +341,6 @@ def test_a_column_found_alone_pulls_in_the_other_columns_of_its_table(wide, monk
     assert result["citations"] == [sibling]
 
 
-@NO_P6_9
 def test_retrieved_items_keep_their_place_and_nothing_repeats(wide, monkeypatch):
     # Table and one of its columns are both retrieved (two slots); expansion adds the rest once.
     _, _, payload, _ = _ask(wide, monkeypatch, "gadget attr_007", retrieval_limit=2)
@@ -368,7 +355,6 @@ def test_retrieved_items_keep_their_place_and_nothing_repeats(wide, monkeypatch)
     assert len(ids) == 1 + len(_gadget_columns())
 
 
-@NO_P6_9
 def test_a_list_question_retrieves_objects_and_each_is_expanded(tmp_path, monkeypatch):
     state = _index(tmp_path, monkeypatch, {
         "alpha": {"kind": "postgresql", "tables": {"gadget": {"fields": [("a_col", "text")]}}},
@@ -379,7 +365,6 @@ def test_a_list_question_retrieves_objects_and_each_is_expanded(tmp_path, monkey
     assert names == ["widget", "b_col"] and "a_col" not in names
 
 
-@NO_P6_9
 def test_expansion_adds_no_value_or_token_text(wide, monkeypatch):
     _, body, payload, _ = _ask(wide, monkeypatch, "Tell me about the gadget", retrieval_limit=1)
     sent = json.dumps(body["messages"])
@@ -392,7 +377,6 @@ def test_expansion_adds_no_value_or_token_text(wide, monkeypatch):
     }
 
 
-@NO_P6_9
 def test_relationship_limit_is_unchanged_by_expansion(tmp_path, monkeypatch):
     tables = {"hub": {"fields": [("id", "integer")], "key": ["id"]}}
     for number in range(3):

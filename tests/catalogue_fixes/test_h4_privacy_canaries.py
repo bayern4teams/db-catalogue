@@ -605,7 +605,11 @@ def test_the_relationship_context_is_names_status_and_the_builders_sentence(worl
     _, _, _, payload = _ask_succeeds_citing(world)
     assert payload["relationships"], "control: relationships were retrieved"
     for edge in payload["relationships"]:
-        assert set(edge) == {"id", "kind", "status", "from", "to", "columns", "evidence"}
+        # P6-7 (F11) adds the source and namespace of each end: identifiers, no value text.
+        assert set(edge) == {
+            "id", "kind", "status", "from", "to", "columns", "evidence",
+            "from_source", "from_namespace", "to_source", "to_namespace",
+        }
         assert edge["status"] in {"declared", "strong", "tentative", "rejected", "observed"}
         for name in (edge["from"], edge["to"], *[n for pair in edge["columns"] for n in pair]):
             assert name in world.names

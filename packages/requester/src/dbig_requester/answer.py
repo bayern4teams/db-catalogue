@@ -14,7 +14,14 @@ from openai import APIConnectionError, APIStatusError, APITimeoutError, OpenAI, 
 from pydantic import BaseModel, ConfigDict
 
 from .config import AnswerConfig
-from .search import SearchRequest, StaleIndexError, question_scope, relationships_for, search
+from .search import (
+    SearchRequest,
+    StaleIndexError,
+    fields_of,
+    question_scope,
+    relationships_for,
+    search,
+)
 
 # The schema sent to the server carries no length or item bound: llama.cpp refuses one ("failed
 # to parse grammar"). `max_answer_chars` is enforced after parsing instead.
@@ -171,12 +178,21 @@ def answer_question(
     except StaleIndexError as error:
         # The same code the search route reports; the remedy is `dbig-requester index`.
         return {"error": {"code": str(error)}}
-    allowed = {item["id"] for item in results["results"]}
+    retrieved = results["results"]
+    allowed = {item["id"] for item in retrieved}
     if not allowed:
         return {
             "error": {"code": "NO_CATALOGUE_MATCH"},
             "snapshot_digest": results["snapshot_digest"],
         }
+    # Every field of each retrieved object, and of each object of a retrieved field, joins the
+    # context after the retrieved items, once each (F13, DEC-18: no cap per table).
+    owners = {item.get("object_id") or item["id"] for item in retrieved}
+    entries = [
+        *retrieved,
+        *(item for item in fields_of(state, owners) if item["id"] not in allowed),
+    ]
+    allowed |= {item["id"] for item in entries}
     # Descriptions are database owners' free text and reach the model by user decision on
     # 2026-09-30. They are untrusted: the system prompt says so, and whatever the model makes of
     # them, only citations of retrieved IDs and no lineage claims are accepted.
@@ -189,7 +205,7 @@ def answer_question(
             )
             if item.get(key) is not None
         }
-        for item in results["results"]
+        for item in entries
     ]
     # Declared and candidate relationships of the objects retrieved, so a question about how two
     # tables link can be answered, and so the model sees which links are only name-based (DEC-5).
@@ -224,7 +240,9 @@ def answer_question(
                     "retrieved metadata does not show what is asked, set outcome to "
                     "not_established and say what you "
                     "checked, citing it; otherwise outcome is answered and must cite IDs. "
-                    "Put the verdict only in the outcome field.",
+                    "Put the verdict only in the outcome field. "
+                    "A relationship between objects of two different sources cannot be joined "
+                    "in one query; say so instead of writing one.",
                 },
                 {
                     "role": "user",
@@ -275,7 +293,7 @@ def answer_question(
         # Each cited ID resolved to its name, app-side, so a reply is never a list of bare IDs
         # (DEC-9). Taken from the retrieved metadata, never from the model's text.
         "cited": [
-            _resolved(cited, results["results"], relationships) for cited in parsed.citations
+            _resolved(cited, entries, relationships) for cited in parsed.citations
         ],
         "model_digest": config.model_digest,
     }
