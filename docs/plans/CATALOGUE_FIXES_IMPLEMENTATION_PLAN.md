@@ -107,7 +107,7 @@ only proof is an independent score. The scorer/acceptance check is written *befo
 the implementation, by the verifier (§4), never fitted afterwards.
 
 2.8 **Environment.** `bash scripts/cloud_setup.sh` (the supervisor runs it when a tool is missing) installs the three graph tools at
-the project's pins (graphify 0.9.65, graft 0.18.0, codebase-memory-mcp 0.11.0) and bootstraps with
+the project's pins (graphify 0.9.65, graft 0.18.0, codebase-memory-mcp 0.12.1) and bootstraps with
 `uv sync --locked --all-packages --all-extras --dev --python 3.12` (uv 0.12.19, the CI pin). Whether the cloud image has `uv` and Python 3.12
 was not verified when this plan was written; the dry-run tick records it. No `.env`, no database credentials, no model key exist in the cloud
 and none may be created: tests use throwaway test values from `tests/` and `.env.example` placeholders only. Network access is Full so `uv`, `pip-audit`

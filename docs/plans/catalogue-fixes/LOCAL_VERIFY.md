@@ -7,7 +7,7 @@ report), never the application's own success message.
 ## Start here (one ordered run, written 2026-10-14)
 
 1. **Get the code.** `git fetch origin feat/catalogue-fixes && git checkout feat/catalogue-fixes && git pull`. Never merge before step 12.
-2. **Install.** `uv sync --locked --all-packages --all-extras --dev --python 3.12` (Python 3.12 is pinned; 3.13 fails one certificate test). Optional graph tools are pinned in `pyproject.toml` (graphify 0.9.65, graft 0.18.0, codebase-memory-mcp 0.11.0); only needed if you run the commit hooks (`python scripts/install_hooks.py`).
+2. **Install.** `uv sync --locked --all-packages --all-extras --dev --python 3.12` (Python 3.12 is pinned; 3.13 fails one certificate test). Optional graph tools are pinned in `pyproject.toml` (graphify 0.9.65, graft 0.18.0, codebase-memory-mcp 0.12.1); only needed if you run the commit hooks (`python scripts/install_hooks.py`).
 3. **Cloud-proven pieces first.** `uv run pytest -q` (cloud: 751 passed, 68 skipped, 1 xfailed; your machine has 69 skipped, 1 more pass). Then `uv run ruff check . && uv run mypy packages`.
 4. **Rebuild the environment** as in "Restore the environment first" below, with a new `artifacts/run-<date>/`.
 5. **Turn value overlap on in all three source configs** (same key and ID everywhere, a new key per run) and cap the probe off for now:

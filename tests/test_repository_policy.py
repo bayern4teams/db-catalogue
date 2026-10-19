@@ -243,7 +243,7 @@ def test_absent_setup_uv_step_does_not_silently_pass(
 # not install them, so the version comparison is exercised through a stubbed reporter.
 
 GRAPH_TOOLS = ("graphify", "graft", "codebase-memory-mcp")
-PINNED = {"graphify": "0.9.65", "graft": "0.18.0", "codebase-memory-mcp": "0.11.0"}
+PINNED = {"graphify": "0.9.65", "graft": "0.18.0", "codebase-memory-mcp": "0.12.1"}
 
 
 def load_graph_sync() -> ModuleType:
@@ -286,7 +286,7 @@ def graph_tool_repository(tmp_path: Path, workflows: dict[str, str], pins: bool 
             'distribution = "graphifyy"\necosystem = "pypi"\n'
             '\n[tool.dbig.graph-tools.graft]\nversion = "0.18.0"\n'
             'distribution = "@nanonets/graft"\necosystem = "npm"\n'
-            '\n[tool.dbig.graph-tools.codebase-memory-mcp]\nversion = "0.11.0"\n'
+            '\n[tool.dbig.graph-tools.codebase-memory-mcp]\nversion = "0.12.1"\n'
             'distribution = "codebase-memory-mcp"\necosystem = "pypi"\n'
         )
     (tmp_path / "pyproject.toml").write_text(text, encoding="utf-8")
@@ -354,7 +354,7 @@ def test_graph_sync_reads_the_same_pins(graph_sync: ModuleType) -> None:
     [
         ("graphify 0.9.65", "0.9.65"),
         ("0.18.0", "0.18.0"),
-        ("codebase-memory-mcp 0.11.0", "0.11.0"),
+        ("codebase-memory-mcp 0.12.1", "0.12.1"),
         ("0.18.0\n↑ graft 0.18.0 → 0.20.0 available", "0.18.0"),
     ],
 )

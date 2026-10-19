@@ -7,7 +7,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 [ -x /opt/graphtools/bin/graphify ] || python3.11 -m venv /opt/graphtools
-/opt/graphtools/bin/pip install -q graphifyy==0.9.65 codebase-memory-mcp==0.11.0
+/opt/graphtools/bin/pip install -q graphifyy==0.9.65 codebase-memory-mcp==0.12.1
 # graft's postinstall downloads a tree-sitter binary from GitHub and that download has hung, so install it
 # once, bounded and killable, and never let it block or fail setup.
 # An image may ship graft at another version; graph_sync.py refuses anything but the pin, so test the version.

@@ -17,7 +17,7 @@ git checkout main && git merge --ff-only feat/catalogue-fixes && git push origin
 
 ## 2. Cloud environment
 claude.ai/code -> create a NEW environment `catalogue-fixes-env` (so other cloud work is unaffected),
-Network access Full, and paste [`environment_setup.sh`](environment_setup.sh) from this folder (verbatim) as its setup script. It uses this project's graph-tool pins (graphifyy 0.9.65, codebase-memory-mcp 0.11.0, graft 0.18.0), not the kit's. Add no secrets and no environment variables: the cloud never gets `.env`, database credentials or a model key.
+Network access Full, and paste [`environment_setup.sh`](environment_setup.sh) from this folder (verbatim) as its setup script. It uses this project's graph-tool pins (graphifyy 0.9.65, codebase-memory-mcp 0.12.1, graft 0.18.0), not the kit's. Add no secrets and no environment variables: the cloud never gets `.env`, database credentials or a model key.
 
 ## 3. Routine (create it in the claude.ai Routines UI, not from inside a session)
 | Field | Value |
