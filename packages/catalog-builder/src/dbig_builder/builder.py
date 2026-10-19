@@ -721,7 +721,9 @@ def assemble(
                 # value. A non-zero overlap, however small, is shown and never drops.
                 dropped_zero_overlap += 1
                 continue
-            if parent.id in needs_overlap and overlap.kind != "value_containment":
+            if parent.id in needs_overlap and (
+                overlap.kind != "value_containment" or "reason" in overlap.metrics
+            ):
                 # Counted, never recorded by value; nothing to say about it without a measurement.
                 dropped_unmeasured_key_name += 1
                 continue
@@ -770,6 +772,9 @@ def assemble(
             cited.append(overlap.id)
             if overlap.kind == "value_overlap_not_measured":
                 explanation = f"{explanation}; values not compared ({overlap.explanation})"
+            elif "reason" in overlap.metrics:
+                # A zero against a parent that was only partly read (P6-2): not a measurement.
+                explanation = f"{explanation}; {overlap.explanation}"
             else:
                 explanation = (
                     f"{explanation}; value overlap {overlap.metrics['contained_fraction']:.0%} "

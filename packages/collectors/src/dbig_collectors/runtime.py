@@ -901,8 +901,12 @@ def _mongo_paths(
     tokens: dict[str, set[str]] | None = None,
     observed: dict[str, int] | None = None,
     token_key: bytes | None = None,
+    cut: set[str] | None = None,
 ) -> None:
     """Walk a sampled document for paths and types, and optionally key its scalar values.
+
+    `cut` collects the array paths where `array_limit` left elements unread, so their value
+    tokens are not marked complete.
 
     When tokenising, each scalar is keyed where it is met and only the digest is kept, so no
     buffer of raw source values ever exists, not even for the duration of one document.
@@ -916,16 +920,18 @@ def _mongo_paths(
         if isinstance(value, dict):
             _mongo_paths(
                 value, path, depth + 1, limit, array_limit, found, present,
-                tokens, observed, token_key,
+                tokens, observed, token_key, cut,
             )
         elif isinstance(value, list):
+            if cut is not None and len(value) > array_limit:
+                cut.add(path + "[]")
             for element in value[:array_limit]:
                 found[path + "[]"].add(type(element).__name__)
                 present.add(path + "[]")
                 if isinstance(element, dict):
                     _mongo_paths(
                         element, path + "[]", depth + 1, limit, array_limit, found, present,
-                        tokens, observed, token_key,
+                        tokens, observed, token_key, cut,
                     )
                 elif token_key is not None and tokens is not None and observed is not None:
                     _record_token(path + "[]", element, tokens, observed, token_key)
@@ -1070,6 +1076,7 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
             # Set when `max_sample_bytes` stopped the read, which leaves the sample incomplete
             # however few documents it holds.
             byte_cut = False
+            array_cut: set[str] = set()
             present_counts: dict[str, int] = defaultdict(int)
             # Tokenising needs a key as well as a sample, and is off unless both are configured.
             token_key = (
@@ -1136,6 +1143,7 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
                             path_tokens,
                             path_observed,
                             token_key,
+                            array_cut,
                         )
                         for path in present:
                             present_counts[path] += 1
@@ -1208,7 +1216,12 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
                                     observed_count=observed,
                                     distinct_count=distinct,
                                     truncated=truncated,
-                                    complete=not byte_cut and sample_count < config.sample_rows,
+                                    complete=not byte_cut
+                                    and sample_count < config.sample_rows
+                                    and not any(
+                                        path == item or path.startswith(item + ".")
+                                        for item in array_cut
+                                    ),
                                     tokens=digests,
                                     **common,
                                 )
