@@ -1,0 +1,149 @@
+{
+ "#13": {
+  "true": false,
+  "pair": "ch.Company.companyID -> pg.company.companyid",
+  "now(100,256,current)": "dropped",
+  "proposed(25000,4096,range)": "dropped",
+  "A only (100)": "kept_zero_not_trusted"
+ },
+ "#5": {
+  "true": false,
+  "pair": "ch.CompanyIndustry.companyID -> pg.company.companyid",
+  "now(100,256,current)": "dropped",
+  "proposed(25000,4096,range)": "dropped",
+  "A only (100)": "kept_zero_not_trusted"
+ },
+ "#3": {
+  "true": false,
+  "pair": "ch.Experience.companyID -> pg.company.companyid",
+  "now(100,256,current)": "dropped",
+  "proposed(25000,4096,range)": "dropped",
+  "A only (100)": "kept_zero_not_trusted"
+ },
+ "#4": {
+  "true": false,
+  "pair": "ch.Experience.personID -> pg.person.personid",
+  "now(100,256,current)": "dropped",
+  "proposed(25000,4096,range)": "dropped",
+  "A only (100)": "kept_zero_not_trusted"
+ },
+ "#9": {
+  "true": false,
+  "pair": "ch.Location.locationID -> pg.location.companyid",
+  "now(100,256,current)": "dropped",
+  "proposed(25000,4096,range)": "dropped",
+  "A only (100)": "kept_zero_not_trusted"
+ },
+ "#14": {
+  "true": false,
+  "pair": "ch.Person.personID -> pg.person.personid",
+  "now(100,256,current)": "dropped",
+  "proposed(25000,4096,range)": "dropped",
+  "A only (100)": "kept_zero_not_trusted"
+ },
+ "#16": {
+  "true": false,
+  "pair": "ch.PersonContact.personID -> pg.person.personid",
+  "now(100,256,current)": "dropped",
+  "proposed(25000,4096,range)": "dropped",
+  "A only (100)": "kept_zero_not_trusted"
+ },
+ "#11": {
+  "true": true,
+  "pair": "mongo.diffbot_Company.companyID -> pg.company.companyid",
+  "now(100,256,current)": "kept_measured",
+  "proposed(25000,4096,range)": "kept_measured",
+  "A only (100)": "kept_measured"
+ },
+ "#12": {
+  "true": true,
+  "pair": "mongo.diffbot_CompanyExperience.companyID -> pg.company.companyid",
+  "now(100,256,current)": "dropped",
+  "proposed(25000,4096,range)": "kept_measured",
+  "A only (100)": "kept_zero_not_trusted"
+ },
+ "#2": {
+  "true": true,
+  "pair": "mongo.diffbot_CompanyExperience.personID -> pg.person.personid",
+  "now(100,256,current)": "kept_measured",
+  "proposed(25000,4096,range)": "kept_measured",
+  "A only (100)": "kept_measured"
+ },
+ "#8": {
+  "true": true,
+  "pair": "mongo.diffbot_CompanyIndustry.companyID -> pg.company.companyid",
+  "now(100,256,current)": "kept_measured",
+  "proposed(25000,4096,range)": "kept_measured",
+  "A only (100)": "kept_measured"
+ },
+ "#7": {
+  "true": true,
+  "pair": "mongo.diffbot_CompanyInvestmentRound.companyID -> pg.company.companyid",
+  "now(100,256,current)": "dropped",
+  "proposed(25000,4096,range)": "kept_measured",
+  "A only (100)": "kept_zero_not_trusted"
+ },
+ "#10": {
+  "true": false,
+  "pair": "mongo.zoominfo_Company.companyID -> pg.company.companyid",
+  "now(100,256,current)": "dropped",
+  "proposed(25000,4096,range)": "dropped",
+  "A only (100)": "kept_zero_not_trusted"
+ },
+ "#19": {
+  "true": false,
+  "pair": "mongo.zoominfo_CompanyIndustry.companyID -> pg.company.companyid",
+  "now(100,256,current)": "dropped",
+  "proposed(25000,4096,range)": "dropped",
+  "A only (100)": "kept_zero_not_trusted"
+ },
+ "#1": {
+  "true": false,
+  "pair": "mongo.zoominfo_Experience.companyID -> pg.company.companyid",
+  "now(100,256,current)": "unmeasured",
+  "proposed(25000,4096,range)": "dropped",
+  "A only (100)": "unmeasured"
+ },
+ "#6": {
+  "true": false,
+  "pair": "mongo.zoominfo_Experience.personID -> pg.person.personid",
+  "now(100,256,current)": "dropped",
+  "proposed(25000,4096,range)": "dropped",
+  "A only (100)": "kept_zero_not_trusted"
+ },
+ "#15": {
+  "true": false,
+  "pair": "mongo.zoominfo_contact_information.personID -> pg.person.personid",
+  "now(100,256,current)": "dropped",
+  "proposed(25000,4096,range)": "dropped",
+  "A only (100)": "kept_zero_not_trusted"
+ },
+ "#18": {
+  "true": false,
+  "pair": "mongo.zoominfo_contracts.company_id -> pg.company.companyid",
+  "now(100,256,current)": "dropped",
+  "proposed(25000,4096,range)": "dropped",
+  "A only (100)": "kept_zero_not_trusted"
+ },
+ "#17": {
+  "true": false,
+  "pair": "mongo.zoominfo_evidence.company_id -> pg.company.companyid",
+  "now(100,256,current)": "dropped",
+  "proposed(25000,4096,range)": "dropped",
+  "A only (100)": "kept_zero_not_trusted"
+ },
+ "#20": {
+  "true": false,
+  "pair": "mongo.zoominfo_location.locationID -> pg.location.companyid",
+  "now(100,256,current)": "dropped",
+  "proposed(25000,4096,range)": "dropped",
+  "A only (100)": "kept_zero_not_trusted"
+ },
+ "#21": {
+  "true": false,
+  "pair": "mongo.zoominfo_staff.personID -> pg.person.personid",
+  "now(100,256,current)": "dropped",
+  "proposed(25000,4096,range)": "dropped",
+  "A only (100)": "kept_zero_not_trusted"
+ }
+}

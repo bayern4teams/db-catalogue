@@ -1,0 +1,362 @@
+{
+ "N-D1": {
+  "grade": "Right",
+  "expected": 1,
+  "top10": 1,
+  "top30": 1,
+  "A_expand": 1,
+  "A_extra_entries": 64,
+  "hits10": 10
+ },
+ "N-D2": {
+  "grade": "Right",
+  "expected": 1,
+  "top10": 1,
+  "top30": 1,
+  "A_expand": 1,
+  "A_extra_entries": 22,
+  "hits10": 10
+ },
+ "N-D3": {
+  "grade": "Right",
+  "expected": 1,
+  "top10": 1,
+  "top30": 1,
+  "A_expand": 1,
+  "A_extra_entries": 70,
+  "hits10": 10
+ },
+ "N-D4": {
+  "grade": "Right",
+  "expected": 2,
+  "top10": 1,
+  "top30": 1,
+  "A_expand": 2,
+  "A_extra_entries": 3,
+  "hits10": 1
+ },
+ "N-D5": {
+  "grade": "Right",
+  "expected": 1,
+  "top10": 1,
+  "top30": 1,
+  "A_expand": 1,
+  "A_extra_entries": 76,
+  "hits10": 10
+ },
+ "N-D6": {
+  "grade": "Right",
+  "expected": 2,
+  "top10": 2,
+  "top30": 2,
+  "A_expand": 2,
+  "A_extra_entries": 8,
+  "hits10": 10
+ },
+ "N-D7": {
+  "grade": "Right",
+  "expected": 2,
+  "top10": 2,
+  "top30": 2,
+  "A_expand": 2,
+  "A_extra_entries": 65,
+  "hits10": 10
+ },
+ "N-D8": {
+  "grade": "Right",
+  "expected": 1,
+  "top10": 1,
+  "top30": 1,
+  "A_expand": 1,
+  "A_extra_entries": 6,
+  "hits10": 10
+ },
+ "N-D9": {
+  "grade": "Right",
+  "expected": 1,
+  "top10": 1,
+  "top30": 1,
+  "A_expand": 1,
+  "A_extra_entries": 74,
+  "hits10": 10
+ },
+ "N-D10": {
+  "grade": "Right",
+  "expected": 1,
+  "top10": 1,
+  "top30": 1,
+  "A_expand": 1,
+  "A_extra_entries": 15,
+  "hits10": 10
+ },
+ "N-S1": {
+  "grade": "Partial",
+  "expected": 7,
+  "top10": 2,
+  "top30": 4,
+  "A_expand": 7,
+  "A_extra_entries": 61,
+  "hits10": 10
+ },
+ "N-S2": {
+  "grade": "Partial",
+  "expected": 4,
+  "top10": 3,
+  "top30": 3,
+  "A_expand": 4,
+  "A_extra_entries": 75,
+  "hits10": 10
+ },
+ "N-S3": {
+  "grade": "Right",
+  "expected": 8,
+  "top10": 4,
+  "top30": 7,
+  "A_expand": 8,
+  "A_extra_entries": 25,
+  "hits10": 10
+ },
+ "N-S4": {
+  "grade": "Partial",
+  "expected": 6,
+  "top10": 3,
+  "top30": 4,
+  "A_expand": 4,
+  "A_extra_entries": 10,
+  "hits10": 10
+ },
+ "N-S5": {
+  "grade": "Wrong (owner)",
+  "expected": 7,
+  "top10": 2,
+  "top30": 7,
+  "A_expand": 5,
+  "A_extra_entries": 27,
+  "hits10": 10
+ },
+ "N-S6": {
+  "grade": "Partial",
+  "expected": 7,
+  "top10": 4,
+  "top30": 4,
+  "A_expand": 5,
+  "A_extra_entries": 40,
+  "hits10": 10
+ },
+ "N-S7": {
+  "grade": "Partial",
+  "expected": 8,
+  "top10": 3,
+  "top30": 3,
+  "A_expand": 8,
+  "A_extra_entries": 81,
+  "hits10": 10
+ },
+ "N-S8": {
+  "grade": "Partial",
+  "expected": 6,
+  "top10": 2,
+  "top30": 5,
+  "A_expand": 4,
+  "A_extra_entries": 61,
+  "hits10": 10
+ },
+ "N-S9": {
+  "grade": "Partial",
+  "expected": 8,
+  "top10": 4,
+  "top30": 5,
+  "A_expand": 8,
+  "A_extra_entries": 70,
+  "hits10": 10
+ },
+ "N-S10": {
+  "grade": "Right",
+  "expected": 5,
+  "top10": 2,
+  "top30": 2,
+  "A_expand": 5,
+  "A_extra_entries": 49,
+  "hits10": 10
+ },
+ "N-C1": {
+  "grade": "Partial",
+  "expected": 0,
+  "top10": 0,
+  "top30": 0,
+  "A_expand": 0,
+  "A_extra_entries": 14,
+  "hits10": 2
+ },
+ "N-C2": {
+  "grade": "NOT_ESTABLISHED (owner)",
+  "expected": 0,
+  "top10": 0,
+  "top30": 0,
+  "A_expand": 0,
+  "A_extra_entries": 95,
+  "hits10": 10
+ },
+ "N-C3": {
+  "grade": "Partial",
+  "expected": 5,
+  "top10": 2,
+  "top30": 3,
+  "A_expand": 2,
+  "A_extra_entries": 34,
+  "hits10": 10
+ },
+ "N-C4": {
+  "grade": "NO_CATALOGUE_MATCH",
+  "expected": 0,
+  "top10": 0,
+  "top30": 0,
+  "A_expand": 0,
+  "A_extra_entries": 0,
+  "hits10": 0
+ },
+ "N-C5": {
+  "grade": "Partial",
+  "expected": 7,
+  "top10": 4,
+  "top30": 4,
+  "A_expand": 5,
+  "A_extra_entries": 31,
+  "hits10": 5
+ },
+ "N-C6": {
+  "grade": "Wrong",
+  "expected": 4,
+  "top10": 0,
+  "top30": 0,
+  "A_expand": 4,
+  "A_extra_entries": 79,
+  "hits10": 10
+ },
+ "N-C7": {
+  "grade": "NO_CATALOGUE_MATCH",
+  "expected": 9,
+  "top10": 0,
+  "top30": 0,
+  "A_expand": 0,
+  "A_extra_entries": 0,
+  "hits10": 0
+ },
+ "N-C8": {
+  "grade": "Partial (owner)",
+  "expected": 8,
+  "top10": 4,
+  "top30": 6,
+  "A_expand": 6,
+  "A_extra_entries": 59,
+  "hits10": 10
+ },
+ "N-C9": {
+  "grade": "NOT_ESTABLISHED",
+  "expected": 4,
+  "top10": 0,
+  "top30": 0,
+  "A_expand": 1,
+  "A_extra_entries": 17,
+  "hits10": 3
+ },
+ "N-C10": {
+  "grade": "Wrong (owner)",
+  "expected": 4,
+  "top10": 0,
+  "top30": 0,
+  "A_expand": 4,
+  "A_extra_entries": 102,
+  "hits10": 10
+ },
+ "N-I1": {
+  "grade": "Wrong",
+  "expected": 2,
+  "top10": 2,
+  "top30": 2,
+  "A_expand": 2,
+  "A_extra_entries": 15,
+  "hits10": 10
+ },
+ "N-I2": {
+  "grade": "Partial (owner)",
+  "expected": 0,
+  "top10": 0,
+  "top30": 0,
+  "A_expand": 0,
+  "A_extra_entries": 85,
+  "hits10": 10
+ },
+ "N-I3": {
+  "grade": "Wrong",
+  "expected": 2,
+  "top10": 2,
+  "top30": 2,
+  "A_expand": 2,
+  "A_extra_entries": 68,
+  "hits10": 10
+ },
+ "N-I4": {
+  "grade": "Right",
+  "expected": 0,
+  "top10": 0,
+  "top30": 0,
+  "A_expand": 0,
+  "A_extra_entries": 17,
+  "hits10": 10
+ },
+ "N-I5": {
+  "grade": "Partial",
+  "expected": 0,
+  "top10": 0,
+  "top30": 0,
+  "A_expand": 0,
+  "A_extra_entries": 60,
+  "hits10": 10
+ },
+ "N-I6": {
+  "grade": "Right",
+  "expected": 2,
+  "top10": 2,
+  "top30": 2,
+  "A_expand": 2,
+  "A_extra_entries": 84,
+  "hits10": 10
+ },
+ "N-I7": {
+  "grade": "Right",
+  "expected": 2,
+  "top10": 1,
+  "top30": 2,
+  "A_expand": 2,
+  "A_extra_entries": 43,
+  "hits10": 10
+ },
+ "N-I8": {
+  "grade": "Right",
+  "expected": 1,
+  "top10": 0,
+  "top30": 0,
+  "A_expand": 0,
+  "A_extra_entries": 24,
+  "hits10": 10
+ },
+ "N-I9": {
+  "grade": "Right",
+  "expected": 0,
+  "top10": 0,
+  "top30": 0,
+  "A_expand": 0,
+  "A_extra_entries": 15,
+  "hits10": 10
+ },
+ "N-I10": {
+  "grade": "Wrong (owner)",
+  "expected": 5,
+  "top10": 1,
+  "top30": 4,
+  "A_expand": 3,
+  "A_extra_entries": 22,
+  "hits10": 10
+ }
+}

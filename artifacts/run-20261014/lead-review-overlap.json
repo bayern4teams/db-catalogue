@@ -1,0 +1,4097 @@
+[
+ {
+  "child": "ch.Company.companyID",
+  "parent": "mongo.diffbot_Company.companyID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 1266268,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 22,
+  "parent_distinct_full": 22,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": 22
+ },
+ {
+  "child": "ch.Company.companyID",
+  "parent": "mongo.diffbot_CompanyIndustry.companyID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 1266268,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 22,
+  "parent_distinct_full": 22,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": 22
+ },
+ {
+  "child": "ch.Company.companyID",
+  "parent": "mongo.zoominfo_Company.companyID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 1266268,
+  "matched_full": 27,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 93,
+  "parent_distinct_full": 93,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": 93
+ },
+ {
+  "child": "ch.Company.companyID",
+  "parent": "pg.company.companyid",
+  "mark": "#13",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 1266268,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "ch.Company.companyID",
+  "parent": "pg.companyindustry.companyid",
+  "mark": "U-ci",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 1266268,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "ch.Company.companyID",
+  "parent": "pg.location.companyid",
+  "mark": "U-loc",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 1266268,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 3506,
+  "parent_distinct_full": 3506,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "ch.CompanyIndustry.companyID",
+  "parent": "ch.Company.companyID",
+  "mark": "CH",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 2656247,
+  "matched_full": 673855,
+  "containment_full": 0.2537,
+  "parent_nonnull_rows": 1266268,
+  "parent_distinct_full": 1266268,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "ch.CompanyIndustry.companyID",
+  "parent": "mongo.diffbot_Company.companyID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 2656247,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 22,
+  "parent_distinct_full": 22,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": 22
+ },
+ {
+  "child": "ch.CompanyIndustry.companyID",
+  "parent": "mongo.diffbot_CompanyIndustry.companyID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 2656247,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 22,
+  "parent_distinct_full": 22,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": 22
+ },
+ {
+  "child": "ch.CompanyIndustry.companyID",
+  "parent": "mongo.zoominfo_Company.companyID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 2656247,
+  "matched_full": 65,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 93,
+  "parent_distinct_full": 93,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": 93
+ },
+ {
+  "child": "ch.CompanyIndustry.companyID",
+  "parent": "pg.company.companyid",
+  "mark": "#5",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 2656247,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "ch.CompanyIndustry.companyID",
+  "parent": "pg.companyindustry.companyid",
+  "mark": "U-ci",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 2656247,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "ch.CompanyIndustry.companyID",
+  "parent": "pg.location.companyid",
+  "mark": "U-loc",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 2656247,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 3506,
+  "parent_distinct_full": 3506,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "ch.CompanyIndustry.industryID",
+  "parent": "ch.Industry.industryID",
+  "mark": "CH",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 180,
+  "matched_full": 37,
+  "containment_full": 0.2056,
+  "parent_nonnull_rows": 37,
+  "parent_distinct_full": 37,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "ch.Experience.companyID",
+  "parent": "ch.Company.companyID",
+  "mark": "CH",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 2109112,
+  "matched_full": 537786,
+  "containment_full": 0.255,
+  "parent_nonnull_rows": 1266268,
+  "parent_distinct_full": 1266268,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "ch.Experience.companyID",
+  "parent": "mongo.diffbot_Company.companyID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 2109112,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 22,
+  "parent_distinct_full": 22,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": 22
+ },
+ {
+  "child": "ch.Experience.companyID",
+  "parent": "mongo.diffbot_CompanyIndustry.companyID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 2109112,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 22,
+  "parent_distinct_full": 22,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": 22
+ },
+ {
+  "child": "ch.Experience.companyID",
+  "parent": "mongo.zoominfo_Company.companyID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 2109112,
+  "matched_full": 82,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 93,
+  "parent_distinct_full": 93,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": 93
+ },
+ {
+  "child": "ch.Experience.companyID",
+  "parent": "pg.company.companyid",
+  "mark": "#3",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 2109112,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "ch.Experience.companyID",
+  "parent": "pg.companyindustry.companyid",
+  "mark": "U-ci",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 2109112,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "ch.Experience.companyID",
+  "parent": "pg.location.companyid",
+  "mark": "U-loc",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 2109112,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 3506,
+  "parent_distinct_full": 3506,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "ch.Experience.personID",
+  "parent": "ch.Person.personID",
+  "mark": "CH",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 12326104,
+  "matched_full": 3088438,
+  "containment_full": 0.2506,
+  "parent_nonnull_rows": 11795168,
+  "parent_distinct_full": 11795168,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "ch.Experience.personID",
+  "parent": "ch.PersonContact.personID",
+  "mark": "P4-ch",
+  "true": true,
+  "seen_in": [
+   "probe-nomongo"
+  ],
+  "child_distinct_full": 12326104,
+  "matched_full": 1149983,
+  "containment_full": 0.0933,
+  "parent_nonnull_rows": 4336389,
+  "parent_distinct_full": 4320757,
+  "parent_unique_full": false,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "ch.Experience.personID",
+  "parent": "mongo.diffbot_CompanyExperience.personID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 12326104,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 84,
+  "parent_distinct_full": 84,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": 84
+ },
+ {
+  "child": "ch.Experience.personID",
+  "parent": "mongo.zoominfo_Experience.personID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 12326104,
+  "matched_full": 4262,
+  "containment_full": 0.0003,
+  "parent_nonnull_rows": 13518,
+  "parent_distinct_full": 13513,
+  "parent_unique_full": false,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "ch.Experience.personID",
+  "parent": "mongo.zoominfo_staff.personID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 12326104,
+  "matched_full": 4262,
+  "containment_full": 0.0003,
+  "parent_nonnull_rows": 13518,
+  "parent_distinct_full": 13513,
+  "parent_unique_full": false,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "ch.Experience.personID",
+  "parent": "pg.person.personid",
+  "mark": "#4",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 12326104,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 1215,
+  "parent_distinct_full": 1215,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "ch.Location.companyID",
+  "parent": "ch.Company.companyID",
+  "mark": "CH",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 1720600,
+  "matched_full": 436828,
+  "containment_full": 0.2539,
+  "parent_nonnull_rows": 1266268,
+  "parent_distinct_full": 1266268,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "ch.Location.locationID",
+  "parent": "mongo.zoominfo_location.locationID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 1757532,
+  "matched_full": 39,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 103,
+  "parent_distinct_full": 103,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "ch.Location.locationID",
+  "parent": "pg.location.companyid",
+  "mark": "#9",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 1757532,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 3506,
+  "parent_distinct_full": 3506,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "ch.Person.personID",
+  "parent": "ch.Experience.personID",
+  "mark": "P4-ch",
+  "true": true,
+  "seen_in": [
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 11795168,
+  "matched_full": 3088438,
+  "containment_full": 0.2618,
+  "parent_nonnull_rows": 12338392,
+  "parent_distinct_full": 12326104,
+  "parent_unique_full": false,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "ch.Person.personID",
+  "parent": "ch.PersonContact.personID",
+  "mark": "P4-ch",
+  "true": true,
+  "seen_in": [
+   "probe-nomongo"
+  ],
+  "child_distinct_full": 11795168,
+  "matched_full": 1082567,
+  "containment_full": 0.0918,
+  "parent_nonnull_rows": 4336389,
+  "parent_distinct_full": 4320757,
+  "parent_unique_full": false,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "ch.Person.personID",
+  "parent": "mongo.diffbot_CompanyExperience.personID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 11795168,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 84,
+  "parent_distinct_full": 84,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": 84
+ },
+ {
+  "child": "ch.Person.personID",
+  "parent": "mongo.zoominfo_Experience.personID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 11795168,
+  "matched_full": 3319,
+  "containment_full": 0.0003,
+  "parent_nonnull_rows": 13518,
+  "parent_distinct_full": 13513,
+  "parent_unique_full": false,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "ch.Person.personID",
+  "parent": "mongo.zoominfo_staff.personID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 11795168,
+  "matched_full": 3319,
+  "containment_full": 0.0003,
+  "parent_nonnull_rows": 13518,
+  "parent_distinct_full": 13513,
+  "parent_unique_full": false,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "ch.Person.personID",
+  "parent": "pg.person.personid",
+  "mark": "#14",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 11795168,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 1215,
+  "parent_distinct_full": 1215,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "ch.PersonContact.personID",
+  "parent": "ch.Experience.personID",
+  "mark": "P4-ch",
+  "true": true,
+  "seen_in": [
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 4320757,
+  "matched_full": 1149983,
+  "containment_full": 0.2662,
+  "parent_nonnull_rows": 12338392,
+  "parent_distinct_full": 12326104,
+  "parent_unique_full": false,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "ch.PersonContact.personID",
+  "parent": "ch.Person.personID",
+  "mark": "CH",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 4320757,
+  "matched_full": 1082567,
+  "containment_full": 0.2506,
+  "parent_nonnull_rows": 11795168,
+  "parent_distinct_full": 11795168,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "ch.PersonContact.personID",
+  "parent": "mongo.diffbot_CompanyExperience.personID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 4320757,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 84,
+  "parent_distinct_full": 84,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": 84
+ },
+ {
+  "child": "ch.PersonContact.personID",
+  "parent": "mongo.zoominfo_Experience.personID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 4320757,
+  "matched_full": 1330,
+  "containment_full": 0.0003,
+  "parent_nonnull_rows": 13518,
+  "parent_distinct_full": 13513,
+  "parent_unique_full": false,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "ch.PersonContact.personID",
+  "parent": "mongo.zoominfo_staff.personID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 4320757,
+  "matched_full": 1330,
+  "containment_full": 0.0003,
+  "parent_nonnull_rows": 13518,
+  "parent_distinct_full": 13513,
+  "parent_unique_full": false,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "ch.PersonContact.personID",
+  "parent": "pg.person.personid",
+  "mark": "#16",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 4320757,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 1215,
+  "parent_distinct_full": 1215,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "mongo.diffbot_Company.companyID",
+  "parent": "ch.Company.companyID",
+  "mark": "W-A",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 22,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 1266268,
+  "parent_distinct_full": 1266268,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": 22,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "mongo.diffbot_Company.companyID",
+  "parent": "mongo.diffbot_CompanyIndustry.companyID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 22,
+  "matched_full": 22,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 22,
+  "parent_distinct_full": 22,
+  "parent_unique_full": true,
+  "sample_shared": 22,
+  "sample_child_distinct": 22,
+  "sample_parent_distinct": 22
+ },
+ {
+  "child": "mongo.diffbot_Company.companyID",
+  "parent": "pg.company.companyid",
+  "mark": "#11",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 22,
+  "matched_full": 22,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": 1,
+  "sample_child_distinct": 22,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "mongo.diffbot_Company.companyID",
+  "parent": "pg.companyindustry.companyid",
+  "mark": "U-ci",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 22,
+  "matched_full": 22,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": 0,
+  "sample_child_distinct": 22,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "mongo.diffbot_Company.companyID",
+  "parent": "pg.location.companyid",
+  "mark": "U-loc",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 22,
+  "matched_full": 21,
+  "containment_full": 0.9545,
+  "parent_nonnull_rows": 3506,
+  "parent_distinct_full": 3506,
+  "parent_unique_full": true,
+  "sample_shared": 0,
+  "sample_child_distinct": 22,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "mongo.diffbot_Company.description",
+  "parent": "mongo.diffbot_entities.description",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 22,
+  "matched_full": 22,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 22,
+  "parent_distinct_full": 22,
+  "parent_unique_full": true,
+  "sample_shared": 22,
+  "sample_child_distinct": 22,
+  "sample_parent_distinct": 22
+ },
+ {
+  "child": "mongo.diffbot_Company.run_timestamp",
+  "parent": "mongo.diffbot_CompanyIndustry.run_timestamp",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 22,
+  "matched_full": 22,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 22,
+  "parent_distinct_full": 22,
+  "parent_unique_full": true,
+  "sample_shared": 22,
+  "sample_child_distinct": 22,
+  "sample_parent_distinct": 22
+ },
+ {
+  "child": "mongo.diffbot_CompanyExperience.companyID",
+  "parent": "ch.Company.companyID",
+  "mark": "W-A",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 17,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 1266268,
+  "parent_distinct_full": 1266268,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": 17,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "mongo.diffbot_CompanyExperience.companyID",
+  "parent": "mongo.diffbot_Company.companyID",
+  "mark": "MG",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 17,
+  "matched_full": 17,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 22,
+  "parent_distinct_full": 22,
+  "parent_unique_full": true,
+  "sample_shared": 17,
+  "sample_child_distinct": 17,
+  "sample_parent_distinct": 22
+ },
+ {
+  "child": "mongo.diffbot_CompanyExperience.companyID",
+  "parent": "mongo.diffbot_CompanyIndustry.companyID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 17,
+  "matched_full": 17,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 22,
+  "parent_distinct_full": 22,
+  "parent_unique_full": true,
+  "sample_shared": 17,
+  "sample_child_distinct": 17,
+  "sample_parent_distinct": 22
+ },
+ {
+  "child": "mongo.diffbot_CompanyExperience.companyID",
+  "parent": "pg.company.companyid",
+  "mark": "#12",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 17,
+  "matched_full": 17,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": 0,
+  "sample_child_distinct": 17,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "mongo.diffbot_CompanyExperience.companyID",
+  "parent": "pg.companyindustry.companyid",
+  "mark": "U-ci",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 17,
+  "matched_full": 17,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": 0,
+  "sample_child_distinct": 17,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "mongo.diffbot_CompanyExperience.companyID",
+  "parent": "pg.location.companyid",
+  "mark": "U-loc",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 17,
+  "matched_full": 17,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 3506,
+  "parent_distinct_full": 3506,
+  "parent_unique_full": true,
+  "sample_shared": 0,
+  "sample_child_distinct": 17,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "mongo.diffbot_CompanyExperience.main_entity_id",
+  "parent": "mongo.diffbot_CompanyIndustry.main_entity_id",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 17,
+  "matched_full": 17,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 22,
+  "parent_distinct_full": 22,
+  "parent_unique_full": true,
+  "sample_shared": 17,
+  "sample_child_distinct": 17,
+  "sample_parent_distinct": 22
+ },
+ {
+  "child": "mongo.diffbot_CompanyExperience.personID",
+  "parent": "ch.Experience.personID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 84,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 12338392,
+  "parent_distinct_full": 12326104,
+  "parent_unique_full": false,
+  "sample_shared": null,
+  "sample_child_distinct": 84,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "mongo.diffbot_CompanyExperience.personID",
+  "parent": "ch.Person.personID",
+  "mark": "W-B",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 84,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 11795168,
+  "parent_distinct_full": 11795168,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": 84,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "mongo.diffbot_CompanyExperience.personID",
+  "parent": "ch.PersonContact.personID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 84,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 4336389,
+  "parent_distinct_full": 4320757,
+  "parent_unique_full": false,
+  "sample_shared": null,
+  "sample_child_distinct": 84,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "mongo.diffbot_CompanyExperience.personID",
+  "parent": "pg.person.personid",
+  "mark": "#2",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 84,
+  "matched_full": 84,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 1215,
+  "parent_distinct_full": 1215,
+  "parent_unique_full": true,
+  "sample_shared": 6,
+  "sample_child_distinct": 84,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "mongo.diffbot_CompanyExperience.run_timestamp",
+  "parent": "mongo.diffbot_CompanyIndustry.run_timestamp",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 17,
+  "matched_full": 17,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 22,
+  "parent_distinct_full": 22,
+  "parent_unique_full": true,
+  "sample_shared": 17,
+  "sample_child_distinct": 17,
+  "sample_parent_distinct": 22
+ },
+ {
+  "child": "mongo.diffbot_CompanyIndustry.classificationID",
+  "parent": "pg.industryclassification.classificationid",
+  "mark": "M26",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 14,
+  "matched_full": 14,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 339,
+  "parent_distinct_full": 339,
+  "parent_unique_full": true,
+  "sample_shared": 6,
+  "sample_child_distinct": 14,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "mongo.diffbot_CompanyIndustry.companyID",
+  "parent": "ch.Company.companyID",
+  "mark": "W-A",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 22,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 1266268,
+  "parent_distinct_full": 1266268,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": 22,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "mongo.diffbot_CompanyIndustry.companyID",
+  "parent": "mongo.diffbot_Company.companyID",
+  "mark": "MG",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 22,
+  "matched_full": 22,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 22,
+  "parent_distinct_full": 22,
+  "parent_unique_full": true,
+  "sample_shared": 22,
+  "sample_child_distinct": 22,
+  "sample_parent_distinct": 22
+ },
+ {
+  "child": "mongo.diffbot_CompanyIndustry.companyID",
+  "parent": "pg.company.companyid",
+  "mark": "#8",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 22,
+  "matched_full": 22,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": 1,
+  "sample_child_distinct": 22,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "mongo.diffbot_CompanyIndustry.companyID",
+  "parent": "pg.companyindustry.companyid",
+  "mark": "U-ci",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 22,
+  "matched_full": 22,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": 0,
+  "sample_child_distinct": 22,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "mongo.diffbot_CompanyIndustry.companyID",
+  "parent": "pg.location.companyid",
+  "mark": "U-loc",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 22,
+  "matched_full": 21,
+  "containment_full": 0.9545,
+  "parent_nonnull_rows": 3506,
+  "parent_distinct_full": 3506,
+  "parent_unique_full": true,
+  "sample_shared": 0,
+  "sample_child_distinct": 22,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "mongo.diffbot_CompanyInvestmentRound.companyID",
+  "parent": "ch.Company.companyID",
+  "mark": "W-A",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 5,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 1266268,
+  "parent_distinct_full": 1266268,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": 5,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "mongo.diffbot_CompanyInvestmentRound.companyID",
+  "parent": "mongo.diffbot_Company.companyID",
+  "mark": "MG",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 5,
+  "matched_full": 5,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 22,
+  "parent_distinct_full": 22,
+  "parent_unique_full": true,
+  "sample_shared": 5,
+  "sample_child_distinct": 5,
+  "sample_parent_distinct": 22
+ },
+ {
+  "child": "mongo.diffbot_CompanyInvestmentRound.companyID",
+  "parent": "mongo.diffbot_CompanyIndustry.companyID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 5,
+  "matched_full": 5,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 22,
+  "parent_distinct_full": 22,
+  "parent_unique_full": true,
+  "sample_shared": 5,
+  "sample_child_distinct": 5,
+  "sample_parent_distinct": 22
+ },
+ {
+  "child": "mongo.diffbot_CompanyInvestmentRound.companyID",
+  "parent": "pg.company.companyid",
+  "mark": "#7",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 5,
+  "matched_full": 5,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": 0,
+  "sample_child_distinct": 5,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "mongo.diffbot_CompanyInvestmentRound.companyID",
+  "parent": "pg.companyindustry.companyid",
+  "mark": "U-ci",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 5,
+  "matched_full": 5,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": 0,
+  "sample_child_distinct": 5,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "mongo.diffbot_CompanyInvestmentRound.companyID",
+  "parent": "pg.location.companyid",
+  "mark": "U-loc",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 5,
+  "matched_full": 5,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 3506,
+  "parent_distinct_full": 3506,
+  "parent_unique_full": true,
+  "sample_shared": 0,
+  "sample_child_distinct": 5,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "mongo.diffbot_CompanyInvestmentRound.investmentID",
+  "parent": "pg.companyinvestmentround.investmentid",
+  "mark": "U-inv",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 11,
+  "matched_full": 11,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 470,
+  "parent_distinct_full": 470,
+  "parent_unique_full": true,
+  "sample_shared": 0,
+  "sample_child_distinct": 11,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "mongo.diffbot_CompanyInvestmentRound.main_entity_id",
+  "parent": "mongo.diffbot_CompanyIndustry.main_entity_id",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 5,
+  "matched_full": 5,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 22,
+  "parent_distinct_full": 22,
+  "parent_unique_full": true,
+  "sample_shared": 5,
+  "sample_child_distinct": 5,
+  "sample_parent_distinct": 22
+ },
+ {
+  "child": "mongo.diffbot_CompanyInvestmentRound.run_timestamp",
+  "parent": "mongo.diffbot_CompanyIndustry.run_timestamp",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 5,
+  "matched_full": 5,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 22,
+  "parent_distinct_full": 22,
+  "parent_unique_full": true,
+  "sample_shared": 5,
+  "sample_child_distinct": 5,
+  "sample_parent_distinct": 22
+ },
+ {
+  "child": "mongo.diffbot__schemas.collection",
+  "parent": "mongo.zoominfo__schemas.collection",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 10,
+  "matched_full": 8,
+  "containment_full": 0.8,
+  "parent_nonnull_rows": 14,
+  "parent_distinct_full": 14,
+  "parent_unique_full": true,
+  "sample_shared": 8,
+  "sample_child_distinct": 10,
+  "sample_parent_distinct": 14
+ },
+ {
+  "child": "mongo.diffbot_entities.description",
+  "parent": "mongo.diffbot_Company.description",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 22,
+  "matched_full": 22,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 22,
+  "parent_distinct_full": 22,
+  "parent_unique_full": true,
+  "sample_shared": 22,
+  "sample_child_distinct": 22,
+  "sample_parent_distinct": 22
+ },
+ {
+  "child": "mongo.diffbot_entities.dispatched_name",
+  "parent": "mongo.zoominfo_entities.dispatched_name",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 22,
+  "matched_full": 19,
+  "containment_full": 0.8636,
+  "parent_nonnull_rows": 93,
+  "parent_distinct_full": 93,
+  "parent_unique_full": true,
+  "sample_shared": 19,
+  "sample_child_distinct": 22,
+  "sample_parent_distinct": 93
+ },
+ {
+  "child": "mongo.diffbot_entities.name",
+  "parent": "mongo.zoominfo_entities.name",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 22,
+  "matched_full": 6,
+  "containment_full": 0.2727,
+  "parent_nonnull_rows": 93,
+  "parent_distinct_full": 93,
+  "parent_unique_full": true,
+  "sample_shared": 6,
+  "sample_child_distinct": 22,
+  "sample_parent_distinct": 93
+ },
+ {
+  "child": "mongo.diffbot_entities.run_timestamp",
+  "parent": "mongo.diffbot_CompanyIndustry.run_timestamp",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 22,
+  "matched_full": 22,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 22,
+  "parent_distinct_full": 22,
+  "parent_unique_full": true,
+  "sample_shared": 22,
+  "sample_child_distinct": 22,
+  "sample_parent_distinct": 22
+ },
+ {
+  "child": "mongo.diffbot_event.event_name",
+  "parent": "mongo.zoominfo_event.event_name",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 19,
+  "matched_full": 2,
+  "containment_full": 0.1053,
+  "parent_nonnull_rows": 93,
+  "parent_distinct_full": 93,
+  "parent_unique_full": true,
+  "sample_shared": 2,
+  "sample_child_distinct": 19,
+  "sample_parent_distinct": 93
+ },
+ {
+  "child": "mongo.diffbot_event.provenance.snippet_text",
+  "parent": "mongo.diffbot_contracts.provenance.snippet_text",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 18,
+  "matched_full": 1,
+  "containment_full": 0.0556,
+  "parent_nonnull_rows": 20,
+  "parent_distinct_full": 20,
+  "parent_unique_full": true,
+  "sample_shared": 1,
+  "sample_child_distinct": 18,
+  "sample_parent_distinct": 20
+ },
+ {
+  "child": "mongo.diffbot_event.provenance.snippet_text",
+  "parent": "mongo.diffbot_evidence.provenance.snippet_text",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 18,
+  "matched_full": 5,
+  "containment_full": 0.2778,
+  "parent_nonnull_rows": 75,
+  "parent_distinct_full": 75,
+  "parent_unique_full": true,
+  "sample_shared": 5,
+  "sample_child_distinct": 18,
+  "sample_parent_distinct": 75
+ },
+ {
+  "child": "mongo.diffbot_event.run_timestamp",
+  "parent": "mongo.diffbot_CompanyIndustry.run_timestamp",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 11,
+  "matched_full": 11,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 22,
+  "parent_distinct_full": 22,
+  "parent_unique_full": true,
+  "sample_shared": 11,
+  "sample_child_distinct": 11,
+  "sample_parent_distinct": 22
+ },
+ {
+  "child": "mongo.diffbot_evidence.run_timestamp",
+  "parent": "mongo.diffbot_CompanyIndustry.run_timestamp",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 22,
+  "matched_full": 22,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 22,
+  "parent_distinct_full": 22,
+  "parent_unique_full": true,
+  "sample_shared": 22,
+  "sample_child_distinct": 22,
+  "sample_parent_distinct": 22
+ },
+ {
+  "child": "mongo.diffbot_institution.provenance.snippet_text",
+  "parent": "mongo.diffbot_contracts.provenance.snippet_text",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 12,
+  "matched_full": 1,
+  "containment_full": 0.0833,
+  "parent_nonnull_rows": 20,
+  "parent_distinct_full": 20,
+  "parent_unique_full": true,
+  "sample_shared": 1,
+  "sample_child_distinct": 12,
+  "sample_parent_distinct": 20
+ },
+ {
+  "child": "mongo.diffbot_institution.provenance.snippet_text",
+  "parent": "mongo.diffbot_evidence.provenance.snippet_text",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 12,
+  "matched_full": 4,
+  "containment_full": 0.3333,
+  "parent_nonnull_rows": 75,
+  "parent_distinct_full": 75,
+  "parent_unique_full": true,
+  "sample_shared": 4,
+  "sample_child_distinct": 12,
+  "sample_parent_distinct": 75
+ },
+ {
+  "child": "mongo.diffbot_institution.run_timestamp",
+  "parent": "mongo.diffbot_CompanyIndustry.run_timestamp",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 6,
+  "matched_full": 6,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 22,
+  "parent_distinct_full": 22,
+  "parent_unique_full": true,
+  "sample_shared": 6,
+  "sample_child_distinct": 6,
+  "sample_parent_distinct": 22
+ },
+ {
+  "child": "mongo.diffbot_products.provenance.snippet_text",
+  "parent": "mongo.diffbot_contracts.provenance.snippet_text",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 153,
+  "matched_full": 2,
+  "containment_full": 0.0131,
+  "parent_nonnull_rows": 20,
+  "parent_distinct_full": 20,
+  "parent_unique_full": true,
+  "sample_shared": 2,
+  "sample_child_distinct": 55,
+  "sample_parent_distinct": 20
+ },
+ {
+  "child": "mongo.diffbot_products.provenance.snippet_text",
+  "parent": "mongo.diffbot_evidence.provenance.snippet_text",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 153,
+  "matched_full": 13,
+  "containment_full": 0.085,
+  "parent_nonnull_rows": 75,
+  "parent_distinct_full": 75,
+  "parent_unique_full": true,
+  "sample_shared": 9,
+  "sample_child_distinct": 55,
+  "sample_parent_distinct": 75
+ },
+ {
+  "child": "mongo.diffbot_products.run_timestamp",
+  "parent": "mongo.diffbot_CompanyIndustry.run_timestamp",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 22,
+  "matched_full": 22,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 22,
+  "parent_distinct_full": 22,
+  "parent_unique_full": true,
+  "sample_shared": 13,
+  "sample_child_distinct": 13,
+  "sample_parent_distinct": 22
+ },
+ {
+  "child": "mongo.zoominfo_Company.companyID",
+  "parent": "ch.Company.companyID",
+  "mark": "Z1",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 93,
+  "matched_full": 27,
+  "containment_full": 0.2903,
+  "parent_nonnull_rows": 1266268,
+  "parent_distinct_full": 1266268,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": 93,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "mongo.zoominfo_Company.companyID",
+  "parent": "pg.company.companyid",
+  "mark": "#10",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 93,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": 0,
+  "sample_child_distinct": 93,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "mongo.zoominfo_Company.companyID",
+  "parent": "pg.companyindustry.companyid",
+  "mark": "U-ci",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 93,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": 0,
+  "sample_child_distinct": 93,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "mongo.zoominfo_Company.companyID",
+  "parent": "pg.location.companyid",
+  "mark": "U-loc",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 93,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 3506,
+  "parent_distinct_full": 3506,
+  "parent_unique_full": true,
+  "sample_shared": 0,
+  "sample_child_distinct": 93,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "mongo.zoominfo_CompanyIndustry.companyID",
+  "parent": "ch.Company.companyID",
+  "mark": "Z2",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 91,
+  "matched_full": 25,
+  "containment_full": 0.2747,
+  "parent_nonnull_rows": 1266268,
+  "parent_distinct_full": 1266268,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": 40,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "mongo.zoominfo_CompanyIndustry.companyID",
+  "parent": "mongo.zoominfo_Company.companyID",
+  "mark": "MG",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 91,
+  "matched_full": 91,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 93,
+  "parent_distinct_full": 93,
+  "parent_unique_full": true,
+  "sample_shared": 40,
+  "sample_child_distinct": 40,
+  "sample_parent_distinct": 93
+ },
+ {
+  "child": "mongo.zoominfo_CompanyIndustry.companyID",
+  "parent": "pg.company.companyid",
+  "mark": "#19",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 91,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": 0,
+  "sample_child_distinct": 40,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "mongo.zoominfo_CompanyIndustry.companyID",
+  "parent": "pg.companyindustry.companyid",
+  "mark": "U-ci",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 91,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": 0,
+  "sample_child_distinct": 40,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "mongo.zoominfo_CompanyIndustry.companyID",
+  "parent": "pg.location.companyid",
+  "mark": "U-loc",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 91,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 3506,
+  "parent_distinct_full": 3506,
+  "parent_unique_full": true,
+  "sample_shared": 0,
+  "sample_child_distinct": 40,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "mongo.zoominfo_CompanyIndustry.industryID",
+  "parent": "ch.Industry.industryID",
+  "mark": "Z3",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 41,
+  "matched_full": 8,
+  "containment_full": 0.1951,
+  "parent_nonnull_rows": 37,
+  "parent_distinct_full": 37,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": 19,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "mongo.zoominfo_CompanyIndustry.industryID",
+  "parent": "mongo.zoominfo_industry.industryID",
+  "mark": "MG",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 41,
+  "matched_full": 41,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 261,
+  "parent_distinct_full": 41,
+  "parent_unique_full": false,
+  "sample_shared": 19,
+  "sample_child_distinct": 19,
+  "sample_parent_distinct": 19
+ },
+ {
+  "child": "mongo.zoominfo_Experience.companyID",
+  "parent": "ch.Company.companyID",
+  "mark": "Z4",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 93,
+  "matched_full": 27,
+  "containment_full": 0.2903,
+  "parent_nonnull_rows": 1266268,
+  "parent_distinct_full": 1266268,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": 2,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "mongo.zoominfo_Experience.companyID",
+  "parent": "mongo.diffbot_Company.companyID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 93,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 22,
+  "parent_distinct_full": 22,
+  "parent_unique_full": true,
+  "sample_shared": 0,
+  "sample_child_distinct": 2,
+  "sample_parent_distinct": 22
+ },
+ {
+  "child": "mongo.zoominfo_Experience.companyID",
+  "parent": "mongo.diffbot_CompanyIndustry.companyID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 93,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 22,
+  "parent_distinct_full": 22,
+  "parent_unique_full": true,
+  "sample_shared": 0,
+  "sample_child_distinct": 2,
+  "sample_parent_distinct": 22
+ },
+ {
+  "child": "mongo.zoominfo_Experience.companyID",
+  "parent": "mongo.zoominfo_Company.companyID",
+  "mark": "MG",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 93,
+  "matched_full": 93,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 93,
+  "parent_distinct_full": 93,
+  "parent_unique_full": true,
+  "sample_shared": 2,
+  "sample_child_distinct": 2,
+  "sample_parent_distinct": 93
+ },
+ {
+  "child": "mongo.zoominfo_Experience.companyID",
+  "parent": "pg.company.companyid",
+  "mark": "#1",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 93,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": 0,
+  "sample_child_distinct": 2,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "mongo.zoominfo_Experience.companyID",
+  "parent": "pg.companyindustry.companyid",
+  "mark": "U-ci",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 93,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": 0,
+  "sample_child_distinct": 2,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "mongo.zoominfo_Experience.companyID",
+  "parent": "pg.location.companyid",
+  "mark": "U-loc",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 93,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 3506,
+  "parent_distinct_full": 3506,
+  "parent_unique_full": true,
+  "sample_shared": 0,
+  "sample_child_distinct": 2,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "mongo.zoominfo_Experience.personID",
+  "parent": "ch.Experience.personID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 13513,
+  "matched_full": 4262,
+  "containment_full": 0.3154,
+  "parent_nonnull_rows": 12338392,
+  "parent_distinct_full": 12326104,
+  "parent_unique_full": false,
+  "sample_shared": null,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "mongo.zoominfo_Experience.personID",
+  "parent": "ch.Person.personID",
+  "mark": "Z5",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 13513,
+  "matched_full": 3319,
+  "containment_full": 0.2456,
+  "parent_nonnull_rows": 11795168,
+  "parent_distinct_full": 11795168,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "mongo.zoominfo_Experience.personID",
+  "parent": "ch.PersonContact.personID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 13513,
+  "matched_full": 1330,
+  "containment_full": 0.0984,
+  "parent_nonnull_rows": 4336389,
+  "parent_distinct_full": 4320757,
+  "parent_unique_full": false,
+  "sample_shared": null,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "mongo.zoominfo_Experience.personID",
+  "parent": "mongo.zoominfo_contact_information.personID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 13513,
+  "matched_full": 3777,
+  "containment_full": 0.2795,
+  "parent_nonnull_rows": 3781,
+  "parent_distinct_full": 3777,
+  "parent_unique_full": false,
+  "sample_shared": 41,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "mongo.zoominfo_Experience.personID",
+  "parent": "mongo.zoominfo_staff.personID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 13513,
+  "matched_full": 13513,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 13518,
+  "parent_distinct_full": 13513,
+  "parent_unique_full": false,
+  "sample_shared": 65,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "mongo.zoominfo_Experience.personID",
+  "parent": "pg.person.personid",
+  "mark": "#6",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 13513,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 1215,
+  "parent_distinct_full": 1215,
+  "parent_unique_full": true,
+  "sample_shared": 0,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "mongo.zoominfo__schemas.collection",
+  "parent": "mongo.diffbot__schemas.collection",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 14,
+  "matched_full": 8,
+  "containment_full": 0.5714,
+  "parent_nonnull_rows": 10,
+  "parent_distinct_full": 10,
+  "parent_unique_full": true,
+  "sample_shared": 8,
+  "sample_child_distinct": 14,
+  "sample_parent_distinct": 10
+ },
+ {
+  "child": "mongo.zoominfo_contact_information.freeMails",
+  "parent": "ch.PersonContact.freeMails",
+  "mark": "W-B",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 3776,
+  "matched_full": 1313,
+  "containment_full": 0.3477,
+  "parent_nonnull_rows": 4336389,
+  "parent_distinct_full": 4336389,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "mongo.zoominfo_contact_information.personID",
+  "parent": "ch.Experience.personID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 3777,
+  "matched_full": 1252,
+  "containment_full": 0.3315,
+  "parent_nonnull_rows": 12338392,
+  "parent_distinct_full": 12326104,
+  "parent_unique_full": false,
+  "sample_shared": null,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "mongo.zoominfo_contact_information.personID",
+  "parent": "ch.Person.personID",
+  "mark": "Z7",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 3777,
+  "matched_full": 928,
+  "containment_full": 0.2457,
+  "parent_nonnull_rows": 11795168,
+  "parent_distinct_full": 11795168,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "mongo.zoominfo_contact_information.personID",
+  "parent": "ch.PersonContact.personID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 3777,
+  "matched_full": 1330,
+  "containment_full": 0.3521,
+  "parent_nonnull_rows": 4336389,
+  "parent_distinct_full": 4320757,
+  "parent_unique_full": false,
+  "sample_shared": null,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "mongo.zoominfo_contact_information.personID",
+  "parent": "mongo.zoominfo_Experience.personID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 3777,
+  "matched_full": 3777,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 13518,
+  "parent_distinct_full": 13513,
+  "parent_unique_full": false,
+  "sample_shared": 41,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "mongo.zoominfo_contact_information.personID",
+  "parent": "mongo.zoominfo_staff.personID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 3777,
+  "matched_full": 3777,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 13518,
+  "parent_distinct_full": 13513,
+  "parent_unique_full": false,
+  "sample_shared": 38,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "mongo.zoominfo_contact_information.personID",
+  "parent": "pg.person.personid",
+  "mark": "#15",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 3777,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 1215,
+  "parent_distinct_full": 1215,
+  "parent_unique_full": true,
+  "sample_shared": 0,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "mongo.zoominfo_contracts.company_id",
+  "parent": "ch.Company.companyID",
+  "mark": "Z10",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 10,
+  "matched_full": 3,
+  "containment_full": 0.3,
+  "parent_nonnull_rows": 1266268,
+  "parent_distinct_full": 1266268,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": 10,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "mongo.zoominfo_contracts.company_id",
+  "parent": "mongo.zoominfo_Company.companyID",
+  "mark": "MG",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 10,
+  "matched_full": 10,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 93,
+  "parent_distinct_full": 93,
+  "parent_unique_full": true,
+  "sample_shared": 10,
+  "sample_child_distinct": 10,
+  "sample_parent_distinct": 93
+ },
+ {
+  "child": "mongo.zoominfo_contracts.company_id",
+  "parent": "pg.company.companyid",
+  "mark": "#18",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 10,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": 0,
+  "sample_child_distinct": 10,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "mongo.zoominfo_entities.dispatched_name",
+  "parent": "mongo.diffbot_entities.dispatched_name",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 93,
+  "matched_full": 19,
+  "containment_full": 0.2043,
+  "parent_nonnull_rows": 22,
+  "parent_distinct_full": 22,
+  "parent_unique_full": true,
+  "sample_shared": 19,
+  "sample_child_distinct": 93,
+  "sample_parent_distinct": 22
+ },
+ {
+  "child": "mongo.zoominfo_entities.name",
+  "parent": "mongo.diffbot_entities.name",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 93,
+  "matched_full": 6,
+  "containment_full": 0.0645,
+  "parent_nonnull_rows": 22,
+  "parent_distinct_full": 22,
+  "parent_unique_full": true,
+  "sample_shared": 6,
+  "sample_child_distinct": 93,
+  "sample_parent_distinct": 22
+ },
+ {
+  "child": "mongo.zoominfo_event.event_name",
+  "parent": "mongo.diffbot_event.event_name",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 93,
+  "matched_full": 2,
+  "containment_full": 0.0215,
+  "parent_nonnull_rows": 19,
+  "parent_distinct_full": 19,
+  "parent_unique_full": true,
+  "sample_shared": 2,
+  "sample_child_distinct": 93,
+  "sample_parent_distinct": 19
+ },
+ {
+  "child": "mongo.zoominfo_evidence.company_id",
+  "parent": "ch.Company.companyID",
+  "mark": "Z9",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 69,
+  "matched_full": 20,
+  "containment_full": 0.2899,
+  "parent_nonnull_rows": 1266268,
+  "parent_distinct_full": 1266268,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": 33,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "mongo.zoominfo_evidence.company_id",
+  "parent": "mongo.zoominfo_Company.companyID",
+  "mark": "MG",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 69,
+  "matched_full": 69,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 93,
+  "parent_distinct_full": 93,
+  "parent_unique_full": true,
+  "sample_shared": 33,
+  "sample_child_distinct": 33,
+  "sample_parent_distinct": 93
+ },
+ {
+  "child": "mongo.zoominfo_evidence.company_id",
+  "parent": "pg.company.companyid",
+  "mark": "#17",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 69,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": 0,
+  "sample_child_distinct": 33,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "mongo.zoominfo_industry.industryID",
+  "parent": "ch.Industry.industryID",
+  "mark": "Z11",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 41,
+  "matched_full": 8,
+  "containment_full": 0.1951,
+  "parent_nonnull_rows": 37,
+  "parent_distinct_full": 37,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": 19,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "mongo.zoominfo_location.companyID",
+  "parent": "ch.Location.companyID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 93,
+  "matched_full": 36,
+  "containment_full": 0.3871,
+  "parent_nonnull_rows": 1757532,
+  "parent_distinct_full": 1720600,
+  "parent_unique_full": false,
+  "sample_shared": null,
+  "sample_child_distinct": 91,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "mongo.zoominfo_location.companyID",
+  "parent": "mongo.zoominfo_Company.companyID",
+  "mark": "MG",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 93,
+  "matched_full": 93,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 93,
+  "parent_distinct_full": 93,
+  "parent_unique_full": true,
+  "sample_shared": 91,
+  "sample_child_distinct": 91,
+  "sample_parent_distinct": 93
+ },
+ {
+  "child": "mongo.zoominfo_location.locationID",
+  "parent": "ch.Location.locationID",
+  "mark": "Z8",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 103,
+  "matched_full": 39,
+  "containment_full": 0.3786,
+  "parent_nonnull_rows": 1757532,
+  "parent_distinct_full": 1757532,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "mongo.zoominfo_location.locationID",
+  "parent": "pg.location.companyid",
+  "mark": "#20",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 103,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 3506,
+  "parent_distinct_full": 3506,
+  "parent_unique_full": true,
+  "sample_shared": 0,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "mongo.zoominfo_products.industryID",
+  "parent": "mongo.zoominfo_industry.industryID",
+  "mark": "MG",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 0,
+  "matched_full": 0,
+  "containment_full": null,
+  "parent_nonnull_rows": 261,
+  "parent_distinct_full": 41,
+  "parent_unique_full": false,
+  "sample_shared": null,
+  "sample_child_distinct": null,
+  "sample_parent_distinct": 19
+ },
+ {
+  "child": "mongo.zoominfo_staff.personID",
+  "parent": "ch.Experience.personID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 13513,
+  "matched_full": 4262,
+  "containment_full": 0.3154,
+  "parent_nonnull_rows": 12338392,
+  "parent_distinct_full": 12326104,
+  "parent_unique_full": false,
+  "sample_shared": null,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "mongo.zoominfo_staff.personID",
+  "parent": "ch.Person.personID",
+  "mark": "Z6",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 13513,
+  "matched_full": 3319,
+  "containment_full": 0.2456,
+  "parent_nonnull_rows": 11795168,
+  "parent_distinct_full": 11795168,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "mongo.zoominfo_staff.personID",
+  "parent": "ch.PersonContact.personID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 13513,
+  "matched_full": 1330,
+  "containment_full": 0.0984,
+  "parent_nonnull_rows": 4336389,
+  "parent_distinct_full": 4320757,
+  "parent_unique_full": false,
+  "sample_shared": null,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "mongo.zoominfo_staff.personID",
+  "parent": "mongo.zoominfo_Experience.personID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 13513,
+  "matched_full": 13513,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 13518,
+  "parent_distinct_full": 13513,
+  "parent_unique_full": false,
+  "sample_shared": 65,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "mongo.zoominfo_staff.personID",
+  "parent": "mongo.zoominfo_contact_information.personID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 13513,
+  "matched_full": 3777,
+  "containment_full": 0.2795,
+  "parent_nonnull_rows": 3781,
+  "parent_distinct_full": 3777,
+  "parent_unique_full": false,
+  "sample_shared": 38,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "mongo.zoominfo_staff.personID",
+  "parent": "pg.person.personid",
+  "mark": "#21",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 13513,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 1215,
+  "parent_distinct_full": 1215,
+  "parent_unique_full": true,
+  "sample_shared": 0,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "pg.company.companyid",
+  "parent": "ch.Company.companyID",
+  "mark": "W-A",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 3940,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 1266268,
+  "parent_distinct_full": 1266268,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "pg.company.companyid",
+  "parent": "mongo.diffbot_Company.companyID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 3940,
+  "matched_full": 22,
+  "containment_full": 0.0056,
+  "parent_nonnull_rows": 22,
+  "parent_distinct_full": 22,
+  "parent_unique_full": true,
+  "sample_shared": 1,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": 22
+ },
+ {
+  "child": "pg.company.companyid",
+  "parent": "mongo.diffbot_CompanyIndustry.companyID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 3940,
+  "matched_full": 22,
+  "containment_full": 0.0056,
+  "parent_nonnull_rows": 22,
+  "parent_distinct_full": 22,
+  "parent_unique_full": true,
+  "sample_shared": 1,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": 22
+ },
+ {
+  "child": "pg.company.companyid",
+  "parent": "pg.companyindustry.companyid",
+  "mark": "U-ci",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 3940,
+  "matched_full": 3940,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": 14,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "pg.company.companyid",
+  "parent": "pg.location.companyid",
+  "mark": "U-loc",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 3940,
+  "matched_full": 3506,
+  "containment_full": 0.8898,
+  "parent_nonnull_rows": 3506,
+  "parent_distinct_full": 3506,
+  "parent_unique_full": true,
+  "sample_shared": 13,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "pg.company.description",
+  "parent": "mongo.diffbot_Company.description",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 2855,
+  "matched_full": 20,
+  "containment_full": 0.007,
+  "parent_nonnull_rows": 22,
+  "parent_distinct_full": 22,
+  "parent_unique_full": true,
+  "sample_shared": 1,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": 22
+ },
+ {
+  "child": "pg.company.description",
+  "parent": "mongo.diffbot_entities.description",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 2855,
+  "matched_full": 20,
+  "containment_full": 0.007,
+  "parent_nonnull_rows": 22,
+  "parent_distinct_full": 22,
+  "parent_unique_full": true,
+  "sample_shared": 1,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": 22
+ },
+ {
+  "child": "pg.company.descriptors",
+  "parent": "mongo.diffbot_Company.descriptors",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 1951,
+  "matched_full": 22,
+  "containment_full": 0.0113,
+  "parent_nonnull_rows": 22,
+  "parent_distinct_full": 22,
+  "parent_unique_full": true,
+  "sample_shared": 2,
+  "sample_child_distinct": 81,
+  "sample_parent_distinct": 22
+ },
+ {
+  "child": "pg.company.entityname",
+  "parent": "mongo.diffbot_Company.entityName",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 2679,
+  "matched_full": 22,
+  "containment_full": 0.0082,
+  "parent_nonnull_rows": 22,
+  "parent_distinct_full": 22,
+  "parent_unique_full": true,
+  "sample_shared": 1,
+  "sample_child_distinct": 99,
+  "sample_parent_distinct": 22
+ },
+ {
+  "child": "pg.company.fullname",
+  "parent": "mongo.diffbot_Company.fullName",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 2703,
+  "matched_full": 22,
+  "containment_full": 0.0081,
+  "parent_nonnull_rows": 22,
+  "parent_distinct_full": 22,
+  "parent_unique_full": true,
+  "sample_shared": 1,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": 22
+ },
+ {
+  "child": "pg.companycontact.companyid",
+  "parent": "ch.Company.companyID",
+  "mark": "W-A",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 3362,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 1266268,
+  "parent_distinct_full": 1266268,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": 67,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "pg.companycontact.companyid",
+  "parent": "pg.company.companyid",
+  "mark": "PG",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 3362,
+  "matched_full": 3361,
+  "containment_full": 0.9997,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": 9,
+  "sample_child_distinct": 67,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "pg.companycontact.companyid",
+  "parent": "pg.companyindustry.companyid",
+  "mark": "U-ci",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 3362,
+  "matched_full": 3361,
+  "containment_full": 0.9997,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": 67,
+  "sample_child_distinct": 67,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "pg.companycontact.companyid",
+  "parent": "pg.location.companyid",
+  "mark": "U-loc",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 3362,
+  "matched_full": 3104,
+  "containment_full": 0.9233,
+  "parent_nonnull_rows": 3506,
+  "parent_distinct_full": 3506,
+  "parent_unique_full": true,
+  "sample_shared": 60,
+  "sample_child_distinct": 67,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "pg.companyemployeecategory.companyid",
+  "parent": "ch.Company.companyID",
+  "mark": "W-A",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 618,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 1266268,
+  "parent_distinct_full": 1266268,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": 14,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "pg.companyemployeecategory.companyid",
+  "parent": "pg.company.companyid",
+  "mark": "PG",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 618,
+  "matched_full": 618,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": 4,
+  "sample_child_distinct": 14,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "pg.companyemployeecategory.companyid",
+  "parent": "pg.companyindustry.companyid",
+  "mark": "U-ci",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 618,
+  "matched_full": 618,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": 13,
+  "sample_child_distinct": 14,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "pg.companyemployeecategory.companyid",
+  "parent": "pg.location.companyid",
+  "mark": "U-loc",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 618,
+  "matched_full": 599,
+  "containment_full": 0.9693,
+  "parent_nonnull_rows": 3506,
+  "parent_distinct_full": 3506,
+  "parent_unique_full": true,
+  "sample_shared": 12,
+  "sample_child_distinct": 14,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "pg.companyexperience.companyid",
+  "parent": "ch.Company.companyID",
+  "mark": "W-A",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 482,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 1266268,
+  "parent_distinct_full": 1266268,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": 44,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "pg.companyexperience.companyid",
+  "parent": "mongo.diffbot_Company.companyID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 482,
+  "matched_full": 17,
+  "containment_full": 0.0353,
+  "parent_nonnull_rows": 22,
+  "parent_distinct_full": 22,
+  "parent_unique_full": true,
+  "sample_shared": 1,
+  "sample_child_distinct": 44,
+  "sample_parent_distinct": 22
+ },
+ {
+  "child": "pg.companyexperience.companyid",
+  "parent": "mongo.diffbot_CompanyIndustry.companyID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 482,
+  "matched_full": 17,
+  "containment_full": 0.0353,
+  "parent_nonnull_rows": 22,
+  "parent_distinct_full": 22,
+  "parent_unique_full": true,
+  "sample_shared": 1,
+  "sample_child_distinct": 44,
+  "sample_parent_distinct": 22
+ },
+ {
+  "child": "pg.companyexperience.companyid",
+  "parent": "pg.company.companyid",
+  "mark": "PG",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 482,
+  "matched_full": 482,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": 6,
+  "sample_child_distinct": 44,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "pg.companyexperience.companyid",
+  "parent": "pg.companyindustry.companyid",
+  "mark": "U-ci",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 482,
+  "matched_full": 482,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": 16,
+  "sample_child_distinct": 44,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "pg.companyexperience.companyid",
+  "parent": "pg.location.companyid",
+  "mark": "U-loc",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 482,
+  "matched_full": 474,
+  "containment_full": 0.9834,
+  "parent_nonnull_rows": 3506,
+  "parent_distinct_full": 3506,
+  "parent_unique_full": true,
+  "sample_shared": 19,
+  "sample_child_distinct": 44,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "pg.companyexperience.personid",
+  "parent": "ch.Experience.personID",
+  "mark": "P4-pg",
+  "true": false,
+  "seen_in": [
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 1215,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 12338392,
+  "parent_distinct_full": 12326104,
+  "parent_unique_full": false,
+  "sample_shared": null,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "pg.companyexperience.personid",
+  "parent": "ch.Person.personID",
+  "mark": "W-B",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 1215,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 11795168,
+  "parent_distinct_full": 11795168,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "pg.companyexperience.personid",
+  "parent": "ch.PersonContact.personID",
+  "mark": "P4-pg",
+  "true": false,
+  "seen_in": [
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 1215,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 4336389,
+  "parent_distinct_full": 4320757,
+  "parent_unique_full": false,
+  "sample_shared": null,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "pg.companyexperience.personid",
+  "parent": "mongo.diffbot_CompanyExperience.personID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 1215,
+  "matched_full": 84,
+  "containment_full": 0.0691,
+  "parent_nonnull_rows": 84,
+  "parent_distinct_full": 84,
+  "parent_unique_full": true,
+  "sample_shared": 3,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": 84
+ },
+ {
+  "child": "pg.companyexperience.personid",
+  "parent": "pg.person.personid",
+  "mark": "PG",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 1215,
+  "matched_full": 1214,
+  "containment_full": 0.9992,
+  "parent_nonnull_rows": 1215,
+  "parent_distinct_full": 1215,
+  "parent_unique_full": true,
+  "sample_shared": 5,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "pg.companyfinancials.companyid",
+  "parent": "ch.Company.companyID",
+  "mark": "W-A",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 29,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 1266268,
+  "parent_distinct_full": 1266268,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": 15,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "pg.companyfinancials.companyid",
+  "parent": "mongo.diffbot_Company.companyID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 29,
+  "matched_full": 2,
+  "containment_full": 0.069,
+  "parent_nonnull_rows": 22,
+  "parent_distinct_full": 22,
+  "parent_unique_full": true,
+  "sample_shared": 1,
+  "sample_child_distinct": 15,
+  "sample_parent_distinct": 22
+ },
+ {
+  "child": "pg.companyfinancials.companyid",
+  "parent": "mongo.diffbot_CompanyIndustry.companyID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 29,
+  "matched_full": 2,
+  "containment_full": 0.069,
+  "parent_nonnull_rows": 22,
+  "parent_distinct_full": 22,
+  "parent_unique_full": true,
+  "sample_shared": 1,
+  "sample_child_distinct": 15,
+  "sample_parent_distinct": 22
+ },
+ {
+  "child": "pg.companyfinancials.companyid",
+  "parent": "pg.company.companyid",
+  "mark": "PG",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 29,
+  "matched_full": 29,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": 0,
+  "sample_child_distinct": 15,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "pg.companyfinancials.companyid",
+  "parent": "pg.companyindustry.companyid",
+  "mark": "U-ci",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 29,
+  "matched_full": 29,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": 1,
+  "sample_child_distinct": 15,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "pg.companyfinancials.companyid",
+  "parent": "pg.location.companyid",
+  "mark": "U-loc",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 29,
+  "matched_full": 29,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 3506,
+  "parent_distinct_full": 3506,
+  "parent_unique_full": true,
+  "sample_shared": 1,
+  "sample_child_distinct": 15,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "pg.companyindustry.classificationid",
+  "parent": "pg.industryclassification.classificationid",
+  "mark": "PG",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 340,
+  "matched_full": 339,
+  "containment_full": 0.9971,
+  "parent_nonnull_rows": 339,
+  "parent_distinct_full": 339,
+  "parent_unique_full": true,
+  "sample_shared": 13,
+  "sample_child_distinct": 31,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "pg.companyindustry.companyid",
+  "parent": "ch.Company.companyID",
+  "mark": "W-A",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 3940,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 1266268,
+  "parent_distinct_full": 1266268,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "pg.companyindustry.companyid",
+  "parent": "pg.company.companyid",
+  "mark": "PG",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 3940,
+  "matched_full": 3940,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": 14,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "pg.companyindustry.companyid",
+  "parent": "pg.location.companyid",
+  "mark": "U-loc",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 3940,
+  "matched_full": 3506,
+  "containment_full": 0.8898,
+  "parent_nonnull_rows": 3506,
+  "parent_distinct_full": 3506,
+  "parent_unique_full": true,
+  "sample_shared": 84,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "pg.companyinvestmentround.companyid",
+  "parent": "ch.Company.companyID",
+  "mark": "W-A",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 154,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 1266268,
+  "parent_distinct_full": 1266268,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": 32,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "pg.companyinvestmentround.companyid",
+  "parent": "pg.company.companyid",
+  "mark": "PG",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 154,
+  "matched_full": 154,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": 3,
+  "sample_child_distinct": 32,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "pg.companyinvestmentround.companyid",
+  "parent": "pg.companyindustry.companyid",
+  "mark": "U-ci",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 154,
+  "matched_full": 154,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": 6,
+  "sample_child_distinct": 32,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "pg.companyinvestmentround.companyid",
+  "parent": "pg.location.companyid",
+  "mark": "U-loc",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 154,
+  "matched_full": 152,
+  "containment_full": 0.987,
+  "parent_nonnull_rows": 3506,
+  "parent_distinct_full": 3506,
+  "parent_unique_full": true,
+  "sample_shared": 8,
+  "sample_child_distinct": 32,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "pg.companyinvestor.investmentid",
+  "parent": "pg.companyinvestmentround.investmentid",
+  "mark": "PG",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 394,
+  "matched_full": 393,
+  "containment_full": 0.9975,
+  "parent_nonnull_rows": 470,
+  "parent_distinct_full": 470,
+  "parent_unique_full": true,
+  "sample_shared": 13,
+  "sample_child_distinct": 32,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "pg.companyinvestor.investorcompanyid",
+  "parent": "pg.company.companyid",
+  "mark": "M9",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 794,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": 0,
+  "sample_child_distinct": 97,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "pg.companyrelation.companyid",
+  "parent": "ch.Company.companyID",
+  "mark": "W-A",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 245,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 1266268,
+  "parent_distinct_full": 1266268,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": 19,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "pg.companyrelation.companyid",
+  "parent": "pg.company.companyid",
+  "mark": "PG",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 245,
+  "matched_full": 245,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": 4,
+  "sample_child_distinct": 19,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "pg.companyrelation.companyid",
+  "parent": "pg.companyindustry.companyid",
+  "mark": "U-ci",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 245,
+  "matched_full": 245,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": 13,
+  "sample_child_distinct": 19,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "pg.companyrelation.companyid",
+  "parent": "pg.location.companyid",
+  "mark": "U-loc",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 245,
+  "matched_full": 242,
+  "containment_full": 0.9878,
+  "parent_nonnull_rows": 3506,
+  "parent_distinct_full": 3506,
+  "parent_unique_full": true,
+  "sample_shared": 15,
+  "sample_child_distinct": 19,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "pg.companyrelation.relatedcompanyid",
+  "parent": "pg.company.companyid",
+  "mark": "M10",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 6174,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": 0,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "pg.companytechnographics.companyid",
+  "parent": "ch.Company.companyID",
+  "mark": "W-A",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 814,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 1266268,
+  "parent_distinct_full": 1266268,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": 8,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "pg.companytechnographics.companyid",
+  "parent": "pg.company.companyid",
+  "mark": "PG",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 814,
+  "matched_full": 814,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": 2,
+  "sample_child_distinct": 8,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "pg.companytechnographics.companyid",
+  "parent": "pg.companyindustry.companyid",
+  "mark": "U-ci",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 814,
+  "matched_full": 814,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": 5,
+  "sample_child_distinct": 8,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "pg.companytechnographics.companyid",
+  "parent": "pg.location.companyid",
+  "mark": "U-loc",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 814,
+  "matched_full": 790,
+  "containment_full": 0.9705,
+  "parent_nonnull_rows": 3506,
+  "parent_distinct_full": 3506,
+  "parent_unique_full": true,
+  "sample_shared": 5,
+  "sample_child_distinct": 8,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "pg.location.companyid",
+  "parent": "ch.Company.companyID",
+  "mark": "W-A",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 3506,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 1266268,
+  "parent_distinct_full": 1266268,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "pg.location.companyid",
+  "parent": "pg.company.companyid",
+  "mark": "PG",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 3506,
+  "matched_full": 3506,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": 13,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "pg.location.companyid",
+  "parent": "pg.companyindustry.companyid",
+  "mark": "U-ci",
+  "true": true,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 3506,
+  "matched_full": 3506,
+  "containment_full": 1.0,
+  "parent_nonnull_rows": 3940,
+  "parent_distinct_full": 3940,
+  "parent_unique_full": true,
+  "sample_shared": 84,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": 100
+ },
+ {
+  "child": "pg.location.locationid",
+  "parent": "ch.Location.locationID",
+  "mark": "W-B",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 3445,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 1757532,
+  "parent_distinct_full": 1757532,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "pg.person.personid",
+  "parent": "ch.Experience.personID",
+  "mark": "P4-pg",
+  "true": false,
+  "seen_in": [
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 1215,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 12338392,
+  "parent_distinct_full": 12326104,
+  "parent_unique_full": false,
+  "sample_shared": null,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "pg.person.personid",
+  "parent": "ch.Person.personID",
+  "mark": "W-B",
+  "true": false,
+  "seen_in": [
+   "off-l2",
+   "on",
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 1215,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 11795168,
+  "parent_distinct_full": 11795168,
+  "parent_unique_full": true,
+  "sample_shared": null,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "pg.person.personid",
+  "parent": "ch.PersonContact.personID",
+  "mark": "P4-pg",
+  "true": false,
+  "seen_in": [
+   "probe-nomongo",
+   "probe"
+  ],
+  "child_distinct_full": 1215,
+  "matched_full": 0,
+  "containment_full": 0.0,
+  "parent_nonnull_rows": 4336389,
+  "parent_distinct_full": 4320757,
+  "parent_unique_full": false,
+  "sample_shared": null,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": null
+ },
+ {
+  "child": "pg.person.personid",
+  "parent": "mongo.diffbot_CompanyExperience.personID",
+  "mark": null,
+  "true": null,
+  "seen_in": [
+   "probe"
+  ],
+  "child_distinct_full": 1215,
+  "matched_full": 84,
+  "containment_full": 0.0691,
+  "parent_nonnull_rows": 84,
+  "parent_distinct_full": 84,
+  "parent_unique_full": true,
+  "sample_shared": 6,
+  "sample_child_distinct": 100,
+  "sample_parent_distinct": 84
+ }
+]
