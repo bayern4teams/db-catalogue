@@ -72,7 +72,8 @@ ASK_CALLS: dict[str, int] = {}  # how many requests the stub saw per cause (fixt
 
 
 def _invented_citation(payload: dict) -> str:
-    return json.dumps({"answer": "quokka-canary says so", "citations": ["id-that-does-not-exist"]})
+    return json.dumps({"answer": "quokka-canary says so", "citations": ["id-that-does-not-exist"],
+        "outcome": "answered"})
 
 
 @pytest.fixture(scope="module")

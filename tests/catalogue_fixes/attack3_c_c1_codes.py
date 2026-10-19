@@ -81,7 +81,8 @@ def review(tmp_path, monkeypatch, url, *, timeout=2, name="r"):
 
 
 def bad_cite_ask(payload):
-    return json.dumps({"answer": "x is catalogued.", "citations": ["invented-" + CANARY]})
+    return json.dumps({"answer": "x is catalogued.", "citations": ["invented-" + CANARY],
+        "outcome": "answered"})
 
 
 def bad_cite_review(payload):

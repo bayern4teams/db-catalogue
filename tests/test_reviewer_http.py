@@ -208,7 +208,8 @@ def test_ask_over_http_sends_the_question_context_and_accepts_a_cited_answer(
 
     def cite_first(body: dict) -> str:
         first = body["items"][0]
-        return json.dumps({"answer": f"{first['name']} is catalogued.", "citations": [first["id"]]})
+        return json.dumps({"answer": f"{first['name']} is catalogued.", "citations": [first["id"]],
+            "outcome": "answered"})
 
     stub = Stub(cite_first)
     try:

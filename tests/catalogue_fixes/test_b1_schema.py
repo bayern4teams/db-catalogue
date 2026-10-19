@@ -85,7 +85,8 @@ def test_an_answer_over_the_limit_is_rejected_after_parsing(tmp_path, monkeypatc
 
     def too_long(payload: dict) -> str:
         return json.dumps({"answer": "x" * (ANSWER_LIMIT + 1),
-                           "citations": [payload["items"][0]["id"]]})
+                           "citations": [payload["items"][0]["id"]],
+                           "outcome": "answered"})
 
     with ModelStub(too_long) as stub:
         result = ask(state, stub, monkeypatch, max_answer_chars=ANSWER_LIMIT)
@@ -99,7 +100,8 @@ def test_an_answer_at_the_limit_is_accepted(tmp_path, monkeypatch):
 
     def at_limit(payload: dict) -> str:
         return json.dumps({"answer": "x" * ANSWER_LIMIT,
-                           "citations": [payload["items"][0]["id"]]})
+                           "citations": [payload["items"][0]["id"]],
+                           "outcome": "answered"})
 
     with ModelStub(at_limit) as stub:
         result = ask(state, stub, monkeypatch, max_answer_chars=ANSWER_LIMIT)
@@ -112,7 +114,8 @@ def test_no_limit_is_set_by_default_so_a_long_list_answer_is_returned(tmp_path, 
     state = _state(tmp_path, monkeypatch)
 
     def long(payload: dict) -> str:
-        return json.dumps({"answer": "x" * 6243, "citations": [payload["items"][0]["id"]]})
+        return json.dumps({"answer": "x" * 6243, "citations": [payload["items"][0]["id"]],
+            "outcome": "answered"})
 
     with ModelStub(long) as stub:
         result = ask(state, stub, monkeypatch)

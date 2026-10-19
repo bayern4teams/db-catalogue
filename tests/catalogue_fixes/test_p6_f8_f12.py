@@ -33,7 +33,6 @@ from pydantic import ValidationError
 
 EXAMPLE = Path(__file__).parents[2] / "examples" / "local" / "builder-with-vllm.toml"
 VERDICT_SENTENCE = "Put the verdict only in the outcome field."
-NO_P6_8 = pytest.mark.xfail(strict=True, reason="P6-8 not built")
 
 
 # --- P6-5 / F8: the review's max_tokens ---------------------------------------------------------
@@ -154,7 +153,6 @@ def _sent_schema(requests: list[dict]) -> dict:
     return requests[0]["body"]["response_format"]["json_schema"]["schema"]
 
 
-@NO_P6_8
 def test_the_schema_sent_requires_answer_citations_and_outcome(tmp_path, monkeypatch):
     _, requests = _ask(tmp_path, monkeypatch, _cites_first(outcome="answered"))
     schema = _sent_schema(requests)
@@ -170,7 +168,6 @@ def test_the_schema_still_lists_both_outcomes_and_forbids_extra_keys(tmp_path, m
     assert schema.get("additionalProperties") is False
 
 
-@NO_P6_8
 def test_a_reply_without_outcome_is_not_an_answer(tmp_path, monkeypatch):
     """Fails on the old code, where the missing field defaulted to `answered`."""
     result, _ = _ask(tmp_path, monkeypatch, _cites_first())
@@ -178,7 +175,6 @@ def test_a_reply_without_outcome_is_not_an_answer(tmp_path, monkeypatch):
     assert "answer" not in result and "citations" not in result and "cited" not in result
 
 
-@NO_P6_8
 def test_a_reply_without_outcome_and_without_citations_is_not_an_answer(tmp_path, monkeypatch):
     result, _ = _ask(
         tmp_path, monkeypatch,
@@ -220,7 +216,6 @@ def test_answered_with_no_citation_is_still_refused(tmp_path, monkeypatch):
     assert result["error"] == {"code": "MODEL_INVALID_CITATION"}
 
 
-@NO_P6_8
 def test_the_system_prompt_tells_the_model_where_the_verdict_goes(tmp_path, monkeypatch):
     _, requests = _ask(tmp_path, monkeypatch, _cites_first(outcome="answered"))
     system = requests[0]["body"]["messages"][0]

@@ -145,7 +145,8 @@ def test_a_relationship_can_be_cited(linked, monkeypatch):
     import json as _json
 
     with ModelStub(
-        content=_json.dumps({"answer": "a tentative link", "citations": [edge_id]})
+        content=_json.dumps({"answer": "a tentative link", "citations": [edge_id],
+            "outcome": "answered"})
     ) as stub:
         config = AnswerConfig(
             base_url=stub.url, model="m", model_digest="d", api_key_env="MODEL_KEY",
@@ -183,7 +184,8 @@ def _ask_with(state, monkeypatch, question, content):
 def test_the_word_lineage_in_a_question_is_answered(linked, monkeypatch):
     import json as _json
 
-    first = _json.dumps({"answer": "No lineage is catalogued.", "citations": []})
+    first = _json.dumps({"answer": "No lineage is catalogued.", "citations": [],
+        "outcome": "answered"})
     reply, stub = _ask_with(linked, monkeypatch, "Is there lineage for shipment?", first)
     assert reply["error"]["code"] == "MODEL_INVALID_CITATION"  # answered outcome must cite
     assert stub.requests, "the model was called: the question was not refused"
@@ -216,7 +218,8 @@ def test_a_lineage_claim_in_an_answer_is_still_rejected(linked, monkeypatch):
 
     _, payload = _ask_payload(linked, monkeypatch, "How does shipment relate to vendor?")
     cited = payload["items"][0]["id"]
-    content = _json.dumps({"answer": "shipment flows into vendor", "citations": [cited]})
+    content = _json.dumps({"answer": "shipment flows into vendor", "citations": [cited],
+        "outcome": "answered"})
     reply, _ = _ask_with(linked, monkeypatch, "How does shipment relate to vendor?", content)
     assert reply["error"]["code"] == "MODEL_UNAVAILABLE_OR_INVALID"
 
@@ -245,7 +248,8 @@ def test_a_cited_relationship_resolves_to_its_tables_and_columns(linked, monkeyp
 
     _, payload = _ask_payload(linked, monkeypatch, "How does shipment relate to vendor?")
     edge_id = payload["relationships"][0]["id"]
-    content = _json.dumps({"answer": "a tentative link", "citations": [edge_id]})
+    content = _json.dumps({"answer": "a tentative link", "citations": [edge_id],
+        "outcome": "answered"})
     reply, _ = _ask_with(linked, monkeypatch, "How does shipment relate to vendor?", content)
     assert reply["cited"] == [{
         "id": edge_id, "kind": "relationship",

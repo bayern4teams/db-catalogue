@@ -93,7 +93,7 @@ def _edge(snapshot, kind, child, parent):
 
 def _answer_with(**fields):
     def reply(payload):
-        body = {"answer": "ok", "citations": [payload["items"][0]["id"]]}
+        body = {"answer": "ok", "citations": [payload["items"][0]["id"]], "outcome": "answered"}
         body.update(fields)
         return json.dumps(body)
 
@@ -199,13 +199,14 @@ def test_dec5_relationship_id_is_a_valid_citation_and_foreign_one_is_not(tmp_pat
     candidate = _edge(snapshot, "REFERENCE_CANDIDATE", "part", "gadget")
     ok, _, _ = _ask(
         state, "part gadget", monkeypatch,
-        _static({"answer": "linked", "citations": [candidate.id]}),
+        _static({"answer": "linked", "citations": [candidate.id], "outcome": "answered"}),
     )
     assert "error" not in ok, ok
     # an edge that exists in the snapshot but was not in the context (limit 0) is not citable
     bad, _, _ = _ask(
         state, "part gadget", monkeypatch,
-        _static({"answer": "linked", "citations": [candidate.id]}), relationship_limit=0,
+        _static({"answer": "linked", "citations": [candidate.id],
+            "outcome": "answered"}), relationship_limit=0,
     )
     assert bad.get("error", {}).get("code") == "MODEL_INVALID_CITATION", bad
 
@@ -321,7 +322,7 @@ def test_dec6_answered_without_citation_is_still_invalid(tmp_path, monkeypatch):
     _, state = _state(tmp_path, monkeypatch, _rel_world())
     for body in (
         {"answer": "x is y", "citations": [], "outcome": "answered"},
-        {"answer": "x is y", "citations": []},
+        {"answer": "x is y", "citations": [], "outcome": "answered"},
     ):
         result, _, _ = _ask(state, "gadget", monkeypatch, _static(body))
         assert "error" in result, f"uncited answer accepted: {body}"
@@ -701,7 +702,8 @@ def test_dec8_excluded_objects_do_not_leak_through_relationships_or_citations(tm
     for edge in noise_edges:
         assert edge.id not in sent
     noise_ids = [n.id for n in nodes.values() if n.name == "gadget__schemas" or (getattr(n, "object_id", None) and nodes.get(n.object_id) and nodes[n.object_id].name == "gadget__schemas")]
-    bad, _, _ = _ask(state, "gadget", monkeypatch, _static({"answer": "x", "citations": [noise_ids[0]]}))
+    bad, _, _ = _ask(state, "gadget", monkeypatch, _static({"answer": "x", "citations": [noise_ids[0]],
+        "outcome": "answered"}))
     assert bad.get("error", {}).get("code") == "MODEL_INVALID_CITATION"
 
 
@@ -746,7 +748,8 @@ def test_dec9_cited_names_come_from_the_catalogue_not_the_model(tmp_path, monkey
 
     def reply(payload):
         item = next(i for i in payload["items"] if i["kind"] == "field")
-        return json.dumps({"answer": "it is liar_table.liar_column in liar_source", "citations": [item["id"]]})
+        return json.dumps({"answer": "it is liar_table.liar_column in liar_source", "citations": [item["id"]],
+            "outcome": "answered"})
 
     result, _, _ = _ask(state, "gadget title", monkeypatch, reply)
     assert "error" not in result, result
@@ -766,7 +769,7 @@ def test_dec9_cited_matches_citations_order_and_count(tmp_path, monkeypatch):
 
     def reply(payload):
         ids = [i["id"] for i in payload["items"][:3]][::-1]
-        return json.dumps({"answer": "several", "citations": ids})
+        return json.dumps({"answer": "several", "citations": ids, "outcome": "answered"})
 
     result, _, _ = _ask(state, "gadget part widget", monkeypatch, reply)
     assert len(result["cited"]) == len(result["citations"]) == 3
@@ -780,7 +783,7 @@ def test_dec9_duplicate_citations_do_not_break(tmp_path, monkeypatch):
 
     def reply(payload):
         i = payload["items"][0]["id"]
-        return json.dumps({"answer": "dup", "citations": [i, i, i]})
+        return json.dumps({"answer": "dup", "citations": [i, i, i], "outcome": "answered"})
 
     result, _, _ = _ask(state, "gadget", monkeypatch, reply)
     assert "error" in result or len(result["cited"]) in (1, 3)
@@ -789,7 +792,8 @@ def test_dec9_duplicate_citations_do_not_break(tmp_path, monkeypatch):
 def test_dec9_relationship_is_resolved_as_from_to(tmp_path, monkeypatch):
     snapshot, state = _state(tmp_path, monkeypatch, _rel_world())
     candidate = _edge(snapshot, "REFERENCE_CANDIDATE", "part", "gadget")
-    result, _, _ = _ask(state, "part gadget", monkeypatch, _static({"answer": "linked", "citations": [candidate.id]}))
+    result, _, _ = _ask(state, "part gadget", monkeypatch, _static({"answer": "linked", "citations": [candidate.id],
+        "outcome": "answered"}))
     assert "error" not in result, result
     blob = json.dumps(result["cited"]).lower()
     nodes = _nodes(snapshot)
@@ -801,7 +805,8 @@ def test_dec9_not_established_has_empty_cited_and_errors_carry_no_names(tmp_path
     _, state = _state(tmp_path, monkeypatch, _rel_world())
     result, _, _ = _ask(state, "gadget", monkeypatch, _static({"answer": "none", "citations": [], "outcome": "not_established"}))
     assert result.get("cited", []) == []
-    bad, _, _ = _ask(state, "gadget", monkeypatch, _static({"answer": "x", "citations": ["nope"]}))
+    bad, _, _ = _ask(state, "gadget", monkeypatch, _static({"answer": "x", "citations": ["nope"],
+        "outcome": "answered"}))
     assert bad["error"]["code"] == "MODEL_INVALID_CITATION"
     assert "gadget" not in json.dumps(bad["error"])
 

@@ -27,7 +27,9 @@ class Answer(BaseModel):
     citations: list[str]
     # `not_established`: the catalogue does not show it. The one outcome that may cite nothing
     # (DEC-6); what was checked may still be cited, and every citation must be a retrieved ID.
-    outcome: Literal["answered", "not_established"] = "answered"
+    # Required, with no default: an optional field let the model write its verdict into the text
+    # and leave the field to default to `answered` (F12, live run 2026-10-14).
+    outcome: Literal["answered", "not_established"]
 
 
 # What went wrong with the model, by cause. Each is derived from the type of the exception or the
@@ -221,7 +223,8 @@ def answer_question(
                     "given. Do not infer lineage, execute queries, or request scans. If the "
                     "retrieved metadata does not show what is asked, set outcome to "
                     "not_established and say what you "
-                    "checked, citing it; otherwise outcome is answered and must cite IDs.",
+                    "checked, citing it; otherwise outcome is answered and must cite IDs. "
+                    "Put the verdict only in the outcome field.",
                 },
                 {
                     "role": "user",
