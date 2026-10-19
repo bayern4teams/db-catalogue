@@ -478,7 +478,8 @@ def relationships_for(state: Path, object_ids: set[str], limit: int) -> list[dic
 
 
 def fields_of(state: Path, object_ids: set[str]) -> list[dict]:
-    """Every field of these objects, in the shape `search` returns, by name. Not capped (DEC-18).
+    """Every field of these objects as stored index rows (list columns stay JSON text; the answer
+    context keeps only its own keys), by name. Not capped (DEC-18).
     ponytail: a very wide table can exceed the model context; the upgrade path is a cap behind
     config or indexing type text (LEAD_REVIEW F13 option C)."""
     if not object_ids:

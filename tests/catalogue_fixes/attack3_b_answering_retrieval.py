@@ -457,8 +457,12 @@ def test_dec7_list_question_retrieves_objects_of_the_named_source(tmp_path, monk
         items = _payload_of(requests)["items"]
         assert items, question
         assert {i["source_id"] for i in items} == {"chsrc"}, (question, [i["source_id"] for i in items])
-        assert {i["kind"] for i in items} == {"table"}, "list question must retrieve objects, not columns"
-        assert {i["name"] for i in items} == {f"chtab{n}" for n in range(4)}
+        # P6-9 (F13, DEC-18) flip: retrieval still returns objects only; each retrieved table's
+        # columns then join the context, so only the non-field items are the retrieved ones.
+        objects = [i for i in items if i["kind"] != "field"]
+        assert {i["kind"] for i in objects} == {"table"}, "list question must retrieve objects, not columns"
+        assert {i["name"] for i in objects} == {f"chtab{n}" for n in range(4)}
+        assert {i["object_name"] for i in items if i["kind"] == "field"} <= {i["name"] for i in objects}
 
 
 @pytest.mark.parametrize(
@@ -480,7 +484,8 @@ def test_dec7_list_question_with_ordinary_extra_words_still_lists_the_source(tmp
     assert result.get("error", {}).get("code") != "NO_CATALOGUE_MATCH", result
     items = _payload_of(requests)["items"]
     assert {i["source_id"] for i in items} == {source}
-    assert {i["name"] for i in items} == {f"{names}{n}" for n in range(4)}
+    # P6-9 flip: each listed object's fields follow it in the context; the objects are unchanged.
+    assert {i["name"] for i in items if i["kind"] != "field"} == {f"{names}{n}" for n in range(4)}
 
 
 def test_dec7_wrong_source_is_not_returned_even_when_other_names_match(tmp_path, monkeypatch):
@@ -520,7 +525,8 @@ def test_dec7_plural_tables_word_alone_without_source_does_not_dump_everything_u
 def test_dec7_retrieval_limit_bounds_object_listing(tmp_path, monkeypatch):
     _, state = _state(tmp_path, monkeypatch, _three_sources(n_tables=15))
     _, requests, _ = _ask(state, "list the clickhouse tables", monkeypatch, retrieval_limit=5)
-    assert len(_payload_of(requests)["items"]) <= 5
+    # P6-9 flip: `retrieval_limit` bounds the retrieved objects; their columns are added uncapped.
+    assert len([i for i in _payload_of(requests)["items"] if i["kind"] != "field"]) <= 5
 
 
 def test_dec7_object_hit_outranks_generic_column_hits(tmp_path, monkeypatch):
