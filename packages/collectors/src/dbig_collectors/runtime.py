@@ -564,7 +564,7 @@ def discover_clickhouse(
                 )
                 continue
             identities[name] = uuid
-            if engine in {"View", "MaterializedView", "LiveView"}:
+            if engine in {"View", "LiveView"}:
                 views.add(name)
             if total_rows is not None:
                 row_counts[name] = int(total_rows)
@@ -743,7 +743,10 @@ def _tokenize_clickhouse(
 
     Off unless sampling and a token key are both configured. One bounded read per table, of the
     first `sample_rows` rows, naming the plain, non-nested columns from the server's own catalog;
-    a view is not read, since reading one runs its query. `columns` holds (field_id, name, type).
+    a view is not read, since reading one runs its query, but a materialized view holds stored
+    rows and is read, as on PostgreSQL. A read the server refuses (an EPHEMERAL column, a missing
+    backing file) costs that table its tokens and leaves a code-only diagnostic, as the probe
+    does, rather than ending the scan. `columns` holds (field_id, name, type).
     ponytail: a table larger than `sample_rows` is never read whole, so a zero against it never
     drops (P6-2); a full-column sketch read is the upgrade path (LEAD_REVIEW F5 option C).
     """
@@ -760,14 +763,30 @@ def _tokenize_clickhouse(
             continue
         budget.charge()
         selected = ",".join(_quoted(name) for _, name, _ in chosen)
-        rows = client.query(
-            # Identifiers come from the server's catalog and pass `_quoted`; the row limit is a
-            # bound parameter. No caller input reaches this statement.
-            f"SELECT {selected} FROM {_quoted(database)}.{_quoted(table)} "  # noqa: S608
-            "LIMIT {lim:UInt64}",
-            parameters={"lim": config.sample_rows},
-            settings={"max_execution_time": config.read_timeout_seconds},
-        ).result_set
+        try:
+            rows = client.query(
+                # Identifiers come from the server's catalog and pass `_quoted`; the row limit is
+                # a bound parameter. No caller input reaches this statement.
+                f"SELECT {selected} FROM {_quoted(database)}.{_quoted(table)} "  # noqa: S608
+                "LIMIT {lim:UInt64}",
+                parameters={"lim": config.sample_rows},
+                settings={"max_execution_time": config.read_timeout_seconds},
+            ).result_set
+        except Exception:  # noqa: BLE001 - one unreadable table must not fail the metadata scan
+            tables["diagnostics.jsonl"].append(
+                Record.model_validate(
+                    {
+                        "record_type": "diagnostic",
+                        "id": stable_id(
+                            config.source_id, "diagnostic", f"{database}:{table}:sample"
+                        ),
+                        "code": "STATS_UNAVAILABLE",
+                        "message": "value sample unavailable",
+                        **common,
+                    }
+                )
+            )
+            continue
         for position, (field_id, _, _) in enumerate(chosen):
             digests, observed, distinct, truncated = _value_tokens(
                 [row[position] for row in rows], key=key, limit=config.max_value_tokens
