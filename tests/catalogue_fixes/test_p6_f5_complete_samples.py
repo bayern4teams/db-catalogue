@@ -55,7 +55,7 @@ from test_value_evidence import (  # noqa: E402
 )
 
 ROOT = Path(__file__).resolve().parents[2]
-UNBUILT = pytest.mark.xfail(strict=True, reason="P6-1/P6-2 not built")
+
 
 N = MIN_TOKEN_SUPPORT
 CAP = 256  # the live cap; the fixture sets it per scenario, the builder must not know it
@@ -182,7 +182,6 @@ def _bound_of_capped_parent() -> str:
 # --- P6-1 contract: the field exists, is additive, defaults to false ----------------------------
 
 
-@UNBUILT
 def test_value_tokens_has_a_complete_flag_that_defaults_to_false():
     """Spec: `ValueTokens` gains `complete: bool`; an old bundle without it counts as false."""
     made = ValueTokens(
@@ -194,7 +193,6 @@ def test_value_tokens_has_a_complete_flag_that_defaults_to_false():
     assert made.complete is False
 
 
-@UNBUILT
 def test_the_published_schema_lists_complete_as_an_optional_property():
     """Spec: additive; schemas regenerated. An old reader must still validate a row without it."""
     schema = json.loads(
@@ -218,23 +216,19 @@ def _pg_entry(monkeypatch, rows: int, **config):
     return discover_postgresql(connection, _tokenising(**config), Budget(50))["tokens.jsonl"][0]
 
 
-@UNBUILT
 def test_pg_fewer_rows_than_sample_rows_is_complete(monkeypatch):
     assert _pg_entry(monkeypatch, 3, sample_rows=10).complete is True
 
 
-@UNBUILT
 def test_pg_exactly_sample_rows_is_not_known_complete(monkeypatch):
     """`fewer than` is strict: a read that fills the limit may have stopped early."""
     assert _pg_entry(monkeypatch, 5, sample_rows=5).complete is False
 
 
-@UNBUILT
 def test_pg_more_rows_than_sample_rows_is_not_complete(monkeypatch):
     assert _pg_entry(monkeypatch, 9, sample_rows=5).complete is False
 
 
-@UNBUILT
 def test_pg_complete_is_independent_of_the_token_cap(monkeypatch):
     """A read of 20 rows under a limit of 50 is complete even though only 5 hashes are kept."""
     entry = _pg_entry(monkeypatch, 20, sample_rows=50, max_value_tokens=5)
@@ -262,19 +256,16 @@ def _bytes(documents) -> int:
     return sum(len(str(document).encode("utf-8")) for document in documents)
 
 
-@UNBUILT
 def test_mongo_fewer_documents_than_sample_rows_is_complete(monkeypatch):
     entries = _mongo_entries(monkeypatch, _documents(3), sample_rows=10)
     assert [entry.complete for entry in entries] == [True] * len(entries)
 
 
-@UNBUILT
 def test_mongo_a_read_that_fills_sample_rows_is_not_complete(monkeypatch):
     entries = _mongo_entries(monkeypatch, _documents(5), sample_rows=5)
     assert [entry.complete for entry in entries] == [False] * len(entries)
 
 
-@UNBUILT
 def test_mongo_stopped_by_max_sample_bytes_is_not_complete(monkeypatch):
     """Three documents, room for two: fewer than `sample_rows`, yet the read was cut."""
     documents = _documents(3)
@@ -285,7 +276,6 @@ def test_mongo_stopped_by_max_sample_bytes_is_not_complete(monkeypatch):
     assert [entry.complete for entry in entries] == [False] * len(entries)
 
 
-@UNBUILT
 def test_mongo_a_byte_budget_that_just_fits_is_complete(monkeypatch):
     """Control for the cut test: the same documents with room for all three are complete, so the
     flag follows the cut and not merely the presence of a byte limit."""
@@ -310,19 +300,24 @@ INCOMPLETE_PARENTS = {
 
 
 @pytest.mark.parametrize("make_parent", INCOMPLETE_PARENTS.values(), ids=INCOMPLETE_PARENTS)
-@UNBUILT
 def test_a_true_child_against_a_sampled_parent_is_not_dropped_and_says_why(
     tmp_path, monkeypatch, make_parent
 ):
     child = sample(PARENT_KEYS[2000:2017], complete=True)  # 17 true values, none in the sample
     snapshot = _snapshot(tmp_path, monkeypatch, child=child, parent=make_parent())
     assert candidates(snapshot) == [CHILD], "a zero against a sampled parent must not drop"
+    if make_parent().cap is not None:
+        # Lead correction: with a capped parent, (b) compares only inside the common hash range,
+        # where these 17 true values are either shared or too few to measure; no zero exists.
+        assert "not measured" in _text(snapshot) or all(
+            m["shared_tokens"] > 0 for m in containment_metrics(snapshot)
+        )
+        return
     zeros = [m for m in containment_metrics(snapshot) if m["shared_tokens"] == 0]
     assert zeros, "the evidence keeps the zero"
     assert "a zero is not a measurement" in _text(snapshot)
 
 
-@UNBUILT
 def test_the_sampled_parent_reason_is_a_code_of_its_own(tmp_path, monkeypatch):
     """Spec: 'under its own reason code'. Asserted as: some cited evidence carries a `reason`
     that none of the pre-existing codes use. The code's spelling is not prescribed."""
@@ -338,7 +333,6 @@ def test_the_sampled_parent_reason_is_a_code_of_its_own(tmp_path, monkeypatch):
     assert reasons - OLD_REASONS, f"no reason of its own among {sorted(reasons)}"
 
 
-@UNBUILT
 def test_a_sampled_parent_leaks_no_token_into_the_snapshot(tmp_path, monkeypatch):
     """Counts only. The new evidence must not carry a digest or a sampled value."""
     snapshot = _snapshot(
@@ -397,7 +391,6 @@ def _child_for_range(*, members: bool, inside: int, outside: int) -> Sample:
     return sample(values, complete=True)
 
 
-@UNBUILT
 def test_complete_capped_parent_drops_a_disjoint_child_when_the_range_holds_enough(
     tmp_path, monkeypatch
 ):
@@ -411,7 +404,6 @@ def test_complete_capped_parent_drops_a_disjoint_child_when_the_range_holds_enou
     assert candidates(snapshot) == []
 
 
-@UNBUILT
 def test_complete_capped_parent_does_not_drop_when_the_range_holds_too_few(
     tmp_path, monkeypatch
 ):
@@ -426,7 +418,6 @@ def test_complete_capped_parent_does_not_drop_when_the_range_holds_too_few(
     assert "not measured" in _text(snapshot)
 
 
-@UNBUILT
 def test_complete_capped_parent_keeps_a_true_child_with_a_number(tmp_path, monkeypatch):
     """93 true child values, 10 inside the range. Inside the range every one is in the parent's
     kept hashes, so the number is 1.0 over 10; a count over all 93 child values would give
@@ -442,7 +433,6 @@ def test_complete_capped_parent_keeps_a_true_child_with_a_number(tmp_path, monke
     assert metrics["contained_fraction"] == 1.0
 
 
-@UNBUILT
 def test_complete_capped_parent_keeps_a_quarter_overlap_with_its_number(tmp_path, monkeypatch):
     """Inside the range: 8 child values, 2 are parent keys, 6 are not (25%). Outside the range:
     20 non-parent values that must not dilute the number."""
@@ -462,7 +452,6 @@ def test_complete_capped_parent_keeps_a_quarter_overlap_with_its_number(tmp_path
     assert metrics["contained_fraction"] == 0.25
 
 
-@UNBUILT
 def test_two_capped_sides_are_compared_up_to_the_smaller_largest_kept_hash(
     tmp_path, monkeypatch
 ):
@@ -482,7 +471,6 @@ def test_two_capped_sides_are_compared_up_to_the_smaller_largest_kept_hash(
     assert metrics["contained_fraction"] == 1.0
 
 
-@UNBUILT
 def test_two_capped_disjoint_sides_drop_when_the_common_range_holds_enough(
     tmp_path, monkeypatch
 ):
@@ -496,7 +484,6 @@ def test_two_capped_disjoint_sides_drop_when_the_common_range_holds_enough(
     assert candidates(snapshot) == []
 
 
-@UNBUILT
 def test_a_capped_parent_that_is_not_complete_still_never_drops_a_disjoint_child(
     tmp_path, monkeypatch
 ):

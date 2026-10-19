@@ -337,6 +337,22 @@ def _overlap(
         return unmeasured("normalisation_differs", "the two sides were normalised differently")
     child_set, parent_set = set(child_tokens.tokens), set(parent_tokens.tokens)
     smallest = min(child_tokens.distinct_count, parent_tokens.distinct_count)
+    # A capped side that kept no token bounds the range to nothing, which reads as too small.
+    capped = [
+        max(side.tokens, default="") for side in (child_tokens, parent_tokens) if side.truncated
+    ]
+    if capped:
+        # Both sides keep the smallest hashes under one run key, so they are coordinated bottom-k
+        # sketches: below the smaller of the capped sides' largest kept hash, each side holds
+        # every hash it saw. Compared only there, a missing value is really missing from what was
+        # read, and the child's support is what that range holds: containment divides by the
+        # child (F5, owner decision 2026-10-19, DEC-19).
+        # ponytail: a parent never read completely (a large ClickHouse table) still gives no
+        # trusted zero; a full-column sketch read is the upgrade path (LEAD_REVIEW F5 option C).
+        bound = min(capped)
+        child_set = {token for token in child_set if token <= bound}
+        parent_set = {token for token in parent_set if token <= bound}
+        smallest = min(len(child_set), parent_tokens.distinct_count)
     if smallest < min_support or not child_set:
         return unmeasured(
             "sample_too_small",
@@ -349,12 +365,16 @@ def _overlap(
         )
     shared = len(child_set & parent_set)
     union = len(child_set | parent_set)
+    sampled_zero = not shared and not parent_tokens.complete
     return _evidence(
         child,
         "value_containment",
         parent_tokens.field_id,
         f"containment:{parent_tokens.field_id}",
         {
+            # A zero against a parent that was only partly read says nothing: the child's values
+            # may lie in the rows that were not read. Kept, and said, under its own code.
+            **({"reason": "parent_sampled"} if sampled_zero else {}),
             "contained_fraction": round(shared / len(child_set), 6),
             "shared_tokens": shared,
             "child_distinct_sampled": len(child_set),
@@ -367,9 +387,12 @@ def _overlap(
             # A capped token set makes containment a lower bound, not a measurement.
             "lower_bound_only": child_tokens.truncated or parent_tokens.truncated,
             "parent_truncated": parent_tokens.truncated,
+            "parent_complete": parent_tokens.complete,
+            "compared_in_common_hash_range": bool(capped),
             "key_id": child_tokens.key_id,
             "minimum_support": min_support,
         },
+        "parent sampled, a zero is not a measurement" if sampled_zero else "",
     )
 
 
@@ -688,9 +711,10 @@ def assemble(
             if (
                 overlap.kind == "value_containment"
                 and overlap.metrics["shared_tokens"] == 0
-                # A capped parent hides values the child may share. A capped child is still a
-                # sample of that child: none of its sampled values is in a complete parent.
-                and not overlap.metrics["parent_truncated"]
+                # Only a parent read whole makes a zero a measurement; a capped set was already
+                # compared inside the range where it is whole (DEC-19). A sampled child is still
+                # a sample of that child: none of its values is in the complete parent.
+                and overlap.metrics["parent_complete"]
             ):
                 # Measured, with enough values on both sides, and not one value in common: the
                 # columns are unrelated (user decision 2026-10-12). Counted, never recorded by

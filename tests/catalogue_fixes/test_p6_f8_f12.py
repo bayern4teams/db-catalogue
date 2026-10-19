@@ -33,7 +33,6 @@ from pydantic import ValidationError
 
 EXAMPLE = Path(__file__).parents[2] / "examples" / "local" / "builder-with-vllm.toml"
 VERDICT_SENTENCE = "Put the verdict only in the outcome field."
-NO_P6_5 = pytest.mark.xfail(strict=True, reason="P6-5 not built")
 NO_P6_8 = pytest.mark.xfail(strict=True, reason="P6-8 not built")
 
 
@@ -67,12 +66,10 @@ def _review_requests(tmp_path, monkeypatch, *, pairs: int = 1, **review) -> tupl
     return bodies, snapshot
 
 
-@NO_P6_5
 def test_review_max_tokens_defaults_to_unset():
     assert ReviewConfig.model_fields["max_tokens"].default is None
 
 
-@NO_P6_5
 def test_an_explicit_none_is_accepted():
     config = ReviewConfig(base_url="http://127.0.0.1:8000/v1", model="m", model_digest="d",
                           api_key_env="MODEL_KEY", max_tokens=None)
@@ -86,7 +83,6 @@ def test_a_set_max_tokens_must_still_be_positive(bad):
                      api_key_env="MODEL_KEY", max_tokens=bad)
 
 
-@NO_P6_5
 def test_unset_max_tokens_sends_no_limit_in_any_batch(tmp_path, monkeypatch):
     """Three pairs give more than one batch; none of them may carry `max_tokens`.
 
@@ -105,7 +101,6 @@ def test_a_set_max_tokens_is_sent_unchanged_in_every_batch(tmp_path, monkeypatch
     assert all(body["max_tokens"] == value for body in bodies)
 
 
-@NO_P6_5
 def test_the_vllm_example_sets_a_long_timeout_and_leaves_max_tokens_unset(monkeypatch):
     """`tests/test_examples.py` only checks that the example loads; the values are the point."""
     monkeypatch.setenv("DBIG_SIGNING_KEY", "x" * 40)

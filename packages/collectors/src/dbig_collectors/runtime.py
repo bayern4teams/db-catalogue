@@ -230,6 +230,8 @@ def _tokenize_postgresql(
                     observed_count=observed,
                     distinct_count=distinct,
                     truncated=truncated,
+                    # A `LIMIT` read that returned fewer rows than it allowed read the whole table.
+                    complete=len(rows) < config.sample_rows,
                     tokens=digests,
                     **common,
                 )
@@ -1065,6 +1067,9 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
                         paths[field_name].add("unknown")
                         origins[field_name].add("index")
             sample_count = 0
+            # Set when `max_sample_bytes` stopped the read, which leaves the sample incomplete
+            # however few documents it holds.
+            byte_cut = False
             present_counts: dict[str, int] = defaultdict(int)
             # Tokenising needs a key as well as a sample, and is off unless both are configured.
             token_key = (
@@ -1115,6 +1120,7 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
                                     }
                                 )
                             )
+                            byte_cut = True
                             break
                         sampled_bytes_total += document_bytes
                         sample_count += 1
@@ -1202,6 +1208,7 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
                                     observed_count=observed,
                                     distinct_count=distinct,
                                     truncated=truncated,
+                                    complete=not byte_cut and sample_count < config.sample_rows,
                                     tokens=digests,
                                     **common,
                                 )

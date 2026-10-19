@@ -72,6 +72,8 @@ def token_set(
         observed_count=len(values),
         distinct_count=len(digests),
         truncated=False,
+        # Every value of the column is given, so the read is whole (P6-1).
+        complete=True,
         tokens=digests,
         **_common(source_id),
     )

@@ -15,7 +15,8 @@ class ReviewConfig(BaseModel):
     model_digest: str = Field(min_length=1)
     api_key_env: str = Field(pattern=r"^[A-Z][A-Z0-9_]*$")
     timeout_seconds: int = Field(default=20, ge=1)
-    max_tokens: int = Field(default=512, ge=1)
+    # Unset sends no limit (owner decision DEC-18); a set value must be positive.
+    max_tokens: int | None = Field(default=None, ge=1)
     max_candidates: int = Field(default=20, ge=1)
     # Candidates per model call (user decision 2026-10-13, DEC-10): a reasoning model spends its
     # token budget thinking, and 20 in one call ran out at 8192 tokens where 5 completed.

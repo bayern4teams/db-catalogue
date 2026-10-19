@@ -13,7 +13,7 @@ from dbig_contracts.models import Edge, Evidence, Object, Record
 from dbig_contracts.models import Field as CatalogField
 from dbig_contracts.security import secret_from_env
 from langgraph.graph import END, START, StateGraph
-from openai import APIConnectionError, APIStatusError, APITimeoutError, OpenAI
+from openai import APIConnectionError, APIStatusError, APITimeoutError, OpenAI, omit
 from pydantic import BaseModel, ConfigDict, field_validator
 
 from .config import ReviewConfig
@@ -245,7 +245,7 @@ def _review_batch(
                     "strict": True,
                 },
             },
-            max_tokens=config.max_tokens,
+            max_tokens=omit if config.max_tokens is None else config.max_tokens,
         )
         if getattr(response.choices[0], "finish_reason", None) == "length":
             raise _Truncated

@@ -210,6 +210,11 @@ class ValueTokens(Record):
     # True when `tokens` holds fewer than `distinct_count` entries, which makes containment a
     # lower bound rather than a measurement.
     truncated: bool = False
+    # True when the read saw the whole object: fewer rows came back than were asked for and no
+    # byte budget cut it. Only then is a value missing from these tokens absent from the object,
+    # so only then may a zero overlap against it be read as a measurement. Absent in a bundle
+    # written before the field existed, which therefore counts as a sample.
+    complete: bool = False
     tokens: list[str] = PydanticField(default_factory=list)
 
     @field_validator("tokens")
