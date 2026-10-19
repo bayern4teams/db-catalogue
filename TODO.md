@@ -2,6 +2,13 @@
 
 Update this file when work starts, a fact changes, a decision is needed, a check runs, or work finishes. Do not batch updates at the end. Use `- [ ]`, `- [x]`, or `- [~]` (in progress); add a short evidence link/command with every completion. Ask the user about any question, suggestion, or debt as soon as it is discovered. All verified changes are committed. This ledger is a plan, not a claim of implemented runtime capability.
 
+## Current change: Phase 6 plan for the live findings F5-F13 (started 2026-10-19)
+
+Owner 2026-10-19: mix (cloud routine builds, local session verifies on the owner's data, a separate yes per live step); new branch `fix/live-findings` from `verify/live-20261014` at `ec62d7b` (F1-F4 and the evidence included); Phase 6 added to the existing plan; full regression gate (attack files, H4 canaries, CI 8 jobs) before the hand-over; the owner edits the routine pointer in the claude.ai UI to the new branch (routine and `catalogue-fixes-env` exist, routine disabled); only the owner sets `Autonomy`.
+
+- [x] Phase 6 written on `fix/live-findings`: plan §8 entry and §9 items P6-0 to P6-11 (source of truth `LEAD_REVIEW.md`); HANDOFF items, Decisions DEC-18 to DEC-21 (owner answers) plus the delegated recommendations, Phase 6 ownership, Next action "start at P6-0" (Autonomy left at unattended-through-phase-5, so ticks exit until the owner changes it); SUPERVISOR pointer and block on the new branch, expected test count updated, Phase 6 ending as H8; LAUNCH "Phase 6 relaunch" (new environment setup script: codebase-memory-mcp pin 0.12.1, new routine pointer, dry run, go live); LOCAL_VERIFY Phase 6 section stub; CLAUDE.md pointer. Policy tests 38 passed, ci_check ok.
+- [ ] Owner: update the environment setup script and the routine pointer in claude.ai, dry run, then `Autonomy: unattended-through-phase-6` (LAUNCH.md "Phase 6 relaunch").
+
 ## Current change: live verification of feat/catalogue-fixes (started 2026-10-14)
 
 Branch `verify/live-20261014` cut from `feat/catalogue-fixes` at `3d1505f` (fetched; equal to origin). Script: `docs/plans/catalogue-fixes/LOCAL_VERIFY.md` "Start here". No fixes: a failed check is reported and waits for the user. Evidence goes to `artifacts/run-20261014/` (counts and names only).

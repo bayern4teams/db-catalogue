@@ -10,7 +10,7 @@ every commit; a lock older than 75 min is stale. `Autonomy` is `off`, `dryrun` (
 what works and exits) or `unattended-through-phase-N` (authorises the supervisor to chain phases).
 Only the user changes it.)
 
-**Branch:** `feat/catalogue-fixes` (from `claude/gracious-bardeen-x1y6he` at `2e87fa7`, plus the report commit) · **Current phase:** 5
+**Branch:** `fix/live-findings` (from `verify/live-20261014` at `ec62d7b`, owner decision 2026-10-19; Phases 0 to 5 ran on `feat/catalogue-fixes`) · **Current phase:** 6
 
 | item | phase | state | commit | lead verdict |
 |---|---|---|---|---|
@@ -51,6 +51,18 @@ Only the user changes it.)
 | H6 LOCAL_VERIFY.md as one ordered run with a send-back template | 5 | accepted-cloud | | lead: "Start here" (12 steps, sampling snippet, reasoning-model settings from the report) and send-back template at the top of LOCAL_VERIFY.md |
 | H7 final gate: full check, CI, ponytail review/debt | 5 | accepted-cloud | | lead: full check green locally; CI 38524824216 green in all 8 jobs on `4aaa2a9` (first run failed on a missing driver import in a test, fixed); ponytail-review: nothing mandatory; FINAL_REPORT.md updated |
 | H8 hand-over: READY FOR LOCAL VERIFY | 5 | accepted-cloud | | lead: see Notifications |
+| P6-0 baseline: full check, attack files (37 known), H4 canaries, CI, grep baseline, Phase 6 ownership | 6 | todo | | |
+| P6-1 F5 collector: `complete` on every value-hash set (DEC-19) | 6 | todo | | |
+| P6-2 F5 builder: zero drops only against a complete parent; range comparison of capped sets (DEC-19) | 6 | todo | | |
+| P6-3 F7 ClickHouse value hashes | 6 | todo | | |
+| P6-4 F10 ordinary names need a declared key (DEC-20); evidence tie-break at the top-k cut | 6 | todo | | |
+| P6-5 F8 review `max_tokens` optional, unset by default; example timeout 900 (DEC-18) | 6 | todo | | |
+| P6-6 F9 probe reads through `LIMIT` with `max_threads = 1` | 6 | todo | | |
+| P6-7 F11 source and namespace on relationship entries; prompt sentence; INDEX_VERSION 7 | 6 | todo | | |
+| P6-8 F12 `outcome` required; prompt sentence | 6 | todo | | |
+| P6-9 F13 retrieved tables expanded to all their columns, no cap (DEC-18) | 6 | todo | | |
+| P6-10 regression gate: full check, attack files, H4 canaries, pip-audit, CI 8 jobs, ponytail review/debt, docs | 6 | todo | | |
+| P6-11 hand-over: LOCAL_VERIFY Phase 6 section, READY FOR LOCAL VERIFY | 6 | todo | | |
 
 States: `todo` · `in-progress` · `accepted-cloud` (lead accepted, cloud-verifiable parts proven)
 · `unverified-live` (accepted but needs the real environment — see LOCAL_VERIFY.md) · `blocked` (needs a user Decision or a missing tool) · `deferred-by-user` (the user answered "no" or "later").
@@ -79,6 +91,11 @@ Rules: plan section 2.9. A row with an empty Answer keeps its items `blocked`. A
 | DEC-15 | D5 comprehensive: add a two-stage answer (first pick objects, then expand their columns) for 'list everything' questions? Doubles model calls for those questions. | later (needs the live 20-question rerun first) | D5 comprehensive | later (after the live 20-question rerun); do not build now (user, 2026-10-14, in chat) |
 | DEC-16 | DEC-12 follow-up (H1a D-6): the `key_name` rule on a measured-unique parent now links any 99%-unique column to a same-named column elsewhere, including ordinary names (`email`, `name`, `status`, `url`, `created_at`); unsampled they are published as tentative, "values not compared". Extend the generic-name list, or require value overlap (sampling on) for non-declared parents? | require measured value overlap when the parent is only measured-unique and the name is not stem+id style | DEC-12 follow-up | require measured value overlap when the parent is only measured-unique and the name is not stem+id style (user, 2026-10-14, in chat) |
 | DEC-17 | H4 finding: the REST search route is `GET ...?query=<question>`, so uvicorn's default access log (INFO) writes the question text to the log, against the no-prompt-in-logs rule. Document `--no-access-log` in LOCAL_RUN.md only, or also add a POST search route / redact the query? | document `--no-access-log` now, POST route later | H4 privacy finding | document `--no-access-log` AND add a POST search route now (the question moves to the request body) (user, 2026-10-14, in chat) |
+| DEC-18 | Live findings F3/F8/F13: limits on model tokens? | none: no `max_tokens` on `ask` or the review, no per-table cap on the columns added to the context | P6-5, P6-9 | no model-token limit, input or output; `retrieval_limit` (10) and `relationship_limit` (20) stay as the ranking cut; table expansion uncapped (user, 2026-10-19, in chat) |
+| DEC-19 | F5: how to stop sampling from dropping true relationships? | A (zero drops only against a complete parent) + range comparison of capped sets; owner's run settings 25,000 rows, 4,096 hashes | P6-1, P6-2 | build A + range comparison; the owner's local source configs use `sample_rows = 25000`, `max_value_tokens = 4096`, `max_sample_bytes` raised to fit (16 MiB; first 25,000 documents of all collections measured 10,263,100 bytes). Code defaults unchanged (user, 2026-10-19, in chat) |
+| DEC-20 | F7/F10: DEC-16 lets an ordinary name link once overlap is measured; `freeMails` (35% real overlap, owner-false) and 30 same-name MongoDB pairs pass it. Make it stricter? | yes: an ordinary name links only to a declared key | P6-4 | stricter: an ordinary (not reference-style) name links only to a declared key; measured overlap is not enough; replaces DEC-16's overlap allowance (user, 2026-10-19, in chat) |
+| DEC-21 | Evidence: the owner mark `mongo.zoominfo_products.industryID -> mongo.zoominfo_industry.industryID` names a field that does not exist (`industry_id` exists, null in all 1,325 documents) | remove the mark | none (evidence only) | remove it: 9 true Mongo-Mongo pairs, not 10 (user, 2026-10-19, in chat) |
+| — | F6, F7, F9, F11, F12, F13 recommendations | as set in `artifacts/run-20261014/leader/LEAD_REVIEW.md` | P6-3, P6-6 to P6-9 | the owner delegated setting them to the lead's independent review (2026-10-19, in chat): F6 no own fix; F7 A after F5; F9 LIMIT + `max_threads = 1`; F11 A; F12 A + prompt sentence; F13 A, C deferred; F10 A not built |
 
 Already decided by the user on 2026-10-12 (not open): base the work on the tested branch; `companyid` is read as `company` + `id` only when the stem is a known object; a measured 0-of-N cross-source overlap drops the candidate and an unchecked one is labelled "values not compared"; graft is best effort in the cloud; Phase 1 bugs go ahead.
 
@@ -94,13 +111,26 @@ Phase 0 table (file -> sole owner while its items are open; plan §8/§9 DAG; gr
 | `packages/planner/src/dbig_planner/{paths,plans}.py` | lead | D4 (DEC-4) |
 | `tests/catalogue_fixes/` | verifier | Phase 0 fixtures (xfail strict until the item lands) |
 
+## Phase 6 file-ownership (to be confirmed by P6-0 with `graphify affected`)
+
+| file | owner | items (serial order) |
+|---|---|---|
+| `packages/contracts/src/dbig_contracts/models.py`, `schemas/` | lead | P6-1 (`complete` field) |
+| `packages/collectors/src/dbig_collectors/{runtime,config}.py`, `tests/test_collectors.py`, live test files | lead (serial chain) | P6-1, P6-3, P6-6 |
+| `packages/catalog-builder/src/dbig_builder/builder.py` | lead (serial chain) | P6-2, P6-4 |
+| `packages/catalog-builder/src/dbig_builder/{config,reviewer}.py`, `examples/local/builder-with-vllm.toml` | worker | P6-5 |
+| `packages/requester/src/dbig_requester/{answer,search,config}.py`, `tests/test_requester.py` | worker lane R (serial) | P6-7, P6-8, P6-9 |
+| `tests/catalogue_fixes/` | verifier | checks written before each item |
+| docs (`TECHNICAL_IMPLEMENTATION.md`, `docs/`, `LOCAL_VERIFY.md`, `FINAL_REPORT.md`) | lead | P6-10, P6-11 |
+
 ## Lane plan
 Phase 1: lane R and lane D concurrent (disjoint files); lead does C1 builder half, C2, D1b. Phase 2: lead chain only.
 
 ## Next action
-READY FOR LOCAL VERIFY - waiting for the user. Start at the top of `docs/plans/catalogue-fixes/LOCAL_VERIFY.md` ("Start here").
+Phase 6: start at P6-0 (plan §9 "Phase 6"; source of truth `artifacts/run-20261014/leader/LEAD_REVIEW.md`). Built only when the owner sets `Autonomy: unattended-through-phase-6`.
 
 ## Notifications
+- [PHASE 6 PLANNED] 2026-10-19: Phase 6 written by the owner's local session on `fix/live-findings` (from `verify/live-20261014` at `ec62d7b`). Decisions DEC-18 to DEC-21 answered by the owner. Waiting for the owner to point the routine at this branch and set Autonomy.
 - [READY FOR LOCAL VERIFY] 2026-10-14: Phase 5 done on `feat/catalogue-fixes`, never merged. Cloud proved: full check green (751 passed, 68 skipped), CI 38524824216 green in all 8 jobs incl. both live-container jobs; H0 coverage, H1 mutation-proof attacks, H3 end-to-end counts (10 of 10 true links, 0 false with sampling on), H4 privacy canaries (no leak; the access-log finding fixed by L3). Built from your 2026-10-14 answers: L1 cardinality probe (default off), L2 measured overlap for non-reference names, L3 POST search + `--no-access-log`. `unverified-live`: real ClickHouse/MongoDB probe behaviour, real PostgreSQL statistics, real model answers, the 20 questions. Open Decisions: none blocking (DEC-15 deferred by you). First commands: `git fetch origin feat/catalogue-fixes && git checkout feat/catalogue-fixes && git pull`; `uv sync --locked --all-packages --all-extras --dev --python 3.12`; `uv run pytest -q`; then follow "Start here" in `LOCAL_VERIFY.md`.
 - [UNBLOCKED] 2026-10-14: the user's session verified the lead's triage and applied the five test edits in `tests/catalogue_fixes/test_h4_privacy_canaries.py` (short-key output counted once; `-` allowed in a metric label; `max_candidates=1000` in the fixture's ReviewConfig; cited-name parts stripped; the Starlette TestClient's own `httpx2` logger excluded from `Capture.visible`, since it is not the server under test), plus ruff fixes in the H3 and H4 test files (`# ruff: noqa: E501`, two inline noqa with reasons, one unused import, two wrapped lines). Verified before editing: the only logger carrying the question was `httpx2`. H4 now 48 passed, 1 xfailed; full suite 729 passed, 69 skipped, 1 xfailed; `ruff check .` clean. No privacy assertion was removed. Resume: write the H4 report, then H5 to H8. DEC-14 to DEC-17 are open (the lead builds those the user answers).
 - [BLOCKED] 2026-10-13T17:40Z: H4 triage of the 10 failing tests in `tests/catalogue_fixes/test_h4_privacy_canaries.py` (edit denied again by the permission classifier: "Security Test Removal"; not worked around, nothing edited). Triage result, all 10 are test defects, no product leak found: (1) 6x short-key test counts the CLI output twice (`result.output + result.stderr`, click 8.2 output already holds both): use `result.output`; (2) metric regex rejects `run-1`, the non-secret `value_token_key_id` label: allow `-`; (3) control `vendor_id in sent` fails because review keeps only `max_candidates` (20, sorted by hash id) and the fixture has more: pass `max_candidates=1000` in the test ReviewConfig; (4) cited-names check splits `shipment -> vendor (...)` leaving a trailing space: `.strip()` parts; (5) REST test sees the TestClient's own `httpx2` logger printing the search URL with the question: exclude logger `httpx2` in `Capture.visible`. Real finding: `GET /v1/catalogue/search?query=...` puts the question in the URL, so a default uvicorn access log would record it: opened DEC-17. User: apply these five test edits locally (or allow them), then resume (H4 report, H5-H8 remain).

@@ -4,6 +4,14 @@ Everything here is **implemented, unverified**. The user runs each entry locally
 environment; confirm with an *independent* check (direct query, log inspection, a regenerated
 report), never the application's own success message.
 
+## Phase 6 live re-check (to be written by P6-11)
+The cloud's last Phase 6 item writes this section on `fix/live-findings`. It lists, in order, each step that touches the owner's systems, and each needs its own explicit yes:
+1. Gate 2 with ClickHouse value hashes and the DEC-19 settings (`sample_rows = 25000`, `max_value_tokens = 4096`, `max_sample_bytes = 16777216`);
+2. the probe snapshot;
+3. the 40 questions with the model and no `max_tokens`.
+
+Each step gives its command, its "before" value from `artifacts/run-20261014/leader/LEAD_REVIEW.md`, and the expected "after". The "Start here" run below was done 2026-10-14 to 2026-10-18 (`artifacts/run-20261014/LIVE_VERIFY_REPORT.md`) and is kept as history.
+
 ## Start here (one ordered run, written 2026-10-14)
 
 1. **Get the code.** `git fetch origin feat/catalogue-fixes && git checkout feat/catalogue-fixes && git pull`. Never merge before step 12.

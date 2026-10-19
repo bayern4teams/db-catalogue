@@ -2,6 +2,36 @@
 
 Do these in order. Each step says what to check and what to send back.
 
+## Phase 6 relaunch (2026-10-19) — do this, not the first-launch steps below
+The routine and the environment `catalogue-fixes-env` already exist; the routine is disabled. Phase 6 runs on `fix/live-findings`.
+
+1. **Check the branch.** Run `git fetch origin && git log --oneline -3 origin/fix/live-findings`. The top commit is the Phase 6 plan.
+2. **Update the environment's setup script.** claude.ai/code → environment `catalogue-fixes-env` → replace its setup script with the current [`environment_setup.sh`](environment_setup.sh) from `fix/live-findings`, pasted verbatim.
+   - **Why:** codebase-memory-mcp is now pinned at 0.12.1, not 0.11.0; with the old script, the pin check and the commit hook would fail.
+   - **How:** `git show origin/fix/live-findings:docs/plans/catalogue-fixes/environment_setup.sh` prints it.
+3. **Change the routine's instructions** in the Routines UI to this pointer. Leave all other fields as they are: repo `bayern4teams/db-catalogue`, `catalogue-fixes-env`, the GitHub connector, cron `0 * * * *`, Opus 5.5 high.
+   ```
+   You are the Catalogue fixes supervisor tick. Run: git fetch origin fix/live-findings, then read
+   docs/plans/catalogue-fixes/SUPERVISOR.md with: git show origin/fix/live-findings:docs/plans/catalogue-fixes/SUPERVISOR.md
+   Follow the LAST fenced block in that file exactly. Do nothing else.
+   ```
+4. **Run one dry run.** It proves the tick reaches the new branch and the new pin.
+   ```bash
+   git checkout fix/live-findings && git pull --ff-only
+   sed -i 's/\*\*Autonomy:\*\* unattended-through-phase-5/**Autonomy:** dryrun/' docs/plans/catalogue-fixes/HANDOFF.md
+   git add docs/plans/catalogue-fixes/HANDOFF.md && git commit -m "handoff: Autonomy dryrun" && git push origin fix/live-findings
+   ```
+   Enable the routine and run it once (run-now). Then run `git pull --ff-only && tail -1 .handoff/supervisor_dryrun.txt`. Every check must be yes, including `graph_sync.py --check-tools` exit 0 and `git branch --show-current` reaching `fix/live-findings`. Send the line back if anything fails.
+5. **Go live.**
+   ```bash
+   git pull --ff-only
+   sed -i 's/\*\*Autonomy:\*\* dryrun/**Autonomy:** unattended-through-phase-6/' docs/plans/catalogue-fixes/HANDOFF.md
+   git add docs/plans/catalogue-fixes/HANDOFF.md && git commit -m "handoff: unattended through phase 6" && git push origin fix/live-findings
+   ```
+   Do not work on `fix/live-findings` locally while it runs. Watch it as in step 6 below, with `fix/live-findings` in place of `feat/catalogue-fixes`. It ends in `[READY FOR LOCAL VERIFY]`; then the local live re-check follows (`LOCAL_VERIFY.md`, "Phase 6 live re-check"), with a separate yes for each step that touches your systems.
+
+The first-launch steps below are kept as history (Phases 0 to 5).
+
 ## 0. Preconditions
 `git pull --ff-only` on `feat/catalogue-fixes`. CI does not run on pushes to this branch: start it with `gh workflow run ci.yml --ref feat/catalogue-fixes` and wait for green (`gh run list --workflow ci.yml --branch feat/catalogue-fixes`). Confirm the remote: `git remote -v` shows `Reza-Sh83/db-catalogue` but `gh repo view` says `bayern4teams/db-catalogue`; the routine uses the latter, so make sure that is the repository you mean.
 
