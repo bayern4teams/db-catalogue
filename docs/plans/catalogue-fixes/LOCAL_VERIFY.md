@@ -4,13 +4,24 @@ Everything here is **implemented, unverified**. The user runs each entry locally
 environment; confirm with an *independent* check (direct query, log inspection, a regenerated
 report), never the application's own success message.
 
-## Phase 6 live re-check (to be written by P6-11)
-The cloud's last Phase 6 item writes this section on `fix/live-findings`. It lists, in order, each step that touches the owner's systems, and each needs its own explicit yes:
-1. Gate 2 with ClickHouse value hashes and the DEC-19 settings (`sample_rows = 25000`, `max_value_tokens = 4096`, `max_sample_bytes = 16777216`);
-2. the probe snapshot;
-3. the 40 questions with the model and no `max_tokens`.
+## Phase 6 live re-check (written by P6-11, 2026-10-19)
 
-Each step gives its command, its "before" value from `artifacts/run-20261014/leader/LEAD_REVIEW.md`, and the expected "after". The "Start here" run below was done 2026-10-14 to 2026-10-18 (`artifacts/run-20261014/LIVE_VERIFY_REPORT.md`) and is kept as history.
+Branch `fix/live-findings`. Each numbered step touches your systems and needs its own explicit yes before it runs. "Before" values are from `artifacts/run-20261014/leader/LEAD_REVIEW.md` and the gate summaries next to it; compare with an independent count, never the app's own message.
+
+**Prepare (no system touched):** `git fetch origin fix/live-findings && git checkout fix/live-findings && git pull`; `uv sync --locked --all-packages --all-extras --dev --python 3.12`; `uv run pytest -q` (expected about 900 passed, 69 skipped locally). Copy `artifacts/run-20261014/config/*-on.toml` to a scratch config folder and set, in all three source files (DEC-19): `sample_rows = 25000`, `max_value_tokens = 4096`, and for MongoDB `max_sample_bytes = 16777216`. Builder and requester: `[builder.review] max_tokens` and `[requester.answer] max_tokens` unset, `timeout_seconds = 900` (DEC-18). Use a fresh `DBIG_TOKEN_KEY` and a new `value_token_key_id`.
+
+1. **Gate 2 with ClickHouse value hashes (P6-1, P6-2, P6-3, P6-4).** `dbig collect` for pg, ch and mongo with those configs, then `dbig-builder assemble`, `render`, `dbig-requester index` (index version 7), as in `docs/LOCAL_RUN.md` §5.
+   - Before (`gate2-summary.md`, 100 rows): ClickHouse tokens 0; 12 owner-true pairs dropped; 7 of 16 known-wrong remain; 2 of 5 known-right dropped.
+   - Expected after (replay `lead-review-drop-replay-21.json`): ClickHouse `tokens.jsonl` non-empty with `complete` set per table; **0 true pairs dropped**; the 16 known-wrong gone (PostgreSQL/MongoDB ones dropped by a measured zero against a complete parent; a ClickHouse parent larger than 25,000 rows is never complete, so its pairs stay "parent sampled, a zero is not a measurement" or "values not compared"); the 21-27% ClickHouse pairs (e.g. `Experience.companyID -> Company` about 25%) shown with a number; `freeMails` and the ordinary-name pairs absent; manifest `dropped_ordinary_name_candidates` replaces `dropped_unmeasured_key_name_candidates`.
+   - Check independently: re-count containment for the 12 + 16 + 5 marked pairs against `lead-review-overlap.json`.
+2. **The probe snapshot (P6-4, P6-6).** Collect ClickHouse and MongoDB with `cardinality_probe = true` (the `*-probe.toml` configs plus the DEC-19 settings), assemble at the default `top_k_per_field = 5`.
+   - Before (`gate4-summary.md`, `lead-review-rowcap.json`): 42 of 46 probes read 163,696-229,376 rows (7.8x on 2026-10-19) against a cap of 100,000; 30 ordinary-name MongoDB pairs and `freeMails` linked; 3 true pairs cut at top-k on hash order.
+   - Expected after: each probe `sample_count` equals 100,000 on tables larger than that (else the table's row count), and `system.query_log` `read_rows` about 2x the cap, not 7.8x; `ch.Experience.companyID -> ch.Company.companyID`, `ch.CompanyIndustry.companyID -> ch.Company.companyID` and Z4 present; none of the 30 ordinary-name pairs or `freeMails`.
+3. **The 40 questions with the model (P6-7, P6-8, P6-9).** `dbig-requester index` on the new snapshot, then the 40 questions of `q40-questions.json` with `requester-q40.toml` (no `max_tokens`, timeout 900), and grade with the owner's rules.
+   - Before (`q40-grades.json`): Right 17, Partial 13, Wrong 6, NOT_ESTABLISHED 2, NO_CATALOGUE_MATCH 2; 4 answers said not_established in the text with no outcome code; N-S5, N-C10, N-I1, N-I3 proposed PostgreSQL-ClickHouse joins; expected names reaching the model 59 of 134 (44%).
+   - Expected after: every reply has an `outcome` (a missing one is `MODEL_UNAVAILABLE_OR_INVALID`); no cross-source join written as one query (the model says it cannot be joined); expected names reaching the model about 94 of 134 (70%, `lead-review-retrieval.json`); grades not worse than before on any question. Watch for a context-overflow error on a very wide table (the expansion has no cap, DEC-18).
+
+Not verifiable in the cloud and therefore here: real ClickHouse value types (UUID, Date and IPv4 give no token on any engine, DEC-22 open), read cost of 25,000-row samples per table, and whether a reasoning model fills `outcome` correctly.
 
 ## Start here (one ordered run, written 2026-10-14)
 
