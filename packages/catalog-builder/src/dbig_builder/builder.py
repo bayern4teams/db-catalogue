@@ -610,7 +610,7 @@ def assemble(
         ) >= MEASURED_UNIQUE:
             unique_fields.append(candidate_parent)
     dropped_zero_overlap = 0
-    dropped_unmeasured_key_name = 0
+    dropped_ordinary_name = 0
     known_objects = frozenset(
         form
         for item in objects.values()
@@ -633,7 +633,6 @@ def assemble(
             continue
         stem, suffixed = _reference_stem(child.name, known_objects)
         candidates = []
-        needs_overlap: set[str] = set()
         for parent in unique_fields:
             parent_object = objects.get(parent.object_id)
             if (
@@ -659,14 +658,16 @@ def assemble(
                 # The child carries the parent's key name exactly, `AccountID` beside a primary
                 # key `AccountID`: as strong a name signal as there is, whatever the parent table
                 # is called (user decision 2026-10-05). A measured-unique parent column counts too
-                # (user decision 2026-10-13, DEC-12); the overlap check below guards that case.
-                candidates.append((100, parent, "key_name"))
+                # (user decision 2026-10-13, DEC-12) when it is named like a reference.
                 if parent.id not in declared_unique and not _is_reference_style(parent.name):
                     # A column that only measures unique, or is only a weak key claim, and is not
-                    # named like a reference (`email`, `status`, `freeMails`) matches on name alone
-                    # far too often, so it needs measured value overlap (user decisions
-                    # 2026-10-14, DEC-16, and 2026-10-17 for weak keys after the live run).
-                    needs_overlap.add(parent.id)
+                    # named like a reference (`email`, `description`, `freeMails`) links only when
+                    # declared: data copied between tables shares values, so even measured overlap
+                    # is not enough (owner decision 2026-10-19, DEC-20, replacing DEC-16's
+                    # overlap allowance). Counted, never recorded by value.
+                    dropped_ordinary_name += 1
+                    continue
+                candidates.append((100, parent, "key_name"))
                 continue
             if suffixed:
                 # The name announces itself as a reference, so a fuzzy match is justified.
@@ -698,7 +699,18 @@ def assemble(
         kept = 0
         # The cut to `top_k_per_field` comes after the overlap check, so a dropped best name
         # match does not use up the slot of the parent that is really referenced.
-        for score, parent, rule in sorted(candidates, key=lambda item: (-item[0], item[1].id)):
+        # Ties are broken by evidence, not by hash order (F10, LEAD_REVIEW 2026-10-19): same
+        # source first, then a declared key, a weak key claim, measured uniqueness; then the id.
+        child_source = child.source_id
+
+        def rank(
+            item: tuple[int, Field, str], source: str = child_source
+        ) -> tuple[int, bool, int, str]:
+            score, parent, _ = item
+            claim = 0 if parent.id in declared_unique else 1 if parent.id in weak_key_ids else 2
+            return (-score, parent.source_id != source, claim, parent.id)
+
+        for score, parent, rule in sorted(candidates, key=rank):
             if kept >= config.top_k_per_field:
                 break
             overlap = _overlap(
@@ -720,12 +732,6 @@ def assemble(
                 # columns are unrelated (user decision 2026-10-12). Counted, never recorded by
                 # value. A non-zero overlap, however small, is shown and never drops.
                 dropped_zero_overlap += 1
-                continue
-            if parent.id in needs_overlap and (
-                overlap.kind != "value_containment" or "reason" in overlap.metrics
-            ):
-                # Counted, never recorded by value; nothing to say about it without a measurement.
-                dropped_unmeasured_key_name += 1
                 continue
             kept += 1
             lexical = _evidence(
@@ -842,9 +848,11 @@ def assemble(
                     if dropped_zero_overlap
                     else {}
                 ),
+                # Renamed from `dropped_unmeasured_key_name_candidates` (P6-4, DEC-20): an
+                # ordinary name on an undeclared parent is now dropped whether measured or not.
                 **(
-                    {"dropped_unmeasured_key_name_candidates": dropped_unmeasured_key_name}
-                    if dropped_unmeasured_key_name
+                    {"dropped_ordinary_name_candidates": dropped_ordinary_name}
+                    if dropped_ordinary_name
                     else {}
                 ),
                 # Only when partial, so a complete snapshot's bytes are unchanged.

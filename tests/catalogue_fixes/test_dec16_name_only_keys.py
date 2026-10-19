@@ -30,10 +30,11 @@ def test_unsampled_ordinary_names_propose_nothing(tmp_path, monkeypatch, col):
     assert _found(tmp_path, monkeypatch, _tables(col)) == []
 
 
-def test_measured_overlap_admits_the_pair(tmp_path, monkeypatch):
+def test_measured_overlap_no_longer_admits_the_pair(tmp_path, monkeypatch):
+    # Flipped on purpose by P6-4 (owner decision 2026-10-19, DEC-20): an ordinary name links only
+    # to a declared key; full measured overlap is not enough any more.
     values = [f"v{i}" for i in range(N + 3)]
-    found = _found(tmp_path, monkeypatch, _tables("email", values, values))
-    assert ("gadgetpart", "email", "gadgetkind", "email") in found, found
+    assert _found(tmp_path, monkeypatch, _tables("email", values, values)) == []
 
 
 def test_a_sample_below_the_support_does_not_admit_the_pair(tmp_path, monkeypatch):
