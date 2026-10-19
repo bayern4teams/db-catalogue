@@ -120,7 +120,6 @@ def test_clickhouse_25_8_system_tables():
     assert {item.name for item in records["fields.jsonl"]} == {"id", "day"}
 
 
-@pytest.mark.xfail(strict=True, reason="P6-3 and P6-6 not built")
 def test_clickhouse_value_tokens_and_exact_probe_cap_on_a_larger_table(monkeypatch):
     """P6-3 and P6-6 on a real server: a table larger than both limits gives tokens from its first
     `sample_rows` rows (not complete) and a probe `sample_count` equal to the cap; a smaller table

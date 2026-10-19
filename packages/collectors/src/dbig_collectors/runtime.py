@@ -535,6 +535,7 @@ def discover_clickhouse(
         if rows:
             listed.add(database)
         identities: dict[str, str] = {}
+        views: set[str] = set()
         row_counts: dict[str, int] = {}
         key_expressions: dict[str, dict[str, str]] = {}
         for (
@@ -563,6 +564,8 @@ def discover_clickhouse(
                 )
                 continue
             identities[name] = uuid
+            if engine in {"View", "MaterializedView", "LiveView"}:
+                views.add(name)
             if total_rows is not None:
                 row_counts[name] = int(total_rows)
             attributes: dict[str, str | int | float | bool | None] = {
@@ -654,6 +657,9 @@ def discover_clickhouse(
                         **common,
                     )
                 )
+        _tokenize_clickhouse(
+            client, config, budget, database, identities, views, probe_columns, tables, common
+        )
         if config.cardinality_probe:
             for table, probed in probe_columns.items():
                 _probe_clickhouse(
@@ -722,6 +728,70 @@ _PLAIN_COLUMN = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 _NESTED_TYPE = re.compile(r"^(Nullable\(|LowCardinality\()*(Array|Map|Tuple|Nested|Object|JSON)")
 
 
+def _tokenize_clickhouse(
+    client: Any,
+    config: SourceConfig,
+    budget: Budget,
+    database: str,
+    identities: dict[str, str],
+    views: set[str],
+    columns: dict[str, list[tuple[str, str, str]]],
+    tables: dict[str, list[Record]],
+    common: dict[str, Any],
+) -> None:
+    """Keyed tokens for ClickHouse, as `_tokenize_postgresql` makes them (F7).
+
+    Off unless sampling and a token key are both configured. One bounded read per table, of the
+    first `sample_rows` rows, naming the plain, non-nested columns from the server's own catalog;
+    a view is not read, since reading one runs its query. `columns` holds (field_id, name, type).
+    ponytail: a table larger than `sample_rows` is never read whole, so a zero against it never
+    drops (P6-2); a full-column sketch read is the upgrade path (LEAD_REVIEW F5 option C).
+    """
+    if config.sample_rows <= 0 or not config.value_token_key_env:
+        return
+    key = key_from_env(config.value_token_key_env, purpose="cross-source value tokenisation")
+    for table, entries in sorted(columns.items()):
+        chosen = [
+            item
+            for item in entries
+            if _PLAIN_COLUMN.fullmatch(item[1]) and not _NESTED_TYPE.match(item[2])
+        ]
+        if table in views or not chosen or not _PLAIN_COLUMN.fullmatch(table):
+            continue
+        budget.charge()
+        selected = ",".join(_quoted(name) for _, name, _ in chosen)
+        rows = client.query(
+            # Identifiers come from the server's catalog and pass `_quoted`; the row limit is a
+            # bound parameter. No caller input reaches this statement.
+            f"SELECT {selected} FROM {_quoted(database)}.{_quoted(table)} "  # noqa: S608
+            "LIMIT {lim:UInt64}",
+            parameters={"lim": config.sample_rows},
+            settings={"max_execution_time": config.read_timeout_seconds},
+        ).result_set
+        for position, (field_id, _, _) in enumerate(chosen):
+            digests, observed, distinct, truncated = _value_tokens(
+                [row[position] for row in rows], key=key, limit=config.max_value_tokens
+            )
+            if not digests:
+                continue
+            tables["tokens.jsonl"].append(
+                ValueTokens(
+                    id=stable_id(config.source_id, "tokens", field_id),
+                    field_id=field_id,
+                    object_id=stable_id(config.source_id, "object", identities[table]),
+                    key_id=config.value_token_key_id or "",
+                    sample_count=len(rows),
+                    sample_method=f"first_rows_limit:{config.sample_rows}",
+                    observed_count=observed,
+                    distinct_count=distinct,
+                    truncated=truncated,
+                    complete=len(rows) < config.sample_rows,
+                    tokens=digests,
+                    **common,
+                )
+            )
+
+
 def _probe_profile(
     config: SourceConfig,
     common: dict[str, Any],
@@ -766,7 +836,9 @@ def _probe_clickhouse(
     """One query: `count()` and `uniq()` of up to N plain columns over a bounded row prefix.
 
     `columns` holds (field_id, name, type). Identifiers come from the server's own catalog and
-    pass `_quoted`; the row bound is a server setting, not a SQL literal.
+    pass `_quoted`; the row bound is a bound parameter. Counted through a `LIMIT` subquery on one
+    thread, the count covers exactly the cap and the server reads about one block more (F9,
+    measured on ClickHouse 26.8: about 2x, against 7.8x for `max_rows_to_read` with `break`).
     """
     chosen = [
         item
@@ -777,14 +849,13 @@ def _probe_clickhouse(
         return
     budget.charge()
     select = ", ".join(["count()", *(f"uniq({_quoted(name)})" for _, name, _ in chosen)])
+    inner = ",".join(_quoted(name) for _, name, _ in chosen)
     try:
         result = client.query(
-            f"SELECT {select} FROM {_quoted(database)}.{_quoted(table)}",  # noqa: S608
-            settings={
-                "max_execution_time": config.read_timeout_seconds,
-                "max_rows_to_read": config.cardinality_probe_max_rows,
-                "read_overflow_mode": "break",
-            },
+            f"SELECT {select} FROM (SELECT {inner} "  # noqa: S608
+            f"FROM {_quoted(database)}.{_quoted(table)} LIMIT {{lim:UInt64}})",
+            parameters={"lim": config.cardinality_probe_max_rows},
+            settings={"max_execution_time": config.read_timeout_seconds, "max_threads": 1},
         ).result_set
         row = result[0]
         rows = int(row[0])

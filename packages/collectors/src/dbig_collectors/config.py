@@ -38,8 +38,9 @@ class SourceConfig(BaseModel):
     # per-column statistics, so that a unique column can be measured as a parent key (DEC-14,
     # user decision 2026-10-14). Off by default. Reads data (counts only, nothing is stored),
     # so a scan request needs the `sample` capability for it. One extra query per table or
-    # collection, charged to `max_queries`; at most `cardinality_probe_max_columns` columns and
-    # `cardinality_probe_max_rows` rows are read each.
+    # collection, charged to `max_queries`; at most `cardinality_probe_max_columns` columns are
+    # read, and about `cardinality_probe_max_rows` rows: the count covers exactly this many rows;
+    # the server may read up to about one block per thread more (F9).
     cardinality_probe: bool = False
     cardinality_probe_max_columns: int = Field(default=20, ge=1, le=200)
     cardinality_probe_max_rows: int = Field(default=100_000, ge=1)

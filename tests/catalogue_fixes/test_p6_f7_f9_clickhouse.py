@@ -48,8 +48,6 @@ ROOT = Path(__file__).resolve().parents[2]
 RUNTIME = ROOT / "packages" / "collectors" / "src" / "dbig_collectors" / "runtime.py"
 COLLECTOR_CONFIG = ROOT / "packages" / "collectors" / "src" / "dbig_collectors" / "config.py"
 
-UNBUILT_TOKENS = pytest.mark.xfail(strict=True, reason="P6-3 not built")
-UNBUILT_PROBE = pytest.mark.xfail(strict=True, reason="P6-6 not built")
 
 # Non-default values everywhere, so a constant the implementation typed in cannot match by luck.
 SAMPLE_ROWS = 7
@@ -282,7 +280,6 @@ def limit_of(call) -> int:
     return FakeClickHouse(None)._limit(token, parameters)
 
 
-@UNBUILT_TOKENS
 def test_one_bounded_read_per_table_names_its_columns_and_skips_nested_types():
     client = FakeClickHouse({"orders": wide_table(3), "items": orders(3)})
     discover_clickhouse(client, tokenising(), Budget(50))
@@ -303,7 +300,6 @@ def test_one_bounded_read_per_table_names_its_columns_and_skips_nested_types():
     assert by_table["items"] == ["rowkey", "ref"]
 
 
-@UNBUILT_TOKENS
 def test_the_row_limit_and_timeout_follow_the_configuration_not_a_constant():
     for rows, timeout in ((5, 2), (11, 31)):
         client = FakeClickHouse({"orders": orders(3)})
@@ -315,7 +311,6 @@ def test_the_row_limit_and_timeout_follow_the_configuration_not_a_constant():
         assert read[2]["max_execution_time"] == timeout
 
 
-@UNBUILT_TOKENS
 def test_no_row_count_setting_replaces_the_limit():
     """The bound is the SQL `LIMIT`; a server setting that breaks the read is the F9 mistake."""
     client = FakeClickHouse({"orders": orders(30)})
@@ -327,7 +322,6 @@ def test_no_row_count_setting_replaces_the_limit():
 # --- P6-3: the budget ----------------------------------------------------------------------------
 
 
-@UNBUILT_TOKENS
 def test_every_value_read_is_charged_to_the_budget():
     tables = {"orders": orders(3), "items": orders(3)}
     plain = Budget(50)
@@ -352,7 +346,6 @@ def test_control_an_exhausted_budget_stops_the_value_reads(limit):
     assert budget.used <= limit
 
 
-@UNBUILT_TOKENS
 def test_the_probe_and_the_value_read_each_cost_one_query_per_table():
     client = FakeClickHouse({"orders": orders(3)})
     budget = Budget(50)
@@ -364,7 +357,6 @@ def test_the_probe_and_the_value_read_each_cost_one_query_per_table():
 # --- P6-3: the tokens ----------------------------------------------------------------------------
 
 
-@UNBUILT_TOKENS
 def test_tokens_are_the_shared_keyed_digest_with_its_denominators():
     rows = [
         {"rowkey": 1, "ref": "alpha"},
@@ -390,7 +382,6 @@ def test_tokens_are_the_shared_keyed_digest_with_its_denominators():
     assert len({item.id for item in records["tokens.jsonl"]}) == len(records["tokens.jsonl"])
 
 
-@UNBUILT_TOKENS
 def test_an_integer_and_its_text_form_give_the_same_token_as_on_the_other_engines():
     """The cross-source case the product exists for: a string id in one engine, an integer in
     another. Same normaliser as PostgreSQL and MongoDB, so 123 and "123" agree."""
@@ -405,7 +396,6 @@ def test_an_integer_and_its_text_form_give_the_same_token_as_on_the_other_engine
     assert by_field(records, "numeric", "ident").tokens == sorted([digest(123), digest(456)])
 
 
-@UNBUILT_TOKENS
 def test_an_all_null_or_empty_column_has_no_entry_and_nested_columns_have_none():
     rows = [{"rowkey": index, "note": None, "label": "l", "code": "c", "tags": ["x"],
              "attrs": {}, "pair": (1, 2), "inner": [1], "doc": {}, "blob": {}, "maybe": None}
@@ -436,7 +426,6 @@ def test_an_all_null_or_empty_column_has_no_entry_and_nested_columns_have_none()
     ],
     ids=["fewer", "exactly-the-limit", "larger", "cap-independent", "single-row"],
 )
-@UNBUILT_TOKENS
 def test_complete_is_true_only_when_the_read_returned_fewer_rows_than_the_limit(
     rows, sample_rows, cap, complete, truncated, sample_count
 ):
@@ -456,7 +445,6 @@ def test_complete_is_true_only_when_the_read_returned_fewer_rows_than_the_limit(
 # --- P6-3: privacy and failure -------------------------------------------------------------------
 
 
-@UNBUILT_TOKENS
 def test_no_sampled_value_reaches_the_records():
     canary = "canary-value-9f2c41"
     rows = [{"rowkey": index, "ref": f"{canary}-{index}"} for index in range(1, 4)]
@@ -467,14 +455,12 @@ def test_no_sampled_value_reaches_the_records():
     assert canary not in dumped and "canary-value" not in dumped
 
 
-@UNBUILT_TOKENS
 def test_a_short_token_key_is_refused_on_this_path_too(monkeypatch):
     monkeypatch.setenv("DBIG_TOKENISER", "too-short")
     with pytest.raises(ValueError, match="at least 32 bytes"):
         discover_clickhouse(FakeClickHouse({"orders": orders(3)}), tokenising(), Budget(50))
 
 
-@UNBUILT_TOKENS
 def test_attack_an_identifier_that_is_not_a_plain_name_does_not_abort_the_scan():
     """Beyond the letter of the spec, from 'as the probe does': the probe filters names with
     `_PLAIN_COLUMN`, while `_quoted` raises ValueError on anything else. A ClickHouse column or
@@ -555,7 +541,6 @@ def test_control_a_clickhouse_child_without_sampling_keeps_its_candidate_unmeasu
     assert containment_metrics(snapshot) == []
 
 
-@UNBUILT_TOKENS
 def test_a_quarter_overlap_clickhouse_child_shows_its_number_against_a_postgresql_parent(
     tmp_path, monkeypatch
 ):
@@ -575,7 +560,6 @@ def test_a_quarter_overlap_clickhouse_child_shows_its_number_against_a_postgresq
     assert metrics["child_distinct_sampled"] == 8 and metrics["shared_tokens"] == 2
 
 
-@UNBUILT_TOKENS
 def test_a_disjoint_clickhouse_child_against_a_complete_parent_is_measured_and_dropped(
     tmp_path, monkeypatch
 ):
@@ -591,7 +575,6 @@ def test_a_disjoint_clickhouse_child_against_a_complete_parent_is_measured_and_d
     assert candidates(snapshot) == []
 
 
-@UNBUILT_TOKENS
 def test_no_raw_value_or_digest_leaks_into_the_clickhouse_bundle_text(tmp_path, monkeypatch):
     """Privacy canary extended to the new hashes (P10): values never, digests only in tokens."""
     canary = "canary-value-77b1e0"
@@ -631,7 +614,6 @@ def probe_config(**overrides):
     return config(cardinality_probe=True, cardinality_probe_max_rows=PROBE_ROWS, **overrides)
 
 
-@UNBUILT_PROBE
 def test_the_probe_reads_through_a_limited_subquery_of_the_chosen_columns():
     client = probe_client(40)
     discover_clickhouse(client, probe_config(), Budget(50))
@@ -647,7 +629,6 @@ def test_the_probe_reads_through_a_limited_subquery_of_the_chosen_columns():
     assert "tags" not in text and "*" not in text, "array columns are still skipped"
 
 
-@UNBUILT_PROBE
 def test_the_probe_settings_are_one_thread_and_the_timeout_and_nothing_that_breaks_the_read():
     client = probe_client(40)
     discover_clickhouse(client, probe_config(), Budget(50))
@@ -661,8 +642,8 @@ def test_the_probe_settings_are_one_thread_and_the_timeout_and_nothing_that_brea
 @pytest.mark.parametrize(
     ("rows", "expected"),
     [
-        pytest.param(40, PROBE_ROWS, id="larger", marks=UNBUILT_PROBE),
-        pytest.param(PROBE_ROWS + 1, PROBE_ROWS, id="one-over-the-cap", marks=UNBUILT_PROBE),
+        pytest.param(40, PROBE_ROWS, id="larger"),
+        pytest.param(PROBE_ROWS + 1, PROBE_ROWS, id="one-over-the-cap"),
         # Boundary controls: the old query counts these correctly too, so they pass before and
         # after and guard an over-fix (an off-by-one in the new LIMIT).
         pytest.param(PROBE_ROWS, PROBE_ROWS, id="exactly-the-cap"),
@@ -683,7 +664,6 @@ def test_the_probe_counts_exactly_the_cap_or_the_whole_smaller_table(rows, expec
     ), "distinct counts cover the same rows that were counted"
 
 
-@UNBUILT_PROBE
 def test_the_cap_follows_the_configuration():
     for cap in (3, 25):
         client = probe_client(40)
@@ -693,7 +673,6 @@ def test_the_cap_follows_the_configuration():
         assert {p.sample_count for p in records["profiles.jsonl"] if p.method == "sample"} == {cap}
 
 
-@UNBUILT_PROBE
 def test_the_config_comment_says_about_not_at_most():
     """Plan: change 'at most' to 'about: the count covers exactly this many rows; the server may
     read up to about one block per thread more'."""
@@ -753,7 +732,6 @@ def _stray(name: str) -> list[tuple[int, object]]:
     return [(line, value) for line, value in _function_numbers(name) if value not in (0, 1, -1)]
 
 
-@UNBUILT_TOKENS
 def test_no_numeric_threshold_is_typed_into_the_clickhouse_tokenizer():
     assert _stray("_tokenize_clickhouse") == []
 

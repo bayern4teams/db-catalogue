@@ -63,10 +63,15 @@ def test_clickhouse_probe_yields_uniqueness_from_counts_only():
         client, config("clickhouse", cardinality_probe=True), Budget(10)
     )
     statement, kwargs = client.queries[-1]
-    assert statement.startswith('SELECT count(), uniq("rowkey"), uniq("kind") FROM "public"."t"')
+    # P6-6 (F9): counted through a LIMIT subquery on one thread (intended flip of the L1 shape).
+    assert statement.startswith(
+        'SELECT count(), uniq("rowkey"), uniq("kind") '
+        'FROM (SELECT "rowkey","kind" FROM "public"."t"'
+    )
     assert "tags" not in statement  # array columns are skipped
-    assert kwargs["settings"]["max_rows_to_read"] == 100_000
-    assert kwargs["settings"]["read_overflow_mode"] == "break"
+    assert kwargs["parameters"]["lim"] == 100_000
+    assert kwargs["settings"]["max_threads"] == 1
+    assert "max_rows_to_read" not in kwargs["settings"]
     by_name = {
         field.name: field.id for field in records["fields.jsonl"]
     }
