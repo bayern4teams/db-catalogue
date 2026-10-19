@@ -3,7 +3,7 @@
 Overwrite this file at every commit. A fresh session reads it first, then
 [the plan](../CATALOGUE_FIXES_IMPLEMENTATION_PLAN.md). Git is the memory; a session's context is not.
 
-**Lock:** 2026-10-19T15:21:34Z · **Autonomy:** unattended-through-phase-6 · **Last heartbeat:** 2026-10-19T15:21:34Z
+**Lock:** 2026-10-19T15:37:12Z · **Autonomy:** unattended-through-phase-6 · **Last heartbeat:** 2026-10-19T15:37:12Z
 
 (Lock/heartbeat protocol: plan §7. A session sets `Lock: <ISO time>`, pushes it, and refreshes it at
 every commit; a lock older than 75 min is stale. `Autonomy` is `off`, `dryrun` (a tick only records
@@ -51,7 +51,7 @@ Only the user changes it.)
 | H6 LOCAL_VERIFY.md as one ordered run with a send-back template | 5 | accepted-cloud | | lead: "Start here" (12 steps, sampling snippet, reasoning-model settings from the report) and send-back template at the top of LOCAL_VERIFY.md |
 | H7 final gate: full check, CI, ponytail review/debt | 5 | accepted-cloud | | lead: full check green locally; CI 38524824216 green in all 8 jobs on `4aaa2a9` (first run failed on a missing driver import in a test, fixed); ponytail-review: nothing mandatory; FINAL_REPORT.md updated |
 | H8 hand-over: READY FOR LOCAL VERIFY | 5 | accepted-cloud | | lead: see Notifications |
-| P6-0 baseline: full check, attack files (37 known), H4 canaries, CI, grep baseline, Phase 6 ownership | 6 | todo | | |
+| P6-0 baseline: full check, attack files (37 known), H4 canaries, CI, grep baseline, Phase 6 ownership | 6 | accepted-cloud | | lead: full check green on `9d84003` (758 passed, 68 skipped, 1 xfailed; ruff, mypy, ci_check, pip-audit clean, supply_chain, graph_sync ok); `package_isolation.py` fails under the image's default `python` 3.11 and passes with `uv run --python 3.12` (environment, not code); attack files 37 failed = the known 37 (attack2_d3 27, dec1 1, dec2 1, dec4 1, b_answering 6, attack_search 1); H4 49 passed 1 xfailed; §2.4 grep 0 hits; CI dispatched 39279336612; ownership table below confirmed (graphify affected `_overlap`, `_tokenize_postgresql`: callers in builder/collector tests only). Derived checks: `test_p6_f5_complete_samples.py` (22 xfail strict), `test_p6_f8_f12.py` (8 xfail strict) |
 | P6-1 F5 collector: `complete` on every value-hash set (DEC-19) | 6 | todo | | |
 | P6-2 F5 builder: zero drops only against a complete parent; range comparison of capped sets (DEC-19) | 6 | todo | | |
 | P6-3 F7 ClickHouse value hashes | 6 | todo | | |
