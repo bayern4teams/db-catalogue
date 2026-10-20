@@ -93,3 +93,14 @@ artifacts/run-20261020/*
 artifacts/run-20261020/leader/*
 !artifacts/run-20261020/leader/*.md
 artifacts/run-20261020/**/tokens.jsonl
+!artifacts/run-20261020-pgch/
+artifacts/run-20261020-pgch/*
+!artifacts/run-20261020-pgch/*.md
+!artifacts/run-20261020-pgch/*.json
+!artifacts/run-20261020-pgch/*.toml
+!artifacts/run-20261020-pgch/*.txt
+!artifacts/run-20261020-pgch/*.html
+!artifacts/run-20261020-pgch/bundle-*/
+!artifacts/run-20261020-pgch/snapshot*/
+!artifacts/run-20261020-pgch/config/
+artifacts/run-20261020-pgch/**/tokens.jsonl
