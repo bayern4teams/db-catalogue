@@ -16,7 +16,10 @@ Branch `verify/live-20261020` cut from `fix/live-findings` at `d06dc25` (owner: 
 - [x] Research F14-F17 done: `artifacts/run-20261020-pgch/research-f14-f17.md` (4 agents; code claims checked by the lead). Extra Sonnet agent on llama.cpp + Qwen3 thinking + json_schema for F17 (the server is llama.cpp, the first F17 research assumed vLLM).
 - [x] Owner 2026-10-20: yes to the lead's recommendations F14 A (wording + bounds), F15 A (tiered ranking within equal name score), F16 A (requester BFS, path-only bridge tables), F17 A (`checked` field, app check, one retry, `MODEL_ANSWER_UNEXPLAINED`); build locally (where: asked); record the S2 reply (after the 40 questions finish); the owner grades step 3.
 - [ ] Lead doubts raised to the owner before building: F16 with a 2-hop cap cannot reach N-S4/N-I10 on the probe-off snapshot (needs 3 hops via ch.Person; the 2-hop Experience->PersonContact edge exists only with the probe); F15 not reproducible without MongoDB (unit test + offline replay of the old MongoDB bundles only).
-- [ ] Owner: F11-b (PG<->CH candidates still proposed though the data is unrelated): explained, asked again.
+- [x] Owner 2026-10-20: F11-b A + B + E now (c_min 0.25, min_expected_shared 5), C next, D later; F16 hops 4, bridges 4; F15 declared keys first; F17 thinking stays on; repeats 3; benchmark yes, one compose project per dataset (layout in the plan; each compose file shown to the owner first); other running containers not included; `4ae2e85` pushed; N-S8 recorded once (NOT_ESTABLISHED, citations allowed; earlier failure not reproduced); new F18 (failure reason lost) -> add a value-free `reason` (owner yes).
+- [x] Phase 7 plan written: `docs/plans/PHASE7_LOCAL_PLAN.md` (local, multi-agent; Sonnet subagents for routine work); research for F11-b and the benchmark added to `research-f14-f17.md`.
+- [ ] Owner: start the new local session with the prompt from the setup session; it creates `fix/phase7` from `verify/live-20261020`.
+- [ ] Owner: grades in `artifacts/run-20261020-pgch/step3-grading-sheet.md`.
 - [ ] Merge decision (only on "merge it").
 
 ## Current change: Phase 6 plan for the live findings F5-F13 (started 2026-10-19)

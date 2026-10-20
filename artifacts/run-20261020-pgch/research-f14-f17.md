@@ -98,3 +98,40 @@ While checking a licence, the F15 agent ran `pip download` without asking. It sa
 - A plain string accepts `""` and `"not_established"`; that is expected, so app validation is needed whatever the schema says.
 - Property order: probably schema order with required fields first (*from memory, unverified*); all fields required with no default keeps it fixed. One test request will show it.
 - Verdict: the planned fix (`checked` before `answer`, app check, one retry) should work on llama.cpp. Optional: thinking off per request (`enable_thinking: false`) would make `checked` the reasoning and cut latency; needs the server build to include the #20345 fix. Owner choice.
+
+## F11-b: false candidates across unrelated sources, solved generally (2 Sonnet agents, web only)
+**What the app does today** (checked by the lead):
+- **Sampled overlap only:** value tokens come from 25,000 sampled rows (PG 106/124 columns, CH 38/46). A zero drops a link only against a fully read parent.
+- **Column profiles:** PG from `pg_stats`; CH width only (the probe adds distinct and uniqueness from a sample).
+- **Tables:** row-count estimates only.
+- **Not collected:** min/max, length or format profiles, full-column sketches.
+
+**What others do:**
+- **Rostin 2009:** out-of-range feature (min/max).
+- **Zhang 2010:** distribution similarity (EMD).
+- **NextiaJD** ([dtim-upc/NextiaJD](https://github.com/dtim-upc/NextiaJD), Apache-2.0, Spark): join quality predicted from profiles (cardinality, entropy, length, character classes).
+- **Valentine** ([delftdata/valentine](https://github.com/delftdata/valentine), Apache-2.0): schema-matching suite; good as an offline benchmark harness.
+- **Metanome** (Apache-2.0, Java): FAIDA, approximate inclusion from hashed samples.
+- **Aurum** (MIT).
+- **D3L** (format "regex" signatures; no licence).
+- **Auctus** (Apache-2.0): range and type pruning.
+- **Auto-BI:** one best parent per child, with a globally consistent graph.
+- **Power BI:** a cross-source relationship is "limited", never trusted automatically.
+- **Profilers** (ydata, DataProfiler, OpenMetadata, DataHub, Great Expectations): min/max, distinct, length and patterns through SQL aggregates, so they are cheap.
+- **Embedding matchers** (Starmie, DeepJoin, WarpGate): need values sent to a model, which conflicts with the privacy rule; not used.
+
+**Options:**
+- A tiers plus an owner decisions file;
+- B a conclusive zero by expected overlap;
+- C value-free length, character-class and format profiles (numeric min/max local only);
+- D coordinated `md5` hash sampling in the database;
+- E `allowed_source_pairs`.
+
+Owner 2026-10-20: A + B + E now (`c_min` 0.25, `min_expected_shared` 5), C next, D later.
+
+**Benchmark data on disk** (`/home/bayern/Projects/benchmark/datasets`):
+- Pagila and Chinook (declared FKs).
+- TPC-H SF1 (8 FKs).
+- GLEIF golden copy: 3,458,719 records (counted by the lead). 164,048 name RA000189 (INSEE, France SIRENE) and 63,396 name RA000472 (Brønnøysund, Norway Enhetsregisteret), linked through `Entity.RegistrationAuthority.RegistrationAuthorityEntityID`.
+- Negatives: raha sets, nyc-taxi, ontime, uk-price-paid, openaddresses-lu.
+- Licences in the MANIFEST: GLEIF CC0, brreg NLOD 2.0, Sirene Licence Ouverte 2.0.
