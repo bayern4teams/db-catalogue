@@ -1,0 +1,12 @@
+### collect ch probe
+artifacts/run-20261020/bundle-ch-probe
+exit 0 seconds 2.58
+### collect mongo probe
+artifacts/run-20261020/bundle-mongo-probe
+exit 0 seconds 1.25
+### assemble probe
+{"ir_version":"1.0","content_type":"catalog-snapshot","producer":"dbig-builder/0.1.0","source_run_ids":["run:407529d677ee3e109f98261f63be559b","run:b7ee506c857459a3b5ae894f3c6403c2","run:b8f6810c0961bc394951b0829b3845e9","run:d53c92ddf904fdf169a796cd7a3ca3ec"],"created_at":"2026-10-20T05:56:03.627526Z","as_of":"2026-10-20T05:56:03.627526Z","completeness":"complete","files":[{"path":"nodes.jsonl","bytes":532931,"sha256":"05f92daf8115685f48e563ce9f34f0e583980408a7875077bc2be52443e36f25","count":1086},{"path":"edges.jsonl","bytes":115628,"sha256":"aebc44c650a52a956bcd8c97a059af49e5ba9923922a7ebc08d7ff1c41f6c635","count":134},{"path":"evidence.jsonl","bytes":295246,"sha256":"22091d11034281a3a073c5226863a434f7d48b1122bec3e712ea3140843e805e","count":536},{"path":"runs.jsonl","bytes":1214,"sha256":"5529557256e7b1bc5d4c9b64c160f8a2bd020e922e0eb04ee14c64a8215a20d8","count":4}],"classification":"metadata","diagnostics":null,"partial_reasons":null,"signature":null}
+exit 0 seconds 2.11
+### assemble probe without mongo
+{"ir_version":"1.0","content_type":"catalog-snapshot","producer":"dbig-builder/0.1.0","source_run_ids":["run:6592eaa044b8090440b60a4be2658557","run:b7ee506c857459a3b5ae894f3c6403c2","run:d53c92ddf904fdf169a796cd7a3ca3ec"],"created_at":"2026-10-20T05:56:05.322560Z","as_of":"2026-10-20T05:56:05.322560Z","completeness":"complete","files":[{"path":"nodes.jsonl","bytes":80155,"sha256":"fe340eeba8c23a7c6c19f6bc75a45ee3724df60faecac28c81e6a934b677fd54","count":192},{"path":"edges.jsonl","bytes":48188,"sha256":"229a92d15aa943bdee89e6b28e388500b62dc6d22a128318e2e097794aeb96ce","count":56},{"path":"evidence.jsonl","bytes":123860,"sha256":"b96872cedec162e37e943b4ef0a563e73548c21895286e2eab0168b0b16b168e","count":224},{"path":"runs.jsonl","bytes":924,"sha256":"e490debf0507c0577d4e16b87f33cc733b99a4586ce67111854386ead539bbf6","count":3}],"classification":"metadata","diagnostics":null,"partial_reasons":null,"signature":null}
+exit 0 seconds 1.58
