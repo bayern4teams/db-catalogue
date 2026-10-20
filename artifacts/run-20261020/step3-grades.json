@@ -1,0 +1,92 @@
+{
+ "grades": {
+  "N-D1": "Right",
+  "N-D2": "Right",
+  "N-D3": "Right",
+  "N-D4": "Right",
+  "N-D5": "Right",
+  "N-D6": "Right",
+  "N-D7": "Right",
+  "N-D8": "Right",
+  "N-D9": "Right",
+  "N-D10": "Right",
+  "N-S1": "Partial",
+  "N-S2": "MODEL_INVALID_CITATION",
+  "N-S3": "Right",
+  "N-S4": "NOT_ESTABLISHED",
+  "N-S5": "Partial (owner)",
+  "N-S6": "Partial",
+  "N-S7": "Partial",
+  "N-S8": "NOT_ESTABLISHED",
+  "N-S9": "Partial",
+  "N-S10": "Right",
+  "N-C1": "Partial (owner)",
+  "N-C2": "Partial",
+  "N-C3": "Partial",
+  "N-C4": "NO_CATALOGUE_MATCH",
+  "N-C5": "Partial",
+  "N-C6": "Right",
+  "N-C7": "NO_CATALOGUE_MATCH",
+  "N-C8": "Right",
+  "N-C9": "Partial",
+  "N-C10": "Right",
+  "N-I1": "Partial (owner)",
+  "N-I2": "NOT_ESTABLISHED",
+  "N-I3": "Partial (owner)",
+  "N-I4": "Right",
+  "N-I5": "NOT_ESTABLISHED",
+  "N-I6": "Partial (owner)",
+  "N-I7": "Right",
+  "N-I8": "Right",
+  "N-I9": "Right (owner)",
+  "N-I10": "NOT_ESTABLISHED"
+ },
+ "tally": {
+  "Right": 19,
+  "Partial": 13,
+  "MODEL_INVALID_CITATION": 1,
+  "NOT_ESTABLISHED": 5,
+  "NO_CATALOGUE_MATCH": 2
+ },
+ "by_category": {
+  "D": {
+   "Right": 10
+  },
+  "S": {
+   "Partial": 5,
+   "MODEL_INVALID_CITATION": 1,
+   "Right": 2,
+   "NOT_ESTABLISHED": 2
+  },
+  "C": {
+   "Partial": 5,
+   "NO_CATALOGUE_MATCH": 2,
+   "Right": 3
+  },
+  "I": {
+   "Partial": 3,
+   "NOT_ESTABLISHED": 3,
+   "Right": 4
+  }
+ },
+ "better_than_2026-10-18": [
+  "N-S5: Wrong -> Partial",
+  "N-C2: NOT_ESTABLISHED -> Partial",
+  "N-C6: Wrong -> Right",
+  "N-C8: Partial -> Right",
+  "N-C9: NOT_ESTABLISHED -> Partial",
+  "N-C10: Wrong -> Right",
+  "N-I1: Wrong -> Partial",
+  "N-I3: Wrong -> Partial",
+  "N-I10: Wrong -> NOT_ESTABLISHED"
+ ],
+ "worse_than_2026-10-18": [
+  "N-S2: Partial -> MODEL_INVALID_CITATION",
+  "N-S4: Partial -> NOT_ESTABLISHED",
+  "N-S8: Partial -> NOT_ESTABLISHED",
+  "N-I2: Partial -> NOT_ESTABLISHED",
+  "N-I5: Partial -> NOT_ESTABLISHED",
+  "N-I6: Right -> Partial"
+ ],
+ "rule": "Right = names the expected tables/columns and states nothing false; Partial = some right or a missing piece; Wrong = false or wrong source; NOT_ESTABLISHED = the app's code with no usable answer; UNCLEAR = waiting for the owner"
+}

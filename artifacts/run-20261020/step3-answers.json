@@ -1,0 +1,2348 @@
+{
+ "N-D1": {
+  "question": "Which PostgreSQL column holds the fiscal year of a company's financial record, and what is its type?",
+  "exit": 0,
+  "seconds": 128.12,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "outcome_code": null,
+  "answer": "In the PostgreSQL catalog, the `year` column on `companyfinancials` has type `integer` (field:9431fa59187fb3d015d2b2238c779159).",
+  "cited": [
+   {
+    "id": "field:9431fa59187fb3d015d2b2238c779159",
+    "kind": "field",
+    "name": "year",
+    "namespace": "public",
+    "object_name": "companyfinancials",
+    "source_id": "pg-main"
+   }
+  ]
+ },
+ "N-D2": {
+  "question": "Which ClickHouse column holds a person's first name, and what is its type?",
+  "exit": 0,
+  "seconds": 80.18,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "outcome_code": null,
+  "answer": "In the ClickHouse source 'ch-main', the column named 'firstName' in the 'Person' table holds the person's first name. Its type is Nullable(String).",
+  "cited": [
+   {
+    "id": "field:055ac3c827cb9d840704592325514de4",
+    "kind": "field",
+    "name": "firstName",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Person",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "object:364d20537dea8b3c54c5c93685285687",
+    "kind": "table",
+    "name": "Person",
+    "namespace": "testzoominfo_clone2",
+    "source_id": "ch-main"
+   }
+  ]
+ },
+ "N-D3": {
+  "question": "Which PostgreSQL column holds the latitude of a company location, and what type is it?",
+  "exit": 0,
+  "seconds": 17.07,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "outcome_code": null,
+  "answer": "In PostgreSQL, the latitude of a company location is held in the column public.location.latitude, and its type is text.",
+  "cited": [
+   {
+    "id": "field:3ef7953d5e6d306b98778ceaba6c6581",
+    "kind": "field",
+    "name": "latitude",
+    "namespace": "public",
+    "object_name": "location",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "object:46db43985f4307a123288605607dc896",
+    "kind": "table",
+    "name": "location",
+    "namespace": "public",
+    "source_id": "pg-main"
+   }
+  ]
+ },
+ "N-D4": {
+  "question": "In ClickHouse, which table and column hold the free email addresses of people?",
+  "exit": 0,
+  "seconds": 41.44,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "outcome_code": null,
+  "answer": "In the ClickHouse catalogue (`source_id: ch-main`, namespace `testzoominfo_clone2`), the table/object `PersonContact` contains the field `freeMails`, typed `String`, which is the listed location corresponding to free email addresses [field:7b45c137b580b26cc328fc4aa0dbefc6].\n\n`PersonContact` also has a `personID` field [field:df329c939e41b4df0640f5f9fbaa1036] and a tentative reference candidate to `Person` via `personID` [edge:fddd5f6f08ae38306830023c32fcde14]. This is a tentative candidate, not a declared relationship; the evidence sentence is: \"name, compatible type, and weak key claim (source sorting or primary key, uniqueness unproven); value overlap 0% of 4042 sampled child values\".",
+  "cited": [
+   {
+    "id": "field:7b45c137b580b26cc328fc4aa0dbefc6",
+    "kind": "field",
+    "name": "freeMails",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "PersonContact",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:df329c939e41b4df0640f5f9fbaa1036",
+    "kind": "field",
+    "name": "personID",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "PersonContact",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "edge:fddd5f6f08ae38306830023c32fcde14",
+    "kind": "relationship",
+    "name": "PersonContact -> Person (personID -> personID)",
+    "status": "tentative"
+   }
+  ]
+ },
+ "N-D5": {
+  "question": "Which PostgreSQL column stores the name of a technology a company uses?",
+  "exit": 0,
+  "seconds": 40.45,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "outcome_code": null,
+  "answer": "The PostgreSQL column is `technologyname` in `public.companytechnographics` (source `pg-main`). A link from `companytechnographics` to `company` is tentative, not declared; evidence sentence: \"name, compatible type, and uniqueness measured from source statistics, not declared; value overlap 100% of 814 sampled child values\".",
+  "cited": [
+   {
+    "id": "field:10a7e6a6c31530ce482c9bd1bdf7539e",
+    "kind": "field",
+    "name": "technologyname",
+    "namespace": "public",
+    "object_name": "companytechnographics",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "edge:12a153b35e900302a718b5d2860598f8",
+    "kind": "relationship",
+    "name": "companytechnographics -> company (companyid -> companyid)",
+    "status": "tentative"
+   }
+  ]
+ },
+ "N-D6": {
+  "question": "Which ClickHouse columns hold a person's job title in the work-history table?",
+  "exit": 0,
+  "seconds": 56.93,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "outcome_code": null,
+  "answer": "In the ClickHouse source `ch-main` namespace `testzoominfo_clone2`, the job-title columns in the `Experience` table are `jobTitle` [field:257400d421de3d60c3a4c87ddf9b14a2] and `title` [field:d6156efd7957fab3a15e264c9010af75]. `Experience.personID` [field:185053ed6692d43fdaf5c3bda313d1c2] links these rows toward `Person.personID` [field:06b1befeb60ad6fe33aa28ba79c79b31], but that relationship is only `tentative` [edge:2569a3532b8abeff3a3d90010ee81262]. Evidence: \"name, compatible type, and weak key claim (source sorting or primary key, uniqueness unproven); value overlap 24% of 4096 sampled child values\".",
+  "cited": [
+   {
+    "id": "field:257400d421de3d60c3a4c87ddf9b14a2",
+    "kind": "field",
+    "name": "jobTitle",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Experience",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:d6156efd7957fab3a15e264c9010af75",
+    "kind": "field",
+    "name": "title",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Experience",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:185053ed6692d43fdaf5c3bda313d1c2",
+    "kind": "field",
+    "name": "personID",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Experience",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:06b1befeb60ad6fe33aa28ba79c79b31",
+    "kind": "field",
+    "name": "personID",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Person",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "edge:2569a3532b8abeff3a3d90010ee81262",
+    "kind": "relationship",
+    "name": "Experience -> Person (personID -> personID)",
+    "status": "tentative"
+   }
+  ]
+ },
+ "N-D7": {
+  "question": "Which PostgreSQL columns record the amount and currency of an investment round, and what are their types?",
+  "exit": 0,
+  "seconds": 110.92,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "outcome_code": null,
+  "answer": "In the PostgreSQL metadata, investment-round amount and currency are recorded on the object `companyinvestmentround` in namespace `public`: `amount` has type `bigint`, and `currency` has type `text`.",
+  "cited": [
+   {
+    "id": "field:4382c7b4a2f817850726f368d5a736b8",
+    "kind": "field",
+    "name": "amount",
+    "namespace": "public",
+    "object_name": "companyinvestmentround",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:6eadd41789773a04386dec450cf5d4a0",
+    "kind": "field",
+    "name": "currency",
+    "namespace": "public",
+    "object_name": "companyinvestmentround",
+    "source_id": "pg-main"
+   }
+  ]
+ },
+ "N-D8": {
+  "question": "Which ClickHouse column holds a company's phone number?",
+  "exit": 0,
+  "seconds": 34.24,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "outcome_code": null,
+  "answer": "The ClickHouse column is `companyPhone` in the `Company` table (source `ch-main`, namespace `testzoominfo_clone2`).",
+  "cited": [
+   {
+    "id": "object:b3653bad92366ef20567af26b5ca7ce6",
+    "kind": "table",
+    "name": "Company",
+    "namespace": "testzoominfo_clone2",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:2bd9894dbed77e3fae8a68828a60fdd8",
+    "kind": "field",
+    "name": "companyPhone",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Company",
+    "source_id": "ch-main"
+   }
+  ]
+ },
+ "N-D9": {
+  "question": "Which PostgreSQL column holds the founding date of a company, and is it a date type?",
+  "exit": 0,
+  "seconds": 38.5,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "outcome_code": null,
+  "answer": "The founding date of a company in PostgreSQL is stored in the `foundingdate` column of the `public.company` table. It is **not** a date type; it is of type `text`.",
+  "cited": [
+   {
+    "id": "field:e4e90a620a6092873841161fb009a443",
+    "kind": "field",
+    "name": "foundingdate",
+    "namespace": "public",
+    "object_name": "company",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "object:cdbf59a0739bcf46a9eef890233bf217",
+    "kind": "table",
+    "name": "company",
+    "namespace": "public",
+    "source_id": "pg-main"
+   }
+  ]
+ },
+ "N-D10": {
+  "question": "Which ClickHouse column holds the country code of a location, and what is its type?",
+  "exit": 0,
+  "seconds": 37.55,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "outcome_code": null,
+  "answer": "The ClickHouse column is `CountryCode` in the `Location` table, and its type is `Nullable(String)`.",
+  "cited": [
+   {
+    "id": "object:50cd5e5900edd832934fb32887fcce5e",
+    "kind": "table",
+    "name": "Location",
+    "namespace": "testzoominfo_clone2",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:ba5f408c511bc395d51951c82ceed724",
+    "kind": "field",
+    "name": "CountryCode",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Location",
+    "source_id": "ch-main"
+   }
+  ]
+ },
+ "N-S1": {
+  "question": "In PostgreSQL, how do I list the financial amounts per year together with the name of the company?",
+  "exit": 0,
+  "seconds": 94.34,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "outcome_code": null,
+  "answer": "The metadata shows `companyfinancials.year` and `companyfinancials.amount`, and a tentative reference candidate from `companyfinancials.companyid` to `company.companyid`. It also shows `company.entityname` and `company.fullname` as available company-name-like fields. A list query using `entityname` is:\n\n```sql\nSELECT\n  c.entityname AS company_name,\n  cf.year,\n  cf.amount\nFROM public.companyfinancials AS cf\nJOIN public.company AS c\n  ON cf.companyid = c.companyid\nORDER BY cf.year;\n```\n\nThe join is tentative, not declared. The relationship evidence sentence is: name, compatible type, and uniqueness measured from source statistics, not declared; value overlap 100% of 29 sampled child values",
+  "cited": [
+   {
+    "id": "object:cdbf59a0739bcf46a9eef890233bf217",
+    "kind": "table",
+    "name": "company",
+    "namespace": "public",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:9431fa59187fb3d015d2b2238c779159",
+    "kind": "field",
+    "name": "year",
+    "namespace": "public",
+    "object_name": "companyfinancials",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:9544b40caa989a5ecbf2abeb953ac2db",
+    "kind": "field",
+    "name": "amount",
+    "namespace": "public",
+    "object_name": "companyfinancials",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:016c0eddecd67ae864f4ca53ded32d9c",
+    "kind": "field",
+    "name": "companyid",
+    "namespace": "public",
+    "object_name": "companyfinancials",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:0006585d4b70be3a0f20a3714fa9a277",
+    "kind": "field",
+    "name": "companyid",
+    "namespace": "public",
+    "object_name": "company",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:9d09e4066544e092c095abcc1af8476b",
+    "kind": "field",
+    "name": "entityname",
+    "namespace": "public",
+    "object_name": "company",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:f09ae868731d63bd8a5a7e08b085f99d",
+    "kind": "field",
+    "name": "fullname",
+    "namespace": "public",
+    "object_name": "company",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "edge:d37d5bd241167af3738fec495f13c0ae",
+    "kind": "relationship",
+    "name": "companyfinancials -> company (companyid -> companyid)",
+    "status": "tentative"
+   }
+  ]
+ },
+ "N-S2": {
+  "question": "In PostgreSQL, how do I get the technologies used by a company together with the company website?",
+  "exit": 0,
+  "seconds": 49.92,
+  "stderr_bytes": 0,
+  "error_code": "MODEL_INVALID_CITATION",
+  "outcome_code": null,
+  "answer": null,
+  "cited": null
+ },
+ "N-S3": {
+  "question": "In ClickHouse, how do I get from a person's name to the job titles and the names of the companies they hold them at?",
+  "exit": 0,
+  "seconds": 94.11,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "outcome_code": null,
+  "answer": "answered: Within the ClickHouse source ch-main, namespace testzoominfo_clone2, the relevant metadata shows Person, Experience, and Company objects and fields. Person is object:364d20537dea8b3c54c5c93685285687, Company is object:b3653bad92366ef20567af26b5ca7ce6. Person name fields are Person.name field:423465b8356d027b942c8de2060c1173, Person.firstName field:055ac3c827cb9d840704592325514de4, and Person.lastName field:900d74cdf7588a9ddca14263575d3657; Person.personID field:06b1befeb60ad6fe33aa28ba79c79b31 is the person key candidate. Job titles are present in Experience.jobTitle field:257400d421de3d60c3a4c87ddf9b14a2 and Experience.title field:d6156efd7957fab3a15e264c9010af75. Experience also has candidate link columns Experience.personID field:185053ed6692d43fdaf5c3bda313d1c2 and Experience.companyID field:6201990413b074090cd6f8cf34c2aa87. Company names are present in Company.companyName field:acb560e6086a0d2545806ce87102ef28 and Company.companyID field:861fe226e14fcf38588592aad6e62355. The metadata does not declare established links for this path; it provides only tentative reference candidates: edge:2569a3532b8abeff3a3d90010ee81262 from Experience to Person on personID, evidence: name, compatible type, and weak key claim (source sorting or primary key, uniqueness unproven); value overlap 24% of 4096 sampled child values; and edge:2623e3f6bf42984777c7fae4599cd25a from Experience to Company on companyID, evidence: name, compatible type, and weak key claim (source sorting or primary key, uniqueness unproven); value overlap 1% of 2702 sampled child values. Therefore, within the same source and namespace, a candidate retrieval path is: select Person rows by the name/firstName/lastName fields, use the tentative Experience-to-Person personID candidate link to reach Experience rows for that person, take jobTitle or title from Experience, and use the tentative Experience-to-Company companyID candidate link to reach Company rows for the company name. This is a tentative candidate path, not an established relationship. Cross-source candidates such as edge:203a8cf3674b9796ce90b4b27b5c31c7 from pg-main person to ch-main Person or edge:7bdf8607b90723c8dff428c160d3f2f8 from pg-main company to ch-main Company cannot be joined in one query with these ch-main objects.",
+  "cited": [
+   {
+    "id": "object:364d20537dea8b3c54c5c93685285687",
+    "kind": "table",
+    "name": "Person",
+    "namespace": "testzoominfo_clone2",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "object:b3653bad92366ef20567af26b5ca7ce6",
+    "kind": "table",
+    "name": "Company",
+    "namespace": "testzoominfo_clone2",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:423465b8356d027b942c8de2060c1173",
+    "kind": "field",
+    "name": "name",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Person",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:055ac3c827cb9d840704592325514de4",
+    "kind": "field",
+    "name": "firstName",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Person",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:900d74cdf7588a9ddca14263575d3657",
+    "kind": "field",
+    "name": "lastName",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Person",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:06b1befeb60ad6fe33aa28ba79c79b31",
+    "kind": "field",
+    "name": "personID",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Person",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:257400d421de3d60c3a4c87ddf9b14a2",
+    "kind": "field",
+    "name": "jobTitle",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Experience",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:d6156efd7957fab3a15e264c9010af75",
+    "kind": "field",
+    "name": "title",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Experience",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:185053ed6692d43fdaf5c3bda313d1c2",
+    "kind": "field",
+    "name": "personID",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Experience",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:6201990413b074090cd6f8cf34c2aa87",
+    "kind": "field",
+    "name": "companyID",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Experience",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:acb560e6086a0d2545806ce87102ef28",
+    "kind": "field",
+    "name": "companyName",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Company",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:861fe226e14fcf38588592aad6e62355",
+    "kind": "field",
+    "name": "companyID",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Company",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "edge:2569a3532b8abeff3a3d90010ee81262",
+    "kind": "relationship",
+    "name": "Experience -> Person (personID -> personID)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:2623e3f6bf42984777c7fae4599cd25a",
+    "kind": "relationship",
+    "name": "Experience -> Company (companyID -> companyID)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:203a8cf3674b9796ce90b4b27b5c31c7",
+    "kind": "relationship",
+    "name": "person -> Person (personid -> personID)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:7bdf8607b90723c8dff428c160d3f2f8",
+    "kind": "relationship",
+    "name": "company -> Company (companyid -> companyID)",
+    "status": "tentative"
+   }
+  ]
+ },
+ "N-S4": {
+  "question": "In ClickHouse, how do I get the free email column for the people who worked at a given company?",
+  "exit": 0,
+  "seconds": 50.26,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "outcome_code": "NOT_ESTABLISHED_BY_CATALOGUE",
+  "answer": "The catalogue metadata does not establish a usable ClickHouse-only path from a given company to the free email column for people who worked there.",
+  "cited": [
+   {
+    "id": "object:b3653bad92366ef20567af26b5ca7ce6",
+    "kind": "table",
+    "name": "Company",
+    "namespace": "testzoominfo_clone2",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:7b45c137b580b26cc328fc4aa0dbefc6",
+    "kind": "field",
+    "name": "freeMails",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "PersonContact",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:861fe226e14fcf38588592aad6e62355",
+    "kind": "field",
+    "name": "companyID",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Company",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:df329c939e41b4df0640f5f9fbaa1036",
+    "kind": "field",
+    "name": "personID",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "PersonContact",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "edge:2623e3f6bf42984777c7fae4599cd25a",
+    "kind": "relationship",
+    "name": "Experience -> Company (companyID -> companyID)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:fddd5f6f08ae38306830023c32fcde14",
+    "kind": "relationship",
+    "name": "PersonContact -> Person (personID -> personID)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:244fd55777bcfefcbd3e34a3da1f1ce5",
+    "kind": "relationship",
+    "name": "companyemployeecategory -> Company (companyid -> companyID)",
+    "status": "tentative"
+   }
+  ]
+ },
+ "N-S5": {
+  "question": "In ClickHouse, how do I list the city of each company location together with the industry names of that company?",
+  "exit": 0,
+  "seconds": 128.13,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "outcome_code": "NOT_ESTABLISHED_BY_CATALOGUE",
+  "answer": "The catalogue shows the fields you want to list: the city is `Location.City` (field:eeb837e2c47fa1c228f0851018538b42), and the industry text fields are `Industry.name` (field:11b0b540b0c621d5f9c5da3b8c36683f) and `Industry.displayName` (field:d16e92950ecacf0c00b41fd00ca4b519). However, the returned metadata does not show an established ClickHouse relationship connecting `Location` (object:50cd5e5900edd832934fb32887fcce5e) to `Company` (object:b3653bad92366ef20567af26b5ca7ce6). I checked the company-key fields `Location.companyID` (field:831df8415aab92eec49c715ed1acbf2a, Nullable(Int64)) and `Company.companyID` (field:861fe226e14fcf38588592aad6e62355, String), but there is no returned relationship linking those two objects in `ch-main` / `testzoominfo_clone2`. The company-to-industry path is only tentative: CompanyIndustry -> Company (edge:18ea37a0eab0ce91684291b2d4f5a846) evidence: name, compatible type, and weak key claim (source sorting or primary key, uniqueness unproven); value overlap 25% of 2896 sampled child values. CompanyIndustry -> Industry (edge:f58e79a3131be25ecebd264e7374168c) evidence: name, compatible type, and weak key claim (source sorting or primary key, uniqueness unproven); value overlap 20% of 178 sampled child values. Because the Location-to-Company link is not established and the Company-to-Industry links are tentative, I cannot establish the requested joined result from this metadata alone.",
+  "cited": [
+   {
+    "id": "object:50cd5e5900edd832934fb32887fcce5e",
+    "kind": "table",
+    "name": "Location",
+    "namespace": "testzoominfo_clone2",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "object:b3653bad92366ef20567af26b5ca7ce6",
+    "kind": "table",
+    "name": "Company",
+    "namespace": "testzoominfo_clone2",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:eeb837e2c47fa1c228f0851018538b42",
+    "kind": "field",
+    "name": "City",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Location",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:11b0b540b0c621d5f9c5da3b8c36683f",
+    "kind": "field",
+    "name": "name",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Industry",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:d16e92950ecacf0c00b41fd00ca4b519",
+    "kind": "field",
+    "name": "displayName",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Industry",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:831df8415aab92eec49c715ed1acbf2a",
+    "kind": "field",
+    "name": "companyID",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Location",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:861fe226e14fcf38588592aad6e62355",
+    "kind": "field",
+    "name": "companyID",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Company",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "edge:18ea37a0eab0ce91684291b2d4f5a846",
+    "kind": "relationship",
+    "name": "CompanyIndustry -> Company (companyID -> companyID)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:f58e79a3131be25ecebd264e7374168c",
+    "kind": "relationship",
+    "name": "CompanyIndustry -> Industry (industryID -> industryID)",
+    "status": "tentative"
+   }
+  ]
+ },
+ "N-S6": {
+  "question": "In PostgreSQL, how do I get the contact strings of companies together with the industry names of those companies?",
+  "exit": 0,
+  "seconds": 157.48,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "outcome_code": null,
+  "answer": "The returned pg-main metadata shows the needed columns: companycontact.contactstring (field:c9a2611a4dd860082af598de8a2c5341) and industryclassification.name (field:630bfde3eea8bda3e9a668a339ed3202). A PostgreSQL query skeleton using only pg-main objects is: SELECT cc.contactstring, ic.name FROM companycontact AS cc JOIN company AS c ON c.companyid = cc.companyid JOIN companyindustry AS ci ON ci.companyid = c.companyid JOIN industryclassification AS ic ON ic.classificationid = ci.classificationid. The joins are tentative reference candidates, not declared relationships: edge:b0e429b0a4b3462314573c9b9722fef3 (companycontact to company) has evidence 'name, compatible type, and uniqueness measured from source statistics, not declared; value overlap 100% of 3362 sampled child values'; edge:5b6c142827fd382c8572bd325e3bec72 (company to companyindustry) has evidence 'name, compatible type, and uniqueness measured from source statistics, not declared; value overlap 100% of 3940 sampled child values'; edge:f496e1a200c0d7c4e8f5e04bc38f3654 (companyindustry to industryclassification) has evidence 'name, compatible type, and uniqueness measured from source statistics, not declared; value overlap 100% of 340 sampled child values'. The cited object and field IDs include company (object:cdbf59a0739bcf46a9eef890233bf217), company.companyid (field:0006585d4b70be3a0f20a3714fa9a277), companycontact.companyid (field:240fc312abb38e9a0555c68782a67483), industryclassification (object:44c53785e751aabcb831d1a58c77d629), industryclassification.classificationid (field:64e071f0510111f8170fe34f01f5516c), and industryclassification.name (field:630bfde3eea8bda3e9a668a339ed3202). A shorter direct candidate is edge:38b465032bbb068376d1b3a098d1b83d (companycontact to companyindustry) with evidence 'name, compatible type, and uniqueness measured from source statistics, not declared; value overlap 100% of 3362 sampled child values'. Do not join pg-main objects to ch-main objects in one query; cross-source candidates such as edge:7bdf8607b90723c8dff428c160d3f2f8 are therefore not usable together with the pg-main tables above.",
+  "cited": [
+   {
+    "id": "edge:38b465032bbb068376d1b3a098d1b83d",
+    "kind": "relationship",
+    "name": "companycontact -> companyindustry (companyid -> companyid)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:5b6c142827fd382c8572bd325e3bec72",
+    "kind": "relationship",
+    "name": "company -> companyindustry (companyid -> companyid)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:7bdf8607b90723c8dff428c160d3f2f8",
+    "kind": "relationship",
+    "name": "company -> Company (companyid -> companyID)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:b0e429b0a4b3462314573c9b9722fef3",
+    "kind": "relationship",
+    "name": "companycontact -> company (companyid -> companyid)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:f496e1a200c0d7c4e8f5e04bc38f3654",
+    "kind": "relationship",
+    "name": "companyindustry -> industryclassification (classificationid -> classificationid)",
+    "status": "tentative"
+   },
+   {
+    "id": "field:0006585d4b70be3a0f20a3714fa9a277",
+    "kind": "field",
+    "name": "companyid",
+    "namespace": "public",
+    "object_name": "company",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:240fc312abb38e9a0555c68782a67483",
+    "kind": "field",
+    "name": "companyid",
+    "namespace": "public",
+    "object_name": "companycontact",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:630bfde3eea8bda3e9a668a339ed3202",
+    "kind": "field",
+    "name": "name",
+    "namespace": "public",
+    "object_name": "industryclassification",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:64e071f0510111f8170fe34f01f5516c",
+    "kind": "field",
+    "name": "classificationid",
+    "namespace": "public",
+    "object_name": "industryclassification",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:c9a2611a4dd860082af598de8a2c5341",
+    "kind": "field",
+    "name": "contactstring",
+    "namespace": "public",
+    "object_name": "companycontact",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "object:44c53785e751aabcb831d1a58c77d629",
+    "kind": "table",
+    "name": "industryclassification",
+    "namespace": "public",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "object:cdbf59a0739bcf46a9eef890233bf217",
+    "kind": "table",
+    "name": "company",
+    "namespace": "public",
+    "source_id": "pg-main"
+   }
+  ]
+ },
+ "N-S7": {
+  "question": "In PostgreSQL, how do I list the people with a company experience record together with the company name?",
+  "exit": 0,
+  "seconds": 186.96,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "outcome_code": null,
+  "answer": "Use the pg-main companyexperience and company fields. companyexperience.companyid is field:188a84e5dbad19e9bccedd9ef313173d, company.companyid is field:0006585d4b70be3a0f20a3714fa9a277, and the company table object is object:cdbf59a0739bcf46a9eef890233bf217. The candidate relationship companyexperience -> company is tentative, edge:86e6d44e7dfd5644c735966621e5076e, evidence: name, compatible type, and uniqueness measured from source statistics, not declared; value overlap 100% of 482 sampled child values. companyexperience.personid is field:9895a6239314be7552969ff02192e7ff, person.personid is field:be34b2e648fef29d2674e6a288243107, person.name is field:35bbe1f69041cc864971e65231bbe28c, and the candidate relationship companyexperience -> person is tentative, edge:0eaf0e7bad62b09c807f0de9e49e7809, evidence: name, compatible type, and uniqueness measured from source statistics, not declared; value overlap 100% of 1215 sampled child values. The returned company fields include company.entityname field:9d09e4066544e092c095abcc1af8476b and company.fullname field:f09ae868731d63bd8a5a7e08b085f99d, but no company field literally named name. Therefore choose entityname or fullname as the company name. Example PostgreSQL query using person: SELECT p.personid, p.name AS person_name, c.entityname AS company_name FROM person p JOIN companyexperience ce ON p.personid = ce.personid JOIN company c ON ce.companyid = c.companyid; If you only need the person name stored on the experience row, companyexperience.personname is field:9007cd6bf64aa2c28fbd8ae9c23c3c86 and you can use SELECT ce.personid, ce.personname AS person_name, c.entityname AS company_name FROM companyexperience ce JOIN company c ON ce.companyid = c.companyid. Replace c.entityname with c.fullname to use the other returned company name-like field. The candidate relationship edge:2236b1d170d2c33f9a66696d67577588 from companyexperience to ch-main Person is tentative; evidence: name, compatible type, and weak key claim (source sorting or primary key, uniqueness unproven); parent sampled, a zero is not a measurement; it is between different sources and cannot be joined in one query with the pg-main objects above.",
+  "cited": [
+   {
+    "id": "object:cdbf59a0739bcf46a9eef890233bf217",
+    "kind": "table",
+    "name": "company",
+    "namespace": "public",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:188a84e5dbad19e9bccedd9ef313173d",
+    "kind": "field",
+    "name": "companyid",
+    "namespace": "public",
+    "object_name": "companyexperience",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:0006585d4b70be3a0f20a3714fa9a277",
+    "kind": "field",
+    "name": "companyid",
+    "namespace": "public",
+    "object_name": "company",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "edge:86e6d44e7dfd5644c735966621e5076e",
+    "kind": "relationship",
+    "name": "companyexperience -> company (companyid -> companyid)",
+    "status": "tentative"
+   },
+   {
+    "id": "field:9895a6239314be7552969ff02192e7ff",
+    "kind": "field",
+    "name": "personid",
+    "namespace": "public",
+    "object_name": "companyexperience",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:be34b2e648fef29d2674e6a288243107",
+    "kind": "field",
+    "name": "personid",
+    "namespace": "public",
+    "object_name": "person",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:35bbe1f69041cc864971e65231bbe28c",
+    "kind": "field",
+    "name": "name",
+    "namespace": "public",
+    "object_name": "person",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "edge:0eaf0e7bad62b09c807f0de9e49e7809",
+    "kind": "relationship",
+    "name": "companyexperience -> person (personid -> personid)",
+    "status": "tentative"
+   },
+   {
+    "id": "field:9d09e4066544e092c095abcc1af8476b",
+    "kind": "field",
+    "name": "entityname",
+    "namespace": "public",
+    "object_name": "company",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:f09ae868731d63bd8a5a7e08b085f99d",
+    "kind": "field",
+    "name": "fullname",
+    "namespace": "public",
+    "object_name": "company",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:9007cd6bf64aa2c28fbd8ae9c23c3c86",
+    "kind": "field",
+    "name": "personname",
+    "namespace": "public",
+    "object_name": "companyexperience",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "edge:2236b1d170d2c33f9a66696d67577588",
+    "kind": "relationship",
+    "name": "companyexperience -> Person (personid -> personID)",
+    "status": "tentative"
+   }
+  ]
+ },
+ "N-S8": {
+  "question": "In PostgreSQL, how do I get the relation type of each company relation together with the industry names of the company?",
+  "exit": 0,
+  "seconds": 53.8,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "outcome_code": "NOT_ESTABLISHED_BY_CATALOGUE",
+  "answer": "I cannot establish a PostgreSQL query that returns the relation type for each company relation together with the company\u2019s industry names from the cited catalogue metadata alone. The metadata confirms the relevant columns exist, but it does not show a join path from company relation/company to the industry name column.\n\nWhat is present in the metadata:\n\n- Company relation table:\n  - Table `company` is present as `object:cdbf59a0739bcf46a9eef890233bf217`.\n  - Relation type field is `field:cf5c43e09845156183b9ed66db7b589f`: `companyrelation.relationtype`, type `text`.\n  - Company relation company key field is `field:c48ca6e0a92eee71fc22cf1439eb34c0`: `companyrelation.companyid`, type `text`.\n  - Related company field is `field:401a1c792968a2ca378dc86a63994c4b`: `companyrelation.relatedcompanyid`, type `text`.\n\n- Company table key:\n  - `field:0006585d4b70be3a0f20a3714fa9a277`: `company.companyid`, type `text`.\n\n- Industry metadata:\n  - Table `industryclassification` is present as `object:44c53785e751aabcb831d1a58c77d629`.\n  - Industry name field is `field:630bfde3eea8bda3e9a668a339ed3202`: `industryclassification.name`, type `text`.\n  - Industry classification key field is `field:64e071f0510111f8170fe34f01f5516c`: `industryclassification.classificationid`, type `text`.\n\nRelevant relationship candidates that were checked:\n\n- `edge:f4a07bf2a888068903e05a843fbda6b9`: tentative relationship candidate from `companyrelation.companyid` to `company.companyid`. It is tentative, meaning it is a candidate from names, types, and sometimes sampled values, not declared. Evidence sentence as given: \u201cname, compatible type, and uniqueness measured from source statistics, not declared; value overlap 100% of 245 sampled child values\u201d.\n- `edge:3705c35ef6c34b0be3861dd7187e94bd`: tentative relationship candidate from `companyrelation.companyid` to `companyindustry.companyid`. It is tentative, meaning it is a candidate from names, types, and sometimes sampled values, not declared. Evidence sentence as given: \u201cname, compatible type, and uniqueness measured from source statistics, not declared; value overlap 100% of 245 sampled child values\u201d.\n- `edge:c4668d4cd2232bf547c158a07c5def60`: tentative relationship candidate from `companyindustry.companyid` to `company.companyid`. It is tentative, meaning it is a candidate from names, types, and sometimes sampled values, not declared. Evidence sentence as given: \u201cname, compatible type, and uniqueness measured from source statistics, not declared; value overlap 100% of 3940 sampled child values\u201d.\n\nWhy the requested result cannot be established:\n\nThe metadata does not show a relationship or join key connecting `company`, `companyrelation`, or the partially referenced `companyindustry` path to `industryclassification`, whose name field is `field:630bfde3eea8bda3e9a668a339ed3202`. In particular, no relationship involving `object:44c53785e751aabcb831d1a58c77d629` is returned, and the `companyindustry` object/fields are not included in the returned item set, so the link from company/industry rows to `industryclassification.name` cannot be confirmed from the cited metadata.\n\nTherefore, based only on the returned catalogue metadata, the relation type of each company relation can be selected from `companyrelation.relationtype`, but it cannot be reliably joined to industry names of the company. To write the requested PostgreSQL query, the catalogue would need to provide an explicit or tentative relationship/key linking company relation data to `industryclassification`, for example through a returned `companyindustry` join table or a company-to-classification key.",
+  "cited": [
+   {
+    "id": "object:cdbf59a0739bcf46a9eef890233bf217",
+    "kind": "table",
+    "name": "company",
+    "namespace": "public",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:cf5c43e09845156183b9ed66db7b589f",
+    "kind": "field",
+    "name": "relationtype",
+    "namespace": "public",
+    "object_name": "companyrelation",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:c48ca6e0a92eee71fc22cf1439eb34c0",
+    "kind": "field",
+    "name": "companyid",
+    "namespace": "public",
+    "object_name": "companyrelation",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:401a1c792968a2ca378dc86a63994c4b",
+    "kind": "field",
+    "name": "relatedcompanyid",
+    "namespace": "public",
+    "object_name": "companyrelation",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:0006585d4b70be3a0f20a3714fa9a277",
+    "kind": "field",
+    "name": "companyid",
+    "namespace": "public",
+    "object_name": "company",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "object:44c53785e751aabcb831d1a58c77d629",
+    "kind": "table",
+    "name": "industryclassification",
+    "namespace": "public",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:630bfde3eea8bda3e9a668a339ed3202",
+    "kind": "field",
+    "name": "name",
+    "namespace": "public",
+    "object_name": "industryclassification",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:64e071f0510111f8170fe34f01f5516c",
+    "kind": "field",
+    "name": "classificationid",
+    "namespace": "public",
+    "object_name": "industryclassification",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "edge:f4a07bf2a888068903e05a843fbda6b9",
+    "kind": "relationship",
+    "name": "companyrelation -> company (companyid -> companyid)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:3705c35ef6c34b0be3861dd7187e94bd",
+    "kind": "relationship",
+    "name": "companyrelation -> companyindustry (companyid -> companyid)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:c4668d4cd2232bf547c158a07c5def60",
+    "kind": "relationship",
+    "name": "companyindustry -> company (companyid -> companyid)",
+    "status": "tentative"
+   }
+  ]
+ },
+ "N-S9": {
+  "question": "In PostgreSQL, how do I list the investors of each investment round of a company with the company name and round amount?",
+  "exit": 0,
+  "seconds": 74.1,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "outcome_code": null,
+  "answer": "SELECT c.entityname AS company_name, r.amount AS round_amount, ci.investorcompanyid AS investor_company_id FROM public.companyinvestor AS ci JOIN public.companyinvestmentround AS r ON ci.investmentid = r.investmentid JOIN public.company AS c ON r.companyid = c.companyid;",
+  "cited": [
+   {
+    "id": "object:cdbf59a0739bcf46a9eef890233bf217",
+    "kind": "table",
+    "name": "company",
+    "namespace": "public",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:0006585d4b70be3a0f20a3714fa9a277",
+    "kind": "field",
+    "name": "companyid",
+    "namespace": "public",
+    "object_name": "company",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:9d09e4066544e092c095abcc1af8476b",
+    "kind": "field",
+    "name": "entityname",
+    "namespace": "public",
+    "object_name": "company",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:6a1df09484d8bfa11ed37e09c2d70ac7",
+    "kind": "field",
+    "name": "companyid",
+    "namespace": "public",
+    "object_name": "companyinvestmentround",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:951ad8881a7269f06fedccc8485d3d97",
+    "kind": "field",
+    "name": "investmentid",
+    "namespace": "public",
+    "object_name": "companyinvestmentround",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:4382c7b4a2f817850726f368d5a736b8",
+    "kind": "field",
+    "name": "amount",
+    "namespace": "public",
+    "object_name": "companyinvestmentround",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:09430e166257d5d88e301596770b322e",
+    "kind": "field",
+    "name": "investmentid",
+    "namespace": "public",
+    "object_name": "companyinvestor",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:3cbc71216764680dbbfa54576f332ed7",
+    "kind": "field",
+    "name": "investorcompanyid",
+    "namespace": "public",
+    "object_name": "companyinvestor",
+    "source_id": "pg-main"
+   }
+  ]
+ },
+ "N-S10": {
+  "question": "In PostgreSQL, how do I get the employee category of companies located in a given city?",
+  "exit": 0,
+  "seconds": 62.4,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "outcome_code": null,
+  "answer": "Based on the cited PostgreSQL catalog, the employee category is companyemployeecategory.category (field:90a7cc13f2e028ccac85102684df707a) and the city is location.city (field:46ee056cc036c6d85f6c8458a3d5293d). Both use companyid columns: companyemployeecategory.companyid (field:6766572149164a77ba355d20c4aeb7cd) and location.companyid (field:8d39aa813552fb804eb90af7e14f1221). The metadata includes a tentative REFERENCE_CANDIDATE edge edge:5b5e509e349f568cee779efa997b4034 between companyemployeecategory and location on companyid/companyid. Its status is tentative, and the evidence sentence is: 'name, compatible type, and uniqueness measured from source statistics, not declared; value overlap 97% of 618 sampled child values'. Therefore, this join is based on a candidate relationship, not a declared relationship. If that tentative relationship is acceptable, use a parameterized city filter:\n\nSELECT DISTINCT ce.category\nFROM public.companyemployeecategory AS ce\nJOIN public.location AS l ON ce.companyid = l.companyid\nWHERE l.city = $1;\n\nUse $1 for the given city. DISTINCT is optional if you want unique employee categories. The company object is also present as object:cdbf59a0739bcf46a9eef890233bf217, but the direct candidate employee-category/location join uses the companyid fields above. All cited fields and the relationship are in source pg-main and namespace public, so this is a single PostgreSQL query within one source.",
+  "cited": [
+   {
+    "id": "field:90a7cc13f2e028ccac85102684df707a",
+    "kind": "field",
+    "name": "category",
+    "namespace": "public",
+    "object_name": "companyemployeecategory",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:46ee056cc036c6d85f6c8458a3d5293d",
+    "kind": "field",
+    "name": "city",
+    "namespace": "public",
+    "object_name": "location",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:6766572149164a77ba355d20c4aeb7cd",
+    "kind": "field",
+    "name": "companyid",
+    "namespace": "public",
+    "object_name": "companyemployeecategory",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:8d39aa813552fb804eb90af7e14f1221",
+    "kind": "field",
+    "name": "companyid",
+    "namespace": "public",
+    "object_name": "location",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "edge:5b5e509e349f568cee779efa997b4034",
+    "kind": "relationship",
+    "name": "companyemployeecategory -> location (companyid -> companyid)",
+    "status": "tentative"
+   },
+   {
+    "id": "object:cdbf59a0739bcf46a9eef890233bf217",
+    "kind": "table",
+    "name": "company",
+    "namespace": "public",
+    "source_id": "pg-main"
+   }
+  ]
+ },
+ "N-C1": {
+  "question": "List every column in both databases that holds a part of a postal address.",
+  "exit": 0,
+  "seconds": 61.8,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "outcome_code": "NOT_ESTABLISHED_BY_CATALOGUE",
+  "answer": "I checked the returned field metadata for pg-main/public.location: field:f30788483ff4f1db25789c625862549f, field:07881a985e5af07193a5165f89d2df8c, field:f128752420b5952c69cf9f4e2ebab887, field:46ee056cc036c6d85f6c8458a3d5293d, field:8d39aa813552fb804eb90af7e14f1221, field:8276e5ecfe3a91c3c7925fe1279ad701, field:70887869bcd4fcecdb8cab28844c94c4, field:508c06656aa4615277b88ca5cc839bdb, field:cd59b81fca3bed99927ac9398dd314bc, field:3ef7953d5e6d306b98778ceaba6c6581, field:2d7244fee9e418d077b9952dbb3d7d38, field:8cc26e5b0efdb149aeb64a8261c1e822, field:0bd1b27902d1d447defde90e5f772bb3, field:1bafab2370a8680d51f8cf828cc81939, field:b8f5ded6c3b317cad0dfac8d63ae80ba. From these returned pg-main columns, the identifiable postal-address-part columns are: addressfull [field:f30788483ff4f1db25789c625862549f], street [field:b8f5ded6c3b317cad0dfac8d63ae80ba], city [field:46ee056cc036c6d85f6c8458a3d5293d], region [field:1bafab2370a8680d51f8cf828cc81939], postalcode [field:07881a985e5af07193a5165f89d2df8c], and country [field:8276e5ecfe3a91c3c7925fe1279ad701]. This does not establish every column in both databases because the returned metadata includes no ch-main field items. I checked the returned cross-source relationship candidates to ch-main: edge:9c857f70fc373f418ddb88e461478aa0 and edge:e7e65689bc87e89a4b10d5d0526cf9ff. Both are tentative candidates, with evidence as given: edge:9c857f70fc373f418ddb88e461478aa0: name, compatible type, and weak key claim (source sorting or primary key, uniqueness unproven); parent sampled, a zero is not a measurement. edge:e7e65689bc87e89a4b10d5d0526cf9ff: name, compatible type, and weak key claim (source sorting or primary key, uniqueness unproven); parent sampled, a zero is not a measurement.",
+  "cited": [
+   {
+    "id": "field:f30788483ff4f1db25789c625862549f",
+    "kind": "field",
+    "name": "addressfull",
+    "namespace": "public",
+    "object_name": "location",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:07881a985e5af07193a5165f89d2df8c",
+    "kind": "field",
+    "name": "postalcode",
+    "namespace": "public",
+    "object_name": "location",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:f128752420b5952c69cf9f4e2ebab887",
+    "kind": "field",
+    "name": "_version",
+    "namespace": "public",
+    "object_name": "location",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:46ee056cc036c6d85f6c8458a3d5293d",
+    "kind": "field",
+    "name": "city",
+    "namespace": "public",
+    "object_name": "location",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:8d39aa813552fb804eb90af7e14f1221",
+    "kind": "field",
+    "name": "companyid",
+    "namespace": "public",
+    "object_name": "location",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:8276e5ecfe3a91c3c7925fe1279ad701",
+    "kind": "field",
+    "name": "country",
+    "namespace": "public",
+    "object_name": "location",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:70887869bcd4fcecdb8cab28844c94c4",
+    "kind": "field",
+    "name": "created_at",
+    "namespace": "public",
+    "object_name": "location",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:508c06656aa4615277b88ca5cc839bdb",
+    "kind": "field",
+    "name": "iscurrent",
+    "namespace": "public",
+    "object_name": "location",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:cd59b81fca3bed99927ac9398dd314bc",
+    "kind": "field",
+    "name": "isprimary",
+    "namespace": "public",
+    "object_name": "location",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:3ef7953d5e6d306b98778ceaba6c6581",
+    "kind": "field",
+    "name": "latitude",
+    "namespace": "public",
+    "object_name": "location",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:2d7244fee9e418d077b9952dbb3d7d38",
+    "kind": "field",
+    "name": "locationid",
+    "namespace": "public",
+    "object_name": "location",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:8cc26e5b0efdb149aeb64a8261c1e822",
+    "kind": "field",
+    "name": "longitude",
+    "namespace": "public",
+    "object_name": "location",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:0bd1b27902d1d447defde90e5f772bb3",
+    "kind": "field",
+    "name": "precision",
+    "namespace": "public",
+    "object_name": "location",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:1bafab2370a8680d51f8cf828cc81939",
+    "kind": "field",
+    "name": "region",
+    "namespace": "public",
+    "object_name": "location",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:b8f5ded6c3b317cad0dfac8d63ae80ba",
+    "kind": "field",
+    "name": "street",
+    "namespace": "public",
+    "object_name": "location",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "edge:9c857f70fc373f418ddb88e461478aa0",
+    "kind": "relationship",
+    "name": "location -> Company (companyid -> companyID)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:e7e65689bc87e89a4b10d5d0526cf9ff",
+    "kind": "relationship",
+    "name": "location -> Location (locationid -> locationID)",
+    "status": "tentative"
+   }
+  ]
+ },
+ "N-C2": {
+  "question": "Which PostgreSQL tables have a confidence column?",
+  "exit": 0,
+  "seconds": 107.23,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "outcome_code": null,
+  "answer": "In the supplied PostgreSQL (pg-main) metadata, the tables with a field named \"confidence\" are: companycontact, companyemployeecategory, companyexperience, companyfinancials, companyinvestmentround, companyinvestor, companyrelation, and companytechnographics.",
+  "cited": [
+   {
+    "id": "object:681ca304546a91873f8df0edd46173e7",
+    "kind": "table",
+    "name": "companycontact",
+    "namespace": "public",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:727d2a1d51697de10d29d6e1ed07b0dc",
+    "kind": "field",
+    "name": "confidence",
+    "namespace": "public",
+    "object_name": "companycontact",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "object:5db586a1423049313723e3cbd2ac5019",
+    "kind": "table",
+    "name": "companyemployeecategory",
+    "namespace": "public",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:8562d1981dbb85b27ea9c38b9e0d5da4",
+    "kind": "field",
+    "name": "confidence",
+    "namespace": "public",
+    "object_name": "companyemployeecategory",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "object:223cea9a1e2b3d6206b1d0d1d9834b84",
+    "kind": "table",
+    "name": "companyexperience",
+    "namespace": "public",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:5078316e0f27beaabe7ce4886a7b23e5",
+    "kind": "field",
+    "name": "confidence",
+    "namespace": "public",
+    "object_name": "companyexperience",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "object:7517f51b285c36534548fdf1361e1f95",
+    "kind": "table",
+    "name": "companyfinancials",
+    "namespace": "public",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:cda6044b127928863a7a76f068309e94",
+    "kind": "field",
+    "name": "confidence",
+    "namespace": "public",
+    "object_name": "companyfinancials",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "object:4e2bb69e0519d5b05463e40fd0f1ce9c",
+    "kind": "table",
+    "name": "companyinvestmentround",
+    "namespace": "public",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:d6ed4f352481e73b5a18c88c73f6d84a",
+    "kind": "field",
+    "name": "confidence",
+    "namespace": "public",
+    "object_name": "companyinvestmentround",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "object:82313514b51848e2a799c8c9a5a6cf11",
+    "kind": "table",
+    "name": "companyinvestor",
+    "namespace": "public",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:fcff77eee9419d5452aac325c2f3c8d3",
+    "kind": "field",
+    "name": "confidence",
+    "namespace": "public",
+    "object_name": "companyinvestor",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "object:d5f2735a9a250bd27b6aa437997b18a9",
+    "kind": "table",
+    "name": "companyrelation",
+    "namespace": "public",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:95b694da2ab07bd9159ca3c614672598",
+    "kind": "field",
+    "name": "confidence",
+    "namespace": "public",
+    "object_name": "companyrelation",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "object:148e6b724a8d394adc9e4e8fb2103f91",
+    "kind": "table",
+    "name": "companytechnographics",
+    "namespace": "public",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:bb8bc6d3b75dffab11d29246982bcc88",
+    "kind": "field",
+    "name": "confidence",
+    "namespace": "public",
+    "object_name": "companytechnographics",
+    "source_id": "pg-main"
+   }
+  ]
+ },
+ "N-C3": {
+  "question": "List every column in the catalogue that holds a person's name or a part of it.",
+  "exit": 0,
+  "seconds": 109.54,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "outcome_code": null,
+  "answer": "The catalogue shows five columns that hold a person's name or part of a person's name: a full 'name' column on each person object, and firstName, lastName, and middleInitial on the ch-main Person object.",
+  "cited": [
+   {
+    "id": "field:35bbe1f69041cc864971e65231bbe28c",
+    "kind": "field",
+    "name": "name",
+    "namespace": "public",
+    "object_name": "person",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:423465b8356d027b942c8de2060c1173",
+    "kind": "field",
+    "name": "name",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Person",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:055ac3c827cb9d840704592325514de4",
+    "kind": "field",
+    "name": "firstName",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Person",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:900d74cdf7588a9ddca14263575d3657",
+    "kind": "field",
+    "name": "lastName",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Person",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:61d2d3d779f343b228301a2862619f67",
+    "kind": "field",
+    "name": "middleInitial",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Person",
+    "source_id": "ch-main"
+   }
+  ]
+ },
+ "N-C4": {
+  "question": "Which columns in the catalogue have a timestamp or datetime type, and in which tables?",
+  "exit": 0,
+  "seconds": 0.55,
+  "stderr_bytes": 0,
+  "error_code": "NO_CATALOGUE_MATCH",
+  "outcome_code": null,
+  "answer": null,
+  "cited": null
+ },
+ "N-C5": {
+  "question": "List every column in both databases that holds a money amount or the currency of one.",
+  "exit": 0,
+  "seconds": 73.45,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "outcome_code": null,
+  "answer": "The columns that appear to hold a money amount or a currency are: companyinvestmentround.amount, companyfinancials.amount, companyinvestmentround.currency, companyfinancials.currency, Company.companyRevenue_currency, Company.companyRevenueIn000s, and Company.companyRevenue. Company.companyRevenue is included because its name indicates revenue, although its Nullable(String) type means the metadata alone does not prove a numeric or formatted monetary representation.",
+  "cited": [
+   {
+    "id": "field:4382c7b4a2f817850726f368d5a736b8",
+    "kind": "field",
+    "name": "amount",
+    "namespace": "public",
+    "object_name": "companyinvestmentround",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:9544b40caa989a5ecbf2abeb953ac2db",
+    "kind": "field",
+    "name": "amount",
+    "namespace": "public",
+    "object_name": "companyfinancials",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:6eadd41789773a04386dec450cf5d4a0",
+    "kind": "field",
+    "name": "currency",
+    "namespace": "public",
+    "object_name": "companyinvestmentround",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:8052b7c84d7912b48e831735c70136c7",
+    "kind": "field",
+    "name": "currency",
+    "namespace": "public",
+    "object_name": "companyfinancials",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:bea678fd1330ff63ec0d9a74225453c9",
+    "kind": "field",
+    "name": "companyRevenue_currency",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Company",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:1181504f836ac21be205c52fd26c49e2",
+    "kind": "field",
+    "name": "companyRevenueIn000s",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Company",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:675640b0bb67f300bc70991ae573177b",
+    "kind": "field",
+    "name": "companyRevenue",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Company",
+    "source_id": "ch-main"
+   }
+  ]
+ },
+ "N-C6": {
+  "question": "Which columns, other than version columns, have a numeric type in PostgreSQL?",
+  "exit": 0,
+  "seconds": 44.51,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "outcome_code": null,
+  "answer": "Among the retrieved PostgreSQL metadata for `pg-main`, the non-version columns with numeric data types are: `amount` in `companyinvestmentround` (`bigint`) [field:4382c7b4a2f817850726f368d5a736b8], `amount` in `companyfinancials` (`bigint`) [field:9544b40caa989a5ecbf2abeb953ac2db], `totalinvestment` in `company` (`bigint`) [field:a7d40ea5bc0e90b96a2688ed69800d13], and `year` in `companyfinancials` (`integer`) [field:9431fa59187fb3d015d2b2238c779159]. The retrieved metadata does not show any non-version field with the exact PostgreSQL data type `numeric`; if 'numeric type' is intended strictly as the PostgreSQL type `numeric`, then none are present.",
+  "cited": [
+   {
+    "id": "field:4382c7b4a2f817850726f368d5a736b8",
+    "kind": "field",
+    "name": "amount",
+    "namespace": "public",
+    "object_name": "companyinvestmentround",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:9544b40caa989a5ecbf2abeb953ac2db",
+    "kind": "field",
+    "name": "amount",
+    "namespace": "public",
+    "object_name": "companyfinancials",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:a7d40ea5bc0e90b96a2688ed69800d13",
+    "kind": "field",
+    "name": "totalinvestment",
+    "namespace": "public",
+    "object_name": "company",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:9431fa59187fb3d015d2b2238c779159",
+    "kind": "field",
+    "name": "year",
+    "namespace": "public",
+    "object_name": "companyfinancials",
+    "source_id": "pg-main"
+   }
+  ]
+ },
+ "N-C7": {
+  "question": "Which ClickHouse columns are not nullable, and what do they have in common?",
+  "exit": 0,
+  "seconds": 0.56,
+  "stderr_bytes": 0,
+  "error_code": "NO_CATALOGUE_MATCH",
+  "outcome_code": null,
+  "answer": null,
+  "cited": null
+ },
+ "N-C8": {
+  "question": "List every column in both databases that links people to companies or to person records.",
+  "exit": 0,
+  "seconds": 291.39,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "outcome_code": null,
+  "answer": "Candidate linking columns in pg-main: person.personid (field:be34b2e648fef29d2674e6a288243107) and companyexperience.personid / companyexperience.companyid (evidenced by relationships edge:0eaf0e7bad62b09c807f0de9e49e7809, edge:2236b1d170d2c33f9a66696d67577588, edge:86e6d44e7dfd5644c735966621e5076e). Candidate linking columns in ch-main: Person.personID (field:06b1befeb60ad6fe33aa28ba79c79b31), PersonContact.personID (field:df329c939e41b4df0640f5f9fbaa1036), Experience.personID (field:185053ed6692d43fdaf5c3bda313d1c2), Experience.companyID (field:6201990413b074090cd6f8cf34c2aa87). All cited relationships are status tentative (REFERENCE_CANDIDATE) \u2014 candidates from names, types, and sometimes sampled values \u2014 not declared links.\n\nTentative relationship evidence:\n  \u2022 edge:0eaf0e7bad62b09c807f0de9e49e7809: name, compatible type, and uniqueness measured from source statistics, not declared; value overlap 100% of 1215 sampled child values\n  \u2022 edge:2236b1d170d2c33f9a66696d67577588: name, compatible type, and weak key claim (source sorting or primary key, uniqueness unproven); parent sampled, a zero is not a measurement\n  \u2022 edge:86e6d44e7dfd5644c735966621e5076e: name, compatible type, and uniqueness measured from source statistics, not declared; value overlap 100% of 482 sampled child values\n  \u2022 edge:2569a3532b8abeff3a3d90010ee81262: name, compatible type, and weak key claim (source sorting or primary key, uniqueness unproven); value overlap 24% of 4096 sampled child values\n  \u2022 edge:2623e3f6bf42984777c7fae4599cd25a: name, compatible type, and weak key claim (source sorting or primary key, uniqueness unproven); value overlap 1% of 2702 sampled child values\n  \u2022 edge:fddd5f6f08ae38306830023c32fcde14: name, compatible type, and weak key claim (source sorting or primary key, uniqueness unproven); value overlap 0% of 4042 sampled child values\n  \u2022 edge:203a8cf3674b9796ce90b4b27b5c31c7: name, compatible type, and weak key claim (source sorting or primary key, uniqueness unproven); parent sampled, a zero is not a measurement\n\nThe cross-source candidates edge:203a8cf3674b9796ce90b4b27b5c31c7 (person.personid -> Person.personID) and edge:2236b1d170d2c33f9a66696d67577588 (companyexperience.personid -> Person.personID) span pg-main and ch-main and cannot be joined in one query.",
+  "cited": [
+   {
+    "id": "field:be34b2e648fef29d2674e6a288243107",
+    "kind": "field",
+    "name": "personid",
+    "namespace": "public",
+    "object_name": "person",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "edge:0eaf0e7bad62b09c807f0de9e49e7809",
+    "kind": "relationship",
+    "name": "companyexperience -> person (personid -> personid)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:2236b1d170d2c33f9a66696d67577588",
+    "kind": "relationship",
+    "name": "companyexperience -> Person (personid -> personID)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:86e6d44e7dfd5644c735966621e5076e",
+    "kind": "relationship",
+    "name": "companyexperience -> company (companyid -> companyid)",
+    "status": "tentative"
+   },
+   {
+    "id": "field:06b1befeb60ad6fe33aa28ba79c79b31",
+    "kind": "field",
+    "name": "personID",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Person",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:df329c939e41b4df0640f5f9fbaa1036",
+    "kind": "field",
+    "name": "personID",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "PersonContact",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:185053ed6692d43fdaf5c3bda313d1c2",
+    "kind": "field",
+    "name": "personID",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Experience",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:6201990413b074090cd6f8cf34c2aa87",
+    "kind": "field",
+    "name": "companyID",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Experience",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "edge:2569a3532b8abeff3a3d90010ee81262",
+    "kind": "relationship",
+    "name": "Experience -> Person (personID -> personID)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:2623e3f6bf42984777c7fae4599cd25a",
+    "kind": "relationship",
+    "name": "Experience -> Company (companyID -> companyID)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:fddd5f6f08ae38306830023c32fcde14",
+    "kind": "relationship",
+    "name": "PersonContact -> Person (personID -> personID)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:203a8cf3674b9796ce90b4b27b5c31c7",
+    "kind": "relationship",
+    "name": "person -> Person (personid -> personID)",
+    "status": "tentative"
+   }
+  ]
+ },
+ "N-C9": {
+  "question": "In every source, which tables hold a role, title or category of a person or employees?",
+  "exit": 0,
+  "seconds": 196.99,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "outcome_code": null,
+  "answer": "Based on the cited catalogue metadata:\n\n- In `pg-main`, the table `person` (`object:a304cb9932fe92f0dc604f4fcbf4e156`) holds a role of a person via the field `role` (`field:5e6cab3f3d0f18ecd1720ee376af56d4`).\n- In `ch-main`, no cited table is shown to hold a role, title, or category of a person or employee. The cited `ch-main` tables are `Person` (`object:364d20537dea8b3c54c5c93685285687`) and `PersonContact` (`object:5696f20c5f1a765ab463bd4aaa930e13`), and the metadata returned for them does not include a role, title, or category field.",
+  "cited": [
+   {
+    "id": "object:a304cb9932fe92f0dc604f4fcbf4e156",
+    "kind": "table",
+    "name": "person",
+    "namespace": "public",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:5e6cab3f3d0f18ecd1720ee376af56d4",
+    "kind": "field",
+    "name": "role",
+    "namespace": "public",
+    "object_name": "person",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "object:364d20537dea8b3c54c5c93685285687",
+    "kind": "table",
+    "name": "Person",
+    "namespace": "testzoominfo_clone2",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "object:5696f20c5f1a765ab463bd4aaa930e13",
+    "kind": "table",
+    "name": "PersonContact",
+    "namespace": "testzoominfo_clone2",
+    "source_id": "ch-main"
+   }
+  ]
+ },
+ "N-C10": {
+  "question": "Which tables in both databases describe locations of companies, and which columns carry the company id?",
+  "exit": 0,
+  "seconds": 66.32,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "outcome_code": null,
+  "answer": "The returned metadata contains one company-location table in each source: pg-main/public.location and ch-main/testzoominfo_clone2.Location. The column carrying the company id in pg-main/public.location is companyid; the column carrying the company id in ch-main/testzoominfo_clone2.Location is companyID.",
+  "cited": [
+   {
+    "id": "object:46db43985f4307a123288605607dc896",
+    "kind": "table",
+    "name": "location",
+    "namespace": "public",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "object:50cd5e5900edd832934fb32887fcce5e",
+    "kind": "table",
+    "name": "Location",
+    "namespace": "testzoominfo_clone2",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:8d39aa813552fb804eb90af7e14f1221",
+    "kind": "field",
+    "name": "companyid",
+    "namespace": "public",
+    "object_name": "location",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:831df8415aab92eec49c715ed1acbf2a",
+    "kind": "field",
+    "name": "companyID",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Location",
+    "source_id": "ch-main"
+   }
+  ]
+ },
+ "N-I1": {
+  "question": "Can I match PostgreSQL location rows to ClickHouse Location rows on their location ids?",
+  "exit": 0,
+  "seconds": 55.54,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "outcome_code": null,
+  "answer": "The retrieved catalogue metadata contains a tentative candidate relationship for matching `location` and `Location` on their location-id fields. The candidate is `edge:e7e65689bc87e89a4b10d5d0526cf9ff` between PostgreSQL `location` (`object:46db43985f4307a123288605607dc896`) and ClickHouse `Location` (`object:50cd5e5900edd832934fb32887fcce5e`) using columns `locationid` (`field:2d7244fee9e418d077b9952dbb3d7d38`) and `locationID` (`field:c6fc905c5b7a537250e69c31d1d663f2`). Because this relationship is `tentative`, it is a candidate inferred from names, types, and sometimes sampled values, not a declared relationship. Its evidence sentence is: \"name, compatible type, and weak key claim (source sorting or primary key, uniqueness unproven); parent sampled, a zero is not a measurement\". Also, the two table objects are in different sources (`pg-main` and `ch-main`), and a relationship between objects of two different sources cannot be joined in one query.",
+  "cited": [
+   {
+    "id": "edge:e7e65689bc87e89a4b10d5d0526cf9ff",
+    "kind": "relationship",
+    "name": "location -> Location (locationid -> locationID)",
+    "status": "tentative"
+   },
+   {
+    "id": "object:46db43985f4307a123288605607dc896",
+    "kind": "table",
+    "name": "location",
+    "namespace": "public",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "object:50cd5e5900edd832934fb32887fcce5e",
+    "kind": "table",
+    "name": "Location",
+    "namespace": "testzoominfo_clone2",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:2d7244fee9e418d077b9952dbb3d7d38",
+    "kind": "field",
+    "name": "locationid",
+    "namespace": "public",
+    "object_name": "location",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:c6fc905c5b7a537250e69c31d1d663f2",
+    "kind": "field",
+    "name": "locationID",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Location",
+    "source_id": "ch-main"
+   }
+  ]
+ },
+ "N-I2": {
+  "question": "Is pg.companyinvestor.investorcompanyid a reference to pg.company.companyid?",
+  "exit": 0,
+  "seconds": 37.16,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "outcome_code": "NOT_ESTABLISHED_BY_CATALOGUE",
+  "answer": "",
+  "cited": [
+   {
+    "id": "object:82313514b51848e2a799c8c9a5a6cf11",
+    "kind": "table",
+    "name": "companyinvestor",
+    "namespace": "public",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "object:cdbf59a0739bcf46a9eef890233bf217",
+    "kind": "table",
+    "name": "company",
+    "namespace": "public",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:3cbc71216764680dbbfa54576f332ed7",
+    "kind": "field",
+    "name": "investorcompanyid",
+    "namespace": "public",
+    "object_name": "companyinvestor",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:0006585d4b70be3a0f20a3714fa9a277",
+    "kind": "field",
+    "name": "companyid",
+    "namespace": "public",
+    "object_name": "company",
+    "source_id": "pg-main"
+   }
+  ]
+ },
+ "N-I3": {
+  "question": "Can I find the ClickHouse person for a PostgreSQL company experience record via personid?",
+  "exit": 0,
+  "seconds": 108.73,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "outcome_code": null,
+  "answer": "The retrieved metadata shows a tentative reference candidate from pg-main/public/companyexperience.personid to ch-main/testzoominfo_clone2/Person.personID. The source field is field:9895a6239314be7552969ff02192e7ff and the target object is object:364d20537dea8b3c54c5c93685285687 with field:06b1befeb60ad6fe33aa28ba79c79b31. This relationship is not declared; the relationship evidence sentence is: \"name, compatible type, and weak key claim (source sorting or primary key, uniqueness unproven); parent sampled, a zero is not a measurement\". Because this candidate connects pg-main and ch-main objects, it cannot be joined in one query.",
+  "cited": [
+   {
+    "id": "edge:2236b1d170d2c33f9a66696d67577588",
+    "kind": "relationship",
+    "name": "companyexperience -> Person (personid -> personID)",
+    "status": "tentative"
+   },
+   {
+    "id": "field:9895a6239314be7552969ff02192e7ff",
+    "kind": "field",
+    "name": "personid",
+    "namespace": "public",
+    "object_name": "companyexperience",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "object:364d20537dea8b3c54c5c93685285687",
+    "kind": "table",
+    "name": "Person",
+    "namespace": "testzoominfo_clone2",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:06b1befeb60ad6fe33aa28ba79c79b31",
+    "kind": "field",
+    "name": "personID",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Person",
+    "source_id": "ch-main"
+   }
+  ]
+ },
+ "N-I4": {
+  "question": "Between ch.Experience.jobTitle and ch.Experience.title, which should I use for a person's job title?",
+  "exit": 0,
+  "seconds": 29.81,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "outcome_code": "NOT_ESTABLISHED_BY_CATALOGUE",
+  "answer": "The retrieved catalogue metadata does not establish which field should be used for a person's job title between ch.Experience.jobTitle and ch.Experience.title. I checked the Experience table and both fields: ch.Experience.jobTitle and ch.Experience.title. Both are listed as fields of Experience in ch-main/testzoominfo_clone2 with data type Nullable(String), but neither metadata entry includes a description, relationship, or other evidence indicating that one represents a person's job title and the other does not. I also checked Person-related metadata in the returned items, but it did not provide a job title definition that distinguishes these Experience fields.",
+  "cited": [
+   {
+    "id": "object:da196e6ffaff4ffc6d6ee39dd5090883",
+    "kind": "table",
+    "name": "Experience",
+    "namespace": "testzoominfo_clone2",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:257400d421de3d60c3a4c87ddf9b14a2",
+    "kind": "field",
+    "name": "jobTitle",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Experience",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:d6156efd7957fab3a15e264c9010af75",
+    "kind": "field",
+    "name": "title",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Experience",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "object:364d20537dea8b3c54c5c93685285687",
+    "kind": "table",
+    "name": "Person",
+    "namespace": "testzoominfo_clone2",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:06b1befeb60ad6fe33aa28ba79c79b31",
+    "kind": "field",
+    "name": "personID",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Person",
+    "source_id": "ch-main"
+   }
+  ]
+ },
+ "N-I5": {
+  "question": "Between pg.company.entityname, fullname and description, which column holds the company's name?",
+  "exit": 0,
+  "seconds": 51.1,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "outcome_code": "NOT_ESTABLISHED_BY_CATALOGUE",
+  "answer": "not_established",
+  "cited": [
+   {
+    "id": "object:cdbf59a0739bcf46a9eef890233bf217",
+    "kind": "table",
+    "name": "company",
+    "namespace": "public",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:9d09e4066544e092c095abcc1af8476b",
+    "kind": "field",
+    "name": "entityname",
+    "namespace": "public",
+    "object_name": "company",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:f09ae868731d63bd8a5a7e08b085f99d",
+    "kind": "field",
+    "name": "fullname",
+    "namespace": "public",
+    "object_name": "company",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:f3d1920b252a2d88fe9b3db5dae54be6",
+    "kind": "field",
+    "name": "description",
+    "namespace": "public",
+    "object_name": "company",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "edge:7bdf8607b90723c8dff428c160d3f2f8",
+    "kind": "relationship",
+    "name": "company -> Company (companyid -> companyID)",
+    "status": "tentative"
+   },
+   {
+    "id": "field:acb560e6086a0d2545806ce87102ef28",
+    "kind": "field",
+    "name": "companyName",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Company",
+    "source_id": "ch-main"
+   }
+  ]
+ },
+ "N-I6": {
+  "question": "In the pg.company and pg.location relationship on companyid, which table is the parent?",
+  "exit": 0,
+  "seconds": 100.15,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "outcome_code": null,
+  "answer": "answered (tentative): pg.company is the parent for the pg.location \u2192 pg.company companyid candidate relationship.",
+  "cited": [
+   {
+    "id": "edge:776fdc67aec429b2b220b1a3e19ea68f",
+    "kind": "relationship",
+    "name": "location -> company (companyid -> companyid)",
+    "status": "tentative"
+   },
+   {
+    "id": "field:8d39aa813552fb804eb90af7e14f1221",
+    "kind": "field",
+    "name": "companyid",
+    "namespace": "public",
+    "object_name": "location",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:0006585d4b70be3a0f20a3714fa9a277",
+    "kind": "field",
+    "name": "companyid",
+    "namespace": "public",
+    "object_name": "company",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "object:46db43985f4307a123288605607dc896",
+    "kind": "table",
+    "name": "location",
+    "namespace": "public",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "object:cdbf59a0739bcf46a9eef890233bf217",
+    "kind": "table",
+    "name": "company",
+    "namespace": "public",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "edge:63cdba9f542a9dc5255948bfce6297e7",
+    "kind": "relationship",
+    "name": "company -> location (companyid -> companyid)",
+    "status": "tentative"
+   }
+  ]
+ },
+ "N-I7": {
+  "question": "Does the catalogue tell me which company is the parent and which is the subsidiary in pg.companyrelation?",
+  "exit": 0,
+  "seconds": 76.32,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "outcome_code": "NOT_ESTABLISHED_BY_CATALOGUE",
+  "answer": "No, the retrieved catalogue metadata does not establish which company is the parent and which is the subsidiary in pg.companyrelation.",
+  "cited": [
+   {
+    "id": "object:d5f2735a9a250bd27b6aa437997b18a9",
+    "kind": "table",
+    "name": "companyrelation",
+    "namespace": "public",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:c48ca6e0a92eee71fc22cf1439eb34c0",
+    "kind": "field",
+    "name": "companyid",
+    "namespace": "public",
+    "object_name": "companyrelation",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:401a1c792968a2ca378dc86a63994c4b",
+    "kind": "field",
+    "name": "relatedcompanyid",
+    "namespace": "public",
+    "object_name": "companyrelation",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:cf5c43e09845156183b9ed66db7b589f",
+    "kind": "field",
+    "name": "relationtype",
+    "namespace": "public",
+    "object_name": "companyrelation",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:19ae5a8cb9a5b206d09ff1e377926180",
+    "kind": "field",
+    "name": "summary",
+    "namespace": "public",
+    "object_name": "companyrelation",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:3021e810afdbb735a705b11696894436",
+    "kind": "field",
+    "name": "types",
+    "namespace": "public",
+    "object_name": "companyrelation",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:36a8cfc0b339b2593c433a986dd051c1",
+    "kind": "field",
+    "name": "surfaceform",
+    "namespace": "public",
+    "object_name": "companyrelation",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:35aa87e87ee6ff54c7eba0a5eaa4301f",
+    "kind": "field",
+    "name": "explicit_origin",
+    "namespace": "public",
+    "object_name": "companyrelation",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:95b694da2ab07bd9159ca3c614672598",
+    "kind": "field",
+    "name": "confidence",
+    "namespace": "public",
+    "object_name": "companyrelation",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:4ea40fcf8996d84ce1e4475314adb188",
+    "kind": "field",
+    "name": "_version",
+    "namespace": "public",
+    "object_name": "companyrelation",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:b0fda9888a8d57b79b280d4ecbf230cc",
+    "kind": "field",
+    "name": "created_at",
+    "namespace": "public",
+    "object_name": "companyrelation",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "edge:f4a07bf2a888068903e05a843fbda6b9",
+    "kind": "relationship",
+    "name": "companyrelation -> company (companyid -> companyid)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:3705c35ef6c34b0be3861dd7187e94bd",
+    "kind": "relationship",
+    "name": "companyrelation -> companyindustry (companyid -> companyid)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:9847948dee2a7034ab8a750843741d38",
+    "kind": "relationship",
+    "name": "companyrelation -> location (companyid -> companyid)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:f651bc7a8701e90bd91041bae8576a3a",
+    "kind": "relationship",
+    "name": "companyrelation -> Company (companyid -> companyID)",
+    "status": "tentative"
+   }
+  ]
+ },
+ "N-I8": {
+  "question": "Which PostgreSQL column holds a person's email address?",
+  "exit": 0,
+  "seconds": 31.01,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "outcome_code": "NOT_ESTABLISHED_BY_CATALOGUE",
+  "answer": "The provided PostgreSQL catalog metadata does not identify a column that holds a person's email address.",
+  "cited": [
+   {
+    "id": "object:a304cb9932fe92f0dc604f4fcbf4e156",
+    "kind": "table",
+    "name": "person",
+    "namespace": "public",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:be34b2e648fef29d2674e6a288243107",
+    "kind": "field",
+    "name": "personid",
+    "namespace": "public",
+    "object_name": "person",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:748f4045070abc55132c30207dee8dcf",
+    "kind": "field",
+    "name": "_version",
+    "namespace": "public",
+    "object_name": "person",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:a2054f36e9a81b4a103fffc2f846a03c",
+    "kind": "field",
+    "name": "confidence",
+    "namespace": "public",
+    "object_name": "person",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:35bbe1f69041cc864971e65231bbe28c",
+    "kind": "field",
+    "name": "name",
+    "namespace": "public",
+    "object_name": "person",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:5e6cab3f3d0f18ecd1720ee376af56d4",
+    "kind": "field",
+    "name": "role",
+    "namespace": "public",
+    "object_name": "person",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:851c1de57d957816318afc4b2f15c966",
+    "kind": "field",
+    "name": "summary",
+    "namespace": "public",
+    "object_name": "person",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:cf032b97b7abcc6d79f5e79441302fb9",
+    "kind": "field",
+    "name": "created_at",
+    "namespace": "public",
+    "object_name": "person",
+    "source_id": "pg-main"
+   },
+   {
+    "id": "field:fab61c9103d684f2ddf949d6fa897fd5",
+    "kind": "field",
+    "name": "types",
+    "namespace": "public",
+    "object_name": "person",
+    "source_id": "pg-main"
+   }
+  ]
+ },
+ "N-I9": {
+  "question": "Can I tell which ClickHouse Location row is a company's current location?",
+  "exit": 0,
+  "seconds": 39.86,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "outcome_code": "NOT_ESTABLISHED_BY_CATALOGUE",
+  "answer": "Not established",
+  "cited": [
+   {
+    "id": "object:50cd5e5900edd832934fb32887fcce5e",
+    "kind": "table",
+    "name": "Location",
+    "namespace": "testzoominfo_clone2",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "object:b3653bad92366ef20567af26b5ca7ce6",
+    "kind": "table",
+    "name": "Company",
+    "namespace": "testzoominfo_clone2",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:c6fc905c5b7a537250e69c31d1d663f2",
+    "kind": "field",
+    "name": "locationID",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Location",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:2cda97588c0b11300d589bf966c150f1",
+    "kind": "field",
+    "name": "_version",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Location",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:eeb837e2c47fa1c228f0851018538b42",
+    "kind": "field",
+    "name": "City",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Location",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:cd6d60490f14286bc01a18c11a92f1ce",
+    "kind": "field",
+    "name": "State",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Location",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:b977254ef8f73aba8c968a0d6aff6324",
+    "kind": "field",
+    "name": "Street",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Location",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:44265af0ed655347f064a46986480caf",
+    "kind": "field",
+    "name": "Zip",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Location",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:831df8415aab92eec49c715ed1acbf2a",
+    "kind": "field",
+    "name": "companyID",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Location",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:ba5f408c511bc395d51951c82ceed724",
+    "kind": "field",
+    "name": "CountryCode",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Location",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:861fe226e14fcf38588592aad6e62355",
+    "kind": "field",
+    "name": "companyID",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Company",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "edge:e7e65689bc87e89a4b10d5d0526cf9ff",
+    "kind": "relationship",
+    "name": "location -> Location (locationid -> locationID)",
+    "status": "tentative"
+   },
+   {
+    "id": "edge:9c857f70fc373f418ddb88e461478aa0",
+    "kind": "relationship",
+    "name": "location -> Company (companyid -> companyID)",
+    "status": "tentative"
+   }
+  ]
+ },
+ "N-I10": {
+  "question": "In ClickHouse, how can I find the company name for a row in PersonContact?",
+  "exit": 0,
+  "seconds": 18.65,
+  "stderr_bytes": 0,
+  "error_code": null,
+  "outcome_code": "NOT_ESTABLISHED_BY_CATALOGUE",
+  "answer": "not_established: I checked the ClickHouse metadata for `PersonContact` (`object:5696f20c5f1a765ab463bd4aaa930e13`) and found fields `personID` (`field:df329c939e41b4df0640f5f9fbaa1036`), `_version` (`field:4fdfb2ce09a237e2342293753b0c8e6e`), and `freeMails` (`field:7b45c137b580b26cc328fc4aa0dbefc6`), but no `companyID` or `companyName`. The only retrieved relationship from `PersonContact` is a tentative `REFERENCE_CANDIDATE` to `Person` on `personID`/`personID` (`edge:fddd5f6f08ae38306830023c32fcde14`), with evidence: \"name, compatible type, and weak key claim (source sorting or primary key, uniqueness unproven); value overlap 0% of 4042 sampled child values\". `Company` (`object:b3653bad92366ef20567af26b5ca7ce6`) has `companyName` (`field:acb560e6086a0d2545806ce87102ef28`) and `companyID` (`field:861fe226e14fcf38588592aad6e62355`), but the retrieved metadata shows no relationship from `PersonContact` to `Company`, nor from `Person` to `Company`. Therefore, based on the cited metadata, a supported path to find the company name for a `PersonContact` row is not established.",
+  "cited": [
+   {
+    "id": "object:5696f20c5f1a765ab463bd4aaa930e13",
+    "kind": "table",
+    "name": "PersonContact",
+    "namespace": "testzoominfo_clone2",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:df329c939e41b4df0640f5f9fbaa1036",
+    "kind": "field",
+    "name": "personID",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "PersonContact",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:4fdfb2ce09a237e2342293753b0c8e6e",
+    "kind": "field",
+    "name": "_version",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "PersonContact",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:7b45c137b580b26cc328fc4aa0dbefc6",
+    "kind": "field",
+    "name": "freeMails",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "PersonContact",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "edge:fddd5f6f08ae38306830023c32fcde14",
+    "kind": "relationship",
+    "name": "PersonContact -> Person (personID -> personID)",
+    "status": "tentative"
+   },
+   {
+    "id": "object:b3653bad92366ef20567af26b5ca7ce6",
+    "kind": "table",
+    "name": "Company",
+    "namespace": "testzoominfo_clone2",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:acb560e6086a0d2545806ce87102ef28",
+    "kind": "field",
+    "name": "companyName",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Company",
+    "source_id": "ch-main"
+   },
+   {
+    "id": "field:861fe226e14fcf38588592aad6e62355",
+    "kind": "field",
+    "name": "companyID",
+    "namespace": "testzoominfo_clone2",
+    "object_name": "Company",
+    "source_id": "ch-main"
+   }
+  ]
+ }
+}
