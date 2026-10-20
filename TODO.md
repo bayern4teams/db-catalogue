@@ -2,6 +2,15 @@
 
 Update this file when work starts, a fact changes, a decision is needed, a check runs, or work finishes. Do not batch updates at the end. Use `- [ ]`, `- [x]`, or `- [~]` (in progress); add a short evidence link/command with every completion. Ask the user about any question, suggestion, or debt as soon as it is discovered. All verified changes are committed. This ledger is a plan, not a claim of implemented runtime capability.
 
+## Current change: Phase 6 live re-check (started 2026-10-20)
+
+Branch `verify/live-20261020` cut from `fix/live-findings` at `d06dc25` (owner: evidence on a new branch; `fix/live-findings` stays as the cloud left it). Evidence in `artifacts/run-20261020/` (counts and names only). Owner 2026-10-20: reuse the existing `DBIG_TOKEN_KEY` with key id `run-20261020`; DEC-22 answered "later" (recorded here; the HANDOFF row on `fix/live-findings` is left untouched).
+
+- [x] Cloud claim checked: CI 39296289133 green in all 8 jobs on `e409d7d` (later commits only HANDOFF/TODO); local full check 903 passed, 70 skipped, 1 xfailed; ruff, mypy, package isolation, ci_check clean; attack files 37 failed, the same 37 test ids as before Phase 6; schema `required` has `outcome`; review `max_tokens` default None; INDEX_VERSION 7; `ValueTokens.complete`; `_tokenize_clickhouse`; probe through LIMIT on one thread. DEC-22 types in the owner's catalogue: only `created_at`, `_version`, `_id`, 7 Mongo datetimes, none a key.
+- [x] Step 1 Gate 2 with ClickHouse hashes and the DEC-19 settings (owner yes 2026-10-20). PASS: 16/16 known-wrong gone, 5/5 known-right kept, 0 owner-true pairs dropped, ClickHouse 38 hash sets, 29 ClickHouse pairs with numbers, no ordinary-name links; my re-count of 39 marked pairs agrees with the snapshot. 18 false pairs remain against partly read ClickHouse parents (by design). **New finding F14**: a lower bound (`lower_bound_only: true`) is worded as a measurement ("value overlap 1%" where the real overlap is 25%); asked the owner. `artifacts/run-20261020/step1-summary.md`.
+- [ ] Step 2 probe snapshot (needs its own yes).
+- [ ] Step 3 the 40 questions on a PostgreSQL + ClickHouse snapshot (needs its own yes).
+
 ## Current change: Phase 6 plan for the live findings F5-F13 (started 2026-10-19)
 
 Owner 2026-10-19: mix (cloud routine builds, local session verifies on the owner's data, a separate yes per live step); new branch `fix/live-findings` from `verify/live-20261014` at `ec62d7b` (F1-F4 and the evidence included); Phase 6 added to the existing plan; full regression gate (attack files, H4 canaries, CI 8 jobs) before the hand-over; the owner edits the routine pointer in the claude.ai UI to the new branch (routine and `catalogue-fixes-env` exist, routine disabled); only the owner sets `Autonomy`.

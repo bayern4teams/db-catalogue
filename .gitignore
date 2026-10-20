@@ -79,3 +79,17 @@ artifacts/run-20261014/**/tokens.jsonl
 
 # Scratch for cloud agents (the tracked handoff files live in .handoff/)
 .tmp/
+!artifacts/run-20261020/
+artifacts/run-20261020/*
+!artifacts/run-20261020/*.md
+!artifacts/run-20261020/*.json
+!artifacts/run-20261020/*.toml
+!artifacts/run-20261020/*.txt
+!artifacts/run-20261020/*.html
+!artifacts/run-20261020/bundle-*/
+!artifacts/run-20261020/snapshot*/
+!artifacts/run-20261020/config/
+!artifacts/run-20261020/leader/
+artifacts/run-20261020/leader/*
+!artifacts/run-20261020/leader/*.md
+artifacts/run-20261020/**/tokens.jsonl
