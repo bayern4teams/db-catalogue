@@ -2,6 +2,20 @@
 
 Update this file when work starts, a fact changes, a decision is needed, a check runs, or work finishes. Do not batch updates at the end. Use `- [ ]`, `- [x]`, or `- [~]` (in progress); add a short evidence link/command with every completion. Ask the user about any question, suggestion, or debt as soon as it is discovered. All verified changes are committed. This ledger is a plan, not a claim of implemented runtime capability.
 
+## Current change: Phase 7 (started 2026-10-24)
+
+Plan `docs/plans/PHASE7_LOCAL_PLAN.md` (owner-approved 2026-10-20); state in `docs/plans/phase7/HANDOFF.md` (items, DEC-23 onward, next action). Branch `fix/phase7` from `verify/live-20261020` at `30eb6ce`; local only, never merged.
+
+- [x] `fix/phase7` created; `HANDOFF.md` written from plan §4 and §8. Baseline on `30eb6ce`: 903 passed, 70 skipped, 1 xfailed; attack files 37 failed (ids in `.tmp/phase7/attack-baseline.txt`, ignored).
+- [~] P7-8 F18 value-free failure `reason` (requester): verifier deriving acceptance tests.
+- [~] P7-1 F14 "at least" wording, Wilson CI, `basis` (builder + requester index): verifier deriving acceptance tests. Lead: lower-bound metrics are estimate = lower = observed, upper = null; CI level is builder config (default 0.95).
+- [ ] P7-4 F17 `checked`, `MODEL_ANSWER_UNEXPLAINED`, retry (requester).
+- [ ] P7-2 F15 measured evidence ranks above unmeasured (builder).
+- [ ] P7-3 F16 bridge-table paths (requester).
+- [ ] P7-5 F11-b A + B + E (then C; D later).
+- [ ] P7-6 live re-check, 3 repeats (owner yes per run).
+- [ ] P7-7 benchmark (owner yes per compose file).
+
 ## Current change: Phase 6 live re-check (started 2026-10-20)
 
 Branch `verify/live-20261020` cut from `fix/live-findings` at `d06dc25` (owner: evidence on a new branch; `fix/live-findings` stays as the cloud left it). Evidence in `artifacts/run-20261020/` (counts and names only). Owner 2026-10-20: reuse the existing `DBIG_TOKEN_KEY` with key id `run-20261020`; DEC-22 answered "later" (recorded here; the HANDOFF row on `fix/live-findings` is left untouched).
