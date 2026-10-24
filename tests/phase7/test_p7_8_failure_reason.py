@@ -70,32 +70,36 @@ def _first_id(payload: dict) -> str:
 
 def _reply(**body):
     def make(payload: dict) -> str:
-        return json.dumps({"citations": [_first_id(payload)], "outcome": "answered", **body})
+        return json.dumps({"checked": ["x"],
+            "citations": [_first_id(payload)], "outcome": "answered", **body})
     return make
 
 
 def _extra_field(payload: dict) -> str:
     return json.dumps({
-        "answer": f"{CANARY} text", "citations": [_first_id(payload)], "outcome": "answered",
+        "checked": ["x"],
+            "answer": f"{CANARY} text", "citations": [_first_id(payload)], "outcome": "answered",
         f"{CANARY}_name": CANARY,
     })
 
 
 def _unknown_id(_: dict) -> str:
-    return json.dumps({"answer": f"{CANARY} text", "citations": [f"{CANARY}-id"],
+    return json.dumps({"checked": ["x"], "answer": f"{CANARY} text", "citations": [f"{CANARY}-id"],
                        "outcome": "answered"})
 
 
 def _no_citation(_: dict) -> str:
-    return json.dumps({"answer": f"{CANARY} text", "citations": [], "outcome": "answered"})
+    return json.dumps({"checked": ["x"],
+        "answer": f"{CANARY} text", "citations": [], "outcome": "answered"})
 
 
 def _missing(_: dict) -> str:
-    return json.dumps({"answer": f"{CANARY} text", "citations": [f"{CANARY}-id"]})
+    return json.dumps({"checked": ["x"], "answer": f"{CANARY} text", "citations": [f"{CANARY}-id"]})
 
 
 def _bad_outcome(payload: dict) -> str:
-    return json.dumps({"answer": f"{CANARY} text", "citations": [_first_id(payload)],
+    return json.dumps({"checked": ["x"],
+        "answer": f"{CANARY} text", "citations": [_first_id(payload)],
                        "outcome": f"{CANARY}-verdict"})
 
 

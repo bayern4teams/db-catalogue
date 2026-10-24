@@ -144,7 +144,7 @@ def _ask(tmp_path, monkeypatch, reply) -> tuple[dict, list[dict]]:
 def _cites_first(**extra):
     def reply(payload: dict) -> str:
         first = payload["items"][0]
-        return json.dumps({"answer": f"{first['name']} is catalogued.",
+        return json.dumps({"checked": ["x"], "answer": f"{first['name']} is catalogued.",
                            "citations": [first["id"]], **extra})
     return reply
 
@@ -156,7 +156,7 @@ def _sent_schema(requests: list[dict]) -> dict:
 def test_the_schema_sent_requires_answer_citations_and_outcome(tmp_path, monkeypatch):
     _, requests = _ask(tmp_path, monkeypatch, _cites_first(outcome="answered"))
     schema = _sent_schema(requests)
-    assert sorted(schema["required"]) == ["answer", "citations", "outcome"]
+    assert sorted(schema["required"]) == ["answer", "checked", "citations", "outcome"]
     assert "default" not in schema["properties"]["outcome"]
 
 
@@ -199,7 +199,8 @@ def test_an_answered_reply_with_a_citation_is_accepted(tmp_path, monkeypatch):
 def test_not_established_may_cite_nothing_and_says_so(tmp_path, monkeypatch):
     result, _ = _ask(
         tmp_path, monkeypatch,
-        lambda _: json.dumps({"answer": "Checked gadget; no such column.", "citations": [],
+        lambda _: json.dumps({"checked": ["x"],
+            "answer": "Checked gadget; no such column.", "citations": [],
                               "outcome": "not_established"}),
     )
     assert "error" not in result, result
@@ -211,7 +212,8 @@ def test_answered_with_no_citation_is_still_refused(tmp_path, monkeypatch):
     """Making the field required must not loosen the rule that an answer cites an ID."""
     result, _ = _ask(
         tmp_path, monkeypatch,
-        lambda _: json.dumps({"answer": "It is there.", "citations": [], "outcome": "answered"}),
+        lambda _: json.dumps({"checked": ["x"],
+            "answer": "It is there.", "citations": [], "outcome": "answered"}),
     )
     assert result["error"]["code"] == "MODEL_INVALID_CITATION"
 

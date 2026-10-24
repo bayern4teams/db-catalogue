@@ -761,23 +761,12 @@ def assemble(
             or item[1].name.casefold() not in GENERIC_KEY_NAMES
             or item[1].id in declared_unique
         ]
-        kept = 0
-        # The cut to `top_k_per_field` comes after the overlap check, so a dropped best name
-        # match does not use up the slot of the parent that is really referenced.
-        # Ties are broken by evidence, not by hash order (F10, LEAD_REVIEW 2026-10-19): same
-        # source first, then a declared key, a weak key claim, measured uniqueness; then the id.
-        child_source = child.source_id
-
-        def rank(
-            item: tuple[int, Field, str], source: str = child_source
-        ) -> tuple[int, bool, int, str]:
-            score, parent, _ = item
-            claim = 0 if parent.id in declared_unique else 1 if parent.id in weak_key_ids else 2
-            return (-score, parent.source_id != source, claim, parent.id)
-
-        for score, parent, rule in sorted(candidates, key=rank):
-            if kept >= config.top_k_per_field:
-                break
+        # The overlap is computed for every name-filtered candidate before the sort, so measured
+        # evidence can order the cut (F15) and a measured zero never takes a slot (DEC-33: the
+        # count includes zeros that the cut would have skipped; the kept set is the same as
+        # dropping first, then cutting).
+        ranked: list[tuple[int, Field, str, Evidence]] = []
+        for score, parent, rule in candidates:
             overlap = _overlap(
                 child,
                 parent.id,
@@ -799,7 +788,33 @@ def assemble(
                 # value. A non-zero overlap, however small, is shown and never drops.
                 dropped_zero_overlap += 1
                 continue
-            kept += 1
+            ranked.append((score, parent, rule, overlap))
+        # Candidate order (F10, LEAD_REVIEW 2026-10-19; F15, DEC-32): name score; a declared key;
+        # evidence tier (0 measured containment, 1 lower bound or a zero against a partly read
+        # parent, 2 not measured); higher containment; same source first; weak key claim before
+        # measured uniqueness; then the id. Hash order decides nothing.
+        child_source = child.source_id
+
+        def rank(
+            item: tuple[int, Field, str, Evidence], source: str = child_source
+        ) -> tuple[int, int, int, float, bool, int, str]:
+            score, parent, _, overlap = item
+            claim = 0 if parent.id in declared_unique else 1 if parent.id in weak_key_ids else 2
+            if overlap.kind != "value_containment":
+                tier = 2
+            else:
+                tier = 0 if overlap.metrics.get("basis") == "measured" else 1
+            return (
+                -score,
+                0 if parent.id in declared_unique else 1,
+                tier,
+                -float(overlap.metrics.get("contained_fraction") or 0),
+                parent.source_id != source,
+                claim,
+                parent.id,
+            )
+
+        for score, parent, rule, overlap in sorted(ranked, key=rank)[: config.top_k_per_field]:
             lexical = _evidence(
                 child,
                 "name_similarity",

@@ -86,7 +86,8 @@ def _review(tmp_path, monkeypatch, base_url, *, timeout=2, name="r"):
 ])
 def test_the_answer_limit_is_exact_and_counts_characters_not_bytes(state, text, accepted):
     def reply(payload):
-        return json.dumps({"answer": text, "citations": [payload["items"][0]["id"]],
+        return json.dumps({"checked": ["x"],
+            "answer": text, "citations": [payload["items"][0]["id"]],
             "outcome": "answered"})
 
     with ModelStub(reply) as stub:
@@ -106,7 +107,7 @@ def test_the_limit_comes_from_one_constant_and_the_json_schema_names_no_number()
 def test_ask_end_to_end_accepts_the_limit_and_refuses_one_over(state, length):
     def reply(payload):
         first = payload["items"][0]
-        return json.dumps({"answer": "q" * length, "citations": [first["id"]],
+        return json.dumps({"checked": ["x"], "answer": "q" * length, "citations": [first["id"]],
             "outcome": "answered"})
 
     with ModelStub(reply, reject_bounds=True) as stub:
@@ -267,11 +268,12 @@ def test_a_malformed_reply_is_the_umbrella_code_and_never_an_exception(state, co
 def test_empty_citations_and_mixed_citations_are_invalid_citation(state):
     def mixed(payload):
         return json.dumps(
-            {"answer": "a", "citations": [payload["items"][0]["id"], "no-such-id"],
+            {"checked": ["x"],
+                "answer": "a", "citations": [payload["items"][0]["id"], "no-such-id"],
                 "outcome": "answered"}
         )
 
-    with ModelStub(None, content=json.dumps({"answer": "a", "citations": [],
+    with ModelStub(None, content=json.dumps({"checked": ["x"], "answer": "a", "citations": [],
         "outcome": "answered"})) as stub:
         assert _ask(state, stub.url)["error"]["code"] == "MODEL_INVALID_CITATION"
     with ModelStub(mixed) as stub:
@@ -280,7 +282,8 @@ def test_empty_citations_and_mixed_citations_are_invalid_citation(state):
 
 def test_a_complete_reply_cut_off_at_the_token_limit_is_truncated_not_accepted(state):
     def reply(payload):
-        return json.dumps({"answer": "a", "citations": [payload["items"][0]["id"]],
+        return json.dumps({"checked": ["x"],
+            "answer": "a", "citations": [payload["items"][0]["id"]],
             "outcome": "answered"})
 
     with ModelStub(reply, finish_reason="length") as stub:
@@ -290,7 +293,8 @@ def test_a_complete_reply_cut_off_at_the_token_limit_is_truncated_not_accepted(s
 def test_a_lineage_claim_is_not_reported_as_a_citation_or_a_truncation(state):
     def claim(payload):
         return json.dumps(
-            {"answer": "this is derived from quokka-canary", "citations": [payload["items"][0]["id"]],
+            {"checked": ["x"],
+                "answer": "this is derived from quokka-canary", "citations": [payload["items"][0]["id"]],
                 "outcome": "answered"}
         )
 
@@ -330,8 +334,9 @@ def test_no_logger_at_info_level_carries_content_for_ask_or_review(
 
     kwargs = {
         "rejected": dict(status=400),
-        "truncated": dict(finish_reason="length", content='{"answer": "quokka-canary'),
-        "citation": dict(content=json.dumps({"answer": "quokka-canary", "citations": ["zz"],
+        "truncated": dict(finish_reason="length", content='{"checked": ["x"], "answer": "quokka-canary'),
+        "citation": dict(content=json.dumps({
+            "checked": ["x"], "answer": "quokka-canary", "citations": ["zz"],
             "outcome": "answered"})),
     }
     with caplog.at_level(logging.INFO):

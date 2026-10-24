@@ -265,7 +265,7 @@ def test_zero_overlap_drops_do_not_consume_slots_across_the_new_ordering(tmp_pat
 
 def test_source_groups_filter_before_ranking_same_source_still_first(tmp_path, monkeypatch):
     """DEC-3 groups: a forbidden/ungrouped source never reaches the ranking; among the allowed,
-    same source stays first even when its id is the largest."""
+    a declared key ranks first (DEC-32), whatever the source ids."""
     near = near_source_with_large_id()
     tables = {"kid": {"fields": [("rowid", "integer"), ("widgetid", "integer")]},
               "nearp": {"fields": [("widgetid", "integer")], "unique": {"widgetid": 1.0}}}
@@ -278,7 +278,13 @@ def test_source_groups_filter_before_ranking_same_source_still_first(tmp_path, m
     forbidden = (near, far[0])
     found = candidates(snap(tmp_path, monkeypatch, sources, top_k_per_field=1,
                             forbidden_source_pairs=[forbidden]))
-    assert of(found, "kid") == [("nearp", "widgetid")], found
+    # DEC-32 (P7-2, F15): a declared key now ranks before same source, so an allowed far
+    # declared parent wins over the near measured-unique one.
+    assert of(found, "kid") == [("farp", "widgetid")], found
+    every = candidates(snap(tmp_path, monkeypatch, sources, name="all", top_k_per_field=5,
+                            forbidden_source_pairs=[forbidden]))
+    # The forbidden far[0] never reaches the ranking: nearp plus the two allowed farp parents.
+    assert len(of(every, "kid")) == 3, every
     found_groups = candidates(snap(tmp_path, monkeypatch, sources, name="g", top_k_per_field=5,
                                    source_groups=[[near, far[1]]]))
     # far[0], far[2] sit in no group, so pair_allowed is true for them; all four parents allowed

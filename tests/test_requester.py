@@ -72,17 +72,18 @@ def test_answers_validate_citations_and_outage(tmp_path, monkeypatch):
     )
     rows = search(state, SearchRequest(query="orders", limit=10))["results"]
     good = FakeClient(
-        json.dumps({"answer": "Orders are in the catalog.", "citations": [rows[0]["id"]],
+        json.dumps({"checked": ["x"],
+            "answer": "Orders are in the catalog.", "citations": [rows[0]["id"]],
             "outcome": "answered"})
     )
     assert answer_question(state, "orders", config, client=good)["citations"] == [rows[0]["id"]]
-    bad = FakeClient(json.dumps({"answer": "Invented", "citations": ["unknown"],
+    bad = FakeClient(json.dumps({"checked": ["x"], "answer": "Invented", "citations": ["unknown"],
         "outcome": "answered"}))
     assert answer_question(state, "orders", config, client=bad)["error"]["code"] == (
         "MODEL_INVALID_CITATION"
     )
     lineage = FakeClient(
-        json.dumps({"answer": "It flows into x.", "citations": [rows[0]["id"]],
+        json.dumps({"checked": ["x"], "answer": "It flows into x.", "citations": [rows[0]["id"]],
             "outcome": "answered"})
     )
     assert answer_question(state, "orders", config, client=lineage)["error"]["code"] == (
@@ -167,7 +168,8 @@ def test_answer_telemetry_outage_does_not_hide_answer(tmp_path, monkeypatch):
         langfuse_public_key_env="LF_PUBLIC",
         langfuse_secret_key_env="LF_SECRET",  # noqa: S106 - environment variable name
     )
-    client = FakeClient(json.dumps({"answer": "Catalogued.", "citations": [rows[0]["id"]],
+    client = FakeClient(json.dumps({"checked": ["x"],
+        "answer": "Catalogued.", "citations": [rows[0]["id"]],
         "outcome": "answered"}))
     assert answer_question(state, "orders", config, client=client)["answer"] == "Catalogued."
     assert "input" not in calls[0] and "output" not in calls[0]
@@ -293,7 +295,8 @@ def test_ask_retrieves_for_a_natural_question(tmp_path):
                 def create(**kwargs: object) -> SimpleNamespace:
                     items = json.loads(kwargs["messages"][-1]["content"])["items"]  # type: ignore[index]
                     seen.extend(items)
-                    body = json.dumps({"answer": "ledger.addr", "citations": [items[0]["id"]],
+                    body = json.dumps({"checked": ["x"],
+                        "answer": "ledger.addr", "citations": [items[0]["id"]],
                         "outcome": "answered"})
                     return SimpleNamespace(
                         choices=[

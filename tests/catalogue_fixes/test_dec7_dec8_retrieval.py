@@ -145,7 +145,7 @@ def test_a_relationship_can_be_cited(linked, monkeypatch):
     import json as _json
 
     with ModelStub(
-        content=_json.dumps({"answer": "a tentative link", "citations": [edge_id],
+        content=_json.dumps({"checked": ["x"], "answer": "a tentative link", "citations": [edge_id],
             "outcome": "answered"})
     ) as stub:
         config = AnswerConfig(
@@ -184,7 +184,7 @@ def _ask_with(state, monkeypatch, question, content):
 def test_the_word_lineage_in_a_question_is_answered(linked, monkeypatch):
     import json as _json
 
-    first = _json.dumps({"answer": "No lineage is catalogued.", "citations": [],
+    first = _json.dumps({"checked": ["x"], "answer": "No lineage is catalogued.", "citations": [],
         "outcome": "answered"})
     reply, stub = _ask_with(linked, monkeypatch, "Is there lineage for shipment?", first)
     assert reply["error"]["code"] == "MODEL_INVALID_CITATION"  # answered outcome must cite
@@ -195,7 +195,8 @@ def test_a_not_established_outcome_may_cite_nothing_and_has_its_own_code(linked,
     import json as _json
 
     content = _json.dumps(
-        {"answer": "The catalogue records no lineage for shipment.", "citations": [],
+        {"checked": ["x"],
+            "answer": "The catalogue records no lineage for shipment.", "citations": [],
          "outcome": "not_established"}
     )
     reply, _ = _ask_with(linked, monkeypatch, "What is the lineage of shipment?", content)
@@ -207,7 +208,7 @@ def test_a_not_established_outcome_may_cite_nothing_and_has_its_own_code(linked,
 def test_not_established_still_rejects_an_unknown_citation(linked, monkeypatch):
     import json as _json
 
-    content = _json.dumps({"answer": "none", "citations": ["made-up"],
+    content = _json.dumps({"checked": ["x"], "answer": "none", "citations": ["made-up"],
                            "outcome": "not_established"})
     reply, _ = _ask_with(linked, monkeypatch, "What is the lineage of shipment?", content)
     assert reply["error"]["code"] == "MODEL_INVALID_CITATION"
@@ -218,7 +219,8 @@ def test_a_lineage_claim_in_an_answer_is_still_rejected(linked, monkeypatch):
 
     _, payload = _ask_payload(linked, monkeypatch, "How does shipment relate to vendor?")
     cited = payload["items"][0]["id"]
-    content = _json.dumps({"answer": "shipment flows into vendor", "citations": [cited],
+    content = _json.dumps({"checked": ["x"],
+        "answer": "shipment flows into vendor", "citations": [cited],
         "outcome": "answered"})
     reply, _ = _ask_with(linked, monkeypatch, "How does shipment relate to vendor?", content)
     assert reply["error"]["code"] == "MODEL_UNAVAILABLE_OR_INVALID"
@@ -248,7 +250,7 @@ def test_a_cited_relationship_resolves_to_its_tables_and_columns(linked, monkeyp
 
     _, payload = _ask_payload(linked, monkeypatch, "How does shipment relate to vendor?")
     edge_id = payload["relationships"][0]["id"]
-    content = _json.dumps({"answer": "a tentative link", "citations": [edge_id],
+    content = _json.dumps({"checked": ["x"], "answer": "a tentative link", "citations": [edge_id],
         "outcome": "answered"})
     reply, _ = _ask_with(linked, monkeypatch, "How does shipment relate to vendor?", content)
     assert reply["cited"] == [{

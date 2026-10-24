@@ -416,7 +416,8 @@ class ModelStub:
 def cite_first(payload: dict) -> str:
     """A model that answers well: cites the first item it was given."""
     first = payload["items"][0]
-    return json.dumps({"answer": f"{first['name']} is catalogued.", "citations": [first["id"]],
+    return json.dumps({"checked": ["x"],
+        "answer": f"{first['name']} is catalogued.", "citations": [first["id"]],
         "outcome": "answered"})
 
 

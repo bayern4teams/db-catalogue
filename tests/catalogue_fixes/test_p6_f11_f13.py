@@ -51,7 +51,8 @@ def _config(stub: ModelStub, **overrides) -> AnswerConfig:
 
 
 def _answered(*citations: str, answer: str = "The catalogue shows it.") -> str:
-    return json.dumps({"answer": answer, "citations": list(citations), "outcome": "answered"})
+    return json.dumps({"checked": ["x"],
+        "answer": answer, "citations": list(citations), "outcome": "answered"})
 
 
 def _first_item(payload: dict) -> str:

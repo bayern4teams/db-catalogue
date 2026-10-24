@@ -275,24 +275,26 @@ def _near_source_sorting(rank_index, far_ids, table_number=2):
     raise AssertionError("no source name found")  # pragma: no cover
 
 
-def test_a_same_source_weak_key_beats_six_cross_source_declared_keys_that_sort_before_it(
+def test_six_cross_source_declared_keys_beat_a_same_source_weak_key_at_top_k_five(
     tmp_path, monkeypatch
 ):
-    """Rule 1 (same source before cross-source) outranks rule 2 (declared before weak)."""
+    """P7-2 (F15, DEC-32): a declared key ranks before the same-source rule, so the weak key is cut.
+
+    Before P7-2 the same-source weak key outranked the declared cross-source keys.
+    """
     far = _far_ids(6)
-    near = _near_source_sorting(5, far)  # premise: the weak parent sorts 6th of seven by id
-    assert sorted([*far, _fid(near, 2)]).index(_fid(near, 2)) == 5
+    near = _near_source_sorting(5, far)
     sources = {near: {"tables": {"shipment": _child_table(), "weakp": _role_table("weak")}}}
     for k in range(1, 7):
         sources[f"far{k}"] = {"tables": {f"farp{k}": _role_table("declared")}}
     found = _found(tmp_path, monkeypatch, sources, top_k_per_field=5)
     kept = _kept_parents(found)
-    lowest_far = sorted(range(1, 7), key=lambda k: _fid(f"far{k}", 1))[:4]
-    assert kept == {"weakp"} | {f"farp{k}" for k in lowest_far}, found
+    lowest_far = sorted(range(1, 7), key=lambda k: _fid(f"far{k}", 1))[:5]
+    assert kept == {f"farp{k}" for k in lowest_far}, found
 
 
 @pytest.mark.parametrize("same_role", ["declared", "weak", "measured"])
-def test_a_same_source_parent_beats_a_cross_source_declared_key_whatever_the_id(
+def test_a_declared_key_ranks_before_the_same_source_rule_whatever_the_id(
     tmp_path, monkeypatch, same_role
 ):
     far = [_fid("faraway", 1)]
@@ -303,7 +305,9 @@ def test_a_same_source_parent_beats_a_cross_source_declared_key_whatever_the_id(
         "faraway": {"tables": {"farp": _role_table("declared")}},
     }
     found = _found(tmp_path, monkeypatch, sources, top_k_per_field=1)
-    assert _kept_parents(found) == {"nearp"}, found
+    # P7-2 (DEC-32): a declared key ranks before the same-source rule, so only an equally
+    # declared same-source parent wins on being the same source.
+    assert _kept_parents(found) == {"nearp" if same_role == "declared" else "farp"}, found
 
 
 @pytest.mark.parametrize(

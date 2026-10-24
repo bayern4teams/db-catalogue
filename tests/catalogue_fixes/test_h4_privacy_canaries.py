@@ -571,7 +571,7 @@ def _ask_succeeds_citing(world, question: str = QUESTION):
         seen["payload"] = payload
         item, edge = payload["items"][0], payload["relationships"][0]
         return json.dumps({
-            "answer": "The retrieved metadata shows a candidate link.",
+            "checked": ["x"], "answer": "The retrieved metadata shows a candidate link.",
             "citations": [item["id"], edge["id"]],
             "outcome": "answered",
         })
@@ -624,7 +624,8 @@ def test_the_weak_key_sentence_reaches_ask_without_a_value(world):
 
     def reply(payload: dict) -> str:
         seen.update(payload)
-        return json.dumps({"answer": "A candidate link.", "citations": [payload["items"][0]["id"]],
+        return json.dumps({"checked": ["x"],
+            "answer": "A candidate link.", "citations": [payload["items"][0]["id"]],
             "outcome": "answered"})
 
     with ModelStub(reply) as stub:
@@ -661,7 +662,8 @@ def test_cited_names_are_resolved_from_the_catalogue_and_carry_nothing_else(worl
 def test_a_citation_that_is_not_a_retrieved_id_is_not_resolved_to_anything_it_carries(world):
     """The model cites the canary as an id: refused, and the refusal does not echo it."""
     def reply(payload: dict) -> str:
-        return json.dumps({"answer": f"see {VALUE}", "citations": [PROMPT, SQL_LITERAL],
+        return json.dumps({"checked": ["x"],
+            "answer": f"see {VALUE}", "citations": [PROMPT, SQL_LITERAL],
             "outcome": "answered"})
 
     with ModelStub(reply) as stub:
@@ -709,7 +711,8 @@ def test_nothing_is_traced_with_content(world, monkeypatch):
 
 
 def _hostile_reply(payload: dict) -> str:
-    return json.dumps({"answer": f"{VALUE} {SQL_LITERAL} {PROMPT} {MODEL_KEY}", "citations": [PROMPT],
+    return json.dumps({"checked": ["x"],
+        "answer": f"{VALUE} {SQL_LITERAL} {PROMPT} {MODEL_KEY}", "citations": [PROMPT],
         "outcome": "answered"})
 
 
@@ -774,7 +777,7 @@ def test_ask_not_established_is_a_code_with_resolved_citations_and_no_content(wo
     """NOT_ESTABLISHED_BY_CATALOGUE is not an error; it still returns codes and catalogue names."""
     def reply(payload: dict) -> str:
         return json.dumps({
-            "answer": "The retrieved metadata does not show it.",
+            "checked": ["x"], "answer": "The retrieved metadata does not show it.",
             "citations": [payload["items"][0]["id"]], "outcome": "not_established",
         })
 
@@ -787,7 +790,8 @@ def test_ask_not_established_is_a_code_with_resolved_citations_and_no_content(wo
 
 def test_ask_not_established_may_cite_nothing_and_still_leaks_nothing(world):
     def reply(_: dict) -> str:
-        return json.dumps({"answer": "Not shown by the catalogue.", "citations": [],
+        return json.dumps({"checked": ["x"],
+            "answer": "Not shown by the catalogue.", "citations": [],
                            "outcome": "not_established"})
 
     with ModelStub(reply) as stub:

@@ -93,7 +93,8 @@ def _edge(snapshot, kind, child, parent):
 
 def _answer_with(**fields):
     def reply(payload):
-        body = {"answer": "ok", "citations": [payload["items"][0]["id"]], "outcome": "answered"}
+        body = {"checked": ["x"],
+            "answer": "ok", "citations": [payload["items"][0]["id"]], "outcome": "answered"}
         body.update(fields)
         return json.dumps(body)
 
@@ -199,13 +200,14 @@ def test_dec5_relationship_id_is_a_valid_citation_and_foreign_one_is_not(tmp_pat
     candidate = _edge(snapshot, "REFERENCE_CANDIDATE", "part", "gadget")
     ok, _, _ = _ask(
         state, "part gadget", monkeypatch,
-        _static({"answer": "linked", "citations": [candidate.id], "outcome": "answered"}),
+        _static({"checked": ["x"],
+            "answer": "linked", "citations": [candidate.id], "outcome": "answered"}),
     )
     assert "error" not in ok, ok
     # an edge that exists in the snapshot but was not in the context (limit 0) is not citable
     bad, _, _ = _ask(
         state, "part gadget", monkeypatch,
-        _static({"answer": "linked", "citations": [candidate.id],
+        _static({"checked": ["x"], "answer": "linked", "citations": [candidate.id],
             "outcome": "answered"}), relationship_limit=0,
     )
     assert bad.get("error", {}).get("code") == "MODEL_INVALID_CITATION", bad
@@ -311,7 +313,8 @@ def test_dec6_probe_paraphrased_claims(tmp_path, monkeypatch, claim):
 
 def test_dec6_not_established_needs_no_citation_and_has_its_own_code(tmp_path, monkeypatch):
     _, state = _state(tmp_path, monkeypatch, _rel_world())
-    body = {"answer": "The catalogue does not establish this.", "citations": [], "outcome": "not_established"}
+    body = {"checked": ["x"],
+        "answer": "The catalogue does not establish this.", "citations": [], "outcome": "not_established"}
     result, _, _ = _ask(state, "gadget", monkeypatch, _static(body))
     assert "error" not in result, result
     assert result.get("code") == "NOT_ESTABLISHED_BY_CATALOGUE"
@@ -321,8 +324,8 @@ def test_dec6_not_established_needs_no_citation_and_has_its_own_code(tmp_path, m
 def test_dec6_answered_without_citation_is_still_invalid(tmp_path, monkeypatch):
     _, state = _state(tmp_path, monkeypatch, _rel_world())
     for body in (
-        {"answer": "x is y", "citations": [], "outcome": "answered"},
-        {"answer": "x is y", "citations": [], "outcome": "answered"},
+        {"checked": ["x"], "answer": "x is y", "citations": [], "outcome": "answered"},
+        {"checked": ["x"], "answer": "x is y", "citations": [], "outcome": "answered"},
     ):
         result, _, _ = _ask(state, "gadget", monkeypatch, _static(body))
         assert "error" in result, f"uncited answer accepted: {body}"
@@ -331,7 +334,8 @@ def test_dec6_answered_without_citation_is_still_invalid(tmp_path, monkeypatch):
 
 def test_dec6_not_established_is_not_a_bypass_for_claims(tmp_path, monkeypatch):
     _, state = _state(tmp_path, monkeypatch, _rel_world())
-    body = {"answer": "gadget is derived from part and data flows into cog.", "citations": [], "outcome": "not_established"}
+    body = {"checked": ["x"],
+        "answer": "gadget is derived from part and data flows into cog.", "citations": [], "outcome": "not_established"}
     result, _, _ = _ask(state, "gadget", monkeypatch, _static(body))
     assert result.get("code") != "NOT_ESTABLISHED_BY_CATALOGUE", result
     assert "error" in result, "uncited fabricated claim passed as 'not established'"
@@ -339,7 +343,8 @@ def test_dec6_not_established_is_not_a_bypass_for_claims(tmp_path, monkeypatch):
 
 def test_dec6_not_established_with_unknown_citation_is_invalid(tmp_path, monkeypatch):
     _, state = _state(tmp_path, monkeypatch, _rel_world())
-    body = {"answer": "not found", "citations": ["id-that-is-not-in-context"], "outcome": "not_established"}
+    body = {"checked": ["x"],
+        "answer": "not found", "citations": ["id-that-is-not-in-context"], "outcome": "not_established"}
     result, _, _ = _ask(state, "gadget", monkeypatch, _static(body))
     assert result.get("error", {}).get("code") == "MODEL_INVALID_CITATION", result
 
@@ -348,7 +353,8 @@ def test_dec6_not_established_may_cite_what_was_checked(tmp_path, monkeypatch):
     _, state = _state(tmp_path, monkeypatch, _rel_world())
 
     def reply(payload):
-        return json.dumps({"answer": "checked, not established", "citations": [payload["items"][0]["id"]], "outcome": "not_established"})
+        return json.dumps({"checked": ["x"],
+            "answer": "checked, not established", "citations": [payload["items"][0]["id"]], "outcome": "not_established"})
 
     result, _, _ = _ask(state, "gadget", monkeypatch, reply)
     assert result.get("code") == "NOT_ESTABLISHED_BY_CATALOGUE" and "error" not in result
@@ -357,7 +363,7 @@ def test_dec6_not_established_may_cite_what_was_checked(tmp_path, monkeypatch):
 @pytest.mark.parametrize("outcome", ["maybe", "", None, 5, ["answered"], "NOT_ESTABLISHED", "Not_Established "])
 def test_dec6_unknown_outcome_values_never_crash_and_never_pass_uncited(tmp_path, monkeypatch, outcome):
     _, state = _state(tmp_path, monkeypatch, _rel_world())
-    body = {"answer": "text", "citations": [], "outcome": outcome}
+    body = {"checked": ["x"], "answer": "text", "citations": [], "outcome": outcome}
     result, _, _ = _ask(state, "gadget", monkeypatch, _static(body))
     assert "error" in result or result.get("code") == "NOT_ESTABLISHED_BY_CATALOGUE"
     # an uncited reply with a bad outcome must not be a normal answered reply
@@ -386,7 +392,9 @@ def test_dec6_not_established_over_rest(tmp_path, monkeypatch):
     snapshot, state = _state(tmp_path, monkeypatch, _rel_world())
     monkeypatch.setenv("REQUESTER_TOKEN", "synthetic-api-token")
     monkeypatch.setenv("MODEL_KEY", MODEL_KEY)
-    body = {"answer": "not established", "citations": [], "outcome": "not_established"}
+    body = {"checked": ["x"],
+        "answer": "The catalogue does not establish this.", "citations": [],
+        "outcome": "not_established"}
     with ModelStub(_static(body)) as stub:
         config = RequesterConfig(
             snapshot_dir=snapshot, state_dir=state, api_key_env="REQUESTER_TOKEN",
@@ -406,7 +414,8 @@ def test_dec6_no_prompt_or_response_in_logs(tmp_path, monkeypatch, caplog):
     caplog.set_level(logging.INFO)  # an operator who turns on DEBUG gets the library's own log
     secret_answer = "claim-canary-" + CANARY
     _ask(state, f"gadget {CANARY}", monkeypatch, _answer_with(answer=f"{secret_answer} derived from part"))
-    _ask(state, "gadget", monkeypatch, _static({"answer": secret_answer, "citations": [], "outcome": "not_established"}))
+    _ask(state, "gadget", monkeypatch, _static({"checked": ["x"],
+        "answer": secret_answer, "citations": [], "outcome": "not_established"}))
     text = caplog.text
     assert CANARY not in text
 
@@ -708,7 +717,8 @@ def test_dec8_excluded_objects_do_not_leak_through_relationships_or_citations(tm
     for edge in noise_edges:
         assert edge.id not in sent
     noise_ids = [n.id for n in nodes.values() if n.name == "gadget__schemas" or (getattr(n, "object_id", None) and nodes.get(n.object_id) and nodes[n.object_id].name == "gadget__schemas")]
-    bad, _, _ = _ask(state, "gadget", monkeypatch, _static({"answer": "x", "citations": [noise_ids[0]],
+    bad, _, _ = _ask(state, "gadget", monkeypatch, _static({"checked": ["x"],
+        "answer": "x", "citations": [noise_ids[0]],
         "outcome": "answered"}))
     assert bad.get("error", {}).get("code") == "MODEL_INVALID_CITATION"
 
@@ -754,7 +764,8 @@ def test_dec9_cited_names_come_from_the_catalogue_not_the_model(tmp_path, monkey
 
     def reply(payload):
         item = next(i for i in payload["items"] if i["kind"] == "field")
-        return json.dumps({"answer": "it is liar_table.liar_column in liar_source", "citations": [item["id"]],
+        return json.dumps({"checked": ["x"],
+            "answer": "it is liar_table.liar_column in liar_source", "citations": [item["id"]],
             "outcome": "answered"})
 
     result, _, _ = _ask(state, "gadget title", monkeypatch, reply)
@@ -775,7 +786,8 @@ def test_dec9_cited_matches_citations_order_and_count(tmp_path, monkeypatch):
 
     def reply(payload):
         ids = [i["id"] for i in payload["items"][:3]][::-1]
-        return json.dumps({"answer": "several", "citations": ids, "outcome": "answered"})
+        return json.dumps({"checked": ["x"],
+            "answer": "several", "citations": ids, "outcome": "answered"})
 
     result, _, _ = _ask(state, "gadget part widget", monkeypatch, reply)
     assert len(result["cited"]) == len(result["citations"]) == 3
@@ -789,7 +801,8 @@ def test_dec9_duplicate_citations_do_not_break(tmp_path, monkeypatch):
 
     def reply(payload):
         i = payload["items"][0]["id"]
-        return json.dumps({"answer": "dup", "citations": [i, i, i], "outcome": "answered"})
+        return json.dumps({"checked": ["x"],
+            "answer": "dup", "citations": [i, i, i], "outcome": "answered"})
 
     result, _, _ = _ask(state, "gadget", monkeypatch, reply)
     assert "error" in result or len(result["cited"]) in (1, 3)
@@ -798,7 +811,8 @@ def test_dec9_duplicate_citations_do_not_break(tmp_path, monkeypatch):
 def test_dec9_relationship_is_resolved_as_from_to(tmp_path, monkeypatch):
     snapshot, state = _state(tmp_path, monkeypatch, _rel_world())
     candidate = _edge(snapshot, "REFERENCE_CANDIDATE", "part", "gadget")
-    result, _, _ = _ask(state, "part gadget", monkeypatch, _static({"answer": "linked", "citations": [candidate.id],
+    result, _, _ = _ask(state, "part gadget", monkeypatch, _static({"checked": ["x"],
+        "answer": "linked", "citations": [candidate.id],
         "outcome": "answered"}))
     assert "error" not in result, result
     blob = json.dumps(result["cited"]).lower()
@@ -809,9 +823,11 @@ def test_dec9_relationship_is_resolved_as_from_to(tmp_path, monkeypatch):
 
 def test_dec9_not_established_has_empty_cited_and_errors_carry_no_names(tmp_path, monkeypatch):
     _, state = _state(tmp_path, monkeypatch, _rel_world())
-    result, _, _ = _ask(state, "gadget", monkeypatch, _static({"answer": "none", "citations": [], "outcome": "not_established"}))
+    result, _, _ = _ask(state, "gadget", monkeypatch, _static({"checked": ["x"],
+        "answer": "none", "citations": [], "outcome": "not_established"}))
     assert result.get("cited", []) == []
-    bad, _, _ = _ask(state, "gadget", monkeypatch, _static({"answer": "x", "citations": ["nope"],
+    bad, _, _ = _ask(state, "gadget", monkeypatch, _static({"checked": ["x"],
+        "answer": "x", "citations": ["nope"],
         "outcome": "answered"}))
     assert bad["error"]["code"] == "MODEL_INVALID_CITATION"
     assert "gadget" not in json.dumps(bad["error"])

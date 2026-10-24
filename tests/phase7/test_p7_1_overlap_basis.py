@@ -450,7 +450,8 @@ def _relationship_body(tmp_path, monkeypatch, **flags) -> tuple[dict, Path, Path
     config = None
     with ModelStub(
         lambda payload: json.dumps(
-            {"answer": "x", "citations": [payload["items"][0]["id"]], "outcome": "answered"}
+            {"checked": ["x"],
+                "answer": "x", "citations": [payload["items"][0]["id"]], "outcome": "answered"}
         )
     ) as stub:
         config = AnswerConfig(

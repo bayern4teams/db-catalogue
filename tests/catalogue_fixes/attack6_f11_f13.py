@@ -71,7 +71,8 @@ def _config(url: str, **overrides) -> AnswerConfig:
 
 
 def _answered(*ids: str) -> str:
-    return json.dumps({"answer": "ok", "citations": list(ids), "outcome": "answered"})
+    return json.dumps({"checked": ["x"],
+        "answer": "ok", "citations": list(ids), "outcome": "answered"})
 
 
 def _ask(state: Path, monkeypatch, question: str, reply=None, **overrides):

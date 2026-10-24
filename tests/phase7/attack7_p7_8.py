@@ -49,9 +49,10 @@ def test_blank_api_key_env_no_reply_keys(tmp_path, monkeypatch):
 
 
 @pytest.mark.parametrize("body", [
-    "", "null", "[]", "123", '"str"', "{}", '{"answer": 5, "citations": "x", "outcome": null}',
-    '{"answer": "a", "citations": [1, 2], "outcome": "answered"}',
-    '{"answer":"a","citations":[],"outcome":"answered","x":{"y":1}}',
+    "", "null", "[]", "123", '"str"', "{}",
+    '{"checked": ["x"], "answer": 5, "citations": "x", "outcome": null}',
+    '{"checked": ["x"], "answer": "a", "citations": [1, 2], "outcome": "answered"}',
+    '{"checked": ["x"], "answer":"a","citations":[],"outcome":"answered","x":{"y":1}}',
     "\x00\xff", "{" * 5000, '{"answer": "' + "a" * 100000 + '"}',
 ])
 def test_unusual_bodies_give_only_closed_types(tmp_path, monkeypatch, body):
@@ -141,7 +142,7 @@ def test_span_metadata_equals_result_error(tmp_path, monkeypatch):
 
     monkeypatch.setattr(answer_module, "_trace", lambda c, n: S())
     r = _ask(tmp_path, monkeypatch, dict(content="{bad"))
-    assert seen == [{"metadata": {"error": r["error"]}}]
+    assert seen == [{"metadata": {"error": r["error"], "attempts": 1}}]  # P7-4 adds the count
 
 
 def test_rest_503_detail_carries_reason_without_content(tmp_path, monkeypatch):
