@@ -22,7 +22,7 @@ import catalogue_fixture_kit as kit
 import pytest
 from catalogue_fixture_kit import TOKEN_MATERIAL, build_snapshot, candidates
 from dbig_builder.builder import MIN_TOKEN_SUPPORT, _overlap
-from dbig_builder.config import ReviewConfig
+from dbig_builder.config import BuilderConfig, ReviewConfig
 from dbig_collectors.runtime import Budget, _capped_tokens, _value_tokens, discover_mongodb
 from dbig_contracts.artifact import read_artifact
 from dbig_contracts.models import Field, ValueTokens
@@ -75,7 +75,9 @@ def _field(name="gadget_id") -> Field:
 
 
 def _ov(child: ValueTokens, parent: ValueTokens, support: int = N):
-    return _overlap(_field(), "pid", child, parent, support)
+    # P7-1 (F14) added the level argument; the config's documented default.
+    level = BuilderConfig.model_fields["overlap_confidence_level"].default
+    return _overlap(_field(), "pid", child, parent, support, level)
 
 
 # --- 1. is the bottom-k reasoning sound? --------------------------------------------------------

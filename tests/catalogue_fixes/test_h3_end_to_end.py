@@ -274,7 +274,7 @@ def score_links(snapshot: Path) -> dict[str, int]:
         "decoy_children": sum(1 for link in links if link[2] in DECOYS),
         "values_not_compared": sum("values not compared" in item["text"] for item in found),
         "with_overlap_number": sum(
-            bool(re.search(r"overlap \d+%", item["text"])) for item in found
+            bool(re.search(r"overlap (?:≈|at least )\d+%", item["text"])) for item in found
         ),
     }
 

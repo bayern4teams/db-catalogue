@@ -8,6 +8,8 @@ signing_keys = { local = "DBIG_SIGNING_KEY" }
 # cross-source candidate; below it the candidate stays, marked "sample too small". Only
 # applies when the source files set sample_rows and value_token_key_env.
 # min_token_support = 4
+# Confidence level of the interval shown on a measured value overlap (strictly between 0 and 1).
+# overlap_confidence_level = 0.95
 # Optional operator knowledge. Cross-source candidates are proposed only between sources of
 # the same group (a source in no group is unrestricted) and never between a forbidden pair.
 # Default: none, so nothing is restricted.

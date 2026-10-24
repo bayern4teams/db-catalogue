@@ -256,7 +256,7 @@ def test_ask_error_carries_no_prompt_response_question_or_key(state, caplog, cap
     assert "sprocket" not in json.dumps(result.get("error", {}))
     assert "zorblax" not in json.dumps(result.get("error", {}))
     assert "127.0.0.1" not in json.dumps(result.get("error", {})), "no endpoint in the error"
-    assert set(result["error"]) <= {"code", "message"}, result["error"]
+    assert set(result["error"]) <= {"code", "message", "reason"}, result["error"]
     assert len(json.dumps(result["error"])) < 400
 
 

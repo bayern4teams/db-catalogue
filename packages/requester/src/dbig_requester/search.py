@@ -15,7 +15,7 @@ from typing import Any, Literal
 
 from dbig_contracts.artifact import read_artifact
 from dbig_contracts.errors import OperatorError
-from dbig_contracts.models import Edge, Field, Object, Source
+from dbig_contracts.models import Edge, Evidence, Field, Object, Source
 from pydantic import BaseModel, ConfigDict
 from pydantic import Field as PydanticField
 
@@ -37,7 +37,7 @@ WEIGHTS = (10.0, 4.0, 1.0)
 # Bump when what `index_snapshot` writes into the full-text table changes meaning. An index
 # written under another version is refused with STALE_INDEX instead of answering from words it
 # does not hold (a search would return nothing, as if the catalogue lacked the column).
-INDEX_VERSION = "7"
+INDEX_VERSION = "8"
 
 
 class StaleIndexError(OperatorError):
@@ -228,11 +228,19 @@ def index_snapshot(
             if record.record_type in {"object", "field"}:
                 owner = owners.get(getattr(record, "object_id", record.id))
                 places[record.id] = (record.source_id, owner.namespace if owner else None)
+        # The containment measurement an edge cites, handed on unchanged (F14).
+        evidence = (
+            Evidence.model_validate(item.model_dump(mode="json"))
+            for item in tables["evidence.jsonl"]
+        )
+        containment = {
+            item.id: item.metrics for item in evidence if item.kind == "value_containment"
+        }
         for record in tables["edges.jsonl"]:
             edge = Edge.model_validate(record.model_dump(mode="json"))
             if edge.kind not in RELATIONSHIP_KINDS or {edge.from_id, edge.to_id} & skipped:
                 continue
-            body = {
+            body: dict[str, Any] = {
                 "id": edge.id,
                 "kind": edge.kind,
                 "status": edge.status,
@@ -248,6 +256,11 @@ def index_snapshot(
                 ],
                 "evidence": edge.explanation,
             }
+            for evidence_id in edge.evidence_ids:
+                if "basis" in containment.get(evidence_id, {}):
+                    keys = ("basis", "estimate", "lower", "upper")
+                    body.update({key: containment[evidence_id].get(key) for key in keys})
+                    break
             connection.execute(
                 "INSERT INTO relationships VALUES (?,?,?,?,?)",
                 (

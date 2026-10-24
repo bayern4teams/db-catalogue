@@ -12,10 +12,10 @@ States: `todo` · `in-progress` · `blocked` · `done` (acceptance tests pass an
 | item | finding | owner files | state | commit | lead verdict |
 |---|---|---|---|---|---|
 | P7-0 research record | F11-b, benchmark | `artifacts/run-20261020-pgch/research-f14-f17.md` | done | 30eb6ce | setup session |
-| P7-8 value-free failure `reason` | F18 | requester `answer.py` | in-progress (verifier derive) | | |
-| P7-1 "at least" wording + Wilson CI, `basis` | F14 | builder `builder.py`, `config.py`; requester `search.py` index | in-progress (verifier derive) | | |
-| P7-4 `checked` field, `MODEL_ANSWER_UNEXPLAINED`, retry | F17 | requester `answer.py` | todo | | |
-| P7-2 measured evidence ranks above unmeasured | F15 | builder `builder.py` | todo | | |
+| P7-8 value-free failure `reason` | F18 | requester `answer.py` | done | (this commit) | lead: `finish_reason` restricted to the OpenAI set (else `other`) after the attack showed server text passing through; old exact `error == {"code"}` pins changed to `error["code"]` |
+| P7-1 "at least" wording + Wilson CI, `basis` | F14 | builder `builder.py`, `config.py`; requester `search.py` index | done | (this commit) | lead: REJECT fixed (floor/ceil, "<1%"/">99%", count when floor is 0); dead branch removed; 29 acceptance + 7 attack pass; ponytail-review ship |
+| P7-4 `checked` field, `MODEL_ANSWER_UNEXPLAINED`, retry | F17 | requester `answer.py` | tests ready (29 fail on old code); worker after P7-8 | | |
+| P7-2 measured evidence ranks above unmeasured | F15 | builder `builder.py` | tests ready (21; 4 fail on old code); worker after P7-1 | | |
 | P7-3 bridge-table paths (BFS) | F16 | requester `search.py`, `answer.py` | todo | | |
 | P7-5 cross-source control A + B + E | F11-b | builder, requester config, planner | todo | | |
 | P7-5 option C value-free profiles | F11-b | collectors, builder | todo (after A+B+E) | | |
@@ -37,6 +37,7 @@ States: `todo` · `in-progress` · `blocked` · `done` (acceptance tests pass an
 | DEC-30 | Push `4ae2e85` | Pushed. |
 | DEC-31 | N-S8 | Recorded once: NOT_ESTABLISHED with 6 allowed citations; the earlier `MODEL_UNAVAILABLE_OR_INVALID` did not recur and its cause is not recorded (-> F18, P7-8). |
 | DEC-32 | F15 tie order | Declared keys first, then evidence tier. |
+| DEC-33 | P7-2: overlap now runs before the top-k cut, so `dropped_zero_overlap_candidates` can rise (kept set unchanged). Which count? (asked 2026-10-24) | Count all zeros, including those below the cut (owner 2026-10-24). |
 
 ## Open owner questions
 
@@ -44,8 +45,9 @@ States: `todo` · `in-progress` · `blocked` · `done` (acceptance tests pass an
 
 ## Next action
 
-P7-8 (F18): brief the verifier for acceptance tests in the requester, then the worker. In parallel: P7-1 (F14) in the builder (disjoint files).
+Start the P7-4 worker (answer.py) and the P7-2 worker (builder.py) in parallel; their acceptance tests are written (uncommitted until each item lands).
 
 ## Log
 
+- 2026-10-24: P7-8 and P7-1 done. Gate: 1011 passed, 70 skipped, 1 xfailed; attack files the same 37 ids; ruff, mypy, ci_check, package_isolation clean; 0 corpus names.
 - 2026-10-24: `fix/phase7` created from `verify/live-20261020` at `30eb6ce`; this file written from plan §4 and §8.

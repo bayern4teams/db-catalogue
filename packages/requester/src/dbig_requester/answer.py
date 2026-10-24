@@ -11,7 +11,7 @@ from typing import Any, Literal
 
 from dbig_contracts.security import secret_from_env
 from openai import APIConnectionError, APIStatusError, APITimeoutError, OpenAI, omit
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, ValidationError
 
 from .config import AnswerConfig
 from .search import (
@@ -52,6 +52,10 @@ ANSWER_TOO_LONG = "MODEL_ANSWER_TOO_LONG"
 # Everything else: a reply not in the schema, a claim of lineage, a server error, a missing key.
 UNAVAILABLE_OR_INVALID = "MODEL_UNAVAILABLE_OR_INVALID"
 FINISH_REASON_LENGTH = "length"
+# The OpenAI-compatible finish reasons; any other server text is reported as `other` (F18).
+FINISH_REASONS = frozenset(
+    {"stop", FINISH_REASON_LENGTH, "tool_calls", "content_filter", "function_call"}
+)
 # Not an error: the model checked the retrieved metadata and the catalogue does not show it.
 NOT_ESTABLISHED = "NOT_ESTABLISHED_BY_CATALOGUE"
 # What a lineage claim looks like in an answer. The word `lineage` is not one: a question about
@@ -62,9 +66,10 @@ LINEAGE_CLAIM = re.compile(r"\b(derived\s+from|flows\s+into|writes\s+to)\b", re.
 
 
 class _ModelFailure(Exception):
-    def __init__(self, code: str) -> None:
+    def __init__(self, code: str, citation_check: str | None = None) -> None:
         super().__init__(code)
         self.code = code
+        self.citation_check = citation_check
 
 
 def _failure_code(error: Exception) -> str:
@@ -82,6 +87,23 @@ def _failure_code(error: Exception) -> str:
     if isinstance(error, APIStatusError) and error.status_code < HTTPStatus.INTERNAL_SERVER_ERROR:
         return REJECTED
     return UNAVAILABLE_OR_INVALID
+
+
+def _failure_reason(error: Exception, choice: Any) -> dict:
+    """F18: why a failure happened, as structure only. The keys are the exception class, pydantic
+    error types, the server's finish reason, the reply's length and which citation check failed;
+    never the reply's text, an ID or a value from it, so it can be shown and traced as it is."""
+    reason: dict[str, Any] = {"exception": type(error).__name__}
+    if isinstance(error, ValidationError):
+        reason["schema_errors"] = [item["type"] for item in error.errors()]
+    if isinstance(error, _ModelFailure) and error.citation_check:
+        reason["citation_check"] = error.citation_check
+    if choice is not None:
+        reason["finish_reason"] = (
+            choice.finish_reason if choice.finish_reason in FINISH_REASONS else "other"
+        )
+        reason["reply_length"] = len(choice.message.content or "")
+    return reason
 
 
 def _trace(config: AnswerConfig, retrieval_count: int) -> Any:
@@ -219,6 +241,7 @@ def answer_question(
         span = _trace(config, len(context))
     except Exception:
         span = None
+    choice = None  # stays None when no reply arrived
     try:
         model_client = client or OpenAI(
             base_url=config.base_url,
@@ -269,15 +292,20 @@ def answer_question(
         if config.max_answer_chars is not None and len(parsed.answer) > config.max_answer_chars:
             raise _ModelFailure(ANSWER_TOO_LONG)
         not_established = parsed.outcome == "not_established"
-        if not set(parsed.citations) <= allowed or not (parsed.citations or not_established):
-            raise _ModelFailure(INVALID_CITATION)
+        if not set(parsed.citations) <= allowed:
+            raise _ModelFailure(INVALID_CITATION, "unknown_id")
+        if not (parsed.citations or not_established):
+            raise _ModelFailure(INVALID_CITATION, "none")
         if LINEAGE_CLAIM.search(parsed.answer):
             raise ValueError("model asserted lineage")
     except Exception as error:
-        return {
-            "error": {"code": _failure_code(error)},
-            "snapshot_digest": results["snapshot_digest"],
-        }
+        failure = {"code": _failure_code(error), "reason": _failure_reason(error, choice)}
+        if span is not None:
+            try:
+                span.update(metadata={"error": failure})
+            except Exception:
+                logging.getLogger(__name__).warning("telemetry span update failed")
+        return {"error": failure, "snapshot_digest": results["snapshot_digest"]}
     finally:
         if span is not None:
             try:

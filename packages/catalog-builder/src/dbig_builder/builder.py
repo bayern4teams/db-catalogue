@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import hashlib
+import math
 import re
 from collections import defaultdict
+from collections.abc import Callable
 from pathlib import Path
+from statistics import NormalDist
 from typing import Any
 
 from dbig_contracts.artifact import ArtifactLimits, canonical, read_artifact, write_artifact
@@ -299,6 +302,7 @@ def _overlap(
     child_tokens: ValueTokens | None,
     parent_tokens: ValueTokens | None,
     min_support: int,
+    level: float,
 ) -> Evidence:
     """Say what was learned about a candidate's values: a measurement, or why there is none.
 
@@ -366,6 +370,21 @@ def _overlap(
     shared = len(child_set & parent_set)
     union = len(child_set | parent_set)
     sampled_zero = not shared and not parent_tokens.complete
+    # F14: only a parent read in part makes the fraction a floor. A capped side is compared inside
+    # the common hash range, where it holds every value it saw, so that stays a measurement.
+    floor = not parent_tokens.complete
+    interval: dict[str, str | float | None] = {}
+    if shared:
+        estimate = shared / len(child_set)
+        if floor:
+            interval = {"basis": "lower_bound", "lower": estimate, "upper": None}
+        else:
+            interval = {"basis": "measured", **_wilson(shared, len(child_set), level)}
+        interval["estimate"] = estimate
+        interval = {
+            key: round(value, 6) if isinstance(value, float) else value
+            for key, value in interval.items()
+        }
     return _evidence(
         child,
         "value_containment",
@@ -391,8 +410,54 @@ def _overlap(
             "compared_in_common_hash_range": bool(capped),
             "key_id": child_tokens.key_id,
             "minimum_support": min_support,
+            **interval,
         },
         "parent sampled, a zero is not a measurement" if sampled_zero else "",
+    )
+
+
+def _wilson(shared: int, total: int, level: float) -> dict[str, float]:
+    """Wilson score interval on shared/total at a two-sided confidence level (stdlib only)."""
+    z = NormalDist().inv_cdf(0.5 + level / 2)
+    p = shared / total
+    d = 1 + z * z / total
+    centre = (p + z * z / (2 * total)) / d
+    half = z * math.sqrt(p * (1 - p) / total + z * z / (4 * total * total)) / d
+    return {"lower": max(0.0, centre - half), "upper": min(1.0, centre + half)}
+
+
+def _percent(fraction: float, how: Callable[[float], float]) -> int:
+    # Rounded to 6 places first so float noise (0.29 * 100 = 28.999...) cannot move a floor.
+    return int(how(round(fraction * 100, 6)))
+
+
+def _overlap_sentence(metrics: dict[str, Any], level: float) -> str:
+    """The candidate's overlap words, from the metrics so the two cannot disagree (F14).
+
+    Never overclaims: the estimate rounds to nearest, a floor ("at least", CI lower) rounds down
+    and a CI upper rounds up; a nonzero share is never shown as 0% and a partial one never as 100%.
+    """
+    count = metrics["child_distinct_sampled"]
+    estimate = metrics["estimate"]
+    if metrics["basis"] == "lower_bound":
+        floor = _percent(estimate, math.floor)
+        # A share under 1% is said as the exact count instead of "at least 0%".
+        figure = f"{floor}% of" if floor else f"{metrics['shared_tokens']} of"
+        return (
+            f"value overlap at least {figure} {count} sampled child values "
+            "(parent only partly read; the true overlap may be much higher)"
+        )
+    nearest = _percent(estimate, lambda v: math.floor(v + 0.5))
+    if estimate > 0 and nearest == 0:
+        shown = "<1%"
+    elif estimate < 1 and nearest == 100:
+        shown = ">99%"
+    else:
+        shown = f"{nearest}%"
+    low, high = _percent(metrics["lower"], math.floor), _percent(metrics["upper"], math.ceil)
+    return (
+        f"value overlap ≈{shown} ({level * 100:.10g}% CI {low}-{high}%) "
+        f"of {count} sampled child values"
     )
 
 
@@ -719,6 +784,7 @@ def assemble(
                 token_sets.get(child.id),
                 token_sets.get(parent.id),
                 config.min_token_support,
+                config.overlap_confidence_level,
             )
             if (
                 overlap.kind == "value_containment"
@@ -783,8 +849,8 @@ def assemble(
                 explanation = f"{explanation}; {overlap.explanation}"
             else:
                 explanation = (
-                    f"{explanation}; value overlap {overlap.metrics['contained_fraction']:.0%} "
-                    f"of {overlap.metrics['child_distinct_sampled']} sampled child values"
+                    f"{explanation}; "
+                    f"{_overlap_sentence(overlap.metrics, config.overlap_confidence_level)}"
                 )
             edge_id = stable_id(child.source_id, "edge", f"{child.id}:{parent.id}")
             edges[edge_id] = Edge.model_validate(

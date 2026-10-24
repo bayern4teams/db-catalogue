@@ -171,7 +171,7 @@ def test_the_schema_still_lists_both_outcomes_and_forbids_extra_keys(tmp_path, m
 def test_a_reply_without_outcome_is_not_an_answer(tmp_path, monkeypatch):
     """Fails on the old code, where the missing field defaulted to `answered`."""
     result, _ = _ask(tmp_path, monkeypatch, _cites_first())
-    assert result["error"] == {"code": "MODEL_UNAVAILABLE_OR_INVALID"}
+    assert result["error"]["code"] == "MODEL_UNAVAILABLE_OR_INVALID"
     assert "answer" not in result and "citations" not in result and "cited" not in result
 
 
@@ -180,13 +180,13 @@ def test_a_reply_without_outcome_and_without_citations_is_not_an_answer(tmp_path
         tmp_path, monkeypatch,
         lambda _: json.dumps({"answer": "The catalogue does not show it.", "citations": []}),
     )
-    assert result["error"] == {"code": "MODEL_UNAVAILABLE_OR_INVALID"}
+    assert result["error"]["code"] == "MODEL_UNAVAILABLE_OR_INVALID"
 
 
 def test_a_null_or_unknown_outcome_is_not_an_answer(tmp_path, monkeypatch):
     for bad in (None, "maybe", "ANSWERED", ""):
         result, _ = _ask(tmp_path / str(bad), monkeypatch, _cites_first(outcome=bad))
-        assert result["error"] == {"code": "MODEL_UNAVAILABLE_OR_INVALID"}, bad
+        assert result["error"]["code"] == "MODEL_UNAVAILABLE_OR_INVALID", bad
         assert "answer" not in result
 
 
@@ -213,7 +213,7 @@ def test_answered_with_no_citation_is_still_refused(tmp_path, monkeypatch):
         tmp_path, monkeypatch,
         lambda _: json.dumps({"answer": "It is there.", "citations": [], "outcome": "answered"}),
     )
-    assert result["error"] == {"code": "MODEL_INVALID_CITATION"}
+    assert result["error"]["code"] == "MODEL_INVALID_CITATION"
 
 
 def test_the_system_prompt_tells_the_model_where_the_verdict_goes(tmp_path, monkeypatch):

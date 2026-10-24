@@ -119,7 +119,7 @@ TWO = {
 
 
 def test_index_version_is_7():
-    assert INDEX_VERSION == "7"
+    assert INDEX_VERSION == "8"  # P7-1 (F14) bumped it
 
 
 def _rewrite(snapshot: Path, dest: Path, extra_edges) -> Path:
@@ -233,7 +233,7 @@ def _set_version(state: Path, value: str) -> None:
         c.commit()
 
 
-@pytest.mark.parametrize("old", ["6", "5", "", "7 ", "07", "8"])
+@pytest.mark.parametrize("old", ["7", "6", "", "8 ", "08", "9"])
 def test_any_other_version_is_stale_through_ask_search_rest_and_cli(tmp_path, monkeypatch, old):
     state = _index(tmp_path, monkeypatch, TWO)
     _set_version(state, old)
@@ -580,7 +580,8 @@ def test_failures_after_expansion_are_codes_and_echo_no_column_or_value(world):
                 world.state, GADGET_QUESTION, ask_config(server.url, retrieval_limit=1)
             )
         assert set(result) <= {"error", "snapshot_digest"}
-        assert set(result["error"]) == {"code"} and result["error"]["code"].isupper()
+        # P7-8 (F18) adds a structural `reason`.
+        assert set(result["error"]) <= {"code", "reason"} and result["error"]["code"].isupper()
         text = json.dumps(result)
         assert_clean("the failure result", text)
         assert "part" not in text and "gadget" not in text

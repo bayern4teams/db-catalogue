@@ -109,7 +109,7 @@ def test_a_bad_outcome_value_is_the_umbrella_code_and_echoes_nothing(state, bad)
     first = _first_id(state)
     content = json.dumps({"answer": CANARY, "citations": [first], "outcome": bad})
     result, _ = _ask(state, content=content)
-    assert result["error"] == UMBRELLA["error"], (bad, result)
+    assert result["error"]["code"] == UMBRELLA["error"]["code"], (bad, result)
     assert CANARY not in json.dumps(result)
     assert not ({"answer", "citations", "cited", "code"} & set(result))
 
@@ -120,14 +120,14 @@ def test_extra_fields_with_a_valid_outcome_are_refused(state):
         content = json.dumps({"answer": CANARY, "citations": [first], "outcome": "answered",
                               **extra})
         result, _ = _ask(state, content=content)
-        assert result["error"] == UMBRELLA["error"], extra
+        assert result["error"]["code"] == UMBRELLA["error"]["code"], extra
         assert CANARY not in json.dumps(result)
 
 
 def test_only_a_capitalised_outcome_key_does_not_satisfy_the_requirement(state):
     first = _first_id(state)
     content = json.dumps({"answer": "a", "citations": [first], "Outcome": "answered"})
-    assert _ask(state, content=content)[0]["error"] == UMBRELLA["error"]
+    assert _ask(state, content=content)[0]["error"]["code"] == UMBRELLA["error"]["code"]
 
 
 @pytest.mark.parametrize("body", [
@@ -142,7 +142,7 @@ def test_outcome_present_but_another_required_field_missing(state, body):
     first = _first_id(state)
     body = {k: ([first] if v == "FIRST" else v) for k, v in body.items()}
     result, _ = _ask(state, content=json.dumps(body))
-    assert result["error"] == UMBRELLA["error"], result
+    assert result["error"]["code"] == UMBRELLA["error"]["code"], result
     assert CANARY not in json.dumps(result)
 
 
@@ -152,21 +152,21 @@ def test_duplicate_outcome_keys_resolve_to_a_valid_one_only(state):
     first = _first_id(state)
     raw = ('{"answer": "a", "citations": ["' + first
            + '"], "outcome": "answered", "outcome": "bogus"}')
-    assert _ask(state, content=raw)[0]["error"] == UMBRELLA["error"]
+    assert _ask(state, content=raw)[0]["error"]["code"] == UMBRELLA["error"]["code"]
 
 
 def test_outcome_nested_in_the_answer_text_is_not_a_verdict(state):
     first = _first_id(state)
     content = json.dumps({"answer": 'outcome: "not_established"', "citations": [first]})
     result, _ = _ask(state, content=content)
-    assert result["error"] == UMBRELLA["error"]
+    assert result["error"]["code"] == UMBRELLA["error"]["code"]
     assert "code" not in result
 
 
 def test_verdict_written_in_prose_with_missing_outcome_is_not_not_established(state):
     content = json.dumps({"answer": "NOT_ESTABLISHED_BY_CATALOGUE", "citations": []})
     result, _ = _ask(state, content=content)
-    assert result["error"] == UMBRELLA["error"]
+    assert result["error"]["code"] == UMBRELLA["error"]["code"]
     assert result.get("code") is None
 
 
@@ -184,13 +184,13 @@ def test_not_established_without_citations_is_accepted_with_its_code(state):
 
 def test_answered_without_citations_is_refused_as_invalid_citation(state):
     content = json.dumps({"answer": "It is.", "citations": [], "outcome": "answered"})
-    assert _ask(state, content=content)[0]["error"] == {"code": "MODEL_INVALID_CITATION"}
+    assert _ask(state, content=content)[0]["error"]["code"] == "MODEL_INVALID_CITATION"
 
 
 def test_not_established_with_a_foreign_citation_is_still_refused(state):
     content = json.dumps({"answer": "x", "citations": ["not-retrieved"],
                           "outcome": "not_established"})
-    assert _ask(state, content=content)[0]["error"] == {"code": "MODEL_INVALID_CITATION"}
+    assert _ask(state, content=content)[0]["error"]["code"] == "MODEL_INVALID_CITATION"
 
 
 def test_not_established_may_cite_what_it_checked(state):
@@ -214,13 +214,14 @@ def test_lineage_claim_is_refused_under_either_outcome(state):
     for outcome in ("answered", "not_established"):
         content = json.dumps({"answer": "a is derived from b", "citations": [first],
                               "outcome": outcome})
-        assert _ask(state, content=content)[0]["error"] == UMBRELLA["error"], outcome
+        code = _ask(state, content=content)[0]["error"]["code"]
+        assert code == UMBRELLA["error"]["code"], outcome
 
 
 def test_truncated_reply_is_truncated_not_missing_outcome(state):
     """finish_reason is checked before parsing, so a cut-off reply keeps its own code."""
     result, _ = _ask(state, content='{"answer": "' + CANARY, finish_reason="length")
-    assert result["error"] == {"code": "MODEL_TRUNCATED"}
+    assert result["error"]["code"] == "MODEL_TRUNCATED"
 
 
 def test_a_refused_reply_is_not_logged_with_content(state, caplog):
@@ -255,7 +256,7 @@ def test_rest_route_maps_a_missing_outcome_to_503_with_the_code_only(tmp_path, m
     response = _rest(tmp_path, monkeypatch, state,
                      json.dumps({"answer": CANARY, "citations": [first]}))
     assert response.status_code == 503
-    assert response.json()["detail"] == UMBRELLA["error"]
+    assert response.json()["detail"]["code"] == UMBRELLA["error"]["code"]
     assert CANARY not in response.text
 
 
@@ -289,7 +290,7 @@ def test_cli_ask_prints_the_umbrella_code_for_a_missing_outcome(tmp_path, monkey
         run = CliRunner().invoke(main, ["ask", "--config", str(config_file), "--question",
                                         "which column holds the gadget website?"])
     assert run.exit_code == 0, run.output
-    assert json.loads(run.output)["error"] == UMBRELLA["error"]
+    assert json.loads(run.output)["error"]["code"] == UMBRELLA["error"]["code"]
     assert CANARY not in run.output
 
 

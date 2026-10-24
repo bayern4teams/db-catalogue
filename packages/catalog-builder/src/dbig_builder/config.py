@@ -52,6 +52,8 @@ class BuilderConfig(BaseModel):
     name_similarity_threshold: int = Field(default=80, ge=0, le=100)
     top_k_per_field: int = Field(default=5, ge=1)
     min_token_support: int = Field(default=MIN_TOKEN_SUPPORT, ge=1)
+    # Two-sided confidence level of the Wilson interval on a measured value overlap (F14).
+    overlap_confidence_level: float = Field(default=0.95, gt=0, lt=1)
     # Operator knowledge of which sources hold the same dataset (user decision 2026-10-13, DEC-3).
     # Both default to none, which changes nothing. With groups set, two sources are paired only
     # when they share a group; a source in no group is unrestricted. A forbidden pair is never

@@ -198,10 +198,10 @@ def _set_version(state: Path, version: str) -> None:
 
 
 def test_a_freshly_built_index_is_version_seven(cross_state):
-    assert search_module.INDEX_VERSION == "7"
+    assert search_module.INDEX_VERSION == "8"
     with closing(sqlite3.connect(search_module._database(cross_state))) as connection:
         stored = dict(connection.execute("SELECT key, value FROM meta"))["index_version"]
-    assert stored == "7"
+    assert stored == "8"
 
 
 def test_a_version_six_index_answers_stale_index_and_calls_no_model(cross_state, monkeypatch):
