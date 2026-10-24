@@ -30,6 +30,10 @@ class AnswerConfig(BaseModel):
     # Most relationship edges, with their evidence status, passed to the model beside the
     # retrieved entries (DEC-5). 0 passes none.
     relationship_limit: int = Field(default=20, ge=0, le=200)
+    # Path search between retrieved tables through bridge tables (F16, DEC-24): longest path in
+    # edges, and most tables added only because they lie on one. 0 bridges turns the search off.
+    path_max_hops: int = Field(default=4, ge=1)
+    path_max_bridge_tables: int = Field(default=4, ge=0)
     langfuse_url: str | None = None
     langfuse_public_key_env: str | None = None
     langfuse_secret_key_env: str | None = None

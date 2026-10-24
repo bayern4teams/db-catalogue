@@ -17,6 +17,7 @@ from .config import AnswerConfig
 from .search import (
     SearchRequest,
     StaleIndexError,
+    bridge_paths,
     fields_of,
     question_scope,
     relationships_for,
@@ -232,9 +233,18 @@ def answer_question(
     # Every field of each retrieved object, and of each object of a retrieved field, joins the
     # context after the retrieved items, once each (F13, DEC-18: no cap per table).
     owners = {item.get("object_id") or item["id"] for item in retrieved}
+    # F16, DEC-24: tables that only link two retrieved ones join with their key columns. A
+    # `relationship_limit` of 0 passes no relationship, so no bridge either.
+    bridges, path_lines = bridge_paths(
+        state,
+        owners,
+        config.path_max_hops,
+        config.path_max_bridge_tables if config.relationship_limit else 0,
+    )
     entries = [
         *retrieved,
         *(item for item in fields_of(state, owners) if item["id"] not in allowed),
+        *(item for item in bridges if item["id"] not in allowed),
     ]
     allowed |= {item["id"] for item in entries}
     # Descriptions are database owners' free text and reach the model by user decision on
@@ -245,7 +255,7 @@ def answer_question(
             key: item[key]
             for key in (
                 "id", "name", "kind", "source_id", "data_type", "object_name", "namespace",
-                "description",
+                "description", "role",
             )
             if item.get(key) is not None
         }
@@ -258,6 +268,10 @@ def answer_question(
         {item.get("object_id") or item["id"] for item in results["results"]},
         config.relationship_limit,
     )
+    # A path line beyond the limit stays: half a path answers nothing.
+    relationships += [
+        line for line in path_lines if line["id"] not in {item["id"] for item in relationships}
+    ]
     allowed |= {item["id"] for item in relationships}
     try:
         span = _trace(config, len(context))

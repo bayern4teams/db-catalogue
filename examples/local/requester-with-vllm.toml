@@ -15,6 +15,8 @@ timeout_seconds = 60
 retrieval_limit = 10    # catalogue entries given to the model per question
 # answer_retries = 1       # extra attempts when the model replies with only a verdict and no explanation; 0 makes one attempt
 # relationship_limit = 20   # relationship edges (declared and candidate, with evidence status) given to the model; 0 turns them off
+# path_max_hops = 4          # longest relationship path, in edges, searched between retrieved tables for bridge tables
+# path_max_bridge_tables = 4  # most tables added to the model context only because they lie on such a path; 0 turns the search off
 
 # Optional: hide schema-description collections from search and `ask`, per source id,
 # glob patterns on the object name. Applied by `dbig-requester index`. Default: none.

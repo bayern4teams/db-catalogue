@@ -12,11 +12,11 @@ States: `todo` · `in-progress` · `blocked` · `done` (acceptance tests pass an
 | item | finding | owner files | state | commit | lead verdict |
 |---|---|---|---|---|---|
 | P7-0 research record | F11-b, benchmark | `artifacts/run-20261020-pgch/research-f14-f17.md` | done | 30eb6ce | setup session |
-| P7-8 value-free failure `reason` | F18 | requester `answer.py` | done | (this commit) | lead: `finish_reason` restricted to the OpenAI set (else `other`) after the attack showed server text passing through; old exact `error == {"code"}` pins changed to `error["code"]` |
-| P7-1 "at least" wording + Wilson CI, `basis` | F14 | builder `builder.py`, `config.py`; requester `search.py` index | done | (this commit) | lead: REJECT fixed (floor/ceil, "<1%"/">99%", count when floor is 0); dead branch removed; 29 acceptance + 7 attack pass; ponytail-review ship |
-| P7-4 `checked` field, `MODEL_ANSWER_UNEXPLAINED`, retry | F17 | requester `answer.py`, `config.py`, test stubs | done | (this commit) | lead: attack ACCEPT; fixed a `checked` of blank strings counting as explained, and the attempt count now reaches the span on success too (one span update in `finally`); DEBUG-level SDK logging of the re-sent reply is pre-existing (the question was already logged there) |
-| P7-2 measured evidence ranks above unmeasured | F15 | builder `builder.py` | done | (this commit) | lead: offline replay (no database): the 2 cut owner-true `-> pg.location` pairs restored; 9 owner-false pairs to an unmeasured CH weak key replaced by 7 unmarked PG -> Mongo pairs at ~0.6% and the 2 restored; PG+CH sets unchanged (48/48, 56/56); `attack6_f10` same-source pin updated to DEC-32 (plus a forbidden-source count) | | |
-| P7-3 bridge-table paths (BFS) | F16 | requester `search.py`, `answer.py` | tests ready (28; 20 fail on old code); worker after P7-4 | | |
+| P7-8 value-free failure `reason` | F18 | requester `answer.py` | done | 3d8a033 | lead: `finish_reason` restricted to the OpenAI set (else `other`) after the attack showed server text passing through; old exact `error == {"code"}` pins changed to `error["code"]` |
+| P7-1 "at least" wording + Wilson CI, `basis` | F14 | builder `builder.py`, `config.py`; requester `search.py` index | done | 3d8a033 | lead: REJECT fixed (floor/ceil, "<1%"/">99%", count when floor is 0); dead branch removed; 29 acceptance + 7 attack pass; ponytail-review ship |
+| P7-4 `checked` field, `MODEL_ANSWER_UNEXPLAINED`, retry | F17 | requester `answer.py`, `config.py`, test stubs | done | 7807328 | lead: attack ACCEPT; fixed a `checked` of blank strings counting as explained, and the attempt count now reaches the span on success too (one span update in `finally`); DEBUG-level SDK logging of the re-sent reply is pre-existing (the question was already logged there) |
+| P7-2 measured evidence ranks above unmeasured | F15 | builder `builder.py` | done | 7807328 | lead: offline replay (no database): the 2 cut owner-true `-> pg.location` pairs restored; 9 owner-false pairs to an unmeasured CH weak key replaced by 7 unmarked PG -> Mongo pairs at ~0.6% and the 2 restored; PG+CH sets unchanged (48/48, 56/56); `attack6_f10` same-source pin updated to DEC-32 (plus a forbidden-source count) |
+| P7-3 bridge-table paths (BFS) | F16 | requester `search.py`, `answer.py`, `config.py` | done | (this commit) | lead: attack ACCEPT, D1 (strongest path first) and D2 (lines through kept tables at a full cap) fixed, 35 attack + 28 acceptance pass; real snapshot N-S4/N-S8/N-I10 3/3 expected tables in context (2/3 search off); P7-5 A must filter cross-source path edges too | | |
 | P7-5 cross-source control A + B (+ E via DEC-3, DEC-34) | F11-b | builder, requester config, planner | todo (DEC-34..36 answered) | | |
 | P7-5 option C value-free profiles | F11-b | collectors, builder | todo (after A+B+E) | | |
 | P7-5 option D coordinated hash sampling | F11-b | collectors | deferred (DEC-23) | | |
@@ -49,9 +49,13 @@ States: `todo` · `in-progress` · `blocked` · `done` (acceptance tests pass an
 
 ## Next action
 
-P7-3 worker (requester `search.py`, `answer.py`), one agent at a time; then P7-5 A + B (DEC-34..37).
+P7-5 A + B (DEC-23, DEC-34..37): verifier derives acceptance tests first, then one worker; A must also filter cross-source edges out of the P7-3 path search. One agent at a time.
 
 ## Log
+
+- 2026-10-24: P7-3 done. Gate (lead alone, capped, temp on disk): 1089 passed, 70 skipped, 1 xfailed; attack files the same 37 ids; ruff, mypy, ci_check, package_isolation clean; 0 corpus names. Real snapshot check 0.6 s for six asks.
+
+- 2026-10-24: `/home` filled to 100% while the P7-3 worker ran; a write truncated `search.py`, which the worker rebuilt from HEAD plus its edit (lead re-reviewed the full diff). The worker deleted `.mypy_cache` and ran `uv cache prune` (~35 GB of unused cache; both regenerable). `/tmp` is a RAM-backed tmpfs: pytest now uses `--basetemp=.tmp/pt`.
 
 - 2026-10-24: P7-2 and P7-4 done. Gate (memory-capped, lead alone): 1061 passed, 70 skipped, 1 xfailed; attack files the same 37 ids; ruff, mypy, ci_check, package_isolation clean; 0 corpus names.
 

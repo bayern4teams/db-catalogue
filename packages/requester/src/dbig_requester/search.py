@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import fnmatch
 import hashlib
+import itertools
 import json
 import os
 import re
@@ -488,6 +489,102 @@ def relationships_for(state: Path, object_ids: set[str], limit: int) -> list[dic
             [*ordered, *ordered, *ordered, *ordered, limit],
         ).fetchall()
     return [json.loads(row[0]) for row in rows]
+
+
+def _distances(
+    adjacent: dict[str, list[tuple[str, str]]], start: str, limit: int
+) -> dict[str, int]:
+    """Breadth-first edge counts from `start`, no further than `limit` edges."""
+    seen, frontier = {start: 0}, [start]
+    for depth in range(1, limit + 1):
+        frontier = [
+            node
+            for current in frontier
+            for node, _ in adjacent.get(current, ())
+            if seen.setdefault(node, depth) == depth
+        ]
+    return seen
+
+
+def bridge_paths(
+    state: Path, ends: set[str], max_hops: int, max_bridges: int
+) -> tuple[list[dict], list[dict]]:
+    """F16, DEC-24: the tables on a shortest path of at most `max_hops` edges between two of the
+    `ends`, through tables that are not themselves ends, at most `max_bridges` of them, as index
+    rows with `role: path_only` (the table, then only the columns its path lines name), and the
+    path's relationship lines as stored (a candidate edge keeps its status). One read of the table.
+    shortcut: every shortest path of a pair is walked and sorted, so a dense hub of equal-length
+    paths is slow; the upgrade is to stop after a visit cap behind config.
+    A path is kept whole or not at all."""
+    if len(ends) < 2 or max_hops < 2 or max_bridges < 1:
+        return [], []
+    with closing(sqlite3.connect(_database(state))) as connection:
+        edges: dict[str, tuple[str, str, str]] = {}
+        ranks: dict[str, int] = {}
+        for edge_id, left, right, body, rank in connection.execute(
+            "SELECT id, from_id, to_id, body, rank FROM relationships ORDER BY rank, id"
+        ):
+            edges[edge_id] = (left, right, body)
+            ranks[edge_id] = rank
+        adjacent: dict[str, list[tuple[str, str]]] = {}
+        for edge_id, (left, right, _) in edges.items():
+            adjacent.setdefault(left, []).append((right, edge_id))
+            adjacent.setdefault(right, []).append((left, edge_id))
+        reach = {end: _distances(adjacent, end, max_hops) for end in sorted(ends & adjacent.keys())}
+
+        def walk(node: str, goal: str, hops: int, taken: tuple[str, ...], via: tuple[str, ...]):
+            # Steps that stay on a shortest path: one edge nearer the goal, one further from here.
+            if node == goal:
+                yield taken, via
+                return
+            for other, edge_id in adjacent[node]:
+                if reach[goal].get(other) == hops - 1 and reach[start].get(other) == len(via) + 1:
+                    yield from walk(other, goal, hops - 1, (*taken, other), (*via, edge_id))
+
+        kept: list[str] = []
+        used: dict[str, None] = {}
+        for start, goal in itertools.combinations(reach, 2):
+            hops = reach[start].get(goal, 0)
+            if hops < 2 or hops - 1 > max_bridges:  # no path, or a direct line (already shown)
+                continue
+            # The strongest path first: its sorted edge ranks, then its edge ids (D1).
+            ordered = sorted(
+                walk(start, goal, hops, (), ()),
+                key=lambda path: (sorted(ranks[e] for e in path[1]), path[1]),
+            )
+            for taken, via in ordered:
+                inner = taken[:-1]
+                new = [n for n in inner if n not in kept]
+                # A path through another end is two shorter paths, each found on its own.
+                if ends.intersection(inner) or len(kept) + len(new) > max_bridges:
+                    continue
+                kept += dict.fromkeys(new)
+                used.update(dict.fromkeys(via))
+        keys: dict[str, set[str]] = {}
+        for edge_id in used:
+            left, right, body = edges[edge_id]
+            for column_pair in json.loads(body)["columns"]:
+                for node, column in zip((left, right), column_pair, strict=True):
+                    keys.setdefault(node, set()).add(column)
+        connection.row_factory = sqlite3.Row
+        rows = {
+            row["id"]: dict(row)
+            for row in connection.execute(
+                f"SELECT * FROM entries WHERE id IN ({','.join('?' * len(kept))})",  # noqa: S608
+                kept,
+            )
+        }
+    fields = fields_of(state, set(kept))
+    items = [
+        {**item, "role": "path_only"}
+        for node in kept
+        if node in rows
+        for item in (
+            rows[node],
+            *(f for f in fields if f["object_id"] == node and f["name"] in keys.get(node, ())),
+        )
+    ]
+    return items, [json.loads(edges[edge_id][2]) for edge_id in used]
 
 
 def fields_of(state: Path, object_ids: set[str]) -> list[dict]:
