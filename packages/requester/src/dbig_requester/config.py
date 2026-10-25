@@ -34,6 +34,9 @@ class AnswerConfig(BaseModel):
     # edges, and most tables added only because they lie on one. 0 bridges turns the search off.
     path_max_hops: int = Field(default=4, ge=1)
     path_max_bridge_tables: int = Field(default=4, ge=0)
+    # Candidates between two sources with no positive measurement (F11-b) are left out of the
+    # model context and the path search unless this is true. A rejected one is always left out.
+    include_unverified_cross_source: bool = False
     langfuse_url: str | None = None
     langfuse_public_key_env: str | None = None
     langfuse_secret_key_env: str | None = None

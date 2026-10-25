@@ -20,6 +20,9 @@ class PlannerConfig(BaseModel):
     # candidate and 1 for a declared or observed link (DEC-4): a roundabout cross-source path
     # loses to a same-source one.
     cross_source_candidate_weight: int = Field(default=4, ge=1, le=100)
+    # Candidates between two sources with no positive measurement (F11-b) are left out of the
+    # graph unless this is true. A rejected one is always left out.
+    include_unverified_cross_source: bool = False
     max_plan_rows: int = Field(default=1000, ge=1, le=100_000)
     max_observation_bytes: int = Field(default=1_048_576, ge=1)
     max_observations: int = Field(default=10_000, ge=1)

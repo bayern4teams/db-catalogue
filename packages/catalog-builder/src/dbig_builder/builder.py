@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import math
 import re
-from collections import defaultdict
+from collections import Counter, defaultdict
 from collections.abc import Callable
 from pathlib import Path
 from statistics import NormalDist
@@ -28,9 +29,11 @@ from dbig_contracts.models import (
 )
 from rapidfuzz.fuzz import ratio
 
+from .config import B_TRUSTED_SAMPLE_METHODS, BuilderConfig
 from .config import MIN_TOKEN_SUPPORT as MIN_TOKEN_SUPPORT
-from .config import BuilderConfig
 from .reviewer import MODEL_FAILURE_CODES, review_candidates
+
+log = logging.getLogger(__name__)
 
 
 def _read_signed(path: Path, config: BuilderConfig) -> tuple[Manifest, dict[str, list[Record]]]:
@@ -291,9 +294,25 @@ def _composite_candidates(
                         "tuple value comparison available"
                     ),
                     "confidence": None,
+                    # No tuple measurement exists, so never verified.
+                    "evidence_tier": _unproven_tier(
+                        child_object.source_id, parent_object.source_id
+                    ),
                     **_base(anchor),
                 }
             )
+
+
+def _unproven_tier(child_source: str, parent_source: str) -> str:
+    """The tier of a candidate with no containment at or above `c_min`: where it points decides."""
+    return "plausible" if child_source == parent_source else "unverified_cross_source"
+
+
+def _qualified(field: Field, objects: dict[str, Object]) -> str:
+    """`<source_id>.<namespace>.<table>.<column>`, namespace omitted when absent (DEC-36)."""
+    owner = objects[field.object_id]
+    parts = [field.source_id, owner.namespace, owner.name, field.name]
+    return ".".join(part for part in parts if part)
 
 
 def _overlap(
@@ -413,6 +432,40 @@ def _overlap(
             **interval,
         },
         "parent sampled, a zero is not a measurement" if sampled_zero else "",
+    )
+
+
+def _zero_is_conclusive(
+    overlap: Evidence,
+    parent_tokens: ValueTokens | None,
+    parent_profiles: list[Profile] | None,
+    config: BuilderConfig,
+) -> bool:
+    """Whether a zero against a partly read parent is a measurement (F11-b option B).
+
+    If the link held at containment `c_min`, the child values compared would share
+    E = n_child x f_parent x c_min values with the parent's tokens, f_parent being the share of
+    the parent's distinct values that was read. A zero that would have shown `min_expected_shared`
+    or more is evidence against the link (P(0 | link) <= e^-min_expected_shared). Without a
+    distinct estimate for the parent f is unknown and the zero stays inconclusive. The formula
+    assumes the parent read is a random subset, so it applies only to a trusted `sample_method`.
+    """
+    metrics = overlap.metrics
+    if (
+        overlap.kind != "value_containment"
+        or metrics["shared_tokens"]
+        or metrics["parent_complete"]
+        or parent_tokens is None
+        # A first-rows read is no random subset of the parent, so a zero says nothing (DEC-39).
+        or not parent_tokens.sample_method.startswith(B_TRUSTED_SAMPLE_METHODS)
+    ):
+        return False
+    estimate = _measure(parent_profiles, "distinct_estimate")
+    if not estimate:
+        return False
+    read = min(1.0, parent_tokens.distinct_count / estimate)
+    return float(metrics["child_distinct_sampled"] or 0) * read * config.c_min >= (
+        config.min_expected_shared
     )
 
 
@@ -653,6 +706,7 @@ def assemble(
                     "field_pairs": pairs,
                     "explanation": "source-declared foreign key",
                     "confidence": None,
+                    "evidence_tier": "verified",
                     **_base(constraint),
                 }
             )
@@ -675,7 +729,13 @@ def assemble(
         ) >= MEASURED_UNIQUE:
             unique_fields.append(candidate_parent)
     dropped_zero_overlap = 0
+    dropped_expected_overlap = 0
     dropped_ordinary_name = 0
+    # Owner decisions by (child, parent) qualified names; the last entry for a pair wins. An entry
+    # that names no proposed candidate is counted, never named (DEC-36).
+    decisions = {(item.child, item.parent): item.decision for item in config.decisions}
+    decided: set[tuple[str, str]] = set()
+    candidate_keys: dict[str, tuple[str, str]] = {}
     known_objects = frozenset(
         form
         for item in objects.values()
@@ -788,6 +848,11 @@ def assemble(
                 # value. A non-zero overlap, however small, is shown and never drops.
                 dropped_zero_overlap += 1
                 continue
+            if _zero_is_conclusive(
+                overlap, token_sets.get(parent.id), field_profiles.get(parent.id), config
+            ):
+                dropped_expected_overlap += 1
+                continue
             ranked.append((score, parent, rule, overlap))
         # Candidate order (F10, LEAD_REVIEW 2026-10-19; F15, DEC-32): name score; a declared key;
         # evidence tier (0 measured containment, 1 lower bound or a zero against a partly read
@@ -867,14 +932,29 @@ def assemble(
                     f"{explanation}; "
                     f"{_overlap_sentence(overlap.metrics, config.overlap_confidence_level)}"
                 )
+            # F11-b: verified needs measured containment of at least `c_min` (the point estimate,
+            # on a complete parent or already as a lower bound); anything else is unproven.
+            # An owner's decision overrides it.
+            tier = (
+                "verified"
+                if overlap.kind == "value_containment"
+                # Unrounded, so a fraction that does not terminate still meets c_min exactly.
+                and float(overlap.metrics["shared_tokens"] or 0)
+                / float(overlap.metrics["child_distinct_sampled"] or 1)
+                >= config.c_min
+                else _unproven_tier(child.source_id, parent.source_id)
+            )
+            status = "tentative"
             edge_id = stable_id(child.source_id, "edge", f"{child.id}:{parent.id}")
+            candidate_keys[edge_id] = (_qualified(child, objects), _qualified(parent, objects))
             edges[edge_id] = Edge.model_validate(
                 {
                     "id": edge_id,
                     "kind": "REFERENCE_CANDIDATE",
                     "from_id": child.object_id,
                     "to_id": parent.object_id,
-                    "status": "tentative",
+                    "status": status,
+                    "evidence_tier": tier,
                     "evidence_ids": cited,
                     "field_pairs": [[child.id, parent.id]],
                     "explanation": explanation,
@@ -882,6 +962,17 @@ def assemble(
                     **_base(child),
                 }
             )
+    # Applied after every candidate exists: a qualified name shared by two candidates (a table
+    # `a.b` against table `b` in namespace `a`) is ambiguous, so it is applied to neither and
+    # counted with the unmatched entries.
+    key_count = Counter(candidate_keys.values())
+    for edge_id, decision_key in candidate_keys.items():
+        if decision_key in decisions and key_count[decision_key] == 1:
+            decided.add(decision_key)
+            if decisions[decision_key] == "confirmed":
+                edges[edge_id] = edges[edge_id].model_copy(update={"evidence_tier": "verified"})
+            else:
+                edges[edge_id] = edges[edge_id].model_copy(update={"status": "rejected"})
     _composite_candidates(
         composite_keys,
         objects,
@@ -892,10 +983,20 @@ def assemble(
         edges,
         config,
     )
+    unmatched_decisions = sum(
+        (item.child, item.parent) not in decided for item in config.decisions
+    )
+    if unmatched_decisions:
+        # A constant message: the count is on the run record, and no name is ever logged.
+        log.warning("owner decisions matched no proposed candidate")
     review_status = "REVIEW_DISABLED"
     if config.review is not None:
         suggestions, review_status = review_candidates(
-            [edge for edge in edges.values() if edge.kind == "REFERENCE_CANDIDATE"],
+            [
+                edge
+                for edge in edges.values()
+                if edge.kind == "REFERENCE_CANDIDATE" and edge.status != "rejected"
+            ],
             nodes,
             evidence,
             config.review,
@@ -929,6 +1030,12 @@ def assemble(
                     if dropped_zero_overlap
                     else {}
                 ),
+                **(
+                    {"dropped_expected_overlap_candidates": dropped_expected_overlap}
+                    if dropped_expected_overlap
+                    else {}
+                ),
+                **({"unmatched_decisions": unmatched_decisions} if unmatched_decisions else {}),
                 # Renamed from `dropped_unmeasured_key_name_candidates` (P6-4, DEC-20): an
                 # ordinary name on an undeclared parent is now dropped whether measured or not.
                 **(

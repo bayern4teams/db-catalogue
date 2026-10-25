@@ -38,7 +38,7 @@ WEIGHTS = (10.0, 4.0, 1.0)
 # Bump when what `index_snapshot` writes into the full-text table changes meaning. An index
 # written under another version is refused with STALE_INDEX instead of answering from words it
 # does not hold (a search would return nothing, as if the catalogue lacked the column).
-INDEX_VERSION = "8"
+INDEX_VERSION = "9"
 
 
 class StaleIndexError(OperatorError):
@@ -245,6 +245,7 @@ def index_snapshot(
                 "id": edge.id,
                 "kind": edge.kind,
                 "status": edge.status,
+                "evidence_tier": edge.evidence_tier,
                 "from": names.get(edge.from_id),
                 "to": names.get(edge.to_id),
                 "from_source": places.get(edge.from_id, (None, None))[0],
@@ -464,12 +465,22 @@ def search(state: Path, request: SearchRequest) -> dict:
     }
 
 
+UNVERIFIED_CROSS_SOURCE = "unverified_cross_source"  # an `Edge.evidence_tier` value
 RELATIONSHIP_KINDS = frozenset({"DECLARES_FK", "REFERENCE_CANDIDATE"})
 # Strongest claim first, so a bounded list of relationships keeps the declared ones.
 STATUS_RANK = {"declared": 0, "executed": 0, "observed": 1, "tentative": 2}
+# Which relationship rows answer time may use (F11-b): never a rejected one, and a candidate
+# between two sources with no positive measurement only when the operator asked for it. Applied in
+# SQL so a left-out line never takes a slot of the limit. One `?`: the flag as 0 or 1.
+_VISIBLE = (
+    "json_extract(body, '$.status') IS NOT 'rejected' AND (? OR "
+    f"json_extract(body, '$.evidence_tier') IS NOT '{UNVERIFIED_CROSS_SOURCE}')"
+)
 
 
-def relationships_for(state: Path, object_ids: set[str], limit: int) -> list[dict]:
+def relationships_for(
+    state: Path, object_ids: set[str], limit: int, include_unverified: bool = False
+) -> list[dict]:
     """Relationships touching these objects, strongest claim first, at most `limit`: metadata
     only (names, status and the builder's evidence sentence), for the answering model (DEC-5)."""
     if not object_ids or limit < 1:
@@ -477,8 +488,8 @@ def relationships_for(state: Path, object_ids: set[str], limit: int) -> list[dic
     with closing(sqlite3.connect(_database(state))) as connection:
         marks = ",".join("?" * len(object_ids))
         query = (
-            f"SELECT body FROM relationships WHERE from_id IN ({marks}) "  # noqa: S608
-            f"OR to_id IN ({marks}) "
+            f"SELECT body FROM relationships WHERE (from_id IN ({marks}) "  # noqa: S608
+            f"OR to_id IN ({marks})) AND {_VISIBLE} "
             f"ORDER BY (from_id IN ({marks}) AND to_id IN ({marks})) DESC, rank, id LIMIT ?"
         )
         ordered = sorted(object_ids)
@@ -486,7 +497,7 @@ def relationships_for(state: Path, object_ids: set[str], limit: int) -> list[dic
         # links must not push it past the limit.
         rows = connection.execute(
             query,
-            [*ordered, *ordered, *ordered, *ordered, limit],
+            [*ordered, *ordered, int(include_unverified), *ordered, *ordered, limit],
         ).fetchall()
     return [json.loads(row[0]) for row in rows]
 
@@ -507,7 +518,7 @@ def _distances(
 
 
 def bridge_paths(
-    state: Path, ends: set[str], max_hops: int, max_bridges: int
+    state: Path, ends: set[str], max_hops: int, max_bridges: int, include_unverified: bool = False
 ) -> tuple[list[dict], list[dict]]:
     """F16, DEC-24: the tables on a shortest path of at most `max_hops` edges between two of the
     `ends`, through tables that are not themselves ends, at most `max_bridges` of them, as index
@@ -515,14 +526,16 @@ def bridge_paths(
     path's relationship lines as stored (a candidate edge keeps its status). One read of the table.
     shortcut: every shortest path of a pair is walked and sorted, so a dense hub of equal-length
     paths is slow; the upgrade is to stop after a visit cap behind config.
-    A path is kept whole or not at all."""
+    A path is kept whole or not at all, and walks only the edges `relationships_for` may show."""
     if len(ends) < 2 or max_hops < 2 or max_bridges < 1:
         return [], []
     with closing(sqlite3.connect(_database(state))) as connection:
         edges: dict[str, tuple[str, str, str]] = {}
         ranks: dict[str, int] = {}
         for edge_id, left, right, body, rank in connection.execute(
-            "SELECT id, from_id, to_id, body, rank FROM relationships ORDER BY rank, id"
+            "SELECT id, from_id, to_id, body, rank FROM relationships "  # noqa: S608
+            f"WHERE {_VISIBLE} ORDER BY rank, id",
+            (int(include_unverified),),
         ):
             edges[edge_id] = (left, right, body)
             ranks[edge_id] = rank

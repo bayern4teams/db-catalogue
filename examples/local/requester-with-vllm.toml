@@ -17,6 +17,7 @@ retrieval_limit = 10    # catalogue entries given to the model per question
 # relationship_limit = 20   # relationship edges (declared and candidate, with evidence status) given to the model; 0 turns them off
 # path_max_hops = 4          # longest relationship path, in edges, searched between retrieved tables for bridge tables
 # path_max_bridge_tables = 4  # most tables added to the model context only because they lie on such a path; 0 turns the search off
+# include_unverified_cross_source = false  # true also gives the model candidates between two sources with no positive measurement (evidence_tier unverified_cross_source); a rejected edge never returns
 
 # Optional: hide schema-description collections from search and `ask`, per source id,
 # glob patterns on the object name. Applied by `dbig-requester index`. Default: none.

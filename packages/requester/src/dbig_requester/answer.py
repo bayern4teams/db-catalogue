@@ -240,6 +240,7 @@ def answer_question(
         owners,
         config.path_max_hops,
         config.path_max_bridge_tables if config.relationship_limit else 0,
+        config.include_unverified_cross_source,
     )
     entries = [
         *retrieved,
@@ -267,6 +268,7 @@ def answer_question(
         state,
         {item.get("object_id") or item["id"] for item in results["results"]},
         config.relationship_limit,
+        config.include_unverified_cross_source,
     )
     # A path line beyond the limit stays: half a path answers nothing.
     relationships += [

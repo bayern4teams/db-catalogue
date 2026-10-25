@@ -413,7 +413,8 @@ def stage_ask(state: Path, env: Any) -> dict:
 def stage_planner(snapshot: Path, root: Path, sampling: bool) -> dict:
     graph_dir = root / f"graph-{int(sampling)}"
     (root / "observations").mkdir(exist_ok=True)
-    config = PlannerConfig(graph_dir=graph_dir)
+    # P7-5: this test pins the warning on an unmeasured cross-source path (hidden by default).
+    config = PlannerConfig(graph_dir=graph_dir, include_unverified_cross_source=True)
     build_graph(snapshot, root / "observations", graph_dir, config)
     ids = _object_ids(snapshot)
     _, data = read_artifact(snapshot)

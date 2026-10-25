@@ -135,6 +135,9 @@ class Edge(Record):
     last_seen: datetime | None = None
     limitations: list[str] = PydanticField(default_factory=list)
     confidence: float | None = None
+    # Strength of the measured evidence for a REFERENCE_CANDIDATE (F11-b); None on other kinds and
+    # on snapshots written before it existed.
+    evidence_tier: Literal["verified", "plausible", "unverified_cross_source"] | None = None
 
 
 class Profile(Record):

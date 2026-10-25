@@ -15,3 +15,14 @@ signing_keys = { local = "DBIG_SIGNING_KEY" }
 # Default: none, so nothing is restricted.
 # source_groups = [["postgres_main", "mongo_main"]]
 # forbidden_source_pairs = [["postgres_main", "clickhouse_main"]]
+# A candidate is "verified" when at least this share of the child's compared values is found in the
+# parent; below it the candidate is "plausible" (one source) or "unverified_cross_source" (two).
+# The requester and planner leave out the latter unless their include_unverified_cross_source is true.
+# c_min = 0.25
+# A zero against a partly read parent drops the candidate when the expected number of shared values
+# at c_min (child values x share of the parent read x c_min) is at least this. Needs a distinct estimate.
+# min_expected_shared = 5
+# Owner decisions: a JSON list of {"child": "<source_id>.<namespace>.<table>.<column>", "parent": "...",
+# "decision": "confirmed" | "rejected"}; namespace left out when the object has none.
+# decisions_file = "decisions.json"
+# decisions_file_max_bytes = 1048576   # larger decisions files are refused

@@ -265,12 +265,16 @@ def render_catalog(
             for item in sorted(suggestions.get(edge.id, []), key=lambda item: item.id)
         )
         cited += reviewed
+        tier = (
+            f"<span class='badge'>{_e(edge.evidence_tier)}</span>" if edge.evidence_tier else ""
+        )
         confidence = (
             "not calibrated" if edge.confidence is None else f"{edge.confidence:.2f}"
         )
         return (
             f"<tr><td>{joined}</td><td><span class='badge'>{_e(edge.kind)}</span>"
-            f"<span class='badge {status_class}'>{_e(edge.status)}</span></td>"
+            f"<span class='badge {status_class}'>{_e(edge.status)}</span>"
+            f"{tier}</td>"
             f"<td>{_e(edge.explanation)}<ul class='evidence'>{cited}</ul></td>"
             f"<td class='muted'>{_e(confidence)}</td></tr>"
         )

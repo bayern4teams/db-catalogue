@@ -608,7 +608,7 @@ def test_the_relationship_context_is_names_status_and_the_builders_sentence(worl
         # P6-7 (F11) adds the source and namespace of each end: identifiers, no value text.
         assert set(edge) == {
             "id", "kind", "status", "from", "to", "columns", "evidence",
-            "from_source", "from_namespace", "to_source", "to_namespace",
+            "from_source", "from_namespace", "to_source", "to_namespace", "evidence_tier",
         } | ({"basis", "estimate", "lower", "upper"} if "basis" in edge else set())
         assert edge["status"] in {"declared", "strong", "tentative", "rejected", "observed"}
         for name in (edge["from"], edge["to"], *[n for pair in edge["columns"] for n in pair]):

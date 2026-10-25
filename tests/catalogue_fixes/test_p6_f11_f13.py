@@ -39,14 +39,16 @@ SENTENCE = (
     "A relationship between objects of two different sources cannot be joined in one query; "
     "say so instead of writing one."
 )
-OLD_BODY_KEYS = {"id", "kind", "status", "from", "to", "columns", "evidence"}
+OLD_BODY_KEYS = {"id", "kind", "status", "from", "to", "columns", "evidence", "evidence_tier"}
 NEW_BODY_KEYS = {"from_source", "from_namespace", "to_source", "to_namespace"}
 
 
 def _config(stub: ModelStub, **overrides) -> AnswerConfig:
     return AnswerConfig(
         base_url=stub.url, model="m", model_digest="d", api_key_env="MODEL_KEY",
-        timeout_seconds=5, **overrides,
+        timeout_seconds=5,
+        # These fixtures hold unmeasured cross-source candidates, hidden by default since P7-5.
+        **{"include_unverified_cross_source": True, **overrides},
     )
 
 
@@ -199,10 +201,10 @@ def _set_version(state: Path, version: str) -> None:
 
 
 def test_a_freshly_built_index_is_version_seven(cross_state):
-    assert search_module.INDEX_VERSION == "8"
+    assert search_module.INDEX_VERSION == "9"
     with closing(sqlite3.connect(search_module._database(cross_state))) as connection:
         stored = dict(connection.execute("SELECT key, value FROM meta"))["index_version"]
-    assert stored == "8"
+    assert stored == "9"
 
 
 def test_a_version_six_index_answers_stale_index_and_calls_no_model(cross_state, monkeypatch):

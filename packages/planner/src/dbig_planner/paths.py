@@ -95,7 +95,15 @@ def find_paths(directory: Path, request: PathRequest, kind: str, config: Planner
     network: nx.Graph = nx.DiGraph() if kind == "lineage" else nx.Graph()
     selected: dict[tuple[str, str], dict] = {}
     for edge in edges:
-        if kind == "join" and edge["status"] == "rejected":
+        if kind == "join" and (
+            edge["status"] == "rejected"
+            # F11-b: a candidate between two sources with no positive measurement is a guess; it
+            # joins the graph only when the operator asked for it.
+            or (
+                edge.get("evidence_tier") == "unverified_cross_source"
+                and not config.include_unverified_cross_source
+            )
+        ):
             continue
         left, right = edge["from_id"], edge["to_id"]
         if left not in entities or right not in entities:

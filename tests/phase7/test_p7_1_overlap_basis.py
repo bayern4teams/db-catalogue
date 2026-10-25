@@ -426,7 +426,7 @@ def test_the_basis_values_are_exactly_two_words_and_metrics_are_numbers(tmp_path
 
 # --- 5. the requester hands the basis to the model ------------------------------------------------
 
-OLD_BODY = {"id", "kind", "status", "from", "to", "columns", "evidence"}
+OLD_BODY = {"id", "kind", "status", "from", "to", "columns", "evidence", "evidence_tier"}
 F11_BODY = {"from_source", "from_namespace", "to_source", "to_namespace"}
 NEW_BODY = {"basis", "estimate", "lower", "upper"}
 QUESTION = "How does shipment relate to vendor?"

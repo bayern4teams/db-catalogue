@@ -120,7 +120,7 @@ TWO = {
 
 
 def test_index_version_is_7():
-    assert INDEX_VERSION == "8"  # P7-1 (F14) bumped it
+    assert INDEX_VERSION == "9"  # P7-5 (F11-b) bumped it
 
 
 def _rewrite(snapshot: Path, dest: Path, extra_edges) -> Path:
@@ -210,7 +210,7 @@ def test_the_fixture_holds_both_a_same_source_and_a_cross_source_edge(tmp_path, 
 def test_relationship_bodies_carry_identifiers_only(tmp_path, monkeypatch):
     allowed = {
         "id", "kind", "status", "from", "to", "columns", "evidence",
-        "from_source", "from_namespace", "to_source", "to_namespace",
+        "from_source", "from_namespace", "to_source", "to_namespace", "evidence_tier",
     }
     for body in _bodies(_index(tmp_path, monkeypatch, TWO)):
         assert set(body) == allowed
@@ -234,7 +234,7 @@ def _set_version(state: Path, value: str) -> None:
         c.commit()
 
 
-@pytest.mark.parametrize("old", ["7", "6", "", "8 ", "08", "9"])
+@pytest.mark.parametrize("old", ["7", "6", "", "9 ", "09", "8", "10"])
 def test_any_other_version_is_stale_through_ask_search_rest_and_cli(tmp_path, monkeypatch, old):
     state = _index(tmp_path, monkeypatch, TWO)
     _set_version(state, old)
