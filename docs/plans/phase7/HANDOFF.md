@@ -18,7 +18,7 @@ States: `todo` · `in-progress` · `blocked` · `done` (acceptance tests pass an
 | P7-2 measured evidence ranks above unmeasured | F15 | builder `builder.py` | done | 7807328 | lead: offline replay (no database): the 2 cut owner-true `-> pg.location` pairs restored; 9 owner-false pairs to an unmeasured CH weak key replaced by 7 unmarked PG -> Mongo pairs at ~0.6% and the 2 restored; PG+CH sets unchanged (48/48, 56/56); `attack6_f10` same-source pin updated to DEC-32 (plus a forbidden-source count) |
 | P7-3 bridge-table paths (BFS) | F16 | requester `search.py`, `answer.py`, `config.py` | done | 6c00681 | lead: attack ACCEPT, D1 (strongest path first) and D2 (lines through kept tables at a full cap) fixed, 35 attack + 28 acceptance pass; real snapshot N-S4/N-S8/N-I10 3/3 expected tables in context (2/3 search off); P7-5 A must filter cross-source path edges too | | |
 | P7-5 cross-source control A + B (+ E via DEC-3, DEC-34) | F11-b | builder, requester config, planner | done | fefe6ef | lead: attack ACCEPT; 4 defects fixed (qualified-name ambiguity, unrounded tier, `decisions_file_max_bytes`, BOM); DEC-39 B trusts only random/hash samples (dormant today); offline replay PG+CH: 0 cross-source candidates reach the model or planner (13 and 17, all `unverified_cross_source`), 0 owner-true lost (35/35, 39/39) | | |
-| P7-5 option C value-free profiles | F11-b | collectors, builder | done | (this commit) | lead: attack REJECT fixed (F1 privacy whitelist, F2 identifiers skip, F3 budget never costs the bundle, F5 `formats_truncated`, F6 `values_complete`, F4 arrays, `ranges.jsonl` only with rows); real SQL unverified until the databases are up | | |
+| P7-5 option C value-free profiles | F11-b | collectors, builder | done | a371f35 | lead: attack REJECT fixed (F1 privacy whitelist, F2 identifiers skip, F3 budget never costs the bundle, F5 `formats_truncated`, F6 `values_complete`, F4 arrays, `ranges.jsonl` only with rows); real SQL unverified until the databases are up | | |
 | P7-5 option D coordinated hash sampling | F11-b | collectors | deferred (DEC-23) | | |
 | P7-6 regression gate + live re-check, 3 repeats | all | evidence only | blocked: databases down (owner 2026-10-24); owner yes per run | | |
 | P7-7 general benchmark | all | `/home/bayern/Projects/benchmark/dbcat-bench/` | todo (owner yes per compose file) | | |
@@ -53,13 +53,16 @@ States: `todo` · `in-progress` · `blocked` · `done` (acceptance tests pass an
 
 ## Open owner questions
 
-(none yet)
+- GitHub Actions billing blocks CI (2026-10-25); CI for `a371f35` (option C) not run. Last green CI: 40174608116 on `b0e6e99`.
+- Databases down (2026-10-24): P7-6 and P7-7 wait.
 
 ## Next action
 
-Run CI on the option C commit. Then P7-6 (live re-check, 3 repeats, includes the first real run of option C SQL with `format_profiles = true`) and P7-7 (benchmark): both wait for the owner to say the databases are up; P7-7 also needs a yes per compose file.
+Owner: fix GitHub billing (CI 40177198288 on `a371f35` was refused before any job started: "recent account payments have failed or your spending limit needs to be increased"), then the lead re-runs CI on `fix/phase7`. Then P7-6 (live re-check, 3 repeats, includes the first real run of option C SQL with `format_profiles = true`) and P7-7 (benchmark): both wait for the owner to say the databases are up; P7-7 also needs a yes per compose file.
 
 ## Log
+
+- 2026-10-25: CI 40177198288 on `a371f35`: no job started (GitHub billing / spending limit). Owner action needed.
 
 - 2026-10-25: P7-5 option C done. Gate (lead alone): 1276 passed, 70 skipped, 1 xfailed; attack files the same 37 ids; all phase-7 attack files pass; ruff, mypy, ci_check, package_isolation clean; 0 corpus names; offline replay unchanged.
 
