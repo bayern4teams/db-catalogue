@@ -22,6 +22,11 @@ signing_keys = { local = "DBIG_SIGNING_KEY" }
 # A zero against a partly read parent drops the candidate when the expected number of shared values
 # at c_min (child values x share of the parent read x c_min) is at least this. Needs a distinct estimate.
 # min_expected_shared = 5
+# A candidate is dropped when the child column's most common value shape (digits 9, letters a)
+# covers at least this share of its values and the parent has no such shape, when two text columns'
+# value lengths cannot meet, or when two integer columns' ranges do not overlap. Needs the sources'
+# format_profiles = true. Strictly above 0, at most 1.
+# format_reject_share = 0.95
 # Owner decisions: a JSON list of {"child": "<source_id>.<namespace>.<table>.<column>", "parent": "...",
 # "decision": "confirmed" | "rejected"}; namespace left out when the object has none.
 # decisions_file = "decisions.json"

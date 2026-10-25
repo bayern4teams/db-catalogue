@@ -161,9 +161,9 @@ def _one_metrics(snapshot: Path) -> dict:
 
 
 def _level_field() -> str:
-    names = [n for n, f in BuilderConfig.model_fields.items() if f.default == 0.95]
-    assert len(names) == 1, f"expected one new config field defaulting to 0.95, found {names}"
-    return names[0]
+    # Lead: pinned by name once P7-5 option C added a second 0.95 default (format_reject_share).
+    assert BuilderConfig.model_fields["overlap_confidence_level"].default == 0.95
+    return "overlap_confidence_level"
 
 
 # 40 distinct child values, 30 of them in the parent (so shared / N = 30 / 40).

@@ -1,0 +1,80 @@
+{
+  "additionalProperties": true,
+  "description": "The smallest and largest value of one integer field, for a local range comparison only.\n\nThese are real values, so they follow the rule for `ValueTokens`: they live in a collector\nbundle, a controlled transfer, never in a snapshot, a log, a trace or a model context. The\nassembler reads them to compare two fields' ranges and publishes only whether they overlap.",
+  "properties": {
+    "collector_version": {
+      "minLength": 1,
+      "title": "Collector Version",
+      "type": "string"
+    },
+    "complete": {
+      "default": true,
+      "title": "Complete",
+      "type": "boolean"
+    },
+    "field_id": {
+      "minLength": 1,
+      "title": "Field Id",
+      "type": "string"
+    },
+    "id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Id",
+      "type": "string"
+    },
+    "ir_version": {
+      "default": "1.0",
+      "title": "Ir Version",
+      "type": "string"
+    },
+    "maximum": {
+      "title": "Maximum",
+      "type": "integer"
+    },
+    "minimum": {
+      "title": "Minimum",
+      "type": "integer"
+    },
+    "object_id": {
+      "minLength": 1,
+      "title": "Object Id",
+      "type": "string"
+    },
+    "observed_at": {
+      "format": "date-time",
+      "title": "Observed At",
+      "type": "string"
+    },
+    "provenance": {
+      "minLength": 1,
+      "title": "Provenance",
+      "type": "string"
+    },
+    "record_type": {
+      "const": "value_ranges",
+      "default": "value_ranges",
+      "title": "Record Type",
+      "type": "string"
+    },
+    "source_id": {
+      "maxLength": 256,
+      "minLength": 1,
+      "title": "Source Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "source_id",
+    "observed_at",
+    "collector_version",
+    "provenance",
+    "field_id",
+    "object_id",
+    "minimum",
+    "maximum"
+  ],
+  "title": "ValueRanges",
+  "type": "object"
+}

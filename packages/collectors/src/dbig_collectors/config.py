@@ -44,6 +44,17 @@ class SourceConfig(BaseModel):
     cardinality_probe: bool = False
     cardinality_probe_max_columns: int = Field(default=20, ge=1, le=200)
     cardinality_probe_max_rows: int = Field(default=100_000, ge=1)
+    # Value-free format profiles (P7-5 option C, F11-b): per linkable column (text, integer, uuid),
+    # the length range, the share of digit, hex, uuid and letter values, and the most common value
+    # shapes (digits 9, letters a). PostgreSQL and ClickHouse run one read-only aggregate over the
+    # whole column, charged to `max_queries` and bounded by `read_timeout_seconds`; MongoDB uses the
+    # documents it already samples. Integer columns also publish their smallest and largest value
+    # to the local-only `ranges.jsonl`. Off by default. It reads data (aggregates only, no value is
+    # kept), so a scan request needs the `sample` capability for it.
+    format_profiles: bool = False
+    # Most common shapes kept per column, and the longest value prefix a shape is made from.
+    format_profile_max_formats: int = Field(default=8, ge=1, le=64)
+    format_token_max_length: int = Field(default=64, ge=1, le=256)
     max_array_elements: int = Field(default=16, ge=1, le=256)
     max_path_depth: int = Field(default=4, ge=1)
     history_access: bool = False

@@ -18,7 +18,7 @@ States: `todo` · `in-progress` · `blocked` · `done` (acceptance tests pass an
 | P7-2 measured evidence ranks above unmeasured | F15 | builder `builder.py` | done | 7807328 | lead: offline replay (no database): the 2 cut owner-true `-> pg.location` pairs restored; 9 owner-false pairs to an unmeasured CH weak key replaced by 7 unmarked PG -> Mongo pairs at ~0.6% and the 2 restored; PG+CH sets unchanged (48/48, 56/56); `attack6_f10` same-source pin updated to DEC-32 (plus a forbidden-source count) |
 | P7-3 bridge-table paths (BFS) | F16 | requester `search.py`, `answer.py`, `config.py` | done | 6c00681 | lead: attack ACCEPT, D1 (strongest path first) and D2 (lines through kept tables at a full cap) fixed, 35 attack + 28 acceptance pass; real snapshot N-S4/N-S8/N-I10 3/3 expected tables in context (2/3 search off); P7-5 A must filter cross-source path edges too | | |
 | P7-5 cross-source control A + B (+ E via DEC-3, DEC-34) | F11-b | builder, requester config, planner | done | fefe6ef | lead: attack ACCEPT; 4 defects fixed (qualified-name ambiguity, unrounded tier, `decisions_file_max_bytes`, BOM); DEC-39 B trusts only random/hash samples (dormant today); offline replay PG+CH: 0 cross-source candidates reach the model or planner (13 and 17, all `unverified_cross_source`), 0 owner-true lost (35/35, 39/39) | | |
-| P7-5 option C value-free profiles | F11-b | collectors, builder | in-progress (verifier derive; DEC-40, 42, 43) | | |
+| P7-5 option C value-free profiles | F11-b | collectors, builder | done | (this commit) | lead: attack REJECT fixed (F1 privacy whitelist, F2 identifiers skip, F3 budget never costs the bundle, F5 `formats_truncated`, F6 `values_complete`, F4 arrays, `ranges.jsonl` only with rows); real SQL unverified until the databases are up | | |
 | P7-5 option D coordinated hash sampling | F11-b | collectors | deferred (DEC-23) | | |
 | P7-6 regression gate + live re-check, 3 repeats | all | evidence only | blocked: databases down (owner 2026-10-24); owner yes per run | | |
 | P7-7 general benchmark | all | `/home/bayern/Projects/benchmark/dbcat-bench/` | todo (owner yes per compose file) | | |
@@ -57,9 +57,13 @@ States: `todo` · `in-progress` · `blocked` · `done` (acceptance tests pass an
 
 ## Next action
 
-P7-5 option C: verifier derives tests, then one worker (fixtures only). Watch CI run 40171751091 and fix any failing job. P7-6/P7-7 wait for the databases.
+Run CI on the option C commit. Then P7-6 (live re-check, 3 repeats, includes the first real run of option C SQL with `format_profiles = true`) and P7-7 (benchmark): both wait for the owner to say the databases are up; P7-7 also needs a yes per compose file.
 
 ## Log
+
+- 2026-10-25: P7-5 option C done. Gate (lead alone): 1276 passed, 70 skipped, 1 xfailed; attack files the same 37 ids; all phase-7 attack files pass; ruff, mypy, ci_check, package_isolation clean; 0 corpus names; offline replay unchanged.
+
+- 2026-10-25: CI 40174608116 on `b0e6e99` green in all 8 jobs (P7-1..P7-5 A+B+E, CI fixes).
 
 - 2026-10-25: CI 40171751091 on `fefe6ef`: 5 of 8 green; `application-quality` red on pip-audit only (1160 tests passed); `source-integration` red: 6 live tests expected cross-source paths that P7-5 A now leaves out by default (intended); `source-integration-latest` red: MongoDB 9.0.2 refuses kernel 6.19+. Fixes: DEC-44 lock upgrade, DEC-45 pin, planner CLI `join-paths --include-unverified-cross-source` (the CLI had no way to set the P7-5 flag), live tests pass the flag. Local gate 1169 passed.
 

@@ -28,3 +28,12 @@ max_queries = 500
 # cardinality_probe = true
 # cardinality_probe_max_columns = 20
 # cardinality_probe_max_rows = 100000
+
+# Optional value-free format profiles (default off): per text, integer or uuid column, the value
+# length range, the share of digit, hex, uuid and letter values and the most common value shapes
+# (digits 9, letters a). Computed from the sampled documents (set sample_rows): no extra query.
+# Integer columns also write their smallest and largest value to the local-only ranges.jsonl.
+# Reads data (aggregates only), so a scan request needs the `sample` capability.
+# format_profiles = true
+# format_profile_max_formats = 8     # most common shapes kept per column
+# format_token_max_length = 64       # longest value prefix a shape is made from

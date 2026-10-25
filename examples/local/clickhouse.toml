@@ -18,6 +18,15 @@ namespaces = ["default"]               # ClickHouse databases to catalogue
 # cardinality_probe_max_columns = 20
 # cardinality_probe_max_rows = 100000
 
+# Optional value-free format profiles (default off): per text, integer or uuid column, the value
+# length range, the share of digit, hex, uuid and letter values and the most common value shapes
+# (digits 9, letters a). One read-only query per column over the whole column, charged to max_queries.
+# Integer columns also write their smallest and largest value to the local-only ranges.jsonl.
+# Reads data (aggregates only), so a scan request needs the `sample` capability.
+# format_profiles = true
+# format_profile_max_formats = 8     # most common shapes kept per column
+# format_token_max_length = 64       # longest value prefix a shape is made from
+
 # Optional value hashes for cross-source overlap (default off; reads the first sample_rows rows of
 # each table, plain columns only). Same key and id as the other sources in this run.
 # sample_rows = 100

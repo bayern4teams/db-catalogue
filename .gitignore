@@ -61,7 +61,8 @@ artifacts/run-20261006-035124/*
 !artifacts/run-20261006-035124/snapshot-no-model/
 
 # Live verification of feat/catalogue-fixes (2026-10-14): evidence only, counts and names.
-# Value-token files (keyed digests of sampled values), search indexes and graphs stay ignored.
+# Value-token files (keyed digests of sampled values), local-only integer range files, search
+# indexes and graphs stay ignored.
 !artifacts/run-20261014/
 artifacts/run-20261014/*
 !artifacts/run-20261014/*.md
@@ -76,6 +77,7 @@ artifacts/run-20261014/*
 artifacts/run-20261014/leader/*
 !artifacts/run-20261014/leader/*.md
 artifacts/run-20261014/**/tokens.jsonl
+artifacts/run-20261014/**/ranges.jsonl
 
 # Scratch for cloud agents (the tracked handoff files live in .handoff/)
 .tmp/
@@ -93,6 +95,7 @@ artifacts/run-20261020/*
 artifacts/run-20261020/leader/*
 !artifacts/run-20261020/leader/*.md
 artifacts/run-20261020/**/tokens.jsonl
+artifacts/run-20261020/**/ranges.jsonl
 !artifacts/run-20261020-pgch/
 artifacts/run-20261020-pgch/*
 !artifacts/run-20261020-pgch/*.md
@@ -104,3 +107,4 @@ artifacts/run-20261020-pgch/*
 !artifacts/run-20261020-pgch/snapshot*/
 !artifacts/run-20261020-pgch/config/
 artifacts/run-20261020-pgch/**/tokens.jsonl
+artifacts/run-20261020-pgch/**/ranges.jsonl

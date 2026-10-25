@@ -83,6 +83,10 @@ class BuilderConfig(BaseModel):
     # have shown at least `min_expected_shared` shared values at that containment.
     c_min: float = Field(default=0.25, gt=0, le=1)
     min_expected_shared: float = Field(default=5, gt=0)
+    # P7-5 option C (DEC-42). A candidate is dropped when its child column's most common format
+    # covers at least this share of the child's values and the parent records no such format.
+    # Compared with `>=`, so 1.0 drops only a child whose values all share one format.
+    format_reject_share: float = Field(default=0.95, gt=0, le=1)
     # JSON list of {"child", "parent", "decision"}, names `<source_id>.<namespace>.<table>.<column>`
     # (namespace omitted when the object has none); `confirmed` or `rejected`.
     decisions_file: Path | None = None

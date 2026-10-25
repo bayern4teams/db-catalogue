@@ -24,6 +24,7 @@ from dbig_contracts.models import (
     Profile,
     Record,
     Source,
+    ValueRanges,
     ValueTokens,
     utc_now,
 )
@@ -112,6 +113,68 @@ def _measure(profiles: list[Profile] | None, name: str) -> float | None:
         if value is not None:
             return float(value)
     return None
+
+
+def _first(profiles: list[Profile] | None, name: str) -> Any:
+    """First non-null value of one profile attribute across a field's profiles, unconverted."""
+    for profile in profiles or []:
+        value = getattr(profile, name, None)
+        if value is not None:
+            return value
+    return None
+
+
+def _covers_every_value(*sides: list[Profile] | None) -> bool:
+    """False when a side's numbers come from a sample that did not reach the end of the column."""
+    return all(_first(profiles, "values_complete") is not False for profiles in sides)
+
+
+def _formats_cut(parent: list[Profile] | None, formats: dict[str, float]) -> bool:
+    """Whether a profile's format list holds only some of the shapes seen.
+
+    The collector says so (`formats_truncated`). A profile that does not say is read from its
+    shares: the unlisted mass is as large as the lightest listed shape, so the list was capped
+    inside the distribution and an unlisted shape may be as common as a listed one. A small
+    unlisted remainder (every shape below the lightest listed, in total) is rounding or a tail.
+    """
+    said = _first(parent, "formats_truncated")
+    if said is not None:
+        return bool(said)
+    total = sum(formats.values())
+    return not math.isclose(total, 1.0) and 1.0 - total >= min(formats.values())
+
+
+def _format_conflict(
+    child: list[Profile] | None, parent: list[Profile] | None, reject_share: float
+) -> bool:
+    """The child's dominant format covers `reject_share` of its values and the parent has none
+    like it (DEC-42). A missing profile or an empty format list claims nothing, so no rule; nor
+    does a parent list that holds only some of its shapes (a shape missing from it may exist)."""
+    child_formats = _first(child, "formats")
+    parent_formats = _first(parent, "formats")
+    if not child_formats or not parent_formats or not _covers_every_value(child, parent):
+        return False
+    if _formats_cut(parent, parent_formats):
+        return False
+    token, share = max(child_formats.items(), key=lambda item: (item[1], item[0]))
+    return share >= reject_share and token not in parent_formats
+
+
+def _length_conflict(child: list[Profile] | None, parent: list[Profile] | None) -> bool:
+    """The two text columns' value lengths cannot meet: one's longest is shorter than the
+    other's shortest. A touching range overlaps; a half-known range claims nothing; a range read
+    from a sample that did not reach the end of the column is not the column's range."""
+    if not _covers_every_value(child, parent):
+        return False
+    bounds = [
+        _first(profiles, name)
+        for profiles in (child, parent)
+        for name in ("length_min", "length_max")
+    ]
+    if any(item is None for item in bounds):
+        return False
+    child_min, child_max, parent_min, parent_max = bounds
+    return child_max < parent_min or parent_max < child_min
 
 
 # Names too generic to identify a key by themselves: every table has an `id`, so a child called
@@ -563,6 +626,8 @@ def assemble(
     nodes: dict[str, Record] = {}
     constraints: list[Constraint] = []
     token_sets: dict[str, ValueTokens] = {}
+    # Local-only integer ranges (P7-5 option C): compared here, never written to the snapshot.
+    value_ranges: dict[str, ValueRanges] = {}
     field_profiles: dict[str, list[Profile]] = {}
     runs: list[Record] = []
     partial_source_receipts = partial_source_receipts or {}
@@ -601,6 +666,9 @@ def assemble(
             # snapshot except the aggregate metrics on a containment evidence record.
             entry = ValueTokens.model_validate(item.model_dump())
             token_sets[entry.field_id] = entry
+        for item in records.get("ranges.jsonl", []):
+            bounds = ValueRanges.model_validate(item.model_dump())
+            value_ranges[bounds.field_id] = bounds
         digest = hashlib.sha256(canonical(manifest)).hexdigest()
         runs.append(
             Record.model_validate(
@@ -731,6 +799,7 @@ def assemble(
     dropped_zero_overlap = 0
     dropped_expected_overlap = 0
     dropped_ordinary_name = 0
+    dropped_format_mismatch = 0
     # Owner decisions by (child, parent) qualified names; the last entry for a pair wins. An entry
     # that names no proposed candidate is counted, never named (DEC-36).
     decisions = {(item.child, item.parent): item.decision for item in config.decisions}
@@ -826,6 +895,8 @@ def assemble(
         # count includes zeros that the cut would have skipped; the kept set is the same as
         # dropping first, then cutting).
         ranked: list[tuple[int, Field, str, Evidence]] = []
+        # Whether the child's and each kept parent's integer ranges overlap, where both are known.
+        ranges_overlap: dict[str, bool] = {}
         for score, parent, rule in candidates:
             overlap = _overlap(
                 child,
@@ -853,6 +924,42 @@ def assemble(
             ):
                 dropped_expected_overlap += 1
                 continue
+            child_range, parent_range = value_ranges.get(child.id), value_ranges.get(parent.id)
+            ranges_meet = (
+                child_range.minimum <= parent_range.maximum
+                and parent_range.minimum <= child_range.maximum
+                if child_range and parent_range
+                else None
+            )
+            # Value-free profile rules (P7-5 option C, DEC-42). A value the two sides share was
+            # observed, which outweighs a profile (a list of formats is a bounded summary), so a
+            # measured overlap keeps the candidate. A range read from a sample is narrower than
+            # the column and may mark, never drop. Declared keys never reach this loop.
+            observed_shared = overlap.kind == "value_containment" and bool(
+                overlap.metrics["shared_tokens"]
+            )
+            child_profiles, parent_profiles = field_profiles.get(child.id), field_profiles.get(
+                parent.id
+            )
+            if not observed_shared and (
+                _format_conflict(child_profiles, parent_profiles, config.format_reject_share)
+                or (
+                    _type_family(child.data_type) == "text"
+                    and _type_family(parent.data_type) == "text"
+                    and _length_conflict(child_profiles, parent_profiles)
+                )
+                or (
+                    ranges_meet is False
+                    and child_range is not None
+                    and parent_range is not None
+                    and child_range.complete
+                    and parent_range.complete
+                )
+            ):
+                dropped_format_mismatch += 1
+                continue
+            if ranges_meet is not None:
+                ranges_overlap[parent.id] = ranges_meet
             ranked.append((score, parent, rule, overlap))
         # Candidate order (F10, LEAD_REVIEW 2026-10-19; F15, DEC-32): name score; a declared key;
         # evidence tier (0 measured containment, 1 lower bound or a zero against a partly read
@@ -959,6 +1066,12 @@ def assemble(
                     "field_pairs": [[child.id, parent.id]],
                     "explanation": explanation,
                     "confidence": None,
+                    # Only whether the ranges meet; the bounds stay in the local bundle file.
+                    **(
+                        {"numeric_ranges_overlap": ranges_overlap[parent.id]}
+                        if parent.id in ranges_overlap
+                        else {}
+                    ),
                     **_base(child),
                 }
             )
@@ -1033,6 +1146,11 @@ def assemble(
                 **(
                     {"dropped_expected_overlap_candidates": dropped_expected_overlap}
                     if dropped_expected_overlap
+                    else {}
+                ),
+                **(
+                    {"dropped_format_mismatch_candidates": dropped_format_mismatch}
+                    if dropped_format_mismatch
                     else {}
                 ),
                 **({"unmatched_decisions": unmatched_decisions} if unmatched_decisions else {}),

@@ -2,6 +2,20 @@
   "additionalProperties": true,
   "description": "A bounded statistical description of one field, carrying its own provenance.\n\nEvery measure is optional, because a source may expose some and not others, and a missing\nmeasure must stay distinguishable from a measured zero. `method` names where the numbers came\nfrom so a reader can judge them: a planner statistic is an estimate that may be stale, and a\nsample is bounded and possibly biased. No raw value ever appears here.",
   "properties": {
+    "alpha_share": {
+      "anyOf": [
+        {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Alpha Share"
+    },
     "average_width_bytes": {
       "anyOf": [
         {
@@ -19,6 +33,20 @@
       "minLength": 1,
       "title": "Collector Version",
       "type": "string"
+    },
+    "digits_share": {
+      "anyOf": [
+        {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Digits Share"
     },
     "distinct_estimate": {
       "anyOf": [
@@ -43,6 +71,49 @@
       "title": "Field Id",
       "type": "string"
     },
+    "formats": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "type": "number"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Formats"
+    },
+    "formats_truncated": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Formats Truncated"
+    },
+    "hex_share": {
+      "anyOf": [
+        {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Hex Share"
+    },
     "id": {
       "maxLength": 256,
       "minLength": 1,
@@ -53,6 +124,45 @@
       "default": "1.0",
       "title": "Ir Version",
       "type": "string"
+    },
+    "length_avg": {
+      "anyOf": [
+        {
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Length Avg"
+    },
+    "length_max": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Length Max"
+    },
+    "length_min": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Length Min"
     },
     "method": {
       "enum": [
@@ -143,10 +253,36 @@
       "default": null,
       "title": "Uniqueness"
     },
+    "uuid_share": {
+      "anyOf": [
+        {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Uuid Share"
+    },
     "value_comparison_excluded": {
       "default": false,
       "title": "Value Comparison Excluded",
       "type": "boolean"
+    },
+    "values_complete": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Values Complete"
     }
   },
   "required": [
