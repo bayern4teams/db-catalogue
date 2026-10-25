@@ -265,8 +265,9 @@ def test_one_catalogue_from_all_three_engines(tmp_path):
     (tmp_path / "observations").mkdir()
     _tool(env, "dbig-planner", "build", "--snapshot", str(tmp_path / "snapshot"),
           "--observations", str(tmp_path / "observations"), "--out", str(tmp_path / "graph"))
+    # P7-5 (F11-b): the path crosses sources over unmeasured candidates, left out unless asked.
     paths = _tool(env, "dbig-planner", "join-paths", "--graph", str(tmp_path / "graph"),
-                  "--from", mongo_orders, "--to", lines)
+                  "--from", mongo_orders, "--to", lines, "--include-unverified-cross-source")
     assert paths["paths"], "orders (MongoDB) -> customers -> invoices -> invoice_lines"
     plan = _tool(env, "dbig-planner", "plan", "--graph", str(tmp_path / "graph"),
                  "--path-id", paths["paths"][0]["path_id"])

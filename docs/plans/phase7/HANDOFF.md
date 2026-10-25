@@ -16,9 +16,9 @@ States: `todo` · `in-progress` · `blocked` · `done` (acceptance tests pass an
 | P7-1 "at least" wording + Wilson CI, `basis` | F14 | builder `builder.py`, `config.py`; requester `search.py` index | done | 3d8a033 | lead: REJECT fixed (floor/ceil, "<1%"/">99%", count when floor is 0); dead branch removed; 29 acceptance + 7 attack pass; ponytail-review ship |
 | P7-4 `checked` field, `MODEL_ANSWER_UNEXPLAINED`, retry | F17 | requester `answer.py`, `config.py`, test stubs | done | 7807328 | lead: attack ACCEPT; fixed a `checked` of blank strings counting as explained, and the attempt count now reaches the span on success too (one span update in `finally`); DEBUG-level SDK logging of the re-sent reply is pre-existing (the question was already logged there) |
 | P7-2 measured evidence ranks above unmeasured | F15 | builder `builder.py` | done | 7807328 | lead: offline replay (no database): the 2 cut owner-true `-> pg.location` pairs restored; 9 owner-false pairs to an unmeasured CH weak key replaced by 7 unmarked PG -> Mongo pairs at ~0.6% and the 2 restored; PG+CH sets unchanged (48/48, 56/56); `attack6_f10` same-source pin updated to DEC-32 (plus a forbidden-source count) |
-| P7-3 bridge-table paths (BFS) | F16 | requester `search.py`, `answer.py`, `config.py` | done | (this commit) | lead: attack ACCEPT, D1 (strongest path first) and D2 (lines through kept tables at a full cap) fixed, 35 attack + 28 acceptance pass; real snapshot N-S4/N-S8/N-I10 3/3 expected tables in context (2/3 search off); P7-5 A must filter cross-source path edges too | | |
-| P7-5 cross-source control A + B (+ E via DEC-3, DEC-34) | F11-b | builder, requester config, planner | done | (this commit) | lead: attack ACCEPT; 4 defects fixed (qualified-name ambiguity, unrounded tier, `decisions_file_max_bytes`, BOM); DEC-39 B trusts only random/hash samples (dormant today); offline replay PG+CH: 0 cross-source candidates reach the model or planner (13 and 17, all `unverified_cross_source`), 0 owner-true lost (35/35, 39/39) | | |
-| P7-5 option C value-free profiles | F11-b | collectors, builder | todo (after A+B+E) | | |
+| P7-3 bridge-table paths (BFS) | F16 | requester `search.py`, `answer.py`, `config.py` | done | 6c00681 | lead: attack ACCEPT, D1 (strongest path first) and D2 (lines through kept tables at a full cap) fixed, 35 attack + 28 acceptance pass; real snapshot N-S4/N-S8/N-I10 3/3 expected tables in context (2/3 search off); P7-5 A must filter cross-source path edges too | | |
+| P7-5 cross-source control A + B (+ E via DEC-3, DEC-34) | F11-b | builder, requester config, planner | done | fefe6ef | lead: attack ACCEPT; 4 defects fixed (qualified-name ambiguity, unrounded tier, `decisions_file_max_bytes`, BOM); DEC-39 B trusts only random/hash samples (dormant today); offline replay PG+CH: 0 cross-source candidates reach the model or planner (13 and 17, all `unverified_cross_source`), 0 owner-true lost (35/35, 39/39) | | |
+| P7-5 option C value-free profiles | F11-b | collectors, builder | in-progress (verifier derive; DEC-40, 42, 43) | | |
 | P7-5 option D coordinated hash sampling | F11-b | collectors | deferred (DEC-23) | | |
 | P7-6 regression gate + live re-check, 3 repeats | all | evidence only | blocked: databases down (owner 2026-10-24); owner yes per run | | |
 | P7-7 general benchmark | all | `/home/bayern/Projects/benchmark/dbcat-bench/` | todo (owner yes per compose file) | | |
@@ -43,6 +43,12 @@ States: `todo` · `in-progress` · `blocked` · `done` (acceptance tests pass an
 | DEC-37 | P7-5 A: does `verified` need a minimum containment? The P7-2 replay shows 7 PG -> MongoDB pairs at ~0.6% on a complete parent (asked 2026-10-24) | Yes: `verified` needs measured containment >= `c_min` (0.25) on a complete parent; below it cross-source is `unverified_cross_source`, same-source `plausible`. No new setting (owner 2026-10-24). |
 | DEC-38 | P7-5 A: does a lower bound (partly read parent) that already reaches c_min count as `verified`? (asked 2026-10-24) | Yes: a lower bound >= c_min is `verified`; below it `plausible` (same source) or `unverified_cross_source` (owner 2026-10-24). |
 | DEC-39 | P7-5 B assumes a random parent sample, but partly read parents are read as `first_rows_limit`; which samples may B trust? (asked 2026-10-25) | Random or hash-coordinated samples only, never first-rows/first-documents reads (owner 2026-10-25). Today no collector emits such a sample, so B is dormant until option D; A's tier still filters. |
+| DEC-40 | Start P7-5 option C while the databases are down? (asked 2026-10-25) | Yes: fixtures now, live checks with P7-6 (owner 2026-10-25). |
+| DEC-41 | Push `fix/phase7` and run CI? (asked 2026-10-25) | Yes (owner 2026-10-25): pushed at `fefe6ef`, CI run 40171751091. |
+| DEC-42 | Option C rule and default (asked 2026-10-25) | Reject when the child's dominant format covers >= `format_reject_share` (0.95) of its values and is absent from the parent's formats, or the length ranges don't overlap, or the numeric ranges don't overlap (owner 2026-10-25). |
+| DEC-43 | Option C source: from the existing sample, or aggregate SQL per column? (asked 2026-10-25) | Aggregate SQL per column on PostgreSQL and ClickHouse; MongoDB from its sample (owner 2026-10-25). Lead: collection behind a source config flag, off by default (as sampling is); numeric min/max stay in a local-only bundle file like the value tokens; the snapshot keeps only a ranges-overlap boolean. |
+| DEC-44 | CI `application-quality`: pip-audit found 5 new CVEs (certifi, filelock, opentelemetry-api); upgrade them in uv.lock? (asked 2026-10-25) | Yes, only those three (owner 2026-10-25). uv also moved the opentelemetry family to 1.45.1/0.66b1 and added two transitive packages (`opentelemetry-exporter-http-transport`, `opentelemetry-exporter-otlp-common`, Apache-2.0); license inventory refreshed. |
+| DEC-45 | CI `source-integration-latest`: `mongo:9.0.2-noble` exits on runner kernels 6.19+ (fix SERVER-125742 released in 8.0.30 and 8.3.9, not yet in 9.0.x). Which pin? (asked 2026-10-25) | `mongo:8.3.13-noble` until a fixed 9.0.x exists (owner 2026-10-25). |
 | DEC-33 | P7-2: overlap now runs before the top-k cut, so `dropped_zero_overlap_candidates` can rise (kept set unchanged). Which count? (asked 2026-10-24) | Count all zeros, including those below the cut (owner 2026-10-24). |
 
 ## Open owner questions
@@ -51,9 +57,11 @@ States: `todo` · `in-progress` · `blocked` · `done` (acceptance tests pass an
 
 ## Next action
 
-Ask the owner: start P7-5 option C now (collector + builder, fixtures only; live verification waits for the databases), and push + CI (`gh workflow run ci.yml --ref fix/phase7`). P7-6/P7-7 wait for the databases.
+P7-5 option C: verifier derives tests, then one worker (fixtures only). Watch CI run 40171751091 and fix any failing job. P7-6/P7-7 wait for the databases.
 
 ## Log
+
+- 2026-10-25: CI 40171751091 on `fefe6ef`: 5 of 8 green; `application-quality` red on pip-audit only (1160 tests passed); `source-integration` red: 6 live tests expected cross-source paths that P7-5 A now leaves out by default (intended); `source-integration-latest` red: MongoDB 9.0.2 refuses kernel 6.19+. Fixes: DEC-44 lock upgrade, DEC-45 pin, planner CLI `join-paths --include-unverified-cross-source` (the CLI had no way to set the P7-5 flag), live tests pass the flag. Local gate 1169 passed.
 
 - 2026-10-25: P7-5 A + B + E done. Gate (lead alone, capped): 1169 passed, 70 skipped, 1 xfailed; attack files the same 37 ids; phase-7 attack files all pass; ruff, mypy, ci_check, package_isolation clean; 0 corpus names; schema `edge.schema.json` additive; goldens unchanged.
 
