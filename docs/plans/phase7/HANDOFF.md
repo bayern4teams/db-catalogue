@@ -53,7 +53,8 @@ States: `todo` · `in-progress` · `blocked` · `done` (acceptance tests pass an
 
 ## Open owner questions
 
-- GitHub Actions billing blocks CI (2026-10-25); CI for `a371f35` (option C) not run. Last green CI: 40174608116 on `b0e6e99`.
+- GitHub Actions billing blocks CI (2026-10-25); CI for `a371f35` (option C) not run on GitHub; local CI green on 2026-10-27. Last green GitHub CI: 40174608116 on `b0e6e99`.
+- GitLab (`gitlab` remote) paused until the owner says it is available (API certificate from an unknown CA).
 - Databases down (2026-10-24): P7-6 and P7-7 wait.
 
 ## Next action
@@ -61,6 +62,8 @@ States: `todo` · `in-progress` · `blocked` · `done` (acceptance tests pass an
 Owner: fix GitHub billing (CI 40177198288 on `a371f35` was refused before any job started: "recent account payments have failed or your spending limit needs to be increased"), then the lead re-runs CI on `fix/phase7`. Then P7-6 (live re-check, 3 repeats, includes the first real run of option C SQL with `format_profiles = true`) and P7-7 (benchmark): both wait for the owner to say the databases are up; P7-7 also needs a yes per compose file.
 
 ## Log
+
+- 2026-10-27: owner: GitHub is `origin` again (GitLab `gitlab` paused until the owner says it is available); CI runs locally. Local CI: repository-policy, application-quality (1266 passed, pip-audit clean), package-isolation Linux, graph-index, source-integration pinned set (91 passed, isolated, containers removed) all green. Not run: -latest set, Windows.
 
 - 2026-10-25: CI 40177198288 on `a371f35`: no job started (GitHub billing / spending limit). Owner action needed.
 
