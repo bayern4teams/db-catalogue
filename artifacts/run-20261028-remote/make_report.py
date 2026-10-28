@@ -67,6 +67,30 @@ w("| N-S3 ClickHouse person → job titles → company names | correct | Person�
 w("| N-S10 employee category by city (PostgreSQL) | correct | join on `companyid` (verified, ≈97% overlap); also gives the route via `company` |")
 w("| N-C6 numeric non-version columns (PostgreSQL) | **incomplete** | named 2 of 4: missed `companyfinancials.amount` and `.year`. Cause: \"list all\" questions see only the top retrieved items (`retrieval_limit = 10`) |")
 w("\n**Spot check: 4 of 5 correct, 1 incomplete.** Not a full grading.\n")
+w("## 4b. What was done today, in order\n")
+for i, t in enumerate([
+    "Checked access to the remote host: SSH by key works; Docker readable; `sudo` needs a password (not used).",
+    "Found the databases: `diffbot-pg` (PostgreSQL, db `testdiffbot`, schema `diffbot`) and `zoominfo-ch` (ClickHouse, db `testzoominfo`). The `bench-*` containers were not touched.",
+    "Wrote one collector config per database (`config/`), sampling on, format profiles on.",
+    "First collect was refused by the plain-text guard (remote address without TLS). Opened an SSH tunnel; the collector then connected to localhost only.",
+    "Diffbot alone: all steps passed but the bundle was `partial` (format profiles stopped at the query budget of 50). Owner raised it to 200; re-run `complete`.",
+    "ZoomInfo alone: all steps passed, `complete`.",
+    "Model: owner's tunnel to vLLM; model name `Qwen/Qwen3.6-35B-A3B-FP8` and revision `95a723d0…` supplied by the owner.",
+    "Both databases in one catalogue; 40 questions, 6 in parallel, 1 repeat.",
+    "Planner: graph built, cross-database join paths found (hidden by default, shown with the flag), read plan written, nothing executed.",
+    "Spot check of 5 answers (section 4a).",
+    "Report, guide and evidence committed (`29b8e82` and later) to branch `fix/phase7` and pushed to GitLab. Raw bundles, `tokens.jsonl` and `ranges.jsonl` stay local.",
+], 1): w(f"{i}. {t}")
+w("\n## 4c. Problems met while running, and the fix (you will meet these too)\n")
+w("| Problem | Message | Fix |\n|---|---|---|")
+w("| Plain connection to a remote database | `tls = false is allowed only for loopback IP literals` | enable TLS on the server, or SSH tunnel to `127.0.0.1` (GUIDE §3) |")
+w("| Bundle check needs the key name | `Missing option '--key-env'` | `dbig validate-bundle --key-env DBIG_SIGNING_KEY <bundle>` |")
+w("| Format profiles cut short | diagnostic `FORMAT_PROFILES_SKIPPED`: \"78 format profiles not read: query budget reached\" | raise `max_queries` in the source config (200 here) |")
+w("| Requester config without model revision | `model_digest` field required | set `model_digest` to the model's Hugging Face revision (`refs/main` on the GPU host) |")
+w("| Planner given a file for observations | `UNSAFE_OBSERVATION_DIRECTORY` | `--observations` must be a directory (an empty one is fine) |")
+w("| \"List all\" questions incomplete | answer names only some items | known limit: the model sees the top `retrieval_limit` (10) items; raise it or ask narrower questions |")
+w("\n## 4d. Security note\n")
+w("- The database password is written in plain text in the remote host's README (Stacks table) and was shown once in the operator's console during setup. It is in **no file of this run**. **Action: change the database passwords** and keep them only in `.env`.\n")
 w("## 5. Not done\n")
 w("- 3 repeats per question (Phase 7 plan): this run is 1 repeat. `python3 ask.py` repeats it.\n- Grading of the answers (owner).\n- Measured value overlap between Diffbot and ZoomInfo (needs both collected with the same token key and overlapping columns; the cross-source candidates stay unverified until then).\n")
 w("## 6. Model answers (all 40)\n")
