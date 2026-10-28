@@ -1,0 +1,44 @@
+assemble both exit 0
+{"candidates": 38, "declared_fks": 0, "diagnostics": 0, "fields": 169, "objects": 20, "out": "artifacts/run-20261028-remote/catalog-both.html", "sources": 2}
+index both exit 0
+N-D3 exit 0 12 s
+N-D5 exit 0 13 s
+N-D4 exit 0 17 s
+N-D2 exit 0 19 s
+N-D1 exit 0 19 s
+N-D6 exit 0 27 s
+N-D7 exit 0 20 s
+N-D10 exit 0 16 s
+N-D9 exit 0 26 s
+N-D8 exit 0 30 s
+N-S1 exit 0 29 s
+N-S2 exit 0 47 s
+N-S3 exit 0 45 s
+N-S7 exit 0 41 s
+N-S4 exit 0 63 s
+N-S5 exit 0 55 s
+N-S6 exit 0 56 s
+N-S8 exit 0 48 s
+N-C4 exit 0 1 s
+N-C1 exit 0 27 s
+N-C2 exit 0 28 s
+N-C7 exit 0 1 s
+N-S9 exit 0 51 s
+N-C3 exit 0 29 s
+N-S10 exit 0 43 s
+N-C5 exit 0 19 s
+N-C6 exit 0 27 s
+N-C10 exit 0 30 s
+N-C9 exit 0 37 s
+N-I2 exit 0 36 s
+N-I1 exit 0 48 s
+N-I3 exit 0 31 s
+N-I4 exit 0 27 s
+N-I5 exit 0 27 s
+N-C8 exit 0 65 s
+N-I7 exit 0 26 s
+N-I6 exit 0 32 s
+N-I8 exit 0 27 s
+N-I9 exit 0 32 s
+N-I10 exit 0 40 s
+answered 40 of 40

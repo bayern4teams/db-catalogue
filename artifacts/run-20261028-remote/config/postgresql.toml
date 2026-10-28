@@ -1,0 +1,15 @@
+# Live re-check 2026-10-28 (owner): remote diffbot-pg, database testdiffbot. Credentials only in PG_CONNECTION.
+[source]
+source_id = "pg-diffbot"
+kind = "postgresql"
+connection_env = "PG_CONNECTION"
+signing_key_env = "DBIG_SIGNING_KEY"
+signing_key_id = "local"
+namespaces = ["diffbot"]
+tls = false
+sample_rows = 25000
+value_token_key_env = "DBIG_TOKEN_KEY"
+value_token_key_id = "run-20261028"
+max_value_tokens = 4096
+format_profiles = true
+max_queries = 200                    # owner 2026-10-28: default 50 left 78 format profiles unread

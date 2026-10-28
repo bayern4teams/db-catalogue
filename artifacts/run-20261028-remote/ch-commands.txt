@@ -1,0 +1,20 @@
+### collect ch
+$ systemd-run --user --scope -p MemoryMax=4G -q uv run --python 3.12 dbig collect --config artifacts/run-20261028-remote/config/clickhouse.toml --out artifacts/run-20261028-remote/bundle-ch
+artifacts/run-20261028-remote/bundle-ch
+exit 0 seconds 16.04
+### validate ch
+$ systemd-run --user --scope -p MemoryMax=4G -q uv run --python 3.12 dbig validate-bundle --key-env DBIG_SIGNING_KEY artifacts/run-20261028-remote/bundle-ch
+{"ir_version":"1.0","content_type":"collector-bundle","producer":"0.1.0","source_run_ids":["b22d273a-00fb-418d-b59c-e21c72aee7f6"],"created_at":"2026-10-28T13:03:15.475044Z","as_of":"2026-10-28T13:03:15.475044Z","completeness":"complete","files":[{"path":"sources.jsonl","bytes":265,"sha256":"7bc71bf6cc7a43b1cd797c44768863d0ab0ad3ffeba03e4996b810c0cba00a8e","count":1},{"path":"objects.jsonl","bytes":4824,"sha256":"bb4da75d56bbd2b721ce5b50746a59016696ac916354cf8929ed58707db81e18","count":7},{"path":"fields.jsonl","bytes":19124,"sha256":"8fba2797b8f3c60fb410e1c5f6e80cb2f4e38911574049d78ce16659072916e9","count":45},{"path":"constraints.jsonl","bytes":2171,"sha256":"129348e9372d9af8b63bc3dececb98c319df28d8b2a7f43c86fb22bda2ff4d7e","count":5},{"path":"profiles.jsonl","bytes":53002,"sha256":"2ec66ae169e06863780565c9af7aa611fc8baac0cbf261deebc43a171319ad21","count":79},{"path":"observations.jsonl","bytes":0,"sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","count":0},{"path":"diagnostics.jsonl","bytes":0,"sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","count":0},{"path":"tokens.jsonl","bytes":6989818,"sha256":"7c24f2f73197831c3650f51dcb1a8e4806d3222c493f3b30d8751e458916ec97","count":38},{"path":"ranges.jsonl","bytes":1140,"sha256":"86a792b0268f9ff8b820015de0ec17b3d1203627d0ac2457dfc4777225a27c37","count":3}],"classification":"metadata","diagnostics":{},"partial_reasons":null,"signature":{"algorithm":"hmac-sha256","key_id":"local","value":"ad3d303334073ce7dc4caa34e1d6d426126403203029aa1ec3abc17fd494127a"}}
+exit 0 seconds 0.31
+### assemble ch
+$ systemd-run --user --scope -p MemoryMax=4G -q uv run --python 3.12 dbig-builder assemble --config artifacts/run-20261028-remote/config/builder.toml --bundle artifacts/run-20261028-remote/bundle-ch --out artifacts/run-20261028-remote/snapshot-ch
+{"ir_version":"1.0","content_type":"catalog-snapshot","producer":"dbig-builder/0.1.0","source_run_ids":["run:1a223915c14bbf60c8dc81e0fb04ed2d","run:ee161a4fcc69b2ab694d62bf07219a98"],"created_at":"2026-10-28T13:03:16.991837Z","as_of":"2026-10-28T13:03:16.991837Z","completeness":"complete","files":[{"path":"nodes.jsonl","bytes":24213,"sha256":"ae1808f968a6c85303d82801a2713f48a747e0ab136b3afa7de2b393299efb09","count":53},{"path":"edges.jsonl","bytes":4808,"sha256":"dbf67731a207603a0ac4c8116ee334fc3a93dbab34df9f7239844771fe0ac524","count":5},{"path":"evidence.jsonl","bytes":11502,"sha256":"1aef7610a7a772a204f29422559e040ebdda218004e13c0348fe4332671bb730","count":20},{"path":"runs.jsonl","bytes":569,"sha256":"2599393d3b2c7953e600c5598a7e0e573f90b2f5def334f9f4fc5ecfda2398ee","count":2}],"classification":"metadata","diagnostics":null,"partial_reasons":null,"signature":null}
+exit 0 seconds 1.17
+### render ch
+$ systemd-run --user --scope -p MemoryMax=4G -q uv run --python 3.12 dbig-builder render --config artifacts/run-20261028-remote/config/builder.toml --snapshot artifacts/run-20261028-remote/snapshot-ch --bundle artifacts/run-20261028-remote/bundle-ch --out artifacts/run-20261028-remote/catalog-ch.html
+{"candidates": 5, "declared_fks": 0, "diagnostics": 0, "fields": 45, "objects": 7, "out": "artifacts/run-20261028-remote/catalog-ch.html", "sources": 1}
+exit 0 seconds 1.06
+### index ch
+$ systemd-run --user --scope -p MemoryMax=4G -q uv run --python 3.12 dbig-requester index --config artifacts/run-20261028-remote/config/requester-ch.toml
+63267ab5990a7aca6eebd108a889c6277a2ecfb91542d7c2ded0c5f4966c8ac3
+exit 0 seconds 0.55

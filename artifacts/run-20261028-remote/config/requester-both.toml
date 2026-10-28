@@ -1,0 +1,13 @@
+# Both databases in one catalogue; model Qwen/Qwen3.6-35B-A3B-FP8 via the owner's tunnel on 127.0.0.1:8000.
+[requester]
+snapshot_dir = "artifacts/run-20261028-remote/snapshot-both"
+state_dir = "artifacts/run-20261028-remote/requester-both"
+api_key_env = "REQUESTER_TOKEN"
+
+[requester.answer]
+base_url = "http://127.0.0.1:8000/v1"
+model = "Qwen/Qwen3.6-35B-A3B-FP8"
+model_digest = "95a723d08a9490559dae23d0cff1d9466213d989"   # owner 2026-10-28, HF refs/main on the GPU host
+api_key_env = "VLLM_API_KEY"
+timeout_seconds = 900
+retrieval_limit = 10

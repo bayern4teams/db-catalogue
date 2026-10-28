@@ -1,0 +1,14 @@
+# Live re-check 2026-10-28 (owner): remote zoominfo-ch, database testzoominfo. Credentials only in CLICKHOUSE_CONNECTION.
+[source]
+source_id = "ch-zoominfo"
+kind = "clickhouse"
+connection_env = "CLICKHOUSE_CONNECTION"
+signing_key_env = "DBIG_SIGNING_KEY"
+signing_key_id = "local"
+namespaces = ["testzoominfo"]
+tls = false
+sample_rows = 25000
+value_token_key_env = "DBIG_TOKEN_KEY"
+value_token_key_id = "run-20261028"
+max_value_tokens = 4096
+format_profiles = true

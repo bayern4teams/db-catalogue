@@ -1,0 +1,2 @@
+[builder]
+signing_keys = { local = "DBIG_SIGNING_KEY" }

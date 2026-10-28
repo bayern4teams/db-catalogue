@@ -1,0 +1,4 @@
+[requester]
+snapshot_dir = "artifacts/run-20261028-remote/snapshot-pg"
+state_dir = "artifacts/run-20261028-remote/requester-pg"
+api_key_env = "REQUESTER_TOKEN"
