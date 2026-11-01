@@ -9,6 +9,11 @@ workflow:
     - if: $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api"
     - if: $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
+default:
+  # The instance runner (git.n4t.com) is tag-gated: run_untagged is off, so every job
+  # must carry its tag or it stays pending forever.
+  tags: [bayern]
+
 stages: [policy, checks]
 
 variables:
