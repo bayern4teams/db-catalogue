@@ -189,10 +189,10 @@
     "evidence": "spdx-expression",
     "release_url": "https://pypi.org/pypi/langgraph-prebuilt/1.1.0/json"
   },
-  "langgraph-sdk==0.4.5": {
+  "langgraph-sdk==0.4.11": {
     "declaration": "MIT",
     "evidence": "spdx-expression",
-    "release_url": "https://pypi.org/pypi/langgraph-sdk/0.4.5/json"
+    "release_url": "https://pypi.org/pypi/langgraph-sdk/0.4.11/json"
   },
   "langgraph==1.2.12": {
     "declaration": "MIT",
@@ -229,10 +229,10 @@
     "evidence": "classifier-review",
     "release_url": "https://pypi.org/pypi/mdurl/0.1.2/json"
   },
-  "msgpack==1.2.2": {
+  "msgpack==1.2.4": {
     "declaration": "Apache-2.0",
     "evidence": "spdx-expression",
-    "release_url": "https://pypi.org/pypi/msgpack/1.2.2/json"
+    "release_url": "https://pypi.org/pypi/msgpack/1.2.4/json"
   },
   "mypy-extensions==1.1.0": {
     "declaration": "MIT",
