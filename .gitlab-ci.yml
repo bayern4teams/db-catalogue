@@ -1,0 +1,129 @@
+# GitLab port of .github/workflows/ci.yml (owner 2026-10-25: GitLab is the default remote; a
+# privileged Linux Docker runner). The GitHub workflow stays as it is: scripts/ci_check.py reads
+# it. Left out: package isolation on Windows (no Windows runner) and the ci-success job (a GitLab
+# pipeline fails when any job fails).
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api"
+    - if: $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+stages: [policy, checks]
+
+variables:
+  UV_VERSION: "0.12.19"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+.python:
+  image: python:3.12-bookworm
+  before_script:
+    - python -m pip install --quiet "uv==${UV_VERSION}"
+
+repository-policy:
+  extends: .python
+  stage: policy
+  before_script: []
+  script:
+    - python -m compileall -q scripts
+    - python scripts/ci_check.py
+
+graph-index:
+  stage: checks
+  needs: [repository-policy]
+  image: node:22-bookworm
+  script:
+    # Python 3.12 managed by uv, as the node image ships only Debian's Python.
+    - apt-get update -qq && apt-get install -y -qq python3-pip >/dev/null
+    - python3 -m pip install --quiet --break-system-packages "uv==${UV_VERSION}"
+    - uv venv --python 3.12 /opt/graphs && . /opt/graphs/bin/activate
+    - uv pip install graphifyy==0.9.65 codebase-memory-mcp==0.12.1
+    - npm install --global @nanonets/graft@0.18.0
+    - python scripts/graph_sync.py
+
+application-quality:
+  extends: .python
+  stage: checks
+  needs: [repository-policy]
+  script:
+    - uv sync --locked --all-extras --dev
+    - uv run ruff check .
+    - uv run mypy packages
+    - uv run pytest
+    - uv run pip-audit
+    - python scripts/supply_chain.py
+
+package-isolation-linux:
+  extends: .python
+  stage: checks
+  needs: [repository-policy]
+  script:
+    - uv build --all-packages
+    - python scripts/package_isolation.py
+
+source-integration:
+  extends: .python
+  stage: checks
+  needs: [repository-policy]
+  parallel:
+    matrix:
+      - CHECK: source-integration
+        POSTGRES_IMAGE: postgres:16.15-alpine3.23
+        CLICKHOUSE_IMAGE: clickhouse/clickhouse-server:25.8.33.6
+        MONGO_IMAGE: mongo:7.0.41-jammy
+      - CHECK: source-integration-latest
+        POSTGRES_IMAGE: postgres:18.6-alpine3.24
+        CLICKHOUSE_IMAGE: clickhouse/clickhouse-server:26.9.10.4
+        # As in ci.yml: MongoDB 8.x/9.x refuse kernels 6.19-7.0.13; return to 9.x on 7.0.14+.
+        MONGO_IMAGE: mongo:7.0.45-jammy
+  services:
+    - name: docker:29.9.2-dind
+      alias: docker
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+    DBIG_RUN_INTEGRATION: "1"
+    CERTS: /tmp/certs
+    # Appends the throwaway CA to the system store (as in ci.yml).
+    SSL_CERT_FILE: /tmp/certs/trust-bundle.crt
+    DBIG_TEST_CA_FILE: /tmp/certs/ca.crt
+  script:
+    - apt-get update -qq && apt-get install -y -qq docker.io socat >/dev/null
+    - python3 scripts/make_ci_certs.py --out "$CERTS"
+    # The databases run in docker:dind, so the job cannot mount a file into them: certificates
+    # go in with `docker cp -a`, owned by the uid each image runs as (70, 101, 999).
+    - mkdir -p /tmp/pg /tmp/ch /tmp/mongo
+    - cp "$CERTS/server.crt" "$CERTS/server.key" /tmp/pg/ && chown -R 70:70 /tmp/pg && chmod 600 /tmp/pg/server.key
+    - cp "$CERTS/server.crt" "$CERTS/server.key" /tmp/ch/ && chown -R 101:101 /tmp/ch
+    - cp "$CERTS/server.pem" "$CERTS/ca.crt" /tmp/mongo/ && chown -R 999:999 /tmp/mongo
+    - printf '%s\n' '<clickhouse>' '  <https_port>8443</https_port>' '  <openSSL><server>'
+      '    <certificateFile>/certs/server.crt</certificateFile>'
+      '    <privateKeyFile>/certs/server.key</privateKeyFile>'
+      '  </server></openSSL>' '</clickhouse>' > /tmp/clickhouse-tls.xml
+    - >-
+      docker create --name dbig-postgres -e POSTGRES_HOST_AUTH_METHOD=trust -p 5432:5432
+      "$POSTGRES_IMAGE" -c ssl=on -c ssl_cert_file=/certs/server.crt
+      -c ssl_key_file=/certs/server.key
+    - >-
+      docker create --name dbig-clickhouse -e CLICKHOUSE_SKIP_USER_SETUP=1
+      -p 8123:8123 -p 8443:8443 "$CLICKHOUSE_IMAGE"
+    - >-
+      docker create --name dbig-mongo -p 27017:27017 "$MONGO_IMAGE"
+      --tlsMode preferTLS --tlsCertificateKeyFile /certs/server.pem
+      --tlsCAFile /certs/ca.crt --tlsAllowConnectionsWithoutCertificates
+    - docker cp -a /tmp/pg/. dbig-postgres:/certs
+    - docker cp -a /tmp/ch/. dbig-clickhouse:/certs
+    - docker cp -a /tmp/clickhouse-tls.xml dbig-clickhouse:/etc/clickhouse-server/config.d/tls.xml
+    - docker cp -a /tmp/mongo/. dbig-mongo:/certs
+    - docker start dbig-postgres dbig-clickhouse dbig-mongo
+    # The tests and the collectors' plaintext opt-out need the servers on loopback: forward
+    # 127.0.0.1 in the job to the published ports of the dind host. TLS passes through.
+    - for port in 5432 8123 8443 27017; do socat "TCP-LISTEN:${port},bind=127.0.0.1,fork,reuseaddr" "TCP:docker:${port}" & done
+    - uv sync --locked --all-packages --all-extras --dev
+    - >-
+      uv run --locked --all-packages --all-extras pytest -q -rs
+      tests/test_live_collectors.py tests/test_live_pipeline.py tests/test_live_tls.py
+      tests/test_live_operator_errors.py tests/test_live_plans.py
+      tests/test_operator_errors.py tests/test_live_scans.py tests/test_live_shapes.py
+  after_script:
+    - for name in dbig-postgres dbig-clickhouse dbig-mongo; do echo "== $name"; docker logs "$name" 2>&1 | tail -50; done
