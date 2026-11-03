@@ -1,7 +1,8 @@
 # GitLab port of .github/workflows/ci.yml (owner 2026-10-25: GitLab is the default remote; a
 # privileged Linux Docker runner). The GitHub workflow stays as it is: scripts/ci_check.py reads
-# it. Left out: package isolation on Windows (no Windows runner) and the ci-success job (a GitLab
-# pipeline fails when any job fails).
+# it. Left out: package isolation on Windows (no Windows runner), the ci-success job (a GitLab
+# pipeline fails when any job fails) and release.yml (it creates a GitHub release with `gh` on a
+# v* tag; there is no GitLab release job). Not run on the runner yet: see the pipeline for this file.
 
 workflow:
   rules:
@@ -19,6 +20,7 @@ stages: [policy, checks]
 variables:
   UV_VERSION: "0.12.19"
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  DOCKER_VERSION: "29.9.2"
 
 .python:
   image: python:3.12-bookworm
@@ -93,7 +95,11 @@ source-integration:
     SSL_CERT_FILE: /tmp/certs/trust-bundle.crt
     DBIG_TEST_CA_FILE: /tmp/certs/ca.crt
   script:
-    - apt-get update -qq && apt-get install -y -qq docker.io socat >/dev/null
+    - apt-get update -qq && apt-get install -y -qq socat >/dev/null
+    # The CLI is pinned to the dind daemon's version (the Debian docker.io package is older).
+    - curl -fsSL "https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKER_VERSION}.tgz" | tar -xz -C /usr/local/bin --strip-components=1 docker/docker
+    # The dind service starts beside the job; wait for its daemon before the first docker call.
+    - for i in $(seq 1 30); do docker info >/dev/null 2>&1 && break; sleep 2; done; docker info >/dev/null
     - python3 scripts/make_ci_certs.py --out "$CERTS"
     # The databases run in docker:dind, so the job cannot mount a file into them: certificates
     # go in with `docker cp -a`, owned by the uid each image runs as (70, 101, 999).

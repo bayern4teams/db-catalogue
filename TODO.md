@@ -6,6 +6,8 @@ Update this file when work starts, a fact changes, a decision is needed, a check
 
 ## Current change: cloud routine for the live-test fixes (started 2026-10-12)
 
+- [x] CI audit 2026-11-03 (branch `ci/gitlab-ci-2`, based on `fix/graphify-pin-0.9.96`): `source-integration` on GitLab failed with "Cannot connect to the Docker daemon" (no wait for the dind service) and installed Debian `docker.io` instead of a CLI matching the daemon. Fixed: wait loop, pinned static docker 29.9.2 CLI. Header of `.gitlab-ci.yml` now lists `release.yml` as not ported. Open: GitHub main also fails `application-quality` (pip-audit CVEs) and `source-integration-latest`; GitLab uses mongo 7.0.45 where main's ci.yml says 9.0.2 (owner to decide). Not run on the runner yet: all jobs of this change.
+
 - [x] User decision on 2026-11-03: move the Graphify pin from 0.9.65 to 0.9.96, the installed version (pre-commit refused commits on the mismatch). Changed `pyproject.toml`, `.gitlab-ci.yml`, `.github/workflows/ci.yml`, `.github/workflows/release.yml`, `scripts/cloud_setup.sh` and TECHNICAL_IMPLEMENTATION.md §pins on `fix/graphify-pin-0.9.96`. Note: `fix/graphify-pin` on the remotes pins 0.9.100 instead (not mine); `scripts/cloud_setup.sh` still installs codebase-memory-mcp 0.11.0. `graph_sync.py --check-tools` and `ci_check.py` pass. CI not yet run.
 
 - [~] Set up the unattended cloud multi-agent routine from `/home/bayern/Projects/phase-kit` to implement `artifacts/engineer-fixes.md` (items A1 to D9). No fix is made in the setup session. Work branch `feat/catalogue-fixes`, cut from `claude/gracious-bardeen-x1y6he` (the tested code, `2e87fa7`) plus the report commit; plan `docs/plans/CATALOGUE_FIXES_IMPLEMENTATION_PLAN.md`, state `docs/plans/catalogue-fixes/`.
