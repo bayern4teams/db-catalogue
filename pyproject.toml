@@ -21,7 +21,7 @@ members = ["packages/*"]
 # developer and CI can never build the three graphs from different tool versions. The `graphify`
 # command ships in the `graphifyy` distribution, hence the separate `distribution` field.
 [tool.dbig.graph-tools.graphify]
-version = "0.9.65"
+version = "0.9.96"
 distribution = "graphifyy"
 ecosystem = "pypi"
 

@@ -7,7 +7,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 [ -x /opt/graphtools/bin/graphify ] || python3.11 -m venv /opt/graphtools
-/opt/graphtools/bin/pip install -q graphifyy==0.9.65 codebase-memory-mcp==0.11.0
+/opt/graphtools/bin/pip install -q graphifyy==0.9.96 codebase-memory-mcp==0.11.0
 # graft's postinstall downloads a tree-sitter binary from GitHub and that download has hung, so install it
 # once, bounded and killable, and never let it block or fail setup.
 command -v graft >/dev/null || timeout -k 5 150 npm install -g @nanonets/graft@0.18.0 \
