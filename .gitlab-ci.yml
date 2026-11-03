@@ -81,7 +81,8 @@ source-integration:
       - CHECK: source-integration-latest
         POSTGRES_IMAGE: postgres:18.6-alpine3.24
         CLICKHOUSE_IMAGE: clickhouse/clickhouse-server:26.9.10.4
-        # As in ci.yml: MongoDB 8.x/9.x refuse kernels 6.19-7.0.13; return to 9.x on 7.0.14+.
+        # Differs from ci.yml on main (mongo:9.0.2-noble), owner 2026-11-03: MongoDB 8.x/9.x refuse
+        # kernels 6.19-7.0.13; return to 9.x on 7.0.14+.
         MONGO_IMAGE: mongo:7.0.45-jammy
   services:
     - name: docker:29.9.2-dind
