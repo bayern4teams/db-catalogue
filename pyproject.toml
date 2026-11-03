@@ -31,7 +31,7 @@ distribution = "@nanonets/graft"
 ecosystem = "npm"
 
 [tool.dbig.graph-tools.codebase-memory-mcp]
-version = "0.11.0"
+version = "0.12.1"
 distribution = "codebase-memory-mcp"
 ecosystem = "pypi"
 
