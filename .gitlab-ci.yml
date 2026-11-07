@@ -166,9 +166,7 @@ docs:
     - sha256sum -c lychee-x86_64-unknown-linux-musl.tar.gz.sha256
     - tar -xzf lychee-x86_64-unknown-linux-musl.tar.gz --strip-components=1 lychee-x86_64-unknown-linux-musl/lychee && mv lychee /usr/local/bin/
     - DOCS=$( (ls README.md ARCHITECTURE.md TECHNICAL_IMPLEMENTATION.md GLOSSARY.md docs/LESSONS.md AGENTS.md 2>/dev/null || true) | tr '\n' ' ')
-    # C5 exception: reason: existing documents still have findings (prompt 2 fixes the prose);
-    # approval: approved by the user 2026-11-07; review date: when prompt 2 lands. Then drop "|| true".
-    - markdownlint-cli2 $DOCS || true
-    - vale sync && (vale $DOCS || true)
+    - markdownlint-cli2 $DOCS
+    - vale sync && vale $DOCS
     - lychee --offline --no-progress $DOCS
     - python3 scripts/mermaid_check.py $DOCS

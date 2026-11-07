@@ -7,13 +7,13 @@
 
 - A1 Never guess. Ask before any choice that affects architecture, results, output, data or a later decision. Small local choices (a name, formatting): decide and mention them. Why: a confident guess is the most expensive mistake to find later.
 - A2 Ask in one batch, each question with options and a recommendation. Why: one question per turn wastes the user's time.
-- A3 Never present something unchecked as fact; say "not checked". Why: the user acts on it.
+- A3 Never present something unchecked as fact; say `not checked`. Why: the user acts on it.
 - A4 Before a big task, state your understanding and the open questions, then wait. Why: a wrong start costs the whole task.
 - A5 If an answer is ambiguous, quote your question and ask again; never pick a reading. Why: the user's intent is not yours to infer.
 
 ### B. Safety
 
-- B1 Work on branches. Do not merge or push main until the user writes "merge it". Do not delete a branch unasked. Why: main is what others build on.
+- B1 Work on branches. Do not merge or push main until the user writes `merge it`. Do not delete a branch unasked. Why: main is what others build on.
 - B2 Do nothing destructive (deleting files, databases, images, volumes, cache; force-push; history rewrite) without a yes for that exact action. A yes does not carry over. Why: it cannot be undone.
 - B3 Before deleting, show the exact list, sizes, what stays and whether it can be recreated, do a dry run, then wait. Why: "all of them" has hidden things in it.
 - B4 Touch only this project's resources. Do not move or delete anything shared with another project or of unknown origin. Why: other projects break silently.
@@ -95,7 +95,7 @@
 
 ## 2. Code graphs and ponytail
 
-- E1 Understand code through the graphs first, in order: graphify (concepts, impact) -> graft (callers, wiring) -> codebase-memory-mcp (symbols, snippets) -> raw files. Stop at the first that answers. Why: each later step costs more context.
+- E1 Understand code through the graphs first, in order: Graphify (concepts, impact) -> Graft (callers, wiring) -> codebase-memory-mcp (symbols, snippets) -> raw files. Stop at the first that answers. Why: each later step costs more context.
 - E2 A graph is a snapshot: check it is current, and read the real lines before changing them. Why: a stale graph is confidently wrong.
 - E3 Graphs model structure, not text: search files directly for literals, config and data. Why: a graph cannot answer what it does not store.
 - E4 A missing tool: say so, install it with the documented command after a yes, and use the next step of E1 meanwhile. Why: silent fallback hides that the agent is working blind.
@@ -128,7 +128,7 @@
 Level of detail: 0 = absent, 1 = one line and a link, 2 = a diagram or table with a short summary, 3 = full detail. The file with 3 owns the topic; the others link to it (J2). Topics with no content in this project are left out, never padded.
 
 | topic | README | ARCHITECTURE | TECH_IMPL |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | what it does, for whom, status | 3 | 1 | 0 |
 | quickstart: install, run, first result | 3 | 0 | 1 |
 | guarantees, and what it never does | 2 | 2 | 3 |
@@ -166,7 +166,7 @@ Read [TECHNICAL_IMPLEMENTATION.md](TECHNICAL_IMPLEMENTATION.md) and [TODO.md](TO
 - **Ponytail** (`/ponytail`, default `full`; `-review`, `-audit`, `-debt`, `-gain`, `-help`). Invoke the commands rather than claiming they ran; if one is unavailable, say so and apply its criteria by hand. `gain` only with measurements; keep debt in TODO.md. Ponytail never reduces safety, tests, error handling, security or CI. Why: E5 must not cost correctness.
 - **Local reviewer and observability.** Use the v1 stack in TECHNICAL_IMPLEMENTATION.md: private vLLM on Linux or WSL2 GPU, a bounded LangGraph reviewer in the assembler, self-hosted Langfuse with metadata-only traces. Use the OpenAI-compatible client only with the configured private vLLM endpoint; no cloud fallback. No top-level LangChain or LangGraph Swarm without a measured need and approval. Never give the model source credentials, database tools, unredacted samples or authority to declare lineage. No automatic raw prompt, response or graph-state tracing until canary privacy tests prove masking; telemetry outages must not stop graph publication. Keep code-intelligence graphs separate from the product's database graph and from Langfuse traces. Why: private data must not leave the machine or enter traces.
 - **Requester and planner** follow TECHNICAL_IMPLEMENTATION.md §17. They are separate wheels, CLIs and optional HTTP JSON REST services; they share only versioned contracts and artifacts, never direct imports or source database credentials. The requester owns structured search, grounded private-LLM answers and authorized scan requests (signed scheduler bundles or private collector HTTP). The planner owns observed lineage, candidate joins and returned SQL/MongoDB or logical plans; it never executes them or calls an LLM. Keep lineage distinct from inferred references; mark cross-source staging unresolved until configured. Architecture and TODO came before runtime skeletons by the user's choice; claim no runtime that does not exist. Why: independent deployment and honest status.
-- **Cloud fix routine.** `artifacts/engineer-fixes.md` is implemented by `docs/plans/CATALOGUE_FIXES_IMPLEMENTATION_PLAN.md`, with live state in `docs/plans/catalogue-fixes/` (`HANDOFF.md`, `LOCAL_VERIFY.md`, `SUPERVISOR.md`, `LAUNCH.md`). Agents there never merge to `main`, never create the routine and never set `Autonomy`; an item needing a user decision stays `blocked` until the user writes the answer in `HANDOFF.md`. Cloud graft is best effort only (plan §2.2). Phase 6 (live findings F5-F13, source of truth `artifacts/run-20261014/leader/LEAD_REVIEW.md`) runs on branch `fix/live-findings`. Why: unattended agents need hard limits.
+- **Cloud fix routine.** `artifacts/engineer-fixes.md` is implemented by `docs/plans/CATALOGUE_FIXES_IMPLEMENTATION_PLAN.md`, with live state in `docs/plans/catalogue-fixes/` (`HANDOFF.md`, `LOCAL_VERIFY.md`, `SUPERVISOR.md`, `LAUNCH.md`). Agents there never merge to `main`, never create the routine and never set `Autonomy`; an item needing a user decision stays `blocked` until the user writes the answer in `HANDOFF.md`. Cloud Graft is best effort only (plan §2.2). Phase 6 (live findings F5-F13, source of truth `artifacts/run-20261014/leader/LEAD_REVIEW.md`) runs on branch `fix/live-findings`. Why: unattended agents need hard limits.
 - **Doc and rule checks.** `scripts/rule_check.py` (C4 and J13) and the docs workflow run in CI; source paths for both checks are `packages/` and `scripts/`. Why: K4.
 
 ## 5. Before you push

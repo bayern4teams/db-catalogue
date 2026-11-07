@@ -41,14 +41,9 @@ jobs:
         run: |
           files=$(ls README.md ARCHITECTURE.md TECHNICAL_IMPLEMENTATION.md GLOSSARY.md docs/LESSONS.md AGENTS.md 2>/dev/null || true)
           echo "DOCS=$(echo $files)" >> "$GITHUB_ENV"
-      # C5 exception: reason: the existing documents still have findings (prompt 2 fixes the prose);
-      # approval: approved by the user 2026-11-07; review date: when prompt 2 lands. Then remove
-      # continue-on-error from the next two steps.
       - name: markdownlint
-        continue-on-error: true
         run: markdownlint-cli2 $DOCS
       - name: Vale
-        continue-on-error: true
         run: vale sync && vale $DOCS
       - name: Links (local files; external links are not fetched)
         run: lychee --offline --no-progress $DOCS

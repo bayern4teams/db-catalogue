@@ -2,6 +2,11 @@
 
 Update this file when work starts, a fact changes, a decision is needed, a check runs, or work finishes. Do not batch updates at the end. Use `- [ ]`, `- [x]`, or `- [~]` (in progress); add a short evidence link/command with every completion. Ask the user about any question, suggestion, or debt as soon as it is discovered. All verified changes are committed. This ledger is a plan, not a claim of implemented runtime capability.
 
+## Current change: main documents (started 2026-11-07, branch docs/main-documents)
+
+- [x] Wrote GLOSSARY.md, ARCHITECTURE.md, docs/LESSONS.md; rewrote README.md; added the code map to TECHNICAL_IMPLEMENTATION.md. Independent review (opus) checked 62 claims; the real findings are fixed. Docs checks are blocking again in `docs.yml` and `.gitlab-ci.yml` (user, 2026-11-07: option 1, fix AGENTS.md lint). AGENTS.md general block got lint-only edits (table separator, quote style, tool names in code spans or capitalised); copy them to the other projects.
+- [ ] Not done, found in review: strict pytest settings (L7), `release.yml` runs `mypy src` (no such folder), unused `jsonschema` dependency in `dbig-contracts` (M4), `dbig-requester index` traceback on a signed snapshot, sections 5-11, 13, 16, 17.2-17.5 of TECHNICAL_IMPLEMENTATION.md not re-verified.
+
 ## Current change: v1 implementation
 
 ## Current change: cloud routine for the live-test fixes (started 2026-10-12)
