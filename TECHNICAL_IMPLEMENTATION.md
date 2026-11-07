@@ -1,8 +1,183 @@
 # Technical implementation contract
 
-Status: binding design baseline with partial implementation, 2026-09-23. The artifact contract, metadata-first collectors, deterministic catalog builder, requester, scan adapters, and initial planner are implemented and tested with synthetic inputs. Live connector matrix, model/telemetry deployment, full lineage facets, benchmarks and acceptance tests remain open in [TODO.md](TODO.md). This file records **decisions to implement and verify**, not claims that every role works. The research and source links behind these decisions are in [ARCHITECTURE_RESEARCH.md](ARCHITECTURE_RESEARCH.md).
+Status: binding design baseline, with all five package roles implemented and tested on synthetic inputs and, in CI, on live PostgreSQL, ClickHouse and MongoDB containers. This file records decisions with their dates and the code map. Open items and live verification are in [TODO.md](TODO.md). The research behind the decisions is in [ARCHITECTURE_RESEARCH.md](ARCHITECTURE_RESEARCH.md). Terms are defined in [GLOSSARY.md](GLOSSARY.md).
+
+## Package map and dependencies
+
+<!-- verified: bce5fee -->
+
+```mermaid
+flowchart LR
+  COL[dbig-collectors] --> CON[dbig-contracts]
+  BLD[dbig-catalog-builder] --> CON
+  REQ[dbig-catalogue-requester] --> CON
+  PLN[dbig-lineage-planner] --> CON
+  COL -.-> DRV["pg8000, clickhouse-connect, pymongo (extras)"]
+  BLD --> RF[rapidfuzz]
+  BLD --> LG[langgraph]
+  BLD --> OAI[openai client]
+  REQ --> OAI
+  BLD --> LF[langfuse]
+  REQ --> LF
+  PLN --> SG[sqlglot]
+  PLN --> NX[networkx]
+```
+
+No role imports another role. Every internal import goes to `dbig_contracts`, checked in all four packages on this commit. `scripts/package_isolation.py` and the `package-isolation` CI job prove from the built wheels that the requester and planner install and import without each other. For the other roles the rule rests on import review. The versions and the reason for each library are in §4 and §17.1.
+
+## Module map
+
+<!-- verified: bce5fee -->
+
+| Package | Module | Owns | Entry point |
+| --- | --- | --- | --- |
+| `packages/contracts/src/dbig_contracts` | `models.py` | IR record types, `Manifest` | `models.py::Record` |
+| | `artifact.py` | Canonical JSON, signing, atomic write, read with checks | `artifact.py::write_artifact`, `artifact.py::read_artifact` |
+| | `scan.py` | Scan request, signature, receipt | `scan.py::verify_scan` |
+| | `security.py`, `errors.py`, `ids.py` | Secret resolver, loopback rule, operator errors, stable IDs | `security.py::secret_from_env` |
+| `packages/collectors/src/dbig_collectors` | `runtime.py` | Discovery for the three engines, budget, bundle write | `runtime.py::collect` |
+| | `scan.py`, `api.py` | Scan intake queue (SQLite) and its private HTTP route | `scan.py::accept_scan` |
+| `packages/catalog-builder/src/dbig_builder` | `builder.py` | Candidates, evidence, snapshot | `builder.py::assemble` |
+| | `reviewer.py` | Bounded LangGraph review | `reviewer.py::review_candidates` |
+| | `state.py` | SQLite receipts, incremental runs | `state.py::assemble_incremental` |
+| | `render.py` | Static HTML page | `render.py::render_catalog` |
+| `packages/requester/src/dbig_requester` | `search.py` | FTS5 index and ranked search | `search.py::search` |
+| | `answer.py` | Grounded answer | `answer.py::answer_question` |
+| | `scan.py` | Scan dispatch, file or HTTP | `scan.py::dispatch_scan` |
+| `packages/planner/src/dbig_planner` | `graph.py` | Path graph from snapshot and observations | `graph.py::build_graph` |
+| | `observations.py` | Observation and OpenLineage models, SQL relations | `observations.py::sql_relations` |
+| | `paths.py`, `plans.py` | Path search, SQL and MongoDB rendering | `paths.py::find_paths`, `plans.py::render_plan` |
+
+Each package also has `cli.py`, `config.py` and, for the three services, `api.py`. Tests are in `tests/`, helper scripts in `scripts/`, published JSON Schemas in `schemas/ir-v1/`, example configurations in `examples/local/`.
+
+## Workflows
+
+<!-- verified: bce5fee -->
+
+**Collect.** One run reads one source and writes one bundle or nothing.
+
+```mermaid
+sequenceDiagram
+  participant CLI as dbig collect
+  participant RT as runtime.collect
+  participant SRC as source
+  participant ART as write_artifact
+  CLI->>RT: config and output directory
+  RT->>RT: resolve secrets, refuse plaintext off loopback
+  RT->>SRC: discover within Budget
+  SRC-->>RT: objects, fields, constraints, profiles
+  RT->>ART: records and signing key
+  ART-->>CLI: bundle, manifest written last
+```
+
+A reached limit or a missing namespace raises an operator error and writes no bundle (`runtime.py::collect`, `runtime.py::_refuse_missing_namespaces`).
+
+**Assemble.** The builder turns signed bundles into a snapshot.
+
+```mermaid
+flowchart LR
+  A["_read_signed: verify and read"] --> B[nodes and declared edges]
+  B --> C["candidates by blocking rules"]
+  C --> D["_containment evidence"]
+  D --> E["_composite_candidates"]
+  E --> F["review_candidates"]
+  F --> G["write_artifact: snapshot"]
+```
+
+`assemble` marks the snapshot `partial` for a partial bundle, a foreign key whose target is outside the snapshot, a reused earlier bundle, or a failed review (`builder.py::assemble`). A failed review still publishes the deterministic snapshot.
+
+**Ask.** The requester refuses before the model when it can.
+
+```mermaid
+sequenceDiagram
+  participant U as caller
+  participant A as answer_question
+  participant S as search
+  participant M as private model
+  U->>A: question
+  A->>A: refuse empty, long or lineage question
+  A->>S: match any, top retrieval_limit
+  S-->>A: entries
+  A->>M: entries as data, strict JSON schema
+  M-->>A: answer and citations
+  A->>A: citations must be retrieved IDs
+  A-->>U: answer or typed error
+```
+
+Typed errors: `INVALID_QUESTION`, `LINEAGE_REQUIRES_PLANNER`, `NO_CATALOGUE_MATCH` (no model call), `MODEL_UNAVAILABLE_OR_INVALID` (`answer.py::answer_question`).
+
+**Plan.** The planner never touches a source.
+
+```mermaid
+flowchart LR
+  SN[snapshot] --> G["build_graph"]
+  OB[observations] --> G
+  G --> F["find_paths: join or lineage"]
+  F --> R["render_plan"]
+  R --> OUT["SQL, MongoDB pipeline, logical steps"]
+```
+
+Limits: `PlannerConfig.max_hops` (default 4) and `max_paths` (default 20) in `config.py`.
+
+**Scan request.** The requester asks, the collector decides.
+
+```mermaid
+sequenceDiagram
+  participant R as requester dispatch_scan
+  participant K as collector accept_scan
+  participant Q as SQLite queue
+  participant W as process_next
+  R->>K: signed request, file or HTTP
+  K->>K: verify key, TTL, requester, scope, capability, replay
+  K->>Q: insert as queued
+  K-->>R: receipt
+  W->>Q: take queued, set running
+  W->>W: collect
+  W->>Q: complete or failed
+```
+
+## Status life cycles
+
+<!-- verified: bce5fee -->
+
+```mermaid
+stateDiagram-v2
+  [*] --> submitted: requester dispatch
+  submitted --> queued: accept_scan
+  queued --> running: process_next
+  running --> complete
+  running --> failed
+  queued --> failed: request expired before processing
+```
+
+Scan status values are `ScanReceipt.status` in `packages/contracts/src/dbig_contracts/scan.py`. The `Edge` model allows `declared`, `strong`, `tentative`, `rejected` and `observed`. The builder sets `declared` and `tentative`; the planner sets `observed` on observed joins; `strong` and `rejected` are reserved. Planner lineage links are `executed` or `defined`. A path status is `found` or `unavailable` (`paths.py::find_paths`). A plan status is `ready_for_review`, `review_required` or `unresolved` (`plans.py::render_plan`).
+
+## Key types
+
+<!-- verified: bce5fee -->
+
+```mermaid
+classDiagram
+  class Record
+  Record <|-- Source
+  Record <|-- Object
+  Record <|-- Field
+  Record <|-- Constraint
+  Record <|-- Profile
+  Record <|-- ValueTokens
+  Record <|-- Evidence
+  Record <|-- Edge
+  Record <|-- Diagnostic
+  class Manifest
+  Manifest *-- FileEntry
+  Manifest *-- Signature
+```
+
+All in `packages/contracts/src/dbig_contracts/models.py`. `Record` allows extra fields, so an older reader tolerates an added field. `SnapshotNode` is the strict union `Source | Object | Field` for `nodes.jsonl`.
 
 ## 1. Product boundary and non-negotiable behavior
+
+<!-- verified: bce5fee -->
 
 The product has four independently deployable roles: source collectors, a catalog builder, a catalogue requester, and a lineage and path planner. The requester and planner are independently installable Python packages with CLIs and optional HTTP JSON REST services. Collectors discover PostgreSQL, ClickHouse, and MongoDB metadata; the builder profiles within explicit budgets and infers *candidates* for same-source and cross-source references. The requester searches an existing snapshot, answers grounded natural-language questions through the private local model, and requests new scans. The planner returns observed transformation lineage, candidate join paths, and reviewable SQL/MongoDB plans without executing them. Similar values alone are never lineage. No central source-database login belongs in v1.
 
@@ -12,42 +187,9 @@ The initial scale assumption is about 10 sources, 200 objects, and 1,000 fields.
 
 ## 2. Execution topology
 
-```mermaid
-flowchart TB
-  subgraph S1[Source security domain A]
-    PG[(PostgreSQL)] --> C1[Read-only collector]
-    C1 --> B1[Sealed bundle]
-  end
-  subgraph S2[Source security domain B]
-    CH[(ClickHouse)] --> C2[Read-only collector]
-    C2 --> B2[Sealed bundle]
-  end
-  subgraph S3[Source security domain C]
-    MG[(MongoDB)] --> C3[Read-only collector]
-    C3 --> B3[Sealed bundle]
-  end
-  B1 --> V[Bundle validator]
-  B2 --> V
-  B3 --> V
-  V --> S[SQLite run state]
-  V --> R[Candidate and evidence engine]
-  O[Observed SQL / pipeline events] --> P[Lineage and path planner]
-  R --> W[Bounded LangGraph reviewer]
-  W --> VLLM[Local vLLM on Linux or WSL2 GPU]
-  VLLM --> W
-  W --> LF[Self-hosted Langfuse metadata traces]
-  W --> R
-  R --> G[Versioned catalog snapshot writer]
-  G --> J[JSONL + manifest + schema]
-  J --> Q[Catalogue requester CLI and REST]
-  J --> P
-  Q -->|signed request bundle or private HTTP| C1
-  Q -->|signed request bundle or private HTTP| C2
-  Q -->|signed request bundle or private HTTP| C3
-  P --> LP[Observed lineage paths and candidate join paths]
-  P --> PL[SQL, Mongo pipeline or unresolved cross-source plan]
-  Q --> VLLM
-```
+<!-- verified: bce5fee -->
+
+The system context, deployment and data flow diagrams are in [ARCHITECTURE.md](ARCHITECTURE.md). Each source is its own security domain with its own collector.
 
 Collector responsibilities: scope authorization, source discovery, bounded profiling, source-local feature extraction, permitted SQL/pipeline observation, redaction, bundle schema validation, manifest hashes, and atomic publication. Builder responsibilities: validation and identity resolution, run reconciliation, cross-source feature comparison, candidate blocking and ranking, evidence policy, local semantic review, QA, and deterministic catalog publication. The requester owns search, grounded answers, and authorized scan dispatch. The planner owns lineage parsing/import, typed path search, and query-plan rendering. Both consume versioned artifacts without importing each other or source drivers.
 
@@ -55,30 +197,35 @@ No collector waits for another collector. A run can mark a missing source as `pa
 
 ## 3. Repository and deployable boundaries
 
-Approved package boundaries (create only as implementation tasks become active; exact published names remain subject to package-index checks):
+<!-- verified: bce5fee -->
+
+Package boundaries:
 
 ```text
-packages/contracts/         # versioned JSON Schemas, Pydantic boundary models, artifact validation
-packages/collectors/        # source-site CLI, source drivers, budgets and sealed bundles
-packages/catalog-builder/   # central profile matching, reviewer, snapshot publication
-packages/requester/         # independent search, grounded questions, scan requests, CLI and REST
-packages/planner/           # independent lineage, paths, SQL/Mongo plans, CLI and REST
-tests/fixtures/          # labeled synthetic PG/CH/Mongo cases, SQL and event fixtures
-schemas/                 # immutable published JSON Schemas per IR version
-config/                  # safe example TOML only; local.toml ignored
-scripts/                 # developer graph/CI helpers, not runtime modules
-.githooks/               # local Git gate and refresh
-.github/workflows/       # required PR checks
+packages/contracts/         # IR models, JSON Schema export, artifact validation, signatures
+packages/collectors/        # source-site CLI, source drivers, budgets, scan intake
+packages/catalog-builder/   # candidates, evidence, reviewer, snapshot, HTML page
+packages/requester/         # search, grounded questions, scan dispatch, CLI and REST
+packages/planner/           # lineage, paths, SQL and MongoDB plans, CLI and REST
+tests/                      # pytest suite; tests/golden/ir-v1 holds the committed golden artifacts
+schemas/ir-v1/              # published JSON Schemas per IR version
+examples/local/             # safe example TOML; local runs use their own copies
+scripts/                    # developer graph, CI and benchmark helpers, not runtime modules
+.githooks/                  # pre-commit and post-commit graph refresh
+.github/workflows/          # ci, docs, rules, release
+.gitlab-ci.yml              # GitLab mirror of the GitHub workflows
 ```
 
 Use a `uv` workspace for development, but publish separate wheels: contracts, collectors, catalog builder, catalogue requester, and lineage planner. Each role depends only on contracts and its own justified libraries; requester and planner never import one another. Collector driver extras install only the matching driver. The builder, requester, and planner have no source drivers or source credentials. REST serving is an optional extra on requester/planner. A shared workspace lock does not prove package isolation: CI must install each wheel in a clean environment and test CLI, API, and file-contract compatibility independently. `uv` is not required at runtime.
 
 ## 4. Module and third-party decisions
 
+<!-- verified: bce5fee -->
+
 | Concern | Decision | Specific use and boundary |
 | --- | --- | --- |
 | Language and build | Python 3.12+, `pyproject.toml`, `uv`, `uv.lock`, hatchling or equivalent build backend after packaging spike | Reproducible environment; verify Windows/Linux wheel availability and lock all extras. |
-| CLI | Click | Commands `collect`, `assemble`, `validate-bundle`, `validate-graph`, `explain-edge`, `schema`. Exit codes and JSON diagnostics. |
+| CLI | Click | Four command groups: `dbig`, `dbig-builder`, `dbig-requester`, `dbig-planner`. Commands are listed in §12. Exit codes and operator errors as in §12a. |
 | Config and IR | `tomllib`, Pydantic v2, standard `typing.Protocol` | TOML config, typed records, strict validation, secret references; no arbitrary YAML. |
 | Serialization | standard `json`, `hashlib`, `pathlib`, `tempfile`; `jsonschema` for published contract | Canonical UTF-8 JSONL, digests, schema validation, atomic replace. |
 | PostgreSQL | `pg8000` | Read-only direct catalog SQL, timeouts and TLS. No ORM and no Psycopg in permissive core. |
@@ -88,17 +235,17 @@ Use a `uv` workspace for development, but publish separate wheels: contracts, co
 | Matching | RapidFuzz plus our deterministic policies | Name similarity is one feature, never sufficient alone. |
 | Graph algorithms | NetworkX `MultiDiGraph`, replaceable planner-local view | Parallel typed edges and bounded path search; canonical persisted IR is independent of NetworkX. |
 | Pipeline interchange | OpenLineage spec; `openlineage-python` extra only if needed | Import/export observed job/run/dataset facets, preserve provenance. |
-| Local LLM | vLLM OpenAI-compatible server on Linux or WSL2 GPU; `openai` Python client against its private base URL; trial Qwen3 8B | One bounded structured-output call per ambiguous candidate batch; no cloud fallback. Record model digest, prompt/schema version, latency. Confirm GPU support and JSON conformance on the pinned versions. |
+| Local LLM | vLLM OpenAI-compatible server on Linux or WSL2 GPU; `openai` Python client against its private base URL; trial Qwen3 `8B` | One bounded structured-output call per ambiguous candidate batch; no cloud fallback. Record model digest, prompt/schema version, latency. Confirm GPU support and JSON conformance on the pinned versions. |
 | Review workflow | LangGraph `StateGraph` | Explicit nodes for redaction, model call, validation and evidence conversion. Our deterministic assembler owns scheduling and publication. No autonomous tools, DB access, dynamic handoffs or model-selected SQL. Top-level `langchain` and `langgraph-swarm` are excluded; `langchain-core` may enter transitively with LangGraph. |
 | Runtime state | SQLite stdlib and FTS5 where available | Local builder run index; requester search index; planner path index. Each package owns its own rebuildable state. Check FTS5 availability at startup and fail with a typed capability error. |
 | Requester API | FastAPI and Uvicorn in the requester `api` extra | Private HTTP JSON REST over the same application functions used by the CLI; no source drivers or planner dependency. |
 | Planner API | FastAPI and Uvicorn in the planner `api` extra | Private HTTP JSON REST over the same deterministic planner functions used by the CLI; no source credentials or query execution. |
 | Telemetry | stdlib structured logging plus self-hosted Langfuse Python SDK | Trace reviewer nodes, local model latency/usage, validation outcomes and redacted error codes with approved metadata only. Never export raw prompts, outputs, SQL, values or credentials. Langfuse is observability, not source catalog state. |
-| Test/tooling | pytest, Ruff, mypy/pyright, Bandit, pip-audit, `cyclonedx-py` or equivalent, license checker selected during dependency lock | CI must run deterministic unit, integration, contract, security and license gates. |
+| Test/tooling | pytest, Ruff, mypy, pip-audit, `scripts/supply_chain.py` (CycloneDX SBOM and license report from `uv export`) | CI runs lint, types, tests, vulnerability audit, supply chain checks and live-source tests (§15). |
 | Source-code intelligence | Graphify, Graft, Codebase Memory MCP | Developer-only structural graphs. Graphify first, then Graft, then CBM. Git hooks/CI refresh them without LLM/deep modes. |
 | Ponytail | Ponytail plugin skills | Agent design/review discipline; use all named skills when available, record results and do not equate a slash command with a CI test. |
 
-Version numbers and exact lock hashes are deliberately pending. The installed developer graph tools at setup were Graphify 0.9.65, Graft 0.18.0, CBM 0.11.0; CI should pin these or a reviewed upgrade. Application dependency pins require a real lockfile, CVE/license check, and connector test matrix before final selection.
+Application dependencies are ranges in each package `pyproject.toml`, resolved and hashed in `uv.lock`. The developer graph tools are pinned in `pyproject.toml` `[tool.dbig.graph-tools]` (§15).
 
 ## 5. Configuration and secrets
 
@@ -250,7 +397,7 @@ three-database snapshot:
   read took an independent `LIMIT` sample, and the final join could be empty although matches
   existed. Keys are never written into a plan: each later step lists `parameters` (`name`,
   `filters_field`, `values_from_step`, `values_from_column`) and its `parameter_binding`:
-  PostgreSQL `= ANY(%(name)s)` bound to an array (psycopg, or pg8000 with `pyformat`),
+  PostgreSQL `= ANY(%(name)s)` bound to an array (`psycopg`, or pg8000 with `pyformat`),
   ClickHouse server-side `IN {name: Array(T)}`, MongoDB `$expr`/`$in` on `$$name` bound through
   the aggregate command's `let`. A composite key filters each column separately, a superset that
   the final join narrows exactly. Each read keeps the row limit, and the plan warns that a later
@@ -364,13 +511,13 @@ can tell a fuzzy suffix match from an exact bare-name match without re-deriving 
 
 **Rules decided 2026-10-05** (user, after `tests/test_live_shapes.py` exposed both gaps):
 
-4. **Declared key first.** Measured uniqueness (rule 3) only proposes a column of a table that
+- Rule 4: **Declared key first.** Measured uniqueness (rule 3) only proposes a column of a table that
    declares no key at all, single or composite. On a two-row lookup table every column measures
    unique, and `regions.name` was proposed beside the declared `regions.code`.
-5. **Case boundaries.** A name is split at case boundaries before the suffix rule
+- Rule 5: **Case boundaries.** A name is split at case boundaries before the suffix rule
    (`AccountID` -> `account_id`, `customerId` -> `customer_id`), so camelCase and PascalCase keys
    reach rule 1; snake_case is unchanged.
-6. **Key name.** A child whose name equals, case-insensitively, a parent's declared
+- Rule 6: **Key name.** A child whose name equals, case-insensitively, a parent's declared
    single-column key name is admitted with `blocking_rule = "key_name"`, whatever the parent
    table is called; generic names (`id`, `_id`, `uuid`, `key`, `code`, `num`, `ref`, `fk`, `no`)
    are excluded, since every table has an `id`. This links `AccountID` in ClickHouse and MongoDB
@@ -386,7 +533,7 @@ spellings of the three engines are each one family (`dbig_builder.builder.INTEGE
 `TEXT_TYPES`, `UUID_TYPES`). Found by `tests/test_live_shapes.py`, where
 `region_code LowCardinality(String)` in ClickHouse now meets `regions.code text`.
 
-## 9. Lineage and query history
+## 9. Query history and lineage
 
 Inputs are observed SQL text/normalized fingerprints with provenance and times, view definitions, job/run records, and OpenLineage events. A view definition is *defined* transformation lineage, distinguished from an executed job. SQLGlot parses PostgreSQL/ClickHouse dialects; our resolver qualifies tables/columns against a snapshot, handles aliases/CTEs/stars where resolvable, and records unresolved expressions. Capture `INSERT ... SELECT`, `CREATE TABLE AS`, materialized view definitions, configured transformation jobs, and reads/writes. Column lineage is emitted only when expressions map to known fields; otherwise table-level edge plus diagnostic. SQL text stored only under policy after literal/comment redaction; default artifact stores fingerprint, parser version and redacted snippet.
 
@@ -396,7 +543,7 @@ OpenLineage import maps dataset namespace/name to source/object IDs and run/job 
 
 ## 10. Local LLM review in version 1
 
-After deterministic scoring, a bounded LangGraph `StateGraph` runs `redact -> request_vllm -> validate -> record_suggestion` for ambiguous candidate batches within configured token, request and time budgets. The trial model is Qwen3 8B; final model, quantization and digest depend on GPU VRAM and measured latency/accuracy. vLLM runs on a Linux or WSL2 GPU host; the assembler calls its private OpenAI-compatible endpoint through the `openai` Python client. This API compatibility does not authorize an OpenAI cloud call. Prompt includes normalized object/field labels, types, structural metrics, sanitized descriptions, source context and evidence IDs. It excludes raw rows, token sets, SQL literals and connection details. Require schema-constrained output: candidate ID, decision (`supports`, `opposes`, `unknown`), short reason, cited evidence IDs, and any suggested follow-up. Validate again with Pydantic and check all IDs; reject malformed, uncited or invented evidence. Persist model/digest, prompt/schema versions and response hash for audit; redact response text as necessary. Verify vLLM's pinned structured-output behavior against the schema before deployment. As implemented until 2026-10-04 the prompt carried only the two object names and the evidence; it now also carries each candidate's column pairs (left referencing, right referenced) with names and types, which this paragraph always required. Sanitized descriptions and source context are still not sent to the reviewer.
+After deterministic scoring, a bounded LangGraph `StateGraph` runs `redact -> request_vllm -> validate -> record_suggestion` for ambiguous candidate batches within configured token, request and time budgets. The trial model is Qwen3 `8B`; final model, quantization and digest depend on GPU VRAM and measured latency/accuracy. vLLM runs on a Linux or WSL2 GPU host; the assembler calls its private OpenAI-compatible endpoint through the `openai` Python client. This API compatibility does not authorize an OpenAI cloud call. Prompt includes normalized object/field labels, types, structural metrics, sanitized descriptions, source context and evidence IDs. It excludes raw rows, token sets, SQL literals and connection details. Require schema-constrained output: candidate ID, decision (`supports`, `opposes`, `unknown`), short reason, cited evidence IDs, and any suggested follow-up. Validate again with Pydantic and check all IDs; reject malformed, uncited or invented evidence. Persist model/digest, prompt/schema versions and response hash for audit; redact response text as necessary. Verify vLLM's pinned structured-output behavior against the schema before deployment. As implemented until 2026-10-04 the prompt carried only the two object names and the evidence; it now also carries each candidate's column pairs (left referencing, right referenced) with names and types, which this paragraph always required. Sanitized descriptions and source context are still not sent to the reviewer.
 
 The reviewer adds only `MODEL_SUGGESTION` evidence and can reprioritize review; it cannot convert a candidate into a declared FK or an observed lineage edge. A timeout, local server outage or invalid output produces a typed diagnostic and the deterministic graph still publishes. The v1 deployment enables review for ambiguous cases, then compares precision/recall and latency with the no-LLM baseline. LangGraph is a fixed workflow, not a free-running agent: no model tool calls, autonomous query planning, peer-agent handoffs or cloud API. Top-level LangChain and LangGraph Swarm add no needed v1 capability; reconsider only if a measured workflow requires their features.
 
@@ -412,28 +559,34 @@ Partial runs identify which sources and capabilities were unavailable. A graph c
 
 ## 12. Command and error contract
 
-Planned commands (names and flags are a decision, pending CLI implementation):
+<!-- verified: bce5fee -->
+
+Commands as implemented (`packages/*/src/*/cli.py`). Option names come from the Click declarations on this commit.
 
 ```text
-dbig collect --config <source.toml> --source-id <id> --out <bundle-dir>
-dbig validate-bundle <bundle-dir> --json
-dbig assemble --config <assembler.toml> --bundle <path> [--bundle <path> ...] --out <graph-dir>
-dbig validate-graph <graph-dir> --json
-dbig explain-edge <edge-id> --graph <graph-dir> --json
-dbig schema --version <major.minor> --out <dir>
-dbig-requester index --snapshot <catalog-dir> --state <state-dir>
-dbig-requester search --state <state-dir> --query <text> --json
-dbig-requester ask --state <state-dir> --question <text> --json
-dbig-requester request-scan --source-id <id> --request <json> --dispatch <bundle|http> --json
-dbig-requester serve --config <requester.toml>
-dbig-planner build --snapshot <catalog-dir> --observations <dir> --out <planner-dir>
-dbig-planner lineage-paths --graph <planner-dir> --from <id> --to <id> --json
-dbig-planner join-paths --graph <planner-dir> --from <id> --to <id> --json
-dbig-planner plan --graph <planner-dir> --path-id <id> --json
-dbig-planner serve --config <planner.toml>
+dbig collect --config <source.toml> --out <bundle-dir>
+dbig validate-bundle <bundle-dir> --key-env <ENV>
+dbig accept-scan --config <source.toml> --request <request.json> --queue-db <db>
+dbig process-scans --config <source.toml> --queue-db <db> --out-root <dir>
+dbig serve --config <source.toml> --queue-db <db> --host <loopback-ip> --port <port>
+dbig-builder assemble --config <builder.toml> --bundle <dir> [--bundle <dir> ...] --out <snapshot-dir>
+dbig-builder assemble-incremental --config <builder.toml> --state <sqlite> [--bundle <dir> ...] --out <snapshot-dir>
+dbig-builder validate-graph <snapshot-dir>
+dbig-builder explain-edge <edge-id> --graph <snapshot-dir>
+dbig-builder render --snapshot <dir> [--bundle <dir> ...] [--config <builder.toml>] --out <catalog.html>
+dbig-requester index --config <requester.toml>
+dbig-requester search --config <requester.toml> [--query <text>] [--match <all|any> --source-id --kind --data-type --tag --capability --evidence-status --max-age-seconds --limit --offset]
+dbig-requester ask --config <requester.toml> --question <text>
+dbig-requester request-scan --config <requester.toml> --request <request.json> --dispatch <bundle|http>
+dbig-requester serve --config <requester.toml> --host <loopback-ip> --port <port>
+dbig-planner build --snapshot <dir> --observations <dir> --out <graph-dir> [--mapping <file>]
+dbig-planner lineage-paths --graph <dir> --from <id> --to <id>
+dbig-planner join-paths --graph <dir> --from <id> --to <id>
+dbig-planner plan --graph <dir> --path-id <id> [--max-rows <1-100000>]
+dbig-planner serve --config <planner.toml> --host <loopback-ip> --port <port>
 ```
 
-Exit codes: 0 complete success; 2 invalid invocation/config; 3 security/integrity violation; 4 unavailable source or partial result (unless `--allow-partial`); 5 internal error; 6 validation failure. JSON diagnostics have code, severity, source ID, object ID if safe, timestamp, retryability, and redacted message. CLI never prints secrets or raw values.
+Exit codes, measured on this commit: 0 on success; 1 for an `OperatorError` (shown as a one-line command error) or an unhandled exception (traceback); 2 for a Click usage error such as a missing file option. The finer scheme once planned here (codes 3 to 6, `--allow-partial`, a JSON diagnostic envelope) is not implemented. A bundle or snapshot reports `partial` in its manifest instead of through an exit code. A command never prints a secret or a raw value.
 
 Snapshot node rows validate strictly. `nodes.jsonl` carries exactly three record types, so it validates against the discriminated union `dbig_contracts.models.SnapshotNode` (`Source | Object | Field`, discriminated on `record_type`) rather than the permissive base `Record`, and `schemas/ir-v1/node.schema.json` publishes that contract as a `oneOf` with a `record_type` discriminator. `dbig_contracts.artifact.validate_row` is the single gate both the write and read paths use, so an unknown `record_type` or a row missing its own type's required fields is refused on publication and on read. `runs.jsonl` deliberately keeps no strict model and stays a base `Record`. The earlier `invalid snapshot node type` check in the referential pass was removed because the union makes it unreachable.
 
@@ -444,14 +597,14 @@ converts into a clean command error. It means a failure the person running the c
 from the message alone: a missing secret reference, an unknown identifier, state that has not
 been built yet. `SecretReferenceError` subclasses it, so the single conversion added earlier for
 secrets now covers the whole class. Catching a bare `ValueError` stays rejected, because it
-would dress a pydantic validation failure or a genuine bug as something an operator can fix; a
+would dress a Pydantic validation failure or a genuine bug as something an operator can fix; a
 test pins that `validate-graph`'s ordinary `signature key unavailable` failure keeps its full
 traceback, which is what keeps the distinction honest.
 
 Two defects were found by adding command coverage rather than by review. `join-paths` and
 `lineage-paths` raised `ValueError("UNKNOWN_OBJECT")`, which reached the operator as a traceback
-naming neither the identifier nor the remedy; and `search` before `index` raised the sqlite
-driver's "unable to open database file". Both now name the cause and the next step.
+naming neither the identifier nor the remedy; and `search` before `index` raised the `sqlite3`
+driver message `unable to open database file`. Both now name the cause and the next step.
 
 The HTTP surface follows the private-network decision: the collector, planner and requester
 `serve` commands each refuse a non-loopback bind address and refuse a hostname outright rather
@@ -472,10 +625,10 @@ Extended on 2026-10-04, after an independent run of the runbook still ended in t
 - **Collector connections**: a refused login, an unknown PostgreSQL database and an unreachable
   server become one line naming the `connection_env` variable to check. Recognised from each
   driver's own types and codes as observed on the pinned servers (pg8000 SQLSTATE `28P01`, `28000`,
-  `3D000` and wrapped socket errors; ClickHouse code 516 in ClickHouse Connect's text; PyMongo
+  `3D000` and wrapped socket errors; ClickHouse code 516 in the text of ClickHouse Connect; PyMongo
   `OperationFailure` code 18 and `ServerSelectionTimeoutError`). Driver text is never repeated,
   because it can carry host and user names. Anything else keeps its traceback.
-- **A namespace that is not there stops the run with no bundle.** Before, a misspelt namespace
+- **A namespace that is not there stops the run with no bundle.** Before, a mistyped namespace
   produced an empty bundle marked `complete`. A namespace that listed nothing is checked against
   `pg_namespace` or `system.databases` (one extra query, only in that case), so an existing but
   empty schema or database still collects. MongoDB has no empty database, so a database with no
@@ -484,36 +637,48 @@ Extended on 2026-10-04, after an independent run of the runbook still ended in t
 
 ## 13. Security and operations
 
-Secret references resolve through one function, `dbig_contracts.security.secret_from_env`. Components never read a credential directly: validated configuration holds the *name* of an environment variable, and this resolver refuses a missing or blank reference, an unset variable, and a variable set to whitespace, so a wrong reference can never degrade into an unsigned bundle, an unverified scan request, or an unauthenticated API. The raised `ValueError` names the variable and the purpose so an operator can fix it, and never contains the secret's value; the resolved value is returned byte-for-byte because signing keys are byte-sensitive. Every secret call site uses it: builder config and reviewer, collector runtime, scan intake and `validate-bundle`, requester answer, scan dispatch and API, and planner API. The resolver raises `SecretReferenceError`, which subclasses `ValueError` so existing callers keep working. Each package's Click group is a `SecretAwareGroup` that converts only that type into a command error, so any command in any of the four CLIs reports a named message rather than a traceback when a secret reference is missing, blank, unset or empty. Only that type is converted: an ordinary `ValueError`, such as `validate-graph`'s `signature key unavailable`, keeps its full traceback, so validation and programming errors are not hidden behind a tidy message. The converter is duplicated once per package rather than shared, because §17 forbids the packages importing each other and `dbig_contracts` must not depend on Click.
+Secret references resolve through one function, `dbig_contracts.security.secret_from_env`. Components never read a credential directly: validated configuration holds the *name* of an environment variable, and this resolver refuses a missing or blank reference, an unset variable, and a variable set to whitespace, so a wrong reference can never degrade into an unsigned bundle, an unverified scan request, or an unauthenticated API. The raised `ValueError` names the variable and the purpose so an operator can fix it, and never contains the secret's value; the resolved value is returned byte-for-byte because signing keys are byte-sensitive. Every secret call site uses it: builder config and reviewer, collector runtime, scan intake and `validate-bundle`, requester answer, scan dispatch and API, and planner API. The resolver raises `SecretReferenceError`, which subclasses `ValueError` so existing callers keep working. Each package's Click group is a `SecretAwareGroup` that converts `OperatorError`, the parent type, into a command error (§12a), so any command in any of the four CLIs reports a named message rather than a traceback when a secret reference is missing, blank, unset or empty. Only that type is converted: an ordinary `ValueError`, such as `validate-graph`'s `signature key unavailable`, keeps its full traceback, so validation and programming errors are not hidden behind a tidy message. The converter is duplicated once per package rather than shared, because §17 forbids the packages importing each other and `dbig_contracts` must not depend on Click.
 
 Use read-only accounts, TLS verification, per-query timeouts, connection pooling limits, process separation by source, and explicit allowlists. Bundle receiver enforces size limits, path traversal rejection, digest verification and trusted transport; optional signatures become mandatory if transfer is not otherwise authenticated. Require workload identity or equivalent secret delivery in production. Scrub logs and crash reports. Keep source-side raw sample in RAM only. Retention schedules apply to manifests and profiler tokens. Provide key rotation and rerun semantics. Run each collector on a schedule agreed with source owners; source load metrics and budgets are visible in diagnostics.
 
-[THREAT_MODEL.md](THREAT_MODEL.md) records the trust boundaries, the nine modelled threats and their controls, and the known gaps. Each mitigation there names the test that holds it, a mitigation without a test is listed as a gap rather than as a control, and `test_the_threat_model_cites_only_tests_that_exist` fails if a cited test is renamed or removed. Threat tests: malicious bundle path/JSON, oversized record, duplicate ID, HMAC mismatch, prompt injection in comments/SQL, model hallucinated IDs, timeout, collector privilege failure, and stale manifest replay. The LLM prompt treats source metadata as data, never instructions.
+[THREAT_MODEL.md](THREAT_MODEL.md) records the trust boundaries, the eleven modelled threats and their controls, and the known gaps. Each mitigation there names the test that holds it, a mitigation without a test is listed as a gap rather than as a control, and `test_the_threat_model_cites_only_tests_that_exist` fails if a cited test is renamed or removed. Threat tests: malicious bundle path/JSON, oversized record, duplicate ID, HMAC mismatch, prompt injection in comments/SQL, model hallucinated IDs, timeout, collector privilege failure, and stale manifest replay. The LLM prompt treats source metadata as data, never instructions.
 
 ## 14. Test and acceptance plan
+
+<!-- verified: bce5fee -->
 
 Unit/contract: IR schema round-trips, versioning, stable IDs, atomic bundle write/read, digest tamper rejection, bounded budget accounting, normalization and scoring, SQL resolver known/unknown cases, LLM schema rejection and timeout, deterministic graph diff. Integration: disposable PostgreSQL, ClickHouse, MongoDB with representative keys, composite joins, arrays/nested paths, views, materialized views, and pipeline events; test least-privilege roles and source failures. Golden fixtures include true/false relationships, ambiguous names, sparse/low-cardinality fields and observed transformations. Measure candidate precision/recall at fixed review budgets; report coverage and abstention separately. Measure no-LLM and local-LLM accuracy and latency on the same held-out corpus. Acceptance thresholds require user approval after a labeled corpus exists; do not invent success percentages.
 
 Performance: benchmark at the stated 10/200/1,000 scale with per-source load and bundle bytes, assembler wall time/RAM, LLM p50/p95, cache hit rate. Security: dependency vulnerability/license report, secrets scan, least-privilege integration checks, malformed bundle fuzz/property tests. CI cannot test live private databases; those run in a separate authorized environment.
 
-Scale measured on 2026-10-04 with `scripts/scale_benchmark.py` at 10 sources, 200 objects and 1,000 fields on the latest server releases: every command finished in under 3 s and under 115 MiB peak memory; in-process search is 87 ms median and 129 ms p95, while a CLI invocation adds about 0.8 s of interpreter start-up. Figures and caveats are in TODO.md item 9 of the 2026-10-04 change. Model latency remains unmeasured until a GPU host exists.
+The suite has 546 tests (`uv run pytest --collect-only -q` on this commit). Tests in `tests/test_live_*.py` run only with `DBIG_RUN_INTEGRATION=1` against real servers, which the `source-integration` CI job starts. Scale was measured on 2026-10-04 with `scripts/scale_benchmark.py` at 10 sources, 200 objects and 1,000 fields on the latest server releases: every command finished in under 3 s; assemble peaked at 110 MiB and each collector at most 44 MiB; in-process search is 87 ms median and 129 ms p95, while a CLI invocation adds about 0.8 s of interpreter start-up. Figures and caveats are in TODO.md (verification fixes 1-10, item 9). Model latency remains unmeasured until a GPU host exists.
 
 ## 15. Git, graph tooling, Ponytail and CI/CD contract
 
-The repository hook path is `.githooks`, installed via `python scripts/install_hooks.py`. Pre-commit calls `scripts/graph_sync.py`: check for partial staging that would make graphs reflect a different tree, refresh Graphify with `graphify update .`, refresh Graft with `graft build .` and verify `graft check .`, then run `codebase-memory-mcp cli index_repository --repo-path . --mode fast --persistence false`. Every required command must exist and exit 0; no silent fallback. Post-commit runs the same refresh against the committed tree. All steps are deterministic structural modes with no semantic/deep LLM calls. Graph caches are ignored until the artifact policy is chosen. Git's `--no-verify` and `core.hooksPath` overrides can bypass local hooks; protected branches and required CI compensate, but no local mechanism can make bypass impossible.
+<!-- verified: bce5fee -->
 
-The three developer graph tools are pinned the same way. `[tool.dbig.graph-tools]` in `pyproject.toml` is the single source of truth for Graphify 0.9.65, Graft 0.18.0 and Codebase Memory MCP 0.12.1, each with its distribution name and ecosystem because the `graphify` command ships in the `graphifyy` distribution. `scripts/graph_sync.py` reads each tool's `--version` before indexing and fails closed on any mismatch, reporting every wrong tool at once with the exact install command; it tolerates Graft's upgrade notice by taking the first `X.Y.Z` in the output. `scripts/ci_check.py` refuses a workflow that installs a version other than the pin, and refuses the case where no workflow installs a pinned tool at all. Graft 0.20.0 and Graphify 0.9.69 exist upstream but are deliberately not adopted; an upgrade requires a reviewed, re-verified graph baseline. Tests stub the version reporter rather than invoking the tools, because the application-quality job does not install them.
+The repository hook path is `.githooks`, installed with `python scripts/install_hooks.py`. Pre-commit runs `scripts/graph_sync.py --pre-commit`, which refuses a commit with staged files that also have unstaged edits, then refreshes Graphify (`graphify update .`), Graft (`graft build .` and `graft check .`) and Codebase Memory (fast index) and fails the commit on any failure. Post-commit and session start run the same refresh in warn-only mode (`--post-commit`, `--session-start`). All steps are structural and make no LLM call. Graph caches are git-ignored local caches. `--no-verify` and a changed `core.hooksPath` bypass local hooks, so CI repeats the refresh in the `graph-index` job.
 
-Tool version pinning is part of the gate, not an environment detail. `pyproject.toml` declares `[tool.uv] required-version = ">=0.10.0"`, and every `astral-sh/setup-uv` step pins one exact uv version (`0.12.19`) instead of defaulting to latest. The floor is empirical rather than from release notes: uv's changelog does not record the introduction of the preview `cyclonedx1.5` export format, so installed binaries were tested directly on 2026-09-27. `uv export --help` first offers `cyclonedx1.5` at uv 0.10.0 and omits it at 0.9.0 and 0.8.17, and `scripts/supply_chain.py` reproduces the same `113 components; unresolved license declarations: 0` result on uv 0.10.0, 0.11.0 and 0.12.19. Because uv validates command arguments before reading `required-version`, an older uv reports an unknown-format error rather than a version error, so `scripts/supply_chain.py` reports uv's own message together with the running and required versions. `scripts/ci_check.py` rejects an unpinned or floating `setup-uv` step, a pin below the declared floor, and pins that disagree across workflows, so a supply-chain gate can never silently depend on whichever uv is latest.
+The three developer graph tools are pinned in `pyproject.toml` `[tool.dbig.graph-tools]`, the single source of truth: Graphify 0.9.103 (`graphifyy` on PyPI), Graft 0.29.0 (`@nanonets/graft` on npm) and Codebase Memory MCP 0.12.1 (PyPI). By user decision on 2026-11-07 ("we should always run on latest version"), a newer release is installed and every pin is bumped together; the pin sites are listed in AGENTS.md section 4. `scripts/graph_sync.py` reads each tool's `--version` and fails closed on a mismatch, naming the install command. `scripts/ci_check.py` refuses a workflow that installs another version. Tests stub the version reporter, because the `application-quality` job does not install the tools.
 
-CI on pull requests and pushes to `main`: install pinned Python, pinned uv, Graphify, Node/Graft, and Codebase Memory; run graph refresh/graft drift checks; check docs and TODO structure. Once code and a lockfile exist, run Ruff, types, tests and vulnerability audit. Integration containers, license/SBOM gates and measured quality thresholds remain implementation tasks. The release workflow refuses to publish until a tested package and lockfile exist. GitHub currently returns HTTP 403 for private-repository branch protection/rulesets on this account plan; by user decision, the repository remains private, so CI results cannot be a mandatory remote merge gate here.
+Tool version pinning is part of the gate, not an environment detail. `pyproject.toml` declares `[tool.uv] required-version = ">=0.10.0"`, and every `astral-sh/setup-uv` step pins one exact uv version (`0.12.19`) instead of defaulting to latest. The floor is empirical rather than from release notes: uv's changelog does not record the introduction of the preview `cyclonedx1.5` export format, so installed binaries were tested directly on 2026-09-27. `uv export --help` first offers `cyclonedx1.5` at uv 0.10.0 and omits it at 0.9.0 and 0.8.17, and `scripts/supply_chain.py` reproduces the same `113 components; unresolved license declarations: 0` result on uv 0.10.0, 0.11.0 and 0.12.19. Because uv validates command arguments before reading `required-version`, an older uv reports an unknown-format error rather than a version error, so `scripts/supply_chain.py` reports uv's own message together with the running and required versions. `scripts/ci_check.py` rejects an unpinned or floating `setup-uv` step, a pin below the declared floor, and pins that disagree across workflows, so a supply chain gate can never silently depend on whichever uv is latest.
+
+`.github/workflows/ci.yml` runs on pull requests, pushes to `main` and manual dispatch. Its jobs: `repository-policy` (`scripts/ci_check.py`), `graph-index`, `application-quality` (locked sync, Ruff, mypy, pytest, pip-audit), `package-isolation` (Ubuntu and Windows, clean wheels), `source-integration` (pinned server versions) and a second leg with the latest server versions, then `ci-success`, which requires all of them. The separate `docs.yml` runs markdownlint, Vale, offline link check and Mermaid rendering; `rules.yml` runs `scripts/rule_check.py`; `release.yml` runs on a `v*` tag. `.gitlab-ci.yml` mirrors them for the GitLab origin, except Windows package isolation, `ci-success` and release. The live-source job pins PostgreSQL 16.15, ClickHouse 25.8.33.6 and MongoDB 7.0.41; its latest leg uses PostgreSQL 18.6, ClickHouse 26.9.10.4 and MongoDB 7.0.45, an approved exception documented next to the image line in `ci.yml`. GitHub denies branch protection for this private repository on the account plan, so CI results are not a mandatory merge gate; the owner relies on local hooks and inspected runs.
 
 Ponytail is a coding-agent methodology, not a runtime dependency. On every meaningful change, apply `/ponytail [lite | full | ultra | off]` with `full` as intended baseline when the plugin is installed; run review for current diff, audit for repository-wide design, debt to keep TODO debt visible, gain only with measurements, and help when command behavior is uncertain. In Codex, upstream documents these as `@ponytail-*` skills after plugin installation/restart. If unavailable, explicitly report that status and manually apply the same minimal-design checks; never pretend a skill ran. Agent instructions in AGENTS.md and CLAUDE.md are the controlling project policy.
+
+### 15.1 Developer setup
+
+1. Install Python 3.12 (`.python-version`), Git and uv 0.10.0 or later (`pyproject.toml` `[tool.uv] required-version`). Install the three graph tools at the pinned versions with `python -m pip install graphifyy==0.9.103 codebase-memory-mcp==0.12.1` and `npm install --global @nanonets/graft@0.29.0`.
+2. Clone, then run `python scripts/install_hooks.py`. Git does not carry hook configuration through a clone.
+3. Copy `.env.example` to `.env` and fill local values. `.env` is ignored by Git and nothing loads it automatically.
+4. Run `python scripts/graph_sync.py --check-tools`, then the checks in AGENTS.md section 5.
+5. `python scripts/supply_chain.py` writes the CycloneDX SBOM and license reports under the ignored `.data/supply-chain/`. `supply-chain/licenses.json` records every pinned release in `uv.lock`; `--refresh` updates it when the lock changes, and CI rejects a missing or stale entry. A declaration reported by an upstream package is inventory, not a legal conclusion.
 
 ## 16. Decisions requiring user input or empirical evidence
 
 1. Resolved: generated developer graphs are local/CI caches and are never committed.
-2. Resolved: make the first commit and use `https://github.com/Reza-Sh83/db-catalogue.git` as `origin`.
+2. Resolved: make the first commit and record the remote (the origin is now the GitLab repository; `github` is the GitHub mirror, see AGENTS.md section 4).
 3. **Open:** exact GPU model/VRAM and RAM; model size and latency remain provisional.
 4. Resolved 2026-09-27: source read budgets and value classification. Metadata-only stays the default; sampling, query history and cross-source token comparison are opt-in per source under mandatory row, byte and time budgets with a sensitive-field denylist.
 5. Resolved 2026-09-27: bundle transfer and tokenization key. A per-run HMAC key reaches authorized collectors by environment reference, the manifest records only its `key_id`, bundles move as signed files on a filesystem or object store, and tokens exist only in assembler memory inside one run boundary.
@@ -540,7 +705,7 @@ On 2026-09-27 the user decided items 4, 5, 6, 8, 9, 10 and 11 above, and the con
 
 Two decisions remain open and are not implied by these. The GPU host and model identity stay unmeasured, so live vLLM and Langfuse behaviour is still untested by user decision. The source of observed SQL and job metadata is still unchosen, which is why executed lineage remains unavailable; defined lineage from view definitions is unaffected, and no edge asserts execution without that evidence.
 
-The first live metadata compatibility matrix was established by CI run 35911699728: PostgreSQL 16.15 (catalog read through a role granted schema usage and table SELECT), ClickHouse 25.8.33.6 (`system.tables` and `system.columns`), and MongoDB 7.0.41 (`listCollections` and indexes). The three tests passed with synthetic schemas. CI fixture services did not test verified TLS or production authentication. Only these exact tested versions have empirical metadata compatibility evidence; this is not a claim that adjacent versions or secure production connections have passed.
+The first live metadata compatibility matrix was established by CI run 35911699728: PostgreSQL 16.15 (catalog read through a role granted schema usage and table SELECT), ClickHouse 25.8.33.6 (`system.tables` and `system.columns`), and MongoDB 7.0.41 (`listCollections` and indexes). The three tests passed with synthetic schemas. The CI `source-integration` job now also runs `tests/test_live_tls.py` against a throwaway CA; production authentication is untested. Only these exact tested versions have empirical metadata compatibility evidence; this is not a claim that adjacent versions or secure production connections have passed.
 
 On 2026-09-23 the user requested that private vLLM integration be configured in code now while live GPU/model tests wait for an accessible GPU host they will identify later. Synthetic reviewer, answer-grounding and metadata-only telemetry tests remain active. No model artifact, digest, latency, live privacy result, or Langfuse deployment is claimed until it is actually tested. This deferral does not remove the live v1 acceptance gate.
 
@@ -550,12 +715,14 @@ The user selected **both** separately installable packages/CLIs exchanging versi
 
 ### 17.1 Dependency and ownership rules
 
+<!-- verified: bce5fee -->
+
 | Distribution | Owns | Required application dependencies | Optional dependencies |
 | --- | --- | --- | --- |
 | `dbig-contracts` | IR v1, JSON Schema, manifests, validation, stable IDs, signatures | Pydantic v2, `jsonschema`, Python standard library | None |
-| `dbig-collectors` | Site-specific discovery, profiles and signed bundles | `dbig-contracts`, Click, standard library | `pg8000`, `clickhouse-connect`, or `pymongo` by source extra |
-| `dbig-catalog-builder` | Cross-source evidence, reference candidates, deterministic snapshot, bounded semantic review | `dbig-contracts`, RapidFuzz, LangGraph, OpenAI-compatible Python client, Langfuse SDK, SQLite stdlib | NetworkX only if builder-side traversal proves necessary |
-| `dbig-catalogue-requester` | Structured catalogue search, grounded local-LLM answers, scan dispatch | `dbig-contracts`, Click, SQLite/FTS5 stdlib, OpenAI-compatible Python client | FastAPI/Uvicorn `api` extra; LangGraph only if multi-step request workflow is justified by tests |
+| `dbig-collectors` | Site-specific discovery, profiles, signed bundles, scan intake | `dbig-contracts`, Click, standard library | `pg8000`, `clickhouse-connect` or `pymongo` by source extra; FastAPI and Uvicorn `api` extra |
+| `dbig-catalog-builder` | Cross-source evidence, reference candidates, deterministic snapshot, bounded semantic review | `dbig-contracts`, Click, RapidFuzz, LangGraph, OpenAI-compatible Python client, Langfuse SDK, SQLite stdlib | NetworkX only if builder-side traversal proves necessary |
+| `dbig-catalogue-requester` | Structured catalogue search, grounded local-LLM answers, scan dispatch | `dbig-contracts`, Click, SQLite/FTS5 stdlib, OpenAI-compatible Python client, Langfuse SDK | FastAPI and Uvicorn `api` extra |
 | `dbig-lineage-planner` | Observed lineage import, lineage and join paths, SQL/Mongo/query-plan rendering | `dbig-contracts`, SQLGlot, NetworkX, Click | FastAPI/Uvicorn `api` extra; `openlineage-python` only for typed event emission |
 
 The names are intended distribution names, subject to package-index availability and final lock audit. Do not introduce imports from requester to planner or vice versa. Source credentials and drivers are confined to collectors. The planner makes no LLM call; path selection and rendering use validated IR and deterministic policies. The requester may call the same private vLLM server used by the builder, but the packages share no process state or direct Python dependency. No top-level LangChain, LangGraph Swarm, Amundsen, Elasticsearch, Neo4j, Marquez, OpenLineage SQL parser, or second SQL parser is required. Graphify/Graft/Codebase Memory remain developer-only graphs.
@@ -576,7 +743,7 @@ REST v1 routes: `GET /v1/catalogue/search`, `POST /v1/catalogue/questions`, `POS
 
 Both requester and planner HTTP services require a nonempty API bearer secret from their configured environment reference before startup. Their request body ceiling is the validated `max_request_bytes` config field (default 65,536), enforced while streaming; per-minute request limits remain separately configurable. Production TLS termination and client identity policy are deployment obligations.
 
-### 17.4 Lineage and path planner
+### 17.4 Path planner and lineage
 
 Maintain separate edge sets for observed/defined `DERIVES_FROM`/`READS`/`WRITES` lineage and declared or inferred reference candidates. `JOINS_OBSERVED` records that a query used a join, not data movement. A lineage-path request traverses only lineage edges with execution/definition provenance and timestamps. A join-path request traverses approved declared/reference-candidate edges, marks tentative links, applies configured hop/result limits and returns ranked paths with every supporting and contrary evidence ID. Missing mappings, stale snapshots and partial observations are visible; never silently complete a path with an LLM guess. OpenLineage RunEvents, JobEvents and facets are mapped conservatively as described in section 9.
 
@@ -588,4 +755,4 @@ REST v1 routes: `POST /v1/lineage/paths`, `POST /v1/join-paths`, and `POST /v1/p
 
 ### 17.5 Verification gates
 
-Before calling the two packages independent, build and install each wheel in separate clean Windows and Linux environments and prove neither imports the other or a source driver. Contract fixtures must round-trip through both CLIs and REST APIs using the same sealed snapshot; test unknown major and additive minor versions. Test requester search/answer grounding, stale-index rejection, authorization/replay of both scan adapters, and model outage. Test planner lineage versus join separation, multi-input/multi-output OpenLineage ambiguity, SQL dialect and Mongo pipeline rendering, cross-source unresolved staging, prompt injection, read-only AST policy, and that no execution path exists. CI should start these gates only as the packages are implemented; current CI is a planning-stage policy/graph check, not evidence that these runtime behaviors work.
+Before calling the two packages independent, build and install each wheel in separate clean Windows and Linux environments and prove neither imports the other or a source driver. Contract fixtures must round-trip through both CLIs and REST APIs using the same sealed snapshot; test unknown major and additive minor versions. Test requester search/answer grounding, stale-index rejection, authorization/replay of both scan adapters, and model outage. Test planner lineage versus join separation, multi-input/multi-output OpenLineage ambiguity, SQL dialect and Mongo pipeline rendering, cross-source unresolved staging, prompt injection, read-only AST policy, and that no execution path exists. CI should start these gates only as the packages are implemented; CI now runs these gates as described in section 15; a gate not named there is not yet automated.

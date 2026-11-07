@@ -1,88 +1,116 @@
 # Database Intelligence Graph Generator
 
-Evidence-first discovery of database objects, likely relationships, and **observed** data lineage across PostgreSQL, ClickHouse, and MongoDB, with two independent user-facing modules. All five package roles now have a synthetic-tested implementation; live source, model and deployment verification remains in [TODO.md](TODO.md).
+Finds the tables, fields and likely relationships in your PostgreSQL, ClickHouse and MongoDB databases, and shows them as a searchable catalogue. It never reads row values by default. It marks every relationship it guesses as a guess.
 
-## What the system will do
+## What it is
 
-Collectors run beside each configured source with read-only credentials and produce versioned bundles. A central builder validates them, compares permitted features across sources, ranks relationship candidates, and publishes a versioned catalog snapshot. The **catalogue requester** independently searches that snapshot, answers grounded natural-language questions with a private local LLM, and dispatches new scan requests. The **lineage and path planner** independently imports observed SQL/pipeline metadata and OpenLineage events, returns observed lineage or possible join paths, and generates reviewable SQL/MongoDB plans without executing them. Both modules will ship as separate installable Python packages with CLIs and optional HTTP JSON REST services; they share only the artifact contract.
+<!-- verified: bce5fee -->
+
+Four parts, each its own installable Python package:
+
+- **Collectors** run next to each database with a read-only account and write a signed bundle.
+- The **builder** joins the bundles into one catalogue snapshot and proposes relationships between sources.
+- The **requester** searches the snapshot, answers questions with your own private model, and asks a collector to scan again.
+- The **planner** finds join paths and observed lineage, and writes reviewable SQL or MongoDB reads. It never runs them.
 
 ```mermaid
 flowchart LR
-  PG[PostgreSQL collector] --> B1[Validated bundle]
-  CH[ClickHouse collector] --> B2[Validated bundle]
-  MO[MongoDB collector] --> B3[Validated bundle]
-  B1 --> A[Central assembler]
-  B2 --> A
-  B3 --> A
-  A --> L[Bounded LangGraph reviewer]
-  L --> V[vLLM on Linux or WSL2 GPU]
-  V --> L
-  L --> F[Self-hosted Langfuse traces]
-  L --> A
-  A --> IR[Versioned catalog snapshot]
-  IR --> R[Catalogue requester CLI and REST]
-  IR --> P[Lineage and path planner CLI and REST]
-  O[Observed SQL, pipeline and OpenLineage events] --> P
-  R -->|signed bundle or private HTTP| C[Site collector scan adapter]
-  R -->|grounded questions| V
-  P --> X[Lineage paths, join paths, SQL/Mongo plans]
+  DB[(your databases)] --> C[collectors]
+  C -->|signed bundles| B[builder]
+  B -->|snapshot| R[requester]
+  B -->|snapshot| P[planner]
+  R --> A[search and cited answers]
+  P --> X[join paths and plans]
+  B --> H[catalogue web page]
 ```
 
-## Project documents
+## Status
 
-- [TECHNICAL_IMPLEMENTATION.md](TECHNICAL_IMPLEMENTATION.md): binding implementation contract, module ownership, algorithms, data formats, gates, and acceptance criteria.
-- [THREAT_MODEL.md](THREAT_MODEL.md): trust boundaries, the modelled threats and their controls, and the known gaps. Each mitigation names the test that holds it.
-- [TODO.md](TODO.md): live, ordered implementation ledger with verification and decision gates.
-- [ARCHITECTURE_RESEARCH.md](ARCHITECTURE_RESEARCH.md): 30-section research record and upstream source links.
-- [AGENTS.md](AGENTS.md) and [CLAUDE.md](CLAUDE.md): working rules for coding agents. `AGENTS.md` is the canonical policy.
+<!-- verified: bce5fee -->
 
-## Current state
+All four parts work and pass 546 tests, including live tests on PostgreSQL, ClickHouse and MongoDB containers in CI. One live run on real databases found problems, listed under Results. Fixes are on unmerged branches (`feat/catalogue-fixes`, `fix/live-findings`, `fix/phase7`), described in [docs/plans/CATALOGUE_FIXES_IMPLEMENTATION_PLAN.md](docs/plans/CATALOGUE_FIXES_IMPLEMENTATION_PLAN.md). Open work: [TODO.md](TODO.md).
 
-The `dbig-contracts` package validates signed JSONL collector bundles and catalog snapshots. The `dbig-collectors` package has PostgreSQL, ClickHouse, and MongoDB metadata discovery with source-local credentials and defensive limits. It publishes a digest of PostgreSQL view definitions, digests of ClickHouse key expressions, and MongoDB validator/index fields; optional MongoDB sampling publishes only path types within row and byte limits. The `dbig-catalog-builder` package validates signed source bundles, publishes a sealed snapshot, distinguishes declared foreign keys from tentative references, and can review ambiguous candidates through a configured private vLLM endpoint with metadata-only Langfuse spans. Its model output is cited, validated weak evidence; model failure still publishes the deterministic snapshot as partial. The requester indexes and searches snapshots, asks a private model for cited catalogue answers, and dispatches signed scan requests through a scheduler directory or private collector HTTP. The planner consumes the same snapshot plus observation files, separates observed lineage from candidate references, and returns bounded paths and reviewable SQL/MongoDB or unresolved cross-source plans. Current tests use synthetic drivers and a fake model; live database, GPU/model, scheduler, TLS proxy and telemetry deployment tests are still required.
+## Quickstart
 
-For local development, run `uv sync --locked --dev`, `uv run pytest`, and `uv build --all-packages`. At a source site, install only the matching collector extra (`postgresql`, `clickhouse`, or `mongodb`), set the configured connection JSON and signing key in the process environment, then run `dbig collect --config <source.toml> --out <new-bundle-directory>`. The config's `[source]` section requires `source_id`, `kind`, `connection_env`, `signing_key_env`, `signing_key_id`, and an allowed `namespaces` list. The collector refuses plaintext transport and records a partial bundle when stable source identity is unavailable. Never put credentials in TOML or shell arguments.
+<!-- verified: bce5fee -->
 
-Run `python scripts/supply_chain.py` to generate the CycloneDX SBOM and Markdown/JSON license reports under ignored `.data/supply-chain/`. The checked-in `supply-chain/licenses.json` records metadata for every pinned PyPI release in `uv.lock`; `python scripts/supply_chain.py --refresh` refreshes it when the lock changes. CI rejects missing or stale entries. Declarations reported by upstream packages are inventory evidence, not a legal conclusion; the MIT license for this repository and its five wheels is in `LICENSE` and each wheel's metadata.
+You need Python 3.12 and [uv](https://github.com/astral-sh/uv) 0.10 or later.
 
-For incremental catalog publication, run `dbig-builder assemble-incremental --config <builder.toml> --state <local-state.sqlite> --bundle <signed-bundle> --out <new-snapshot-dir>`. Later runs may omit `--bundle` to rebuild from retained receipts. The SQLite state stores only verified bundle paths and digests; keep those bundles available. A partial rescan retains the previous complete bundle for that source and marks the new snapshot partial, so missing objects in the partial scan do not become deletions. A later complete scan replaces that source's active bundle.
+```bash
+uv sync --locked --all-extras --dev
+uv run pytest
+```
 
-Planner lineage paths accept catalog object IDs or field IDs. Explicit OpenLineage job, dataset and column facets can establish mapped field paths; a defined JobEvent is labeled `defined`, and a completed RunEvent is labeled `observed`. Field lineage remains separate from candidate joins, and the planner refuses to turn a lineage path into a query plan.
+To catalogue your own databases, follow [docs/LOCAL_RUN.md](docs/LOCAL_RUN.md). It covers read-only accounts, TLS, secrets, the commands and how to read the page. Example configurations are in [examples/local](examples/local).
 
-Build a snapshot with `dbig-builder assemble --config <builder.toml> --bundle <bundle-dir> --out <new-snapshot-dir>`; run `dbig-requester index --config <requester.toml>` and `dbig-requester search --config <requester.toml> --query orders`. The requester configuration supplies the snapshot and local state directories and an API key environment reference; `[requester.answer]` and `[requester.scan]` enable private answers and scan dispatch. `dbig-requester serve --config <requester.toml> --host 127.0.0.1 --port <port>` serves the private REST API. At a source site, `dbig accept-scan` or `dbig serve` accepts signed scan requests and `dbig process-scans` runs queued work. The signed scheduler bundle consists of a `request.json` inside a new request-ID directory at the configured handoff root.
+## Worked example
 
-Create a planner graph with `dbig-planner build --snapshot <snapshot-dir> --observations <jsonl-dir> --out <graph-dir> [--mapping <dataset-map.json>]`; query it with `dbig-planner lineage-paths` or `join-paths --graph <graph-dir> --from <object-id> --to <object-id> --json`, then `dbig-planner plan --graph <graph-dir> --path-id <returned-id> --json`. Observation JSONL records have `kind: sql` with a source ID, dialect, SQL text, timezone-aware timestamp and executed/defined status; or `kind: pipeline` with catalog input/output object IDs and status. OpenLineage RunEvents with `COMPLETE` and JobEvents require explicit dataset-to-catalog mapping in `dataset_to_object_id`; ambiguous outputs and unresolved SQL produce diagnostics. Raw SQL is parsed but never stored in the derived graph. `dbig-planner serve --config <planner.toml> --host 127.0.0.1 --port <port>` provides its separate REST API. Both APIs bind only to loopback and require a private TLS proxy for remote access.
+<!-- verified: bce5fee -->
 
-The selected LLM stack is vLLM for private GPU serving, LangGraph for the builder's fixed review workflow, and self-hosted Langfuse for metadata-only visibility. The requester also calls the private vLLM endpoint for grounded catalogue questions. The planner is deterministic and makes no LLM call. Top-level LangChain and LangGraph Swarm remain deferred. The exact GPU, model revision, service versions and telemetry infrastructure must be validated before deployment.
+This builds a snapshot from the synthetic bundle that the tests keep in `tests/golden/ir-v1`, then searches it. The key below is the public test key for that fixture, not a credential.
 
-## Run it against your databases
+```bash
+mkdir -p /tmp/dbig-example
+cat > /tmp/dbig-example/builder.toml <<'EOF'
+[builder]
+signing_keys = { golden = "DBIG_SIGNING_KEY" }
+EOF
+cat > /tmp/dbig-example/requester.toml <<'EOF'
+[requester]
+snapshot_dir = "/tmp/dbig-example/snapshot"
+state_dir = "/tmp/dbig-example/state"
+api_key_env = "REQUESTER_TOKEN"
+EOF
+export DBIG_SIGNING_KEY=golden-fixture-key-not-a-credential
+uv run dbig-builder assemble --config /tmp/dbig-example/builder.toml \
+  --bundle tests/golden/ir-v1/collector-bundle --out /tmp/dbig-example/snapshot
+uv run dbig-requester index --config /tmp/dbig-example/requester.toml
+uv run dbig-requester search --config /tmp/dbig-example/requester.toml --query customers
+```
 
-[docs/LOCAL_RUN.md](docs/LOCAL_RUN.md) takes you from a fresh clone to a readable HTML catalogue
-of your PostgreSQL, ClickHouse and MongoDB databases: read-only accounts, TLS with a company CA,
-the three commands, how to read the page, and optional review by your own vLLM. Example
-configurations are in [examples/local](examples/local).
+The search returns the table `customers` and its field `id` from source `golden-site`. The snapshot is `partial` because the fixture bundle carries a diagnostic. `assemble` refuses an existing `--out` directory, so delete `/tmp/dbig-example` to run it again.
 
-[docs/LIVE_TEST.md](docs/LIVE_TEST.md) is the checklist for the first live run on your own
-databases and vLLM, what to report back, and a prompt for a local agent to carry it out.
+## Results
 
-[docs/plans/CATALOGUE_FIXES_IMPLEMENTATION_PLAN.md](docs/plans/CATALOGUE_FIXES_IMPLEMENTATION_PLAN.md) is the plan for fixing what the live test found (`artifacts/engineer-fixes.md`) with an unattended cloud routine; [docs/plans/catalogue-fixes/LAUNCH.md](docs/plans/catalogue-fixes/LAUNCH.md) is the one-time setup.
+<!-- verified: bce5fee -->
 
-## Developer setup
+One live run on real PostgreSQL 16.15, ClickHouse 26.8.2.7 and MongoDB 7.0.41 databases, plaintext on loopback, 2026-10-06 to 2026-10-12, at commit `2e87fa7` (an ancestor of `main`). Source: [artifacts/live-test-report.md](artifacts/live-test-report.md).
 
-1. Install Python 3.12+, Git, [Graphify](https://github.com/Graphify-Labs/graphify), [Graft](https://github.com/trailhq/Graft), and [Codebase Memory MCP](https://github.com/DeusData/codebase-memory-mcp) at the **exact pinned versions**: Graphify 0.9.103, Graft 0.29.0, Codebase Memory MCP 0.12.1. These are declared once in `pyproject.toml` under `[tool.dbig.graph-tools]`; `scripts/graph_sync.py` refuses to index with any other version and names the install command to run, and `python scripts/ci_check.py` refuses a workflow that installs a different one. Install with `python -m pip install graphifyy==0.9.103 codebase-memory-mcp==0.12.1` and `npm install --global @nanonets/graft@0.29.0` (the `graphify` command ships in the `graphifyy` distribution).
-2. Install [uv](https://github.com/astral-sh/uv) **0.10.0 or later**. `pyproject.toml` declares `[tool.uv] required-version = ">=0.10.0"`, so an older uv refuses to run in this workspace. The floor exists because `scripts/supply_chain.py` exports the CycloneDX SBOM with `uv export --format cyclonedx1.5`, a preview format that uv 0.9.0 and earlier reject. CI installs one exact pinned uv version, and `python scripts/ci_check.py` fails if any workflow leaves `astral-sh/setup-uv` unpinned or pins a uv below that floor.
-3. Clone the repository and run `python scripts/install_hooks.py` from its root. Git does not propagate local hook configuration through a clone.
-4. Copy `.env.example` to `.env` and fill local values. `.env` is ignored by Git. Source credentials must be supplied through the approved secret store or process environment, never committed.
-5. Run `python scripts/graph_sync.py --check-tools` to verify graph commands are on `PATH`.
-6. Before implementation, read `TECHNICAL_IMPLEMENTATION.md` and keep `TODO.md` open and updated after each meaningful change.
+| Check | Result |
+| --- | --- |
+| Test suite on the tested code | 477 passed, 69 skipped, 0 failed |
+| Read-only accounts refuse writes | pass |
+| Catalogue of the three sources | `complete`, 48 objects, 1,035 fields |
+| Counts, names and types match the databases | pass |
+| Proposed relationships | 5 true, 16 false of 21; 40 confirmed relationships missing |
+| Searches | 4 of 5 pass |
+| Natural-language questions | 0 of 30 answered |
+| TLS | not tested |
 
-## Commit and CI policy
+Performance at 10 sources, 200 objects and 1,000 fields is in [ARCHITECTURE.md](ARCHITECTURE.md#performance).
 
-The **pre-commit** hook refreshes Graphify, Graft, and Codebase Memory and aborts on any failure. The **post-commit** hook refreshes them again against the committed tree. This ordering matters: a post-commit hook alone cannot reject a commit already written. Graph caches are local regeneration products; CI rebuilds them and enforces freshness. GitHub currently denies branch protection/rulesets for this private repository on the account plan, so CI is visible but cannot be made a mandatory remote merge gate. The owner chose to keep the repository private and rely on local hooks plus inspected CI results.
+## Limits
 
-## Licenses and upstream tools
+<!-- verified: bce5fee -->
 
-Apache-2.0 and MIT are free for small and commercial uses. [DataHub](https://github.com/datahub-project/datahub) is Apache-2.0 and usable as a reference or integration target; its complete platform is outside this project's chosen scope. [OpenMetadata](https://github.com/open-metadata/OpenMetadata) has different terms for its `ingestion/` subtree, so the project does not embed that code under its permissive-core policy. Full reasoning and citations are in the research document.
+- The relationship proposals are weak on real data. Treat each as a candidate to review, not as a fact.
+- Executed lineage is unavailable until you choose a source of query history. OpenLineage events work (a completed run is `executed`, a job event is `defined`).
+- A cross-source plan stays `unresolved` until you configure a staging target.
+- The model features need a private vLLM server. No GPU host has passed the acceptance gate.
+- The services bind to loopback only. Remote access needs your own TLS proxy.
+- Only the database versions that CI runs are supported.
 
-[Amundsen](https://github.com/amundsen-io/amundsen) is Apache-2.0 but its repository was archived in September 2026; use its ingestion/search architecture as a reference, not a v1 runtime dependency. [OpenLineage](https://github.com/OpenLineage/OpenLineage) is Apache-2.0 and supplies the run/job/dataset/facet event standard for planner import/export. Neither repository requires deploying its complete stack. The binding module boundaries and exact package decisions are in [TECHNICAL_IMPLEMENTATION.md](TECHNICAL_IMPLEMENTATION.md#17-independent-requester-and-planner-contract-approved-2026-09-23).
+The full guarantees and non-goals are in [ARCHITECTURE.md](ARCHITECTURE.md#guarantees-and-limits).
 
-The graph tools named above index **this source repository** for developers. They are not runtime dependencies of the Database Intelligence Graph Generator and are not the graph artifact delivered to its users.
+## License
+
+MIT. See [LICENSE](LICENSE). Licenses of the pinned dependencies are in `supply-chain/licenses.json`, produced by `scripts/supply_chain.py`.
+
+## Links
+
+- [ARCHITECTURE.md](ARCHITECTURE.md): how it fits together, runs and stores data.
+- [TECHNICAL_IMPLEMENTATION.md](TECHNICAL_IMPLEMENTATION.md): code map, algorithms, dated design decisions, developer setup.
+- [GLOSSARY.md](GLOSSARY.md): terms.
+- [docs/LESSONS.md](docs/LESSONS.md): approaches that failed.
+- [docs/LOCAL_RUN.md](docs/LOCAL_RUN.md) and [docs/LIVE_TEST.md](docs/LIVE_TEST.md): run it on your databases.
+- [THREAT_MODEL.md](THREAT_MODEL.md), [TODO.md](TODO.md), [ARCHITECTURE_RESEARCH.md](ARCHITECTURE_RESEARCH.md), [AGENTS.md](AGENTS.md).
