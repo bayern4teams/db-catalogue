@@ -162,9 +162,9 @@ docs:
     - grep Linux_64-bit vale_3.26.0_checksums.txt | sha256sum -c -
     - tar -xzf vale_3.26.0_Linux_64-bit.tar.gz vale && mv vale /usr/local/bin/
     - base=https://github.com/lycheeverse/lychee/releases/download/lychee-v0.24.2
-    - curl -fsSLO "$base/lychee-x86_64-unknown-linux-gnu.tar.gz" -O "$base/lychee-x86_64-unknown-linux-gnu.tar.gz.sha256"
-    - sha256sum -c lychee-x86_64-unknown-linux-gnu.tar.gz.sha256
-    - tar -xzf lychee-x86_64-unknown-linux-gnu.tar.gz --strip-components=1 lychee-x86_64-unknown-linux-gnu/lychee && mv lychee /usr/local/bin/
+    - curl -fsSLO "$base/lychee-x86_64-unknown-linux-musl.tar.gz" -O "$base/lychee-x86_64-unknown-linux-musl.tar.gz.sha256"
+    - sha256sum -c lychee-x86_64-unknown-linux-musl.tar.gz.sha256
+    - tar -xzf lychee-x86_64-unknown-linux-musl.tar.gz --strip-components=1 lychee-x86_64-unknown-linux-musl/lychee && mv lychee /usr/local/bin/
     - DOCS=$( (ls README.md ARCHITECTURE.md TECHNICAL_IMPLEMENTATION.md GLOSSARY.md docs/LESSONS.md AGENTS.md 2>/dev/null || true) | tr '\n' ' ')
     # C5 exception: reason: existing documents still have findings (prompt 2 fixes the prose);
     # approval: approved by the user 2026-11-07; review date: when prompt 2 lands. Then drop "|| true".
