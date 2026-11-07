@@ -113,8 +113,8 @@ jobs:
             postgres: postgres:18.6-alpine3.24
             clickhouse: clickhouse/clickhouse-server:26.9.10.4
             # MongoDB 8.x and 9.x refuse to start on runner kernels 6.19 to 7.0.13 (SERVER-121912,
-            # SERVER-125742); 7.0.x has no such guard. Exception to "always latest": approval pending
-            # (asked 2026-11-07); review when runners have kernel 7.0.14+, then return to 9.x.
+            # SERVER-125742); 7.0.x has no such guard. Exception to "always latest": approved by the user 2026-11-07
+            # ("Approve"); review when runners have kernel 7.0.14+, then return to 9.x.
             mongo: mongo:7.0.45-jammy
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
