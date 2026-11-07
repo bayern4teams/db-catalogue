@@ -138,7 +138,36 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check-tools", action="store_true")
     parser.add_argument("--pre-commit", action="store_true")
+    parser.add_argument(
+        "--post-commit", action="store_true", help="fast refresh; warn on failure, exit 0"
+    )
+    parser.add_argument(
+        "--session-start",
+        action="store_true",
+        help="refresh at session start; same as --post-commit",
+    )
     args = parser.parse_args()
+
+    if args.post_commit or args.session_start:
+        if os.environ.get("SKIP_INDEX_HOOK"):
+            return 0
+        # Warn-only mode: a stale graph must never block a commit or a session.
+        try:
+            strict = [sys.executable, str(Path(__file__).resolve())]
+            result = subprocess.run(strict, cwd=ROOT, capture_output=True, text=True)  # noqa: S603
+        except OSError as error:
+            print(f"warning: graph refresh did not start: {error}", file=sys.stderr)
+            return 0
+        if result.returncode != 0:
+            detail = (result.stderr.strip() or result.stdout.strip()).splitlines()
+            print(
+                "warning: graph refresh failed; fix with `python scripts/graph_sync.py` "
+                f"(strict mode shows the tool): {detail[-1] if detail else 'no output'}",
+                file=sys.stderr,
+            )
+        else:
+            print(result.stdout.strip().splitlines()[-1])
+        return 0
 
     missing = [name for name in TOOLS if shutil.which(executable(name)) is None]
     if missing:

@@ -62,3 +62,6 @@ artifacts/run-20261006-035124/*
 
 # Scratch for cloud agents (the tracked handoff files live in .handoff/)
 .tmp/
+
+# Vale style package: restored by `vale sync`
+.vale/styles/Google/

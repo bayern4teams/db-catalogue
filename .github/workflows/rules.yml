@@ -1,0 +1,32 @@
+name: Rule checks
+
+# AGENTS.md K4: C4 (no new TODO/FIXME in source) and J13 (a Docs: line per source commit).
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rule-check:
+    name: rule-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+      - name: Check what this change adds
+        env:
+          PR_BASE: ${{ github.base_ref }}
+          PUSH_BEFORE: ${{ github.event.before }}
+        run: |
+          if [ -n "$PR_BASE" ]; then base="origin/$PR_BASE"
+          elif [ -n "$PUSH_BEFORE" ] && ! echo "$PUSH_BEFORE" | grep -qE '^0+$' \
+               && git cat-file -e "$PUSH_BEFORE" 2>/dev/null; then base="$PUSH_BEFORE"
+          else base="origin/main"; fi
+          python scripts/rule_check.py --base "$base"

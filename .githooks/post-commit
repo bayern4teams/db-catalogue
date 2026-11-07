@@ -1,4 +1,5 @@
 #!/bin/sh
-set -eu
-cd "$(git rev-parse --show-toplevel)"
-python scripts/graph_sync.py
+# Warn-only refresh (rule E7): never fails the commit. SKIP_INDEX_HOOK=1 skips it.
+cd "$(git rev-parse --show-toplevel)" || exit 0
+python scripts/graph_sync.py --post-commit || echo "warning: post-commit graph hook could not run" >&2
+exit 0

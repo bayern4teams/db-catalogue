@@ -1,0 +1,56 @@
+name: Docs checks
+
+# AGENTS.md J12: markdownlint, link check, Mermaid syntax, Vale on the agent-guide documents.
+on:
+  pull_request:
+    paths: ['**.md', '.vale.ini', '.vale/styles/config/**', '.markdownlint-cli2.jsonc', '.puppeteer.json', 'scripts/mermaid_check.py', '.github/workflows/docs.yml']
+  push:
+    paths: ['**.md', '.vale.ini', '.vale/styles/config/**', '.markdownlint-cli2.jsonc', '.puppeteer.json', 'scripts/mermaid_check.py', '.github/workflows/docs.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  docs:
+    name: docs
+    runs-on: ubuntu-latest
+    env:
+      PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+      - name: Install pinned doc tools (release checksums verified)
+        run: |
+          npm install --global markdownlint-cli2@0.24.0 @mermaid-js/mermaid-cli@12.2.0
+          cd "$RUNNER_TEMP"
+          base=https://github.com/errata-ai/vale/releases/download/v3.26.0
+          curl -fsSLO "$base/vale_3.26.0_Linux_64-bit.tar.gz" -O "$base/vale_3.26.0_checksums.txt"
+          grep Linux_64-bit vale_3.26.0_checksums.txt | sha256sum -c -
+          tar -xzf vale_3.26.0_Linux_64-bit.tar.gz vale && sudo mv vale /usr/local/bin/
+          base=https://github.com/lycheeverse/lychee/releases/download/lychee-v0.24.2
+          curl -fsSLO "$base/lychee-x86_64-unknown-linux-gnu.tar.gz" -O "$base/lychee-x86_64-unknown-linux-gnu.tar.gz.sha256"
+          sha256sum -c lychee-x86_64-unknown-linux-gnu.tar.gz.sha256
+          tar -xzf lychee-x86_64-unknown-linux-gnu.tar.gz lychee && sudo mv lychee /usr/local/bin/
+      - name: Select the documents
+        run: |
+          files=$(ls README.md ARCHITECTURE.md TECHNICAL_IMPLEMENTATION.md GLOSSARY.md docs/LESSONS.md AGENTS.md 2>/dev/null)
+          echo "DOCS=$(echo $files)" >> "$GITHUB_ENV"
+      # C5 exception: reason: the existing documents still have findings (prompt 2 fixes the prose);
+      # approval: pending, asked on 2026-11-07; review date: when prompt 2 lands. Then remove
+      # continue-on-error from the next two steps.
+      - name: markdownlint
+        continue-on-error: true
+        run: markdownlint-cli2 $DOCS
+      - name: Vale
+        continue-on-error: true
+        run: vale sync && vale $DOCS
+      - name: Links (local files; external links are not fetched)
+        run: lychee --offline --no-progress $DOCS
+      - name: Mermaid blocks render
+        run: python scripts/mermaid_check.py $DOCS

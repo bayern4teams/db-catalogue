@@ -16,6 +16,9 @@ default:
 
 stages: [policy, checks]
 
+# rule-check and docs mirror .github/workflows/rules.yml and docs.yml (AGENTS.md K4, J12).
+# Not yet run on the GitLab runner: they only run on merge requests and the default branch.
+
 variables:
   UV_VERSION: "0.12.19"
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
@@ -42,8 +45,8 @@ graph-index:
     - apt-get update -qq && apt-get install -y -qq python3-pip >/dev/null
     - python3 -m pip install --quiet --break-system-packages "uv==${UV_VERSION}"
     - uv venv --python 3.12 /opt/graphs && . /opt/graphs/bin/activate
-    - uv pip install graphifyy==0.9.65 codebase-memory-mcp==0.12.1
-    - npm install --global @nanonets/graft@0.18.0
+    - uv pip install graphifyy==0.9.103 codebase-memory-mcp==0.12.1
+    - npm install --global @nanonets/graft@0.29.0
     - python scripts/graph_sync.py
 
 application-quality:
@@ -132,3 +135,40 @@ source-integration:
       tests/test_operator_errors.py tests/test_live_scans.py tests/test_live_shapes.py
   after_script:
     - for name in dbig-postgres dbig-clickhouse dbig-mongo; do echo "== $name"; docker logs "$name" 2>&1 | tail -50; done
+
+rule-check:
+  extends: .python
+  stage: policy
+  before_script: []
+  variables:
+    GIT_DEPTH: "0"
+  script:
+    - git fetch -q origin "+refs/heads/${CI_DEFAULT_BRANCH}:refs/remotes/origin/${CI_DEFAULT_BRANCH}"
+    - python scripts/rule_check.py --base "origin/${CI_DEFAULT_BRANCH}"
+
+docs:
+  stage: checks
+  needs: [repository-policy]
+  image: node:22-bookworm
+  rules:
+    - changes: ["**/*.md", ".vale.ini", ".vale/styles/config/**/*", ".markdownlint-cli2.jsonc", ".puppeteer.json", "scripts/mermaid_check.py"]
+  variables:
+    PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium
+  script:
+    - apt-get update -qq && apt-get install -y -qq python3 chromium curl >/dev/null
+    - npm install --global markdownlint-cli2@0.24.0 @mermaid-js/mermaid-cli@12.2.0
+    - base=https://github.com/errata-ai/vale/releases/download/v3.26.0
+    - curl -fsSLO "$base/vale_3.26.0_Linux_64-bit.tar.gz" -O "$base/vale_3.26.0_checksums.txt"
+    - grep Linux_64-bit vale_3.26.0_checksums.txt | sha256sum -c -
+    - tar -xzf vale_3.26.0_Linux_64-bit.tar.gz vale && mv vale /usr/local/bin/
+    - base=https://github.com/lycheeverse/lychee/releases/download/lychee-v0.24.2
+    - curl -fsSLO "$base/lychee-x86_64-unknown-linux-gnu.tar.gz" -O "$base/lychee-x86_64-unknown-linux-gnu.tar.gz.sha256"
+    - sha256sum -c lychee-x86_64-unknown-linux-gnu.tar.gz.sha256
+    - tar -xzf lychee-x86_64-unknown-linux-gnu.tar.gz lychee && mv lychee /usr/local/bin/
+    - DOCS=$(ls README.md ARCHITECTURE.md TECHNICAL_IMPLEMENTATION.md GLOSSARY.md docs/LESSONS.md AGENTS.md 2>/dev/null | tr '\n' ' ')
+    # C5 exception: reason: existing documents still have findings (prompt 2 fixes the prose);
+    # approval: pending, asked 2026-11-07; review date: when prompt 2 lands. Then drop "|| true".
+    - markdownlint-cli2 $DOCS || true
+    - vale sync && (vale $DOCS || true)
+    - lychee --offline --no-progress $DOCS
+    - python3 scripts/mermaid_check.py $DOCS

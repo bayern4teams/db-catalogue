@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python",
+            "args": ["scripts/graph_sync.py", "--session-start"],
+            "timeout": 120
+          }
+        ]
+      }
+    ]
+  }
+}
