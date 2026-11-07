@@ -39,10 +39,10 @@
     "evidence": "spdx-expression",
     "release_url": "https://pypi.org/pypi/cachecontrol/0.14.4/json"
   },
-  "certifi==2026.7.22": {
+  "certifi==2026.10.23": {
     "declaration": "MPL-2.0",
     "evidence": "legacy-license-field",
-    "release_url": "https://pypi.org/pypi/certifi/2026.7.22/json"
+    "release_url": "https://pypi.org/pypi/certifi/2026.10.23/json"
   },
   "charset-normalizer==3.5.1": {
     "declaration": "MIT",
@@ -89,10 +89,10 @@
     "evidence": "spdx-expression",
     "release_url": "https://pypi.org/pypi/fastapi/0.141.1/json"
   },
-  "filelock==4.0.1": {
+  "filelock==4.2.9": {
     "declaration": "MIT",
     "evidence": "spdx-expression",
-    "release_url": "https://pypi.org/pypi/filelock/4.0.1/json"
+    "release_url": "https://pypi.org/pypi/filelock/4.2.9/json"
   },
   "googleapis-common-protos==1.75.3": {
     "declaration": "Apache-2.0",
@@ -189,10 +189,10 @@
     "evidence": "spdx-expression",
     "release_url": "https://pypi.org/pypi/langgraph-prebuilt/1.1.0/json"
   },
-  "langgraph-sdk==0.4.5": {
+  "langgraph-sdk==0.4.14": {
     "declaration": "MIT",
     "evidence": "spdx-expression",
-    "release_url": "https://pypi.org/pypi/langgraph-sdk/0.4.5/json"
+    "release_url": "https://pypi.org/pypi/langgraph-sdk/0.4.14/json"
   },
   "langgraph==1.2.12": {
     "declaration": "MIT",
@@ -229,10 +229,10 @@
     "evidence": "classifier-review",
     "release_url": "https://pypi.org/pypi/mdurl/0.1.2/json"
   },
-  "msgpack==1.2.2": {
+  "msgpack==1.2.4": {
     "declaration": "Apache-2.0",
     "evidence": "spdx-expression",
-    "release_url": "https://pypi.org/pypi/msgpack/1.2.2/json"
+    "release_url": "https://pypi.org/pypi/msgpack/1.2.4/json"
   },
   "mypy-extensions==1.1.0": {
     "declaration": "MIT",
@@ -254,35 +254,45 @@
     "evidence": "legacy-license-field",
     "release_url": "https://pypi.org/pypi/openai/2.54.0/json"
   },
-  "opentelemetry-api==1.44.0": {
+  "opentelemetry-api==1.45.2": {
     "declaration": "Apache-2.0",
     "evidence": "spdx-expression",
-    "release_url": "https://pypi.org/pypi/opentelemetry-api/1.44.0/json"
+    "release_url": "https://pypi.org/pypi/opentelemetry-api/1.45.2/json"
   },
-  "opentelemetry-exporter-otlp-proto-common==1.44.0": {
+  "opentelemetry-exporter-http-transport==0.66b2": {
     "declaration": "Apache-2.0",
     "evidence": "spdx-expression",
-    "release_url": "https://pypi.org/pypi/opentelemetry-exporter-otlp-proto-common/1.44.0/json"
+    "release_url": "https://pypi.org/pypi/opentelemetry-exporter-http-transport/0.66b2/json"
   },
-  "opentelemetry-exporter-otlp-proto-http==1.44.0": {
+  "opentelemetry-exporter-otlp-common==0.66b2": {
     "declaration": "Apache-2.0",
     "evidence": "spdx-expression",
-    "release_url": "https://pypi.org/pypi/opentelemetry-exporter-otlp-proto-http/1.44.0/json"
+    "release_url": "https://pypi.org/pypi/opentelemetry-exporter-otlp-common/0.66b2/json"
   },
-  "opentelemetry-proto==1.44.0": {
+  "opentelemetry-exporter-otlp-proto-common==1.45.2": {
     "declaration": "Apache-2.0",
     "evidence": "spdx-expression",
-    "release_url": "https://pypi.org/pypi/opentelemetry-proto/1.44.0/json"
+    "release_url": "https://pypi.org/pypi/opentelemetry-exporter-otlp-proto-common/1.45.2/json"
   },
-  "opentelemetry-sdk==1.44.0": {
+  "opentelemetry-exporter-otlp-proto-http==1.45.2": {
     "declaration": "Apache-2.0",
     "evidence": "spdx-expression",
-    "release_url": "https://pypi.org/pypi/opentelemetry-sdk/1.44.0/json"
+    "release_url": "https://pypi.org/pypi/opentelemetry-exporter-otlp-proto-http/1.45.2/json"
   },
-  "opentelemetry-semantic-conventions==0.65b0": {
+  "opentelemetry-proto==1.45.2": {
     "declaration": "Apache-2.0",
     "evidence": "spdx-expression",
-    "release_url": "https://pypi.org/pypi/opentelemetry-semantic-conventions/0.65b0/json"
+    "release_url": "https://pypi.org/pypi/opentelemetry-proto/1.45.2/json"
+  },
+  "opentelemetry-sdk==1.45.2": {
+    "declaration": "Apache-2.0",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/opentelemetry-sdk/1.45.2/json"
+  },
+  "opentelemetry-semantic-conventions==0.66b2": {
+    "declaration": "Apache-2.0",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/opentelemetry-semantic-conventions/0.66b2/json"
   },
   "orjson==3.12.0": {
     "declaration": "MPL-2.0 AND (Apache-2.0 OR MIT)",
