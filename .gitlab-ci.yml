@@ -164,7 +164,7 @@ docs:
     - base=https://github.com/lycheeverse/lychee/releases/download/lychee-v0.24.2
     - curl -fsSLO "$base/lychee-x86_64-unknown-linux-gnu.tar.gz" -O "$base/lychee-x86_64-unknown-linux-gnu.tar.gz.sha256"
     - sha256sum -c lychee-x86_64-unknown-linux-gnu.tar.gz.sha256
-    - tar -xzf lychee-x86_64-unknown-linux-gnu.tar.gz lychee && mv lychee /usr/local/bin/
+    - tar -xzf lychee-x86_64-unknown-linux-gnu.tar.gz --strip-components=1 lychee-x86_64-unknown-linux-gnu/lychee && mv lychee /usr/local/bin/
     - DOCS=$(ls README.md ARCHITECTURE.md TECHNICAL_IMPLEMENTATION.md GLOSSARY.md docs/LESSONS.md AGENTS.md 2>/dev/null | tr '\n' ' ')
     # C5 exception: reason: existing documents still have findings (prompt 2 fixes the prose);
     # approval: pending, asked 2026-11-07; review date: when prompt 2 lands. Then drop "|| true".
