@@ -11,6 +11,7 @@ import hashlib
 import io
 import sys
 import tarfile
+import time
 import urllib.request
 from pathlib import Path
 
@@ -31,8 +32,15 @@ TOOLS = {
 def install(name: str, bin_dir: Path) -> None:
     tool = TOOLS[name]
     url = tool["url"].format(v=tool["version"])
-    with urllib.request.urlopen(url, timeout=60) as response:  # noqa: S310 # C5: reason=pinned https URL, checksum verified; approved=user, 2026-11-08; review=2027-05-08
-        data = response.read()
+    for attempt in range(1, 4):
+        try:
+            with urllib.request.urlopen(url, timeout=120) as response:  # noqa: S310 # C5: reason=pinned https URL, checksum verified; approved=user, 2026-11-08; review=2027-05-08
+                data = response.read()
+            break
+        except OSError as error:  # the release CDN times out now and then
+            if attempt == 3:
+                raise SystemExit(f"{name}: download failed ({error}). Re-run the job.") from error
+            time.sleep(10 * attempt)
     digest = hashlib.sha256(data).hexdigest()
     if digest != tool["sha256"]:
         raise SystemExit(f"{name}: checksum mismatch ({digest}). Not installed; re-check the pin.")
