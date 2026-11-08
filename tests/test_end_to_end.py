@@ -26,7 +26,7 @@ from test_builder import source_bundle
 
 BUNDLE_KEY = "synthetic-key-12345678901234567890"
 # Fixture data describing a statement someone else ran. This code never executes it.
-OBSERVED_INSERT_SELECT = "INSERT INTO customers SELECT * FROM orders"  # noqa: S608
+OBSERVED_INSERT_SELECT = "INSERT INTO customers SELECT * FROM orders"
 SCRIPTS = Path(sys.executable).parent
 
 

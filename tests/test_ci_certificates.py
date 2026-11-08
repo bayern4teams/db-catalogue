@@ -73,7 +73,7 @@ def test_the_generated_certificate_carries_a_loopback_address(certificates):
     """A DNS-only certificate would fail hostname checking against 127.0.0.1, which is the
     address every fixture is reached on."""
     text = certificates["cert"].read_bytes()
-    loaded = ssl._ssl._test_decode_cert(str(certificates["cert"]))  # noqa: SLF001
+    loaded = ssl._ssl._test_decode_cert(str(certificates["cert"]))
     names = {value for kind, value in loaded.get("subjectAltName", ()) if kind == "IP Address"}
     assert "127.0.0.1" in names
     assert b"BEGIN CERTIFICATE" in text

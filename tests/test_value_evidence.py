@@ -49,7 +49,7 @@ def _tokenising(**overrides) -> SourceConfig:
     defaults = {
         "sample_rows": 10,
         "value_token_key_env": "DBIG_TOKENISER",
-        "value_token_key_id": "run-1",  # noqa: S106 - key identifier, not a key
+        "value_token_key_id": "run-1",
     }
     return _config(**{**defaults, **overrides})
 
@@ -485,7 +485,7 @@ def _mongo_config(**overrides) -> SourceConfig:
         "signing_key_id": "test",
         "namespaces": ["shop"],
         "sample_rows": 10,
-        "value_token_key_env": "DBIG_TOKENISER",  # noqa: S106 - environment variable name
+        "value_token_key_env": "DBIG_TOKENISER",
         "value_token_key_id": "run-1",
     }
     return SourceConfig.model_validate({**defaults, **overrides})

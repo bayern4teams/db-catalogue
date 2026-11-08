@@ -34,7 +34,7 @@ from dbig_contracts.security import is_loopback_literal, secret_from_env
 from .config import SourceConfig
 
 
-class BudgetExhausted(RuntimeError):  # noqa: N818 - the established code name, kept for callers
+class BudgetExhausted(RuntimeError):
     """A configured query, object or field limit was reached before the scan finished.
 
     A `RuntimeError` with the message `BUDGET_EXHAUSTED`, as before, so existing handling keeps
@@ -1017,7 +1017,7 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
                     estimate = client[database][name].estimated_document_count(
                         maxTimeMS=config.read_timeout_seconds * 1000
                     )
-                except Exception:  # noqa: BLE001 - optional stats must not fail the metadata scan
+                except Exception:
                     tables["diagnostics.jsonl"].append(
                         Record.model_validate(
                             {

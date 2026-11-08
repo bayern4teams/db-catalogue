@@ -53,7 +53,7 @@ class Stub:
             def log_message(self, *_: object) -> None:
                 pass
 
-            def do_POST(self) -> None:  # noqa: N802 - http.server naming
+            def do_POST(self) -> None:
                 body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
                 stub.requests.append(
                     {"path": self.path, "auth": self.headers.get("Authorization"), "body": body}
@@ -187,7 +187,7 @@ def test_output_that_is_not_the_schema_is_refused(tmp_path, monkeypatch):
 def test_plain_http_is_only_for_a_loopback_literal(url):
     """A vLLM on another machine needs HTTPS; a name is refused because it could resolve
     anywhere. This is the rule the runbook tells operators about."""
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="private endpoint"):
         ReviewConfig(base_url=url, model="m", model_digest="d", api_key_env="MODEL_KEY")
 
 

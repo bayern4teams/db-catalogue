@@ -39,16 +39,16 @@ PLAINTEXT = {**CONNECTIONS, "clickhouse": {"host": "127.0.0.1", "port": 8123}}
 POSTGRES_SEED = (
     f"DROP SCHEMA IF EXISTS {NAMESPACE} CASCADE",
     f"CREATE SCHEMA {NAMESPACE}",
-    f"CREATE TABLE {NAMESPACE}.customers (id integer PRIMARY KEY, email text)",  # noqa: S608
+    f"CREATE TABLE {NAMESPACE}.customers (id integer PRIMARY KEY, email text)",
     f"INSERT INTO {NAMESPACE}.customers VALUES (1, 'a'), (2, 'b'), (3, NULL)",  # noqa: S608
     f"COMMENT ON TABLE {NAMESPACE}.customers IS 'Everyone who has bought something'",
     f"COMMENT ON COLUMN {NAMESPACE}.customers.email IS 'Contact address'",
     # A declared chain inside PostgreSQL, so a path from another engine runs through several
     # PostgreSQL tables in a row and the planner must join them in one query.
-    f"CREATE TABLE {NAMESPACE}.invoices (id integer PRIMARY KEY, "  # noqa: S608
+    f"CREATE TABLE {NAMESPACE}.invoices (id integer PRIMARY KEY, "
     f"customer_id integer REFERENCES {NAMESPACE}.customers(id))",
     f"INSERT INTO {NAMESPACE}.invoices VALUES (10, 1), (11, 2)",  # noqa: S608
-    f"CREATE TABLE {NAMESPACE}.invoice_lines (id integer PRIMARY KEY, "  # noqa: S608
+    f"CREATE TABLE {NAMESPACE}.invoice_lines (id integer PRIMARY KEY, "
     f"invoice_id integer REFERENCES {NAMESPACE}.invoices(id))",
     f"INSERT INTO {NAMESPACE}.invoice_lines VALUES (100, 10), (101, 10), (102, 11)",  # noqa: S608
     f"ANALYZE {NAMESPACE}.customers",

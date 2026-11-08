@@ -220,7 +220,7 @@ def test_a_scan_sent_over_private_http_runs_on_the_real_server(site):
         done = _process(site)
         assert done["status"] == "complete", done
         assert _bundle_objects(done["bundle_path"]) == {"accounts", "payments"}
-        status = urllib.request.Request(  # noqa: S310 - loopback fixture URL
+        status = urllib.request.Request(
             f"http://127.0.0.1:{site['port']}/v1/collector/scan-requests/http-1",
             headers={"Authorization": f"Bearer {COLLECTOR_TOKEN}"},
         )

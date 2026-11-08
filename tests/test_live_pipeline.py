@@ -42,9 +42,9 @@ CONNECTION = json.dumps(
 SEED_STATEMENTS = (
     f"DROP SCHEMA IF EXISTS {NAMESPACE} CASCADE",
     f"CREATE SCHEMA {NAMESPACE}",
-    f"CREATE TABLE {NAMESPACE}.customers (id integer PRIMARY KEY)",  # noqa: S608
+    f"CREATE TABLE {NAMESPACE}.customers (id integer PRIMARY KEY)",
     f"INSERT INTO {NAMESPACE}.customers VALUES (1), (2), (3)",  # noqa: S608
-    f"CREATE TABLE {NAMESPACE}.orders (id integer PRIMARY KEY, "  # noqa: S608
+    f"CREATE TABLE {NAMESPACE}.orders (id integer PRIMARY KEY, "
     f"customer_id integer REFERENCES {NAMESPACE}.customers(id))",
     f"INSERT INTO {NAMESPACE}.orders VALUES (1, 1), (2, 1), (3, 2)",  # noqa: S608
     f"ANALYZE {NAMESPACE}.customers",

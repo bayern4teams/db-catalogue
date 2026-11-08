@@ -121,7 +121,7 @@ def working_model() -> tuple[str, object]:
                 messages=[{"role": "user", "content": "reply with the single word ok"}],
                 max_tokens=16,
             )
-        except Exception as error:  # noqa: BLE001 - any failure means try the next model
+        except Exception as error:
             failures.append(f"{model}: {type(error).__name__}")
             continue
         print(f"\nlive model in use: {model}")

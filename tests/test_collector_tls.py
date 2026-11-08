@@ -26,7 +26,7 @@ SIGNING_KEY = "tls-test-signing-key-of-sufficient-length"
 MAKE_CERTS = Path(__file__).parents[1] / "scripts" / "make_ci_certs.py"
 
 
-class Connected(Exception):  # noqa: N818 - a sentinel, not an error condition
+class Connected(Exception):
     """Raised by a stand-in driver once it has recorded its arguments."""
 
 

@@ -63,7 +63,7 @@ def test_the_purpose_is_reported_so_the_operator_knows_which_secret(
 def test_a_refusal_never_contains_the_secret_value(monkeypatch: pytest.MonkeyPatch) -> None:
     """A blank-looking but non-empty value must still not be echoed into the error text."""
     monkeypatch.setenv("DBIG_TEST_SECRET", " ")
-    with pytest.raises(ValueError) as failure:
+    with pytest.raises(ValueError, match="is empty") as failure:
         secret_from_env("DBIG_TEST_SECRET", purpose="test")
     assert " " not in str(failure.value)
 

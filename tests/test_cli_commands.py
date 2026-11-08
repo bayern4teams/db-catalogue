@@ -25,7 +25,7 @@ from test_builder import source_bundle
 BUNDLE_KEY = "synthetic-key-12345678901234567890"
 SCAN_KEY = "synthetic-key-with-more-than-thirty-two-bytes"
 # Fixture data describing a query someone else ran. This code never builds or executes it.
-OBSERVED_JOIN = "SELECT * FROM orders JOIN customers ON orders.customer_id = customers.id"  # noqa: S608
+OBSERVED_JOIN = "SELECT * FROM orders JOIN customers ON orders.customer_id = customers.id"
 
 
 def _write(path: Path, text: str) -> Path:

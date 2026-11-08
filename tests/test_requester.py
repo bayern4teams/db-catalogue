@@ -203,8 +203,8 @@ def test_ask_never_falls_back_to_an_arbitrary_slice(tmp_path, monkeypatch):
     )
 
     class Unreachable:
-        class chat:  # noqa: N801 - mirrors the client's attribute path
-            class completions:  # noqa: N801
+        class chat:
+            class completions:
                 @staticmethod
                 def create(**_: object) -> None:
                     raise AssertionError("the model must not be called without a match")
@@ -272,8 +272,8 @@ def test_ask_retrieves_for_a_natural_question(tmp_path):
     seen: list[dict] = []
 
     class Recording:
-        class chat:  # noqa: N801 - mirrors the client's attribute path
-            class completions:  # noqa: N801
+        class chat:
+            class completions:
                 @staticmethod
                 def create(**kwargs: object) -> SimpleNamespace:
                     items = json.loads(kwargs["messages"][-1]["content"])["items"]  # type: ignore[index]
