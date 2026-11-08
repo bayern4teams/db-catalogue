@@ -244,7 +244,7 @@ def test_absent_setup_uv_step_does_not_silently_pass(
 # not install them, so the version comparison is exercised through a stubbed reporter.
 
 GRAPH_TOOLS = ("graphify", "graft", "codebase-memory-mcp")
-PINNED = {"graphify": "0.9.103", "graft": "0.29.0", "codebase-memory-mcp": "0.12.1"}
+PINNED = {"graphify": "0.9.104", "graft": "0.29.0", "codebase-memory-mcp": "0.12.1"}
 
 
 def load_graph_sync() -> ModuleType:
@@ -393,7 +393,7 @@ def test_a_mismatched_pypi_graph_tool_names_the_pip_command(
     monkeypatch.setattr(graph_sync, "reported_version", lambda name: versions[name])
     with pytest.raises(SystemExit) as failure:
         graph_sync.check_versions()
-    assert "python -m pip install graphifyy==0.9.103" in str(failure.value)
+    assert "python -m pip install graphifyy==0.9.104" in str(failure.value)
 
 
 def test_every_mismatched_graph_tool_is_reported_together(

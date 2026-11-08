@@ -42,7 +42,7 @@ jobs:
           uv run pip-audit
       - name: Refresh all developer graphs
         run: |
-          python -m pip install graphifyy==0.9.103 codebase-memory-mcp==0.12.1
+          python -m pip install graphifyy==0.9.104 codebase-memory-mcp==0.12.1
           npm install --global @nanonets/graft@0.29.0
           python scripts/graph_sync.py
       - name: Build wheel and source distribution

@@ -45,7 +45,7 @@ graph-index:
     - apt-get update -qq && apt-get install -y -qq python3-pip >/dev/null
     - python3 -m pip install --quiet --break-system-packages "uv==${UV_VERSION}"
     - uv venv --python 3.12 /opt/graphs && . /opt/graphs/bin/activate
-    - uv pip install graphifyy==0.9.103 codebase-memory-mcp==0.12.1
+    - uv pip install graphifyy==0.9.104 codebase-memory-mcp==0.12.1
     - npm install --global @nanonets/graft@0.29.0
     - python scripts/graph_sync.py
 
