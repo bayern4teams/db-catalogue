@@ -333,6 +333,7 @@ dependencies = [
     { name = "langfuse" },
     { name = "langgraph" },
     { name = "openai" },
+    { name = "pydantic" },
     { name = "rapidfuzz" },
 ]
 
@@ -343,6 +344,7 @@ requires-dist = [
     { name = "langfuse", specifier = ">=4,<5" },
     { name = "langgraph", specifier = ">=1.2,<2" },
     { name = "openai", specifier = ">=2,<3" },
+    { name = "pydantic", specifier = ">=2.11,<3" },
     { name = "rapidfuzz", specifier = ">=3.14,<4" },
 ]
 
@@ -355,6 +357,7 @@ dependencies = [
     { name = "dbig-contracts" },
     { name = "langfuse" },
     { name = "openai" },
+    { name = "pydantic" },
 ]
 
 [package.optional-dependencies]
@@ -370,6 +373,7 @@ requires-dist = [
     { name = "fastapi", marker = "extra == 'api'", specifier = ">=0.120,<1" },
     { name = "langfuse", specifier = ">=4,<5" },
     { name = "openai", specifier = ">=2,<3" },
+    { name = "pydantic", specifier = ">=2.11,<3" },
     { name = "uvicorn", marker = "extra == 'api'", specifier = ">=0.35,<1" },
 ]
 provides-extras = ["api"]
@@ -381,6 +385,7 @@ source = { editable = "packages/collectors" }
 dependencies = [
     { name = "click" },
     { name = "dbig-contracts" },
+    { name = "pydantic" },
 ]
 
 [package.optional-dependencies]
@@ -405,6 +410,7 @@ requires-dist = [
     { name = "dbig-contracts", editable = "packages/contracts" },
     { name = "fastapi", marker = "extra == 'api'", specifier = ">=0.120,<1" },
     { name = "pg8000", marker = "extra == 'postgresql'", specifier = ">=1.31,<2" },
+    { name = "pydantic", specifier = ">=2.11,<3" },
     { name = "pymongo", marker = "extra == 'mongodb'", specifier = ">=4.14,<5" },
     { name = "uvicorn", marker = "extra == 'api'", specifier = ">=0.35,<1" },
 ]
@@ -415,15 +421,11 @@ name = "dbig-contracts"
 version = "0.1.0"
 source = { editable = "packages/contracts" }
 dependencies = [
-    { name = "jsonschema" },
     { name = "pydantic" },
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "jsonschema", specifier = ">=4.25,<5" },
-    { name = "pydantic", specifier = ">=2.11,<3" },
-]
+requires-dist = [{ name = "pydantic", specifier = ">=2.11,<3" }]
 
 [[package]]
 name = "dbig-lineage-planner"
@@ -433,6 +435,7 @@ dependencies = [
     { name = "click" },
     { name = "dbig-contracts" },
     { name = "networkx" },
+    { name = "pydantic" },
     { name = "sqlglot" },
 ]
 
@@ -448,6 +451,7 @@ requires-dist = [
     { name = "dbig-contracts", editable = "packages/contracts" },
     { name = "fastapi", marker = "extra == 'api'", specifier = ">=0.120,<1" },
     { name = "networkx", specifier = ">=3.4,<4" },
+    { name = "pydantic", specifier = ">=2.11,<3" },
     { name = "sqlglot", specifier = ">=27,<29" },
     { name = "uvicorn", marker = "extra == 'api'", specifier = ">=0.35,<1" },
 ]
@@ -465,6 +469,7 @@ dev = [
     { name = "dbig-collectors", extra = ["api"] },
     { name = "dbig-contracts" },
     { name = "dbig-lineage-planner", extra = ["api"] },
+    { name = "jsonschema" },
     { name = "mypy" },
     { name = "pip-audit" },
     { name = "pytest" },
@@ -480,6 +485,7 @@ dev = [
     { name = "dbig-collectors", extras = ["api"], editable = "packages/collectors" },
     { name = "dbig-contracts", editable = "packages/contracts" },
     { name = "dbig-lineage-planner", extras = ["api"], editable = "packages/planner" },
+    { name = "jsonschema", specifier = ">=4.25,<5" },
     { name = "mypy", specifier = ">=1.18,<2" },
     { name = "pip-audit", specifier = ">=2.9,<3" },
     { name = "pytest", specifier = ">=9.0.3,<10" },

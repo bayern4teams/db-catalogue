@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import ast
+import importlib.metadata
 import re
 import subprocess
+import sys
 import tomllib
 from pathlib import Path
 
@@ -140,6 +143,67 @@ def _check_graph_tool_pins() -> None:
             )
 
 
+def _distribution(name: str) -> str:
+    return re.sub(r"[-_.]+", "-", name).lower()
+
+
+def _requirement_names(requirements: list[str]) -> set[str]:
+    return {_distribution(re.split(r"[\s<>=!~;\[(]", item, maxsplit=1)[0]) for item in requirements}
+
+
+def _import_dependency_problems(package: Path) -> list[str]:
+    """M4 for one package: imports and declared dependencies must match, in both directions."""
+    project = tomllib.loads((package / "pyproject.toml").read_text(encoding="utf-8"))["project"]
+    declared = _requirement_names(project.get("dependencies", []))
+    for extra in project.get("optional-dependencies", {}).values():
+        declared |= _requirement_names(extra)
+    source = package / "src"
+    own = {entry.name for entry in source.iterdir()}
+    # ponytail: an import name that no installed distribution provides is matched to the
+    # distribution of the same name; add an alias map if CI runs this outside `uv run`
+    # and a package's import name differs from its distribution name.
+    providers = importlib.metadata.packages_distributions()
+    imported: set[str] = set()
+    for path in source.rglob("*.py"):
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if isinstance(node, ast.Import):
+                modules = [alias.name for alias in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+                modules = [node.module]
+            else:
+                continue
+            imported |= {module.split(".")[0] for module in modules}
+    imported -= sys.stdlib_module_names | own
+    matched: set[str] = set()
+    problems = []
+    for top in sorted(imported):
+        # Namespace-style modules such as `langgraph` have several providers; one is enough.
+        hit = {_distribution(item) for item in providers.get(top, [top])} & declared
+        matched |= hit
+        if not hit:
+            problems.append(f"{package.name}: imports {top} but pyproject.toml does not declare it")
+    problems += [
+        f"{package.name}: declares {item} but no source file imports it"
+        for item in sorted(declared - matched)
+    ]
+    return problems
+
+
+def _check_import_dependencies() -> None:
+    """Keep each package's declared dependencies equal to what its source imports (M4)."""
+    problems = [
+        problem
+        for manifest in sorted((ROOT / "packages").glob("*/pyproject.toml"))
+        for problem in _import_dependency_problems(manifest.parent)
+    ]
+    if problems:
+        raise SystemExit(
+            "\n".join(problems)
+            + "\nFix: add the missing dependency to the package's pyproject.toml (then `uv lock`), "
+            "or remove the unused one."
+        )
+
+
 def main() -> None:
     missing = [name for name in REQUIRED if not (ROOT / name).is_file()]
     if missing:
@@ -190,6 +254,7 @@ def main() -> None:
 
     _check_uv_pins()
     _check_graph_tool_pins()
+    _check_import_dependencies()
 
     subprocess.run(("git", "diff", "--check"), cwd=ROOT, check=True)
     subprocess.run(("git", "diff", "--cached", "--check"), cwd=ROOT, check=True)

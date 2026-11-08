@@ -8,6 +8,7 @@ silently installs whatever uv is latest and makes that security gate irreproduci
 
 from __future__ import annotations
 
+import importlib.metadata
 import importlib.util
 import re
 import sys
@@ -436,3 +437,62 @@ def test_the_threat_model_cites_only_tests_that_exist() -> None:
         "THREAT_MODEL.md names tests that no longer exist, so those mitigations are "
         f"unevidenced: {missing}"
     )
+
+
+# --- M4: every import is a declared dependency, every declared dependency is used -----
+
+
+def make_package(
+    tmp_path: Path, dependencies: list[str], source: str, extras: dict[str, list[str]] | None = None
+) -> Path:
+    package = tmp_path / "pkg"
+    (package / "src" / "mod").mkdir(parents=True)
+    optional = "".join(f"{name} = {deps!r}\n" for name, deps in (extras or {}).items())
+    (package / "pyproject.toml").write_text(
+        f'[project]\nname = "dbig-example"\ndependencies = {dependencies!r}\n'
+        f"[project.optional-dependencies]\n{optional}".replace("'", '"'),
+        encoding="utf-8",
+    )
+    (package / "src" / "mod" / "code.py").write_text(source, encoding="utf-8")
+    return package
+
+
+def test_an_import_with_no_declaration_is_reported(ci_check: ModuleType, tmp_path: Path) -> None:
+    package = make_package(tmp_path, ["click>=8"], "import click\nimport pydantic\n")
+    assert ci_check._import_dependency_problems(package) == [
+        "pkg: imports pydantic but pyproject.toml does not declare it"
+    ]
+
+
+def test_a_declaration_nothing_imports_is_reported(ci_check: ModuleType, tmp_path: Path) -> None:
+    package = make_package(tmp_path, ["click>=8", "jsonschema>=4"], "import click\n")
+    assert ci_check._import_dependency_problems(package) == [
+        "pkg: declares jsonschema but no source file imports it"
+    ]
+
+
+def test_declared_and_used_dependencies_pass(ci_check: ModuleType, tmp_path: Path) -> None:
+    source = (
+        "from __future__ import annotations\nimport json\nfrom click import group\n"
+        "from . import x\nfrom mod import y\n"
+    )
+    assert ci_check._import_dependency_problems(make_package(tmp_path, ["click>=8"], source)) == []
+
+
+def test_an_optional_dependency_counts_as_declared(ci_check: ModuleType, tmp_path: Path) -> None:
+    package = make_package(tmp_path, [], "import pydantic\n", extras={"api": ["pydantic>=2"]})
+    assert ci_check._import_dependency_problems(package) == []
+
+
+def test_an_import_name_is_matched_to_its_distribution(
+    ci_check: ModuleType, tmp_path: Path
+) -> None:
+    """`yaml` is provided by PyYAML, so declaring `PyYAML` covers `import yaml`."""
+    package = make_package(tmp_path, ["PyYAML>=6"], "import yaml\n")
+    if "yaml" not in importlib.metadata.packages_distributions():
+        pytest.skip("PyYAML is not installed in this environment")
+    assert ci_check._import_dependency_problems(package) == []
+
+
+def test_every_package_in_the_repository_declares_what_it_imports(ci_check: ModuleType) -> None:
+    ci_check._check_import_dependencies()
