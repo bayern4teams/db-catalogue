@@ -19,6 +19,8 @@ after the user writes an answer there (§2.9). Independent work continues meanwh
 **Branch:** `feat/catalogue-fixes`, created from `claude/gracious-bardeen-x1y6he` (commit `2e87fa7`, the code the live test ran;
 `main` is 14 commits behind it) plus the report commit. Every agent works there and nowhere else (§2).
 
+**Phase 6 branch (2026-10-19, owner decision):** `fix/live-findings`, created from `verify/live-20261014` at `ec62d7b`. It carries everything above plus the live-verification fixes F1 to F4 and the evidence in `artifacts/run-20261014/`. Phase 6 builds the open live findings F5 to F13 there (§8, §9).
+
 **Live state lives in two files, not in any session:**
 [catalogue-fixes/HANDOFF.md](catalogue-fixes/HANDOFF.md) (status table, next action, escalations) and
 [catalogue-fixes/LOCAL_VERIFY.md](catalogue-fixes/LOCAL_VERIFY.md) (what the cloud could not prove).
@@ -38,7 +40,7 @@ sessions: the lead creates every subagent itself.
 These are CLAUDE.md's rules restated as the contract. The lead copies the relevant
 ones into every worker brief; a worker that was not told a rule is the lead's failure.
 
-2.1 **One branch.** `feat/catalogue-fixes` only. Never `git checkout` another branch,
+2.1 **One branch.** `fix/live-findings` only (Phase 6; Phases 0 to 5 ran on `feat/catalogue-fixes`, which is now history and never touched). Never `git checkout` another branch,
 merge, rebase, delete or force-push. Worktree isolation is not used: lanes own
 disjoint files (§3.3), so one working tree is safe.
 
@@ -91,7 +93,7 @@ record each discovery, decision and completion).
 
 2.6 **Known traps.**
 - **CI does not run on a push to this branch** (`ci.yml` triggers on pull requests, pushes to `main` and `workflow_dispatch`). Start it with
-  `gh workflow run ci.yml --ref feat/catalogue-fixes`, then `gh run list --workflow ci.yml --branch feat/catalogue-fixes` and `gh run watch`.
+  `gh workflow run ci.yml --ref fix/live-findings`, then `gh run list --workflow ci.yml --branch fix/live-findings` and `gh run watch`.
   The live suites (`tests/test_live_*.py`) skip locally and run only in CI's `source-integration` and `source-integration-latest` jobs, so a
   local green is not enough for any item that touches collectors, plans or scans: read the CI result per job.
 - **Python 3.12 is pinned** (`.python-version`); 3.13 fails `tests/test_ci_certificates.py`. Use `uv ... --python 3.12`.
@@ -107,7 +109,7 @@ only proof is an independent score. The scorer/acceptance check is written *befo
 the implementation, by the verifier (§4), never fitted afterwards.
 
 2.8 **Environment.** `bash scripts/cloud_setup.sh` (the supervisor runs it when a tool is missing) installs the three graph tools at
-the project's pins (graphify 0.9.65, graft 0.18.0, codebase-memory-mcp 0.11.0) and bootstraps with
+the project's pins (graphify 0.9.65, graft 0.18.0, codebase-memory-mcp 0.12.1) and bootstraps with
 `uv sync --locked --all-packages --all-extras --dev --python 3.12` (uv 0.12.19, the CI pin). Whether the cloud image has `uv` and Python 3.12
 was not verified when this plan was written; the dry-run tick records it. No `.env`, no database credentials, no model key exist in the cloud
 and none may be created: tests use throwaway test values from `tests/` and `.env.example` placeholders only. Network access is Full so `uv`, `pip-audit`
@@ -233,7 +235,7 @@ dry-run tick fails, fall back to an attended session with the same protocol).
   until the limit stops the session. Nothing is lost because everything is committed per
   step. If a usage percentage *is* readable (local `get_usage`), stop at ≥ 90 %: finish the
   commit, write `HANDOFF.md`, push.
-- **Supervisor.** A scheduled cloud routine (cron `0 * * * *`, branch `feat/catalogue-fixes`)
+- **Supervisor.** A scheduled cloud routine (cron `0 * * * *`, branch `fix/live-findings`)
   (created in the claude.ai Routines UI with the repo and GitHub connector — a routine made from
   inside a session has no repo) starts a fresh session whose prompt is
   [catalogue-fixes/SUPERVISOR.md](catalogue-fixes/SUPERVISOR.md). It exits
@@ -241,9 +243,9 @@ dry-run tick fails, fall back to an attended session with the same protocol).
   action is "done" or "waiting for the user"; or `Lock` is younger than 75 minutes (another
   session is alive). Otherwise it takes the lock and acts as **lead** for as long as it can.
   An idle tick costs almost nothing, so hourly resumes soon after each window reset.
-- **Phases chain automatically** once the user sets `Autonomy: unattended-through-phase-4`:
+- **Phases chain automatically** once the user sets `Autonomy: unattended-through-phase-5`:
   the phase gate (§8) must pass, including a green CI run on the pushed head, before
-  `HANDOFF.md` advances to the next phase. After Phase 4 the supervisor stops and never merges.
+  `HANDOFF.md` advances to the next phase. After the last authorised phase the supervisor stops and never merges.
 - **Never lose an item.** Commit `WIP <id>` before any long operation. A session that finds
   uncommitted work or a stale lock inspects `git status`, finishes or discards it deliberately,
   and records which in `HANDOFF.md`.
@@ -267,7 +269,7 @@ uv build --all-packages && python scripts/package_isolation.py
 python scripts/graph_sync.py          # or the §2.2 cloud exception
 ```
 
-Then push and start CI: `gh workflow run ci.yml --ref feat/catalogue-fixes`; the phase gate needs every job green on the pushed head.
+Then push and start CI: `gh workflow run ci.yml --ref fix/live-findings`; the phase gate needs every job green on the pushed head.
 
 **Hard ordering from the report and the code (the DAG):**
 - `builder.py` is one serial lead chain: D3, then A1/D2/D9, then (after answers) DEC-12, DEC-2, DEC-1, DEC-3. `render.py` is shared by C2, D1b and A1's page text: serial, lead.
@@ -277,7 +279,7 @@ Then push and start CI: `gh workflow run ci.yml --ref feat/catalogue-fixes`; the
 - The first-listed Phase 1 items change no inference output and need no decision.
 
 - **Phase 0 — baseline and ownership (lead only; no feature code).** Run the full check and record per-stage result and time (expected on the
-  tested code: `pytest` 477 passed, 69 skipped, about 40 s; CI green on `2e87fa7`). Start CI on the branch head and record it. Record the §2.4 grep
+  tested code: `pytest` 478 passed, 68 skipped in the cloud (about 80 s) and 477 passed, 69 skipped on the user's machine, which has no system CA bundle for the one test that needs it; CI green on `2e87fa7`). Start CI on the branch head and record it. Record the §2.4 grep
   baseline. Lock the file-ownership table with `graphify affected` per item and write it into `HANDOFF.md`. A verifier builds synthetic fixtures under
   `tests/catalogue_fixes/` reproducing each failure *shape* with planted ground truth: lowercase no-separator names (`xid` style), camelCase
   columns, plural words, two sources whose key columns share no values, a source whose key columns share some, a stub model reproducing each B1/C1
@@ -300,6 +302,23 @@ Then push and start CI: `gh workflow run ci.yml --ref feat/catalogue-fixes`; the
   whole branch diff, `/ponytail-audit`, `/ponytail-debt`, `/ponytail-gain`; every `HANDOFF.md` row has a lead verdict; finalise `LOCAL_VERIFY.md`;
   update `TECHNICAL_IMPLEMENTATION.md`, `docs/` and `TODO.md` for changed behaviour; purge `.handoff/` after folding its verdicts into a short final
   report; `[Catalogue fixes COMPLETE]`. **Stop. Never merge.**
+
+- **Phase 5 — cloud hardening and hand-over to local (added 2026-10-13 at the user's request).** Everything the cloud can still test or implement, then a clear hand-over.
+  Items H0 to H8 (§9). Starts when Phase 4 is done and the user has set `Autonomy: unattended-through-phase-5`. It ends in `READY FOR LOCAL VERIFY`, not in
+  "complete": the Next action becomes `READY FOR LOCAL VERIFY - waiting for the user`, and the commit and the Notifications entry start with
+  `[READY FOR LOCAL VERIFY]`. Never merge.
+
+- **Phase 6 — the open live findings F5 to F13 (added 2026-10-19 at the owner's request).**
+  - **Source of truth:** [`artifacts/run-20261014/leader/LEAD_REVIEW.md`](../../artifacts/run-20261014/leader/LEAD_REVIEW.md). Its "Verdicts" table and its "Changed or new recommendations" are what to build; `FIX_PROPOSALS.md` gives background only, and where the two differ, `LEAD_REVIEW.md` wins.
+  - **Decisions:** answered by the owner on 2026-10-19 (DEC-18 to DEC-21 in `HANDOFF.md`).
+  - **Items:** P6-0 to P6-11 (§9).
+  - **Start:** when the owner sets `Autonomy: unattended-through-phase-6`.
+  - **Order (the DAG):**
+    - `packages/collectors/src/dbig_collectors/runtime.py` is one serial chain: P6-1 (F5 collector), then P6-3 (F7), then P6-6 (F9).
+    - `builder.py` is one serial chain: P6-2 (F5 builder), then P6-4 (F10).
+    - The requester is one serial chain: P6-7 (F11), then P6-8 (F12), then P6-9 (F13), because all three touch `answer.py` or `search.py`.
+    - P6-5 (F8) is independent.
+  - **End:** the regression gate P6-10, then the hand-over P6-11 in `READY FOR LOCAL VERIFY`, exactly like H8. Never merge.
 
 ### Phase gate (end of every phase)
 
@@ -372,6 +391,147 @@ what B1 fixed, that a reasoning model needs a larger `max_tokens` and a longer `
 | DEC-12 | B5, X1 | Extend the `key_name` rule to a **measured-unique** parent column (identical, non-generic column name), so `companyindustry.classificationid` links to `industryclassification.classificationid`; the user's 2026-10-05 decision admitted it only for **declared** keys. With sampling on, the A1 overlap check guards it | `builder.py` | yes |
 
 *Accept for every Phase 3 item:* the Decision's check from `engineer-fixes.md` as a synthetic test that fails on the old code; the 20 harder questions re-run is `unverified-live`.
+
+### Phase 5 (cloud hardening; lead chain, verifiers in parallel up to the cap)
+
+**H0 — coverage audit.** Map every sentence of the *Proposal* and *Check* of each item A1 to D9 in `artifacts/engineer-fixes.md`, and each Decision's built scope, to a
+commit and a test, or to an explicit "not built because <Decision answer / ceiling / needs live>". Write the table to `PHASE5_REPORT.md`. Any gap that the cloud can implement and
+that needs no choice from the user is implemented now (with its test); a gap that needs a choice becomes a Decision row and `blocked` (plan §2.9) while the rest continues.
+
+**H1 — independent attack on every Phase 3 item** (C2, DEC-1, DEC-2, DEC-3, DEC-4, DEC-5, DEC-6, DEC-7, DEC-8, DEC-9, DEC-10, DEC-12, E1; they had only the lead's own tests). One
+`catalogue-fixes-verifier` per group, at most two at a time: (a) inference and planner: DEC-12, DEC-2, DEC-1, DEC-3, DEC-4, C2; (b) answering and retrieval: DEC-5, DEC-6, DEC-7, DEC-8, DEC-9;
+(c) DEC-10, E1 and the error codes. The verifier derives its checks **from `engineer-fixes.md` and the Decision text only, before opening the implementation**, writes them under
+`tests/catalogue_fixes/` (attack files stay not collected by default; the lead runs them by path), then attacks the result. For every item it also shows, by reverting the item's
+change on a scratch copy, that its negative case fails without the change (mutation proof). Lead decides ACCEPT or REJECT; a rejected item is corrected and re-attacked, at most two rounds, then the lead takes over.
+
+**H2 — regression of everything earlier.** Run all attack files of Phases 0 to 2 and 5 by path, the Phase 0 fixtures (no leftover strict `xfail` that now passes, none removed without a note),
+the full suite, and `pip-audit`; all green on the final code.
+
+**H3 — report-shaped synthetic end-to-end scenario with planted ground truth** (counts only). Three synthetic sources mirroring the report's failure shapes: two datasets whose key columns share no values; a
+PostgreSQL-like schema with no declared keys and lowercase names without separators; a ClickHouse-like schema with camelCase columns and a declared sorting key; a MongoDB-like schema with a
+schema-description collection. Run it through assemble, render, index, search, `ask` against the recording stub, `join-paths` and `plan`, with value sampling on and off. Report in `PHASE5_REPORT.md`: candidates true/false/missed against the planted
+truth (before = the behaviour recorded in `PHASE0_REPORT.md`), join paths found for the analogues of J1 to J4 and X1, retrieval recall in the top 10 for planted analogues of the 20 questions, and every `partial` reason shown. If it needs
+real containers, say so and use the CI `source-integration` jobs only through an existing test file; changing `ci.yml` is a Decision.
+
+**H4 — privacy canaries.** Plant a canary string as a sampled value, SQL literal, secret and prompt text. Assert it appears in no artifact, log, diagnostic, error message, `partial_reasons` entry, trace,
+`cited` field, or request body sent to the stub model (only names, types and evidence numbers are allowed there), across the review batches (DEC-10), the relationship context (DEC-5), resolved cited names
+(DEC-9), the weak key claim (DEC-2) and the new error codes.
+
+**H5 — documentation and example audit.** Every changed or new config key, error code (`NOT_ESTABLISHED_BY_CATALOGUE`, the C1 codes, `STALE_INDEX`), CLI behaviour and schema field appears, with its default, in `docs/LOCAL_RUN.md`,
+`docs/LIVE_TEST.md`, `examples/local/*.toml` (commented) and `TECHNICAL_IMPLEMENTATION.md`. Run every documented command that can run in the cloud against fixtures; list the rest in `LOCAL_VERIFY.md`. Fix the "Final integration" row and any other stale text in `HANDOFF.md` and `TODO.md`.
+
+**H6 — `LOCAL_VERIFY.md` as one ordered run for the user.** Top section "Start here": pull, `uv sync` with the pinned graph tools note, `dbig-requester index`, the exact sampling config snippet to turn on value overlap in all three source configs, the recommended `max_tokens` and
+`timeout_seconds` for the reasoning model from the report's measurements, then one numbered list of live checks, each with its command, the report's *before* value and the expected *after*. End with a "send back" template (counts and names only, no values, no secrets) shaped like the live report's section 13.
+
+**H7 — final gate.** Full check, CI dispatched on the final head and green in every job, `/ponytail-review` of the Phase 5 diff, `/ponytail-debt`, graphs refreshed, `FINAL_REPORT.md` updated with Phase 5 results and the coverage table.
+
+**H8 — hand-over.** Next action `READY FOR LOCAL VERIFY - waiting for the user`; the Notifications entry and the commit start with `[READY FOR LOCAL VERIFY]` and say, in at most ten lines: what the cloud proved, what is `unverified-live`, any Decision still open, and the first three commands to run locally. Clear the lock, push, try the push-notification tool (it may not reach the user). Stop.
+
+### Phase 6 (live findings; owner decisions of 2026-10-19 in `HANDOFF.md` DEC-18 to DEC-21)
+
+Evidence for every item is in `artifacts/run-20261014/` (read-only); the numbers below come from `LEAD_REVIEW.md` and its `lead-review-*.json`. Every item follows the usual rules:
+- the verifier writes the check before the change;
+- a mutation proof shows the check fails without the change;
+- no corpus literal appears in `packages/*/src` (§2.4);
+- a new value lives in a validated config field with a documented default.
+
+**P6-0 — baseline.** Run the full check and the attack files by path. The known failures are 37, explained in `PHASE5_REPORT.md` H2; record any other, with its cause. Then:
+- run the H4 canaries;
+- dispatch CI on the branch head (`gh workflow run ci.yml --ref fix/live-findings`) and record the run;
+- record the §2.4 grep baseline;
+- lock the file-ownership table for Phase 6 in `HANDOFF.md`.
+
+**P6-1 — F5 collector: say whether a sample is complete** (`runtime.py` `_tokenize_postgresql` line ~211, the MongoDB token path line ~1188; `dbig_contracts/models.py` `ValueTokens` line 178).
+- **Field:** each `ValueTokens` gains `complete: bool`, true when the read returned fewer rows than `sample_rows`. For MongoDB it must also be false when `max_sample_bytes` cut the read.
+- **Schema:** the field is additive (`extra=allow`; an old reader ignores it). Regenerate the schemas; the golden files change only if a fixture samples.
+- **Accept:**
+  - a table with fewer rows than `sample_rows` gives `complete: true`;
+  - a larger table gives `false`;
+  - a MongoDB source stopped by `max_sample_bytes` gives `false`.
+
+**P6-2 — F5 builder: a zero is a measurement only against a complete parent; compare capped sets within their common hash range** (`builder.py` `_overlap` line 296, the drop at lines 688-698).
+- **(a) The drop:** a `value_containment` with 0 shared drops the candidate only when the parent's `complete` is true. Otherwise the evidence keeps the zero and says "parent sampled, a zero is not a measurement", under its own reason code.
+- **(b) Capped sets:** when either side is `truncated`, compare only hashes at or below the smaller of the two sides' largest kept hash (each side's own largest if truncated, no bound if not). Support is counted inside that range, against `min_token_support`. The kept hashes are the smallest of a keyed hash (`_capped_tokens` sorts), so they form a coordinated bottom-k sketch.
+- **(c) What does not change:** the decision is built on the parent's `complete` flag, not on `truncated`; the existing "a capped parent never drops" guard is replaced by (a) and (b) together. A missing `complete` (an old bundle) counts as false.
+- **Accept, on synthetic data shaped like the live evidence:**
+  - a 3,940-key parent read as 100 rows plus a 17-value true child: not dropped;
+  - the same parent complete and capped at 256, with a disjoint 93-value child: dropped when the range holds at least `min_token_support` values, otherwise "not measured";
+  - the same with a true child: kept with a number;
+  - a 25% overlap: kept with a number;
+  - mutation proof for (a) and (b);
+  - the existing `test_a1_overlap.py` and `attack2_a1_overlap.py` expectations are re-checked, and any that flips is flipped on purpose and named in the commit.
+- **Live:** with the owner's settings (DEC-19), 0 true pairs dropped and the 16 known-wrong dropped (replayed in `lead-review-drop-replay-21.json`).
+
+**P6-3 — F7 ClickHouse value hashes** (`runtime.py`, new `_tokenize_clickhouse` beside `_tokenize_postgresql`).
+- **The read:** one bounded read per table, `SELECT <columns> FROM <db>.<table> LIMIT <sample_rows>`, with identifiers from the server's own catalog through `_quoted`, `max_execution_time` from the config, the read charged to the budget, and `sample_method = first_rows_limit:<n>`.
+- **The hashes:** made with the same `_value_tokens`, `_token_text`, key and key id as PostgreSQL and MongoDB, with `complete` as in P6-1.
+- **Skipped columns:** nested types (`_NESTED_TYPE`) are skipped, as the probe does.
+- **Accept:**
+  - a unit test with a fake client: the query shape, no `SELECT *`, the row limit, the budget charge;
+  - the ClickHouse live tests in CI's `source-integration` jobs produce hash sets through an existing live test file (changing `ci.yml` is a Decision);
+  - a 25% overlap against a PostgreSQL parent shows its number.
+- **Live:** the 21-27% ClickHouse pairs show numbers; `freeMails` does not come back (P6-4).
+
+**P6-4 — F10: the stricter ordinary-name rule (DEC-20) and an evidence tie-break** (`builder.py` key_name branch lines ~633-646 and the sort at line 678).
+- **(a) Ordinary names:** a parent that is not a declared key (`declared_unique`) and whose name is not reference-style (`_is_reference_style`) no longer links by `key_name`, with or without measured overlap. This replaces the DEC-16 `needs_overlap` path for these parents, and a weak ClickHouse key claim counts as not declared. Keep the manifest count `dropped_unmeasured_key_name_candidates`, or rename it if its meaning changes; renaming is additive in the manifest, say which in the commit. Flip `tests/catalogue_fixes/test_dec16_name_only_keys.py` on purpose where it asserted a link after overlap.
+- **(b) Ties:** among equal scores, sort by
+  1. same source before cross-source;
+  2. then declared key, then weak key claim, then measured uniqueness;
+  3. then parent id.
+- **Accept:**
+  - a same-name ordinary column (`description`) with 100% overlap on a measured-unique parent: no candidate;
+  - a reference-style name still links;
+  - a child with 7 tied parents where the same-source weak key sorts 6th by id: it is kept at `top_k_per_field = 5`;
+  - mutation proof.
+- **Live:** rebuilding the probe snapshot returns `ch.Experience.companyID -> ch.Company.companyID`, `ch.CompanyIndustry.companyID -> ch.Company.companyID` and Z4, and links none of the 30 ordinary-name pairs or `freeMails`.
+
+**P6-5 — F8 review `max_tokens` optional (DEC-18)** (`dbig_builder/config.py` `ReviewConfig.max_tokens` line 18, `reviewer.py` line 248).
+- **The change:** `max_tokens: int | None = None`. Unset sends no `max_tokens`, using the OpenAI SDK `omit` sentinel exactly as `answer.py` does.
+- **Example and checklist:** `examples/local/builder-with-vllm.toml` gets `timeout_seconds = 900` (the largest measured batch took 243 s) and a comment that `max_tokens` is unset on purpose. `LOCAL_VERIFY.md` drops its `max_tokens = 24000`.
+- **Accept:** a recording stub sees no `max_tokens` key when unset and the configured value when set; mutation proof; `tests/test_examples.py` passes.
+
+**P6-6 — F9 probe row cap** (`runtime.py` `_probe_clickhouse` lines ~770-790, `collectors/config.py` lines 41-42).
+- **The query:** read through `SELECT count(), uniq(...) FROM (SELECT <columns> FROM <db>.<table> LIMIT <cardinality_probe_max_rows>)` with `max_threads = 1` and `max_execution_time`; drop `max_rows_to_read` and `read_overflow_mode`.
+- **Why:** measured on ClickHouse 26.8, this counts exactly the cap and reads about 2× (`lead-review-rowcap.json`), against 7.8× for the shipped query.
+- **The comment:** change "at most" to "about: the count covers exactly this many rows; the server may read up to about one block per thread more".
+- **Accept:** a fake-client test of the query and settings; in CI's live ClickHouse job, `sample_count` equals the cap on a table larger than it, or the table's row count when the table is smaller.
+
+**P6-7 — F11 the source on every relationship given to the model** (`search.py` relationship body lines ~228-238, `answer.py` system prompt line ~216).
+- **The fields:** each relationship body gains `from_source`, `from_namespace`, `to_source`, `to_namespace`, taken from the snapshot nodes, and `INDEX_VERSION` becomes "7" (an old index answers `STALE_INDEX`).
+- **The prompt:** one sentence: "A relationship between objects of two different sources cannot be joined in one query; say so instead of writing one."
+- **Accept:** the recording stub sees the four fields on a cross-source relationship; a version-6 index answers `STALE_INDEX`; no value or description text is added.
+
+**P6-8 — F12 `outcome` required** (`answer.py` class `Answer` line 30).
+- **The change:** no default, so the sent schema lists `outcome` in `required`. The prompt adds: "Put the verdict only in the outcome field."
+- **Accept:** a stub reply that omits `outcome` gives `MODEL_UNAVAILABLE_OR_INVALID`, and is not an answer; the schema's `required` holds `answer`, `citations`, `outcome`; mutation proof.
+
+**P6-9 — F13 expand retrieved tables to their columns, uncapped (DEC-18)** (`answer.py` `answer_question` lines ~172-199).
+- **The change:** after retrieval, every field of each retrieved object, and of each object of a retrieved field, joins the context with the same keys as the other items, and its id becomes citable. There is no per-table cap (owner decision); `retrieval_limit` and `relationship_limit` stay. No type text is indexed (C deferred).
+- **Accept:** a fixture where the needed column is not in the top `retrieval_limit` but its table is: the stub sees the column, and its citation is accepted; `NO_CATALOGUE_MATCH` still means zero hits and no model call.
+- **Live:** in the replay, expected names reaching the model went from 44% to 70% (`lead-review-retrieval.json`).
+
+**P6-10 — regression gate (owner decision: full).**
+- the full check (§8);
+- all attack files by path: only the known 37 may fail, and any change is explained, item by item, as an intended flip;
+- the H4 privacy canaries green, extended to the new ClickHouse hashes (P6-3), the relationship source fields (P6-7) and the expanded columns (P6-9);
+- `pip-audit`;
+- CI dispatched on the final head, green in all 8 jobs;
+- `/ponytail-review` of the Phase 6 diff and `/ponytail-debt`;
+- `TECHNICAL_IMPLEMENTATION.md` (§8b, §12a, §17), `docs/LOCAL_RUN.md`, `docs/LIVE_TEST.md` and `examples/local/*.toml` updated for every changed key, code and default;
+- `FINAL_REPORT.md` gains a Phase 6 section.
+
+**P6-11 — hand-over.**
+- **`LOCAL_VERIFY.md`:** gains a "Phase 6 live re-check" section, as below.
+- **Next action:** `READY FOR LOCAL VERIFY - waiting for the user`.
+- **Notifications entry and commit:** start with `[READY FOR LOCAL VERIFY]`, as H8 does.
+- **Then:** clear the lock, push, stop. Never merge.
+
+The "Phase 6 live re-check" section lists, in order, each step that touches the owner's systems, and each needs its own explicit yes:
+1. Gate 2 re-run with ClickHouse hashes and the DEC-19 settings;
+2. the probe snapshot;
+3. the 40 questions with the model.
+
+Each step gives its command, its "before" value from `LEAD_REVIEW.md`, and the expected "after".
 
 ## 10. After the final phase
 

@@ -1,0 +1,11 @@
+[builder]
+signing_keys = { local = "DBIG_SIGNING_KEY" }
+
+# examples/local/builder-with-vllm.toml review values, with the served model name and revision.
+[builder.review]
+base_url = "http://127.0.0.1:8000/v1"
+model = "Qwen3.8-Flash-Next"
+model_digest = "178b998806b7b406c311a3e6174aa99cf6304eaf"
+api_key_env = "VLLM_API_KEY"
+timeout_seconds = 60
+max_candidates = 20

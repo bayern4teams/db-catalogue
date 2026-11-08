@@ -1,0 +1,8 @@
+### collect ch probe
+$ dbig collect --config artifacts/run-20261020-pgch/config/clickhouse-probe.toml --out artifacts/run-20261020-pgch/bundle-ch-probe
+artifacts/run-20261020-pgch/bundle-ch-probe
+exit 0 seconds 2.67
+### assemble probe
+$ dbig-builder assemble --config artifacts/run-20261020-pgch/config/builder.toml --bundle artifacts/run-20261020-pgch/bundle-pg-on --bundle artifacts/run-20261020-pgch/bundle-ch-probe --out artifacts/run-20261020-pgch/snapshot-probe
+{"ir_version":"1.0","content_type":"catalog-snapshot","producer":"dbig-builder/0.1.0","source_run_ids":["run:49fddd9f0d9bf499aa3540373648f8df","run:60e2841750978e278a2e6dfc8a916f2c","run:a9b2cdef99efa3300d5bdc0d52874e4e"],"created_at":"2026-10-20T07:48:04.807581Z","as_of":"2026-10-20T07:48:04.807581Z","completeness":"complete","files":[{"path":"nodes.jsonl","bytes":80155,"sha256":"1dc9eb24dd3e2346238cfb7647ad0e448b0f0a6872e997cfefa2a2923dc29802","count":192},{"path":"edges.jsonl","bytes":48188,"sha256":"bd9c12827ffcfd5894656fe9f0c347ffed91900c99bbf91d378da5d9251996d1","count":56},{"path":"evidence.jsonl","bytes":123860,"sha256":"e03a3eb2f8e6e4fd2268b17bbf6a23abbb41d84362581faf876db584237d9b28","count":224},{"path":"runs.jsonl","bytes":924,"sha256":"1768a1cc6e4f0b5fa30e92ecaf849b373b432a077372b2a0a017be97f474d9e6","count":3}],"classification":"metadata","diagnostics":null,"partial_reasons":null,"signature":null}
+exit 0 seconds 1.58

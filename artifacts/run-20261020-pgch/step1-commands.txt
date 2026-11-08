@@ -1,0 +1,20 @@
+### collect pg
+$ dbig collect --config artifacts/run-20261020-pgch/config/postgresql-on.toml --out artifacts/run-20261020-pgch/bundle-pg-on
+artifacts/run-20261020-pgch/bundle-pg-on
+exit 0 seconds 1.74
+### collect ch
+$ dbig collect --config artifacts/run-20261020-pgch/config/clickhouse-on.toml --out artifacts/run-20261020-pgch/bundle-ch-on
+artifacts/run-20261020-pgch/bundle-ch-on
+exit 0 seconds 2.75
+### assemble
+$ dbig-builder assemble --config artifacts/run-20261020-pgch/config/builder.toml --bundle artifacts/run-20261020-pgch/bundle-pg-on --bundle artifacts/run-20261020-pgch/bundle-ch-on --out artifacts/run-20261020-pgch/snapshot-on
+{"ir_version":"1.0","content_type":"catalog-snapshot","producer":"dbig-builder/0.1.0","source_run_ids":["run:49fddd9f0d9bf499aa3540373648f8df","run:b668498ce5427dbbfdd905062ecd58a0","run:f3abb7357d765f9f234f4701f0ef5639"],"created_at":"2026-10-20T07:47:34.875104Z","as_of":"2026-10-20T07:47:34.875104Z","completeness":"complete","files":[{"path":"nodes.jsonl","bytes":80155,"sha256":"eb2ad8095005f815850b19805b8f5d68c158ac9317bfc086f3b79e63be770ae0","count":192},{"path":"edges.jsonl","bytes":41339,"sha256":"9d554d74bddac2baa6080e70c609d82a4ce8f091469e0ce2f9c45e67df12133c","count":48},{"path":"evidence.jsonl","bytes":106101,"sha256":"b587a05f0bf45b7b3df08d45d1fbee0aef292bff8a523f01b262d177cb7b4818","count":192},{"path":"runs.jsonl","bytes":924,"sha256":"0aaae47d0097a71de6e43ab4dc7dc9884c2a949fa6d9c9b6a0de906b955e9a8d","count":3}],"classification":"metadata","diagnostics":null,"partial_reasons":null,"signature":null}
+exit 0 seconds 1.71
+### render
+$ dbig-builder render --config artifacts/run-20261020-pgch/config/builder.toml --snapshot artifacts/run-20261020-pgch/snapshot-on --bundle artifacts/run-20261020-pgch/bundle-pg-on --bundle artifacts/run-20261020-pgch/bundle-ch-on --out artifacts/run-20261020-pgch/catalog-on.html
+{"candidates": 48, "declared_fks": 0, "diagnostics": 0, "fields": 170, "objects": 20, "out": "artifacts/run-20261020-pgch/catalog-on.html", "sources": 2}
+exit 0 seconds 1.28
+### index
+$ dbig-requester index --config artifacts/run-20261020-pgch/config/requester-on.toml
+0ade3f6c021f1ac311b797450cd6e522fcea023335ffd27039f74be01ccdabe4
+exit 0 seconds 0.56

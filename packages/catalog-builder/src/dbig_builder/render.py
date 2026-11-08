@@ -219,13 +219,15 @@ def render_catalog(
     builder_run = next(
         (item.model_dump() for item in records["runs.jsonl"] if item.source_id == "builder"), {}
     )
+    partial_reasons = builder_run.get("partial_reasons") or manifest.partial_reasons or []
     counts = {
         "sources": len(sources),
         "objects": len(objects),
         "fields": len(fields),
         "declared_fks": sum(1 for edge in edges if edge.kind == "DECLARES_FK"),
         "candidates": sum(1 for edge in edges if edge.kind == "REFERENCE_CANDIDATE"),
-        "diagnostics": sum(len(items) for items in diagnostics.values()),
+        "diagnostics": sum(len(items) for items in diagnostics.values())
+        + (len(partial_reasons) if manifest.completeness == "partial" else 0),
     }
 
     def label(record_id: str) -> str:
@@ -263,12 +265,16 @@ def render_catalog(
             for item in sorted(suggestions.get(edge.id, []), key=lambda item: item.id)
         )
         cited += reviewed
+        tier = (
+            f"<span class='badge'>{_e(edge.evidence_tier)}</span>" if edge.evidence_tier else ""
+        )
         confidence = (
             "not calibrated" if edge.confidence is None else f"{edge.confidence:.2f}"
         )
         return (
             f"<tr><td>{joined}</td><td><span class='badge'>{_e(edge.kind)}</span>"
-            f"<span class='badge {status_class}'>{_e(edge.status)}</span></td>"
+            f"<span class='badge {status_class}'>{_e(edge.status)}</span>"
+            f"{tier}</td>"
             f"<td>{_e(edge.explanation)}<ul class='evidence'>{cited}</ul></td>"
             f"<td class='muted'>{_e(confidence)}</td></tr>"
         )
@@ -309,12 +315,25 @@ def render_catalog(
         provenance = ", ".join(methods)
         if updated is not None:
             provenance += f" (analyzed {updated:%Y-%m-%d %H:%M}Z)"
+
+        def cell(shown: str, *, after_nulls: bool = False) -> str:
+            # An empty cell says why, chosen from the profile's method and values only.
+            if shown:
+                return f"<td class='num'>{shown}</td>"
+            if not measured:
+                reason = "not computed"
+            elif after_nulls and null_fraction == 1:
+                reason = "all values null"
+            else:
+                reason = "not provided by this source"
+            return f"<td class='num'><span class='muted'>{reason}</span></td>"
+
         return (
-            f"<td class='num'>{_percent(null_fraction)}</td>"
-            f"<td class='num'>{_number(distinct)}</td>"
-            f"<td class='num'>{_percent(uniqueness)}</td>"
-            f"<td class='num'>{_number(width)}</td>"
-            f"<td class='muted'>{_e(provenance)}</td>"
+            cell(_percent(null_fraction))
+            + cell(_number(distinct), after_nulls=True)
+            + cell(_percent(uniqueness), after_nulls=True)
+            + cell(_number(width))
+            + f"<td class='muted'>{_e(provenance)}</td>"
         )
 
     def object_card(item: Object) -> str:
@@ -407,7 +426,7 @@ def render_catalog(
             else "<ul>"
             + "".join(
                 f"<li><code>{_e(reason)}</code></li>"
-                for reason in builder_run.get("partial_reasons")
+                for reason in partial_reasons
                 or ["reason not recorded by the producer of this snapshot"]
             )
             + "</ul>"

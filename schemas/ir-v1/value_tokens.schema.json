@@ -13,6 +13,11 @@
       "title": "Collector Version",
       "type": "string"
     },
+    "complete": {
+      "default": false,
+      "title": "Complete",
+      "type": "boolean"
+    },
     "distinct_count": {
       "minimum": 0,
       "title": "Distinct Count",

@@ -299,3 +299,21 @@ def test_an_invalid_dataset_mapping_is_a_command_error(tmp_path, snapshot):
     )
     _assert_operator_error(result, f"dataset mapping {mapping} is invalid")
     assert SECRET not in result.output
+
+
+def test_a_signing_key_under_32_bytes_is_a_one_line_error_naming_the_variable(
+    tmp_path, monkeypatch
+):
+    """E1: a short DBIG_SIGNING_KEY was a ValueError traceback, now a command error."""
+    config = tmp_path / "source.toml"
+    config.write_text(
+        '[source]\nsource_id = "s"\nkind = "postgresql"\nconnection_env = "C"\n'
+        'signing_key_env = "SHORT_KEY"\nsigning_key_id = "k"\nnamespaces = ["public"]\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("C", "{}")
+    monkeypatch.setenv("SHORT_KEY", "too-short-to-sign")
+    result = _invoke(collector_main, ["collect", "--config", str(config), "--out", "unused"])
+    _assert_operator_error(result, "SHORT_KEY")
+    assert "at least 32 bytes" in result.output
+    assert "too-short-to-sign" not in result.output

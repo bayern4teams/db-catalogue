@@ -9,7 +9,7 @@ from pathlib import Path
 
 from dbig_contracts.errors import OperatorError
 from dbig_contracts.scan import ScanReceipt, ScanRequest, SignedScanRequest, verify_scan
-from dbig_contracts.security import secret_from_env
+from dbig_contracts.security import key_from_env
 
 from .config import SourceConfig
 from .runtime import collect
@@ -37,9 +37,9 @@ def accept_scan(envelope: SignedScanRequest, config: SourceConfig, queue_path: P
         raise OperatorError("UNKNOWN_SIGNING_KEY")
     verify_scan(
         envelope,
-        secret_from_env(
+        key_from_env(
             config.signing_key_env, purpose="scan request signature verification"
-        ).encode("utf-8"),
+        ),
     )
     request = envelope.request
     if request.expires_at.timestamp() - request.issued_at.timestamp() > (
@@ -54,7 +54,7 @@ def accept_scan(envelope: SignedScanRequest, config: SourceConfig, queue_path: P
     if not set(request.scopes) <= set(config.namespaces):
         raise OperatorError("UNAUTHORIZED_SCOPE")
     allowed = {"metadata"}
-    if config.sample_rows:
+    if config.sample_rows or config.cardinality_probe or config.format_profiles:
         allowed.add("sample")
     if config.history_access:
         allowed.add("history")
@@ -144,6 +144,8 @@ def process_next(config: SourceConfig, queue_path: Path, output_root: Path) -> S
         update={
             "namespaces": request.scopes,
             "sample_rows": config.sample_rows if "sample" in request.capabilities else 0,
+            "cardinality_probe": config.cardinality_probe and "sample" in request.capabilities,
+            "format_profiles": config.format_profiles and "sample" in request.capabilities,
             "history_access": config.history_access and "history" in request.capabilities,
         }
     )

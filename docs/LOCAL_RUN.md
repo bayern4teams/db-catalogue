@@ -90,6 +90,19 @@ Use `readonly = 2`, not `1`. The collector sets a per-query time limit (`max_exe
 and `readonly = 1` forbids changing any setting, so the scan fails. `2` still refuses every
 write.
 
+`SHOW TABLES, SHOW COLUMNS` is all `collect` needs. If you also want to run query plans with
+`scripts/run_plan.py` (`docs/LIVE_TEST.md` section 9), that script runs the plan's `SELECT`
+against your tables, so the account needs `SELECT` as well, or ClickHouse refuses with code 497
+("Not enough privileges"):
+
+```sql
+GRANT SELECT ON mydb.* TO dbig_reader;
+```
+
+Reading rows is the only thing this adds; `readonly = 2` still refuses every write. Leave the
+grant out if you never execute a plan. The statement above is not covered by the verification
+claim at the top of this step.
+
 **MongoDB**, in the database being catalogued:
 
 ```javascript
@@ -137,7 +150,32 @@ set -a; . ./.env; set +a                  # in every new shell, before running a
 ```
 
 Keep the single quotes around each JSON value; a password containing a single quote is written
-as `'\''` inside them. Or set the variables directly:
+as `'\''` inside them. `DBIG_SIGNING_KEY` must be filled in too: unset or empty, `collect`
+stops with a one-line message naming it, and a key shorter than 32 bytes is refused.
+
+If `. ./.env` fails, the shell's message points at the wrong place: for an unclosed quote it
+names the last line of the file, and for an unquoted space it names the word after the space
+as the missing command. This command lists each suspect line by number and variable name, and
+never prints a value (no output means every line looks well formed):
+
+```bash
+awk '
+  /^[[:space:]]*(#|$)/ { next }
+  { line = $0; sub(/^[[:space:]]*(export[[:space:]]+)?/, "", line)
+    name = line; sub(/=.*/, "", name)
+    plain = line; gsub(/\\\047/, "", plain); quotes = gsub(/\047/, "&", plain)
+    if (line !~ /^[A-Za-z_][A-Za-z0-9_]*=/) print "line " NR ": not NAME=value"
+    else if (quotes % 2) print "line " NR ": " name ": unbalanced single quote"
+    else if (line ~ /^[A-Za-z_][A-Za-z0-9_]*=[^\047"]*[[:space:]]/) print "line " NR ": " name ": space in an unquoted value"
+    else if (line ~ /\r$/) print "line " NR ": " name ": Windows line ending" }
+' .env
+```
+
+It checks the shapes that break the file (a line that is not `NAME=value`, an odd number of
+single quotes once `\'` is set aside, a space in an unquoted value, a Windows line ending); it
+does not parse the JSON, which the check in `docs/LIVE_TEST.md` section 3 does.
+
+Or set the variables directly:
 
 ```bash
 # One key signs every bundle in a run; at least 32 bytes.
@@ -222,6 +260,9 @@ dbig-requester search --config "$out/requester.toml" --query "where is the custo
 - By default every word must match. `--match any` ranks entries by how well they match any
   meaningful word, which is what you want for a question in plain language.
 - Comments count: a column is found by what its comment says.
+- Over HTTP (`dbig-requester serve`), send a question with `POST /v1/catalogue/search` and a JSON body
+  (`{"query": "...", "match": "any"}`): the `GET` route puts the query in the URL, which a server
+  access log records. `dbig-requester serve ... --no-access-log` turns the request log off.
 - Narrow with `--source-id`, `--kind table|view|collection|field`, `--data-type`, `--limit`.
 
 Each result has an `id` such as `object:e970e074...`. Paths are asked between two object IDs:
@@ -262,6 +303,10 @@ clickhouse-client --param_keys_1_1="[150,157]" --query "<step sql>"
 mongosh ... --eval 'db.tickets.aggregate(<step pipeline>, {let: {keys_1_1: [150, 157]}})'
 ```
 
+`scripts/run_plan.py` does all of this for you with the same drivers the collector uses, so none
+of `psql`, `clickhouse-client` or `mongosh` is needed (`docs/LIVE_TEST.md` section 9); the
+lines above show what it does.
+
 Each read keeps the row limit; if a later read returns exactly `max_rows` rows the plan's
 warning applies: re-plan with a larger limit, `dbig-planner plan ... --max-rows 5000`.
 
@@ -283,7 +328,7 @@ directory empty, lineage paths are empty; relationships between tables still com
 
 Name matching alone proposes candidates; measured overlap tells you whether a child column's
 values really appear in the parent key. It needs sampling, which reads rows, so it is off by
-default. To enable it on PostgreSQL and MongoDB sources (ClickHouse does not produce tokens):
+default. To enable it on PostgreSQL, ClickHouse and MongoDB sources:
 
 ```bash
 export DBIG_TOKEN_KEY="$(python -c 'import secrets; print(secrets.token_urlsafe(48))')"
@@ -300,6 +345,31 @@ value_token_key_id = "run-1"
 Use the same key and ID for every source in a run and a new key for each run. Only keyed digests
 leave the collector; the key never enters any file, and digests from different runs cannot be
 compared.
+
+A measured zero overlap removes a candidate only when the parent's read was complete (fewer rows
+than `sample_rows`); against a sampled parent the candidate stays, marked "parent sampled, a zero
+is not a measurement". So `sample_rows` should cover your parent tables: the owner's live run uses
+`sample_rows = 25000`, `max_value_tokens = 4096` and, for MongoDB, `max_sample_bytes = 16777216`
+(the first 25,000 documents of all collections measured about 10 MB). These are run settings, not
+code defaults; each read costs up to `sample_rows` rows per table per collect.
+
+### Optional: measure uniqueness on ClickHouse and MongoDB
+
+Those two keep no per-column statistics, so with the metadata alone none of their columns can be a
+measured-unique parent. Setting `cardinality_probe = true` in a source file (default off) adds one
+bounded query per table or collection (charged to `max_queries`) that returns only counts; the
+profile then carries a distinct count and a uniqueness over the first `cardinality_probe_max_rows`
+rows (default 100000; ClickHouse counts exactly that many and reads about one block more) of up to `cardinality_probe_max_columns` columns (default 20). On a larger table
+that is uniqueness within those rows, and `sample_count` says how many. A failed probe is a
+`STATS_UNAVAILABLE` diagnostic, not a failed scan. Because it reads data, a scan request needs the
+`sample` capability for it. For MongoDB also set `sample_rows`, otherwise only validator paths are
+known. See the commented keys in `examples/local/clickhouse.toml` and `mongodb.toml`.
+
+### What the overlap does to candidates
+
+With sampling on, a cross-source candidate whose child values were compared and found **0 of N** (N at least `min_token_support`, default 4, in the `[builder]` file) is dropped. A candidate with some overlap, even 21 % to 27 %, stays and shows its number and sample size: overlap ranks and warns, it never decides alone. A sample smaller than `min_token_support` keeps the candidate, marked "sample too small". With sampling off every candidate says "values not compared". A measured overlap is shown with a Wilson confidence interval (`overlap_confidence_level` in `[builder]`, default 0.95, strictly between 0 and 1); when the parent was only partly read the number is a floor and reads "at least". Two optional `[builder]` lists restrict candidates by source: `source_groups` (sources in different groups are not linked) and `forbidden_source_pairs`; both default to empty. See `examples/local/builder.toml`.
+
+Other settings added after the live test, all optional, with defaults in the example files: `[builder.review] batch_size = 5` (candidates per model call); `[requester] exclude_objects` (per source glob list, hides schema-description collections; re-run `dbig-requester index`); `[requester.answer] relationship_limit = 20` (relationships given to the model, 0 turns them off); planner `cross_source_candidate_weight = 4` (how much longer a cross-source path must be to lose against a same-source one). `ask` can reply `NOT_ESTABLISHED_BY_CATALOGUE`: that is an answer ("the catalogue does not show this"), not an error.
 
 ## 9. Optional: your own vLLM, for review and for questions
 
@@ -328,11 +398,36 @@ dbig-requester ask --config "$out/requester.toml" --question "Which column holds
 ```
 
 The requester finds the most relevant catalogue entries for the question (up to
-`retrieval_limit`) and gives the model their names, types, table and comments. The answer must
+`retrieval_limit`), adds every column of each table it found, and gives the model their names,
+types, table and comments. Each relationship it passes names the source and namespace of both
+ends, so the model can say that two tables in different databases cannot be joined in one query.
+After upgrading, run `dbig-requester index` again (index version 7; an older index answers
+`STALE_INDEX`). The answer must
 cite only those entries, and is refused if it cites anything else or claims lineage. If nothing
 in the catalogue matches the question, you get `NO_CATALOGUE_MATCH` and the model is not asked.
 Comments are free text written by your database owners and are given to the model by your
 choice; the model is told to treat them as data, not instructions.
+
+### llama.cpp and other OpenAI-compatible servers
+
+The JSON schema sent to the server no longer carries length or item bounds (`maxLength`,
+`minLength`, `maxItems`, `minItems`): llama.cpp refuses them ("failed to parse grammar"), and the
+limits are checked after the reply is parsed instead. Failures now have their own code:
+`MODEL_UNREACHABLE` (host down or firewalled), `MODEL_TIMEOUT`, `MODEL_REJECTED_REQUEST` (an HTTP 4xx),
+`MODEL_TRUNCATED` (the server stopped on `max_tokens`), `MODEL_INVALID_CITATION` and `MODEL_ANSWER_TOO_LONG` (longer than
+`max_answer_chars`, unset by default). Other causes keep
+`MODEL_UNAVAILABLE_OR_INVALID`.
+
+A reasoning model spends tokens thinking before it answers. In one test with the then-default
+`max_tokens = 512` it used all 512 and returned an empty reply (`MODEL_TRUNCATED`); 20 review
+candidates did not finish in 8192 tokens (72 s), while 5 candidates with `max_tokens = 24000` and
+`timeout_seconds = 900` completed in 14.9 s using 1858 tokens. Both `[builder.review] max_tokens`
+and `[requester.answer] max_tokens` are now unset by default (owner decision 2026-10-19): no limit
+is sent and the server's own maximum applies. Give such a model a long `timeout_seconds` (the
+example uses 900; the largest measured review batch took 243 s) and review fewer candidates. A shared server queues
+requests: a reply that took 19 s idle took over 60 s when the server was busy, so the timeout must
+cover the queue (`MODEL_TIMEOUT` says this, not "unavailable"). These numbers come from one
+model on one shared server; measure your own.
 
 ## 10. Optional: request a new scan from the requester
 
@@ -387,6 +482,7 @@ A failed scan's receipt carries `error`, the same one-line message `collect` wou
 | `signature key unavailable` / `invalid artifact signature` | `DBIG_SIGNING_KEY` differs between `collect` and `assemble`; use one key per run. |
 | `bundle ... was not assembled into this snapshot` | Pass `render` the same bundles you passed `assemble`. |
 | `no search index at ...` | Run `dbig-requester index` for this run first. |
+| `DBIG_SIGNING_KEY ... must hold at least 32 bytes` | Generate a longer key, for example `python -c 'import secrets; print(secrets.token_urlsafe(48))'`. The message never prints the key. |
 | `STALE_INDEX` | The snapshot changed after indexing; run `dbig-requester index` again. |
 | `STALE_PATH` | The path came from another graph; run `join-paths` again against this one. |
 

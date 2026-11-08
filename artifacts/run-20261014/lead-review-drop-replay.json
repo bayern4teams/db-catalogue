@@ -1,0 +1,64 @@
+{
+ "sample_rows=100 cap=256 rule=current": {
+  "pg/mongo false dropped": 14,
+  "pg/mongo false unmeasured": 3,
+  "pg/mongo true dropped": 12,
+  "pg/mongo true kept_measured": 41,
+  "pg/mongo true unmeasured": 2,
+  "with-ch false dropped": 36,
+  "with-ch true dropped": 14,
+  "with-ch true kept_measured": 6,
+  "with-ch true unmeasured": 1
+ },
+ "sample_rows=100 cap=256 rule=A": {
+  "pg/mongo false kept_zero_not_trusted": 14,
+  "pg/mongo false unmeasured": 3,
+  "pg/mongo true kept_measured": 41,
+  "pg/mongo true kept_zero_not_trusted": 12,
+  "pg/mongo true unmeasured": 2,
+  "with-ch false kept_zero_not_trusted": 36,
+  "with-ch true kept_measured": 6,
+  "with-ch true kept_zero_not_trusted": 14,
+  "with-ch true unmeasured": 1
+ },
+ "sample_rows=25000 cap=256 rule=A": {
+  "pg/mongo false kept_zero_not_trusted": 17,
+  "pg/mongo true kept_measured": 54,
+  "pg/mongo true unmeasured": 1,
+  "with-ch false kept_zero_not_trusted": 36,
+  "with-ch true kept_measured": 11,
+  "with-ch true kept_zero_not_trusted": 10
+ },
+ "sample_rows=25000 cap=256 rule=range": {
+  "pg/mongo false dropped": 16,
+  "pg/mongo false unmeasured": 1,
+  "pg/mongo true kept_measured": 39,
+  "pg/mongo true unmeasured": 16,
+  "with-ch false dropped": 13,
+  "with-ch false kept_zero_not_trusted": 15,
+  "with-ch false unmeasured": 8,
+  "with-ch true kept_measured": 11,
+  "with-ch true kept_zero_not_trusted": 4,
+  "with-ch true unmeasured": 6
+ },
+ "sample_rows=25000 cap=4096 rule=A": {
+  "pg/mongo false dropped": 17,
+  "pg/mongo true kept_measured": 54,
+  "pg/mongo true unmeasured": 1,
+  "with-ch false dropped": 13,
+  "with-ch false kept_zero_not_trusted": 23,
+  "with-ch true kept_measured": 15,
+  "with-ch true kept_zero_not_trusted": 6
+ },
+ "sample_rows=25000 cap=4096 rule=range": {
+  "pg/mongo false dropped": 17,
+  "pg/mongo true kept_measured": 54,
+  "pg/mongo true unmeasured": 1,
+  "with-ch false dropped": 13,
+  "with-ch false kept_zero_not_trusted": 22,
+  "with-ch false unmeasured": 1,
+  "with-ch true kept_measured": 15,
+  "with-ch true kept_zero_not_trusted": 5,
+  "with-ch true unmeasured": 1
+ }
+}

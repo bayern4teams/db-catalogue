@@ -88,12 +88,26 @@ def _build_graph(
         for item in tables["nodes.jsonl"]
         if item.record_type == "source"
     }
-    references = [
-        Edge.model_validate(item.model_dump(mode="json")).model_dump(mode="json")
+    value_checked = {
+        item.id
+        for item in tables["evidence.jsonl"]
+        if item.model_dump().get("kind") == "value_containment"
+        # A zero against a parent that was only partly read carries a reason: not a measurement.
+        and "reason" not in item.model_dump().get("metrics", {})
+    }
+    candidate_edges = [
+        Edge.model_validate(item.model_dump(mode="json"))
         for item in tables["edges.jsonl"]
         if item.record_type == "edge"
-        and Edge.model_validate(item.model_dump(mode="json")).kind
-        in {"DECLARES_FK", "REFERENCE_CANDIDATE"}
+    ]
+    references = [
+        {
+            **edge.model_dump(mode="json"),
+            # Whether any cited evidence measured value overlap; a path warns when none did.
+            "value_evidence": any(cited in value_checked for cited in edge.evidence_ids),
+        }
+        for edge in candidate_edges
+        if edge.kind in {"DECLARES_FK", "REFERENCE_CANDIDATE"}
     ]
     by_name: dict[tuple[str, str], list[str]] = {}
     for item in objects.values():

@@ -11,7 +11,7 @@
 {
 date
 timeout -k 5 300 python3.11 -m venv /opt/graphtools || echo "FAILED: venv"
-timeout -k 5 600 /opt/graphtools/bin/pip install -q --default-timeout=30 graphifyy==0.9.65 codebase-memory-mcp==0.11.0 || echo "FAILED: pip"
+timeout -k 5 600 /opt/graphtools/bin/pip install -q --default-timeout=30 graphifyy==0.9.65 codebase-memory-mcp==0.12.1 || echo "FAILED: pip"
 for t in graphify codebase-memory-mcp; do ln -sf /opt/graphtools/bin/$t /usr/local/bin/$t; done
 setsid nohup timeout -k 5 300 npm install -g @nanonets/graft@0.18.0 > /tmp/graft_install.log 2>&1 < /dev/null &
 for t in graphify codebase-memory-mcp; do command -v $t || echo "MISSING: $t"; done

@@ -1,8 +1,10 @@
 import json
+import sqlite3
 import sys
 import types
 from types import SimpleNamespace
 
+import httpx
 import pytest
 from dbig_builder.builder import assemble
 from dbig_builder.config import BuilderConfig
@@ -52,7 +54,11 @@ class FakeClient:
 
     def create(self, **kwargs):
         return SimpleNamespace(
-            choices=[SimpleNamespace(message=SimpleNamespace(content=self.content))]
+            choices=[
+                SimpleNamespace(
+                    finish_reason="stop", message=SimpleNamespace(content=self.content)
+                )
+            ]
         )
 
 
@@ -66,16 +72,25 @@ def test_answers_validate_citations_and_outage(tmp_path, monkeypatch):
     )
     rows = search(state, SearchRequest(query="orders", limit=10))["results"]
     good = FakeClient(
-        json.dumps({"answer": "Orders are in the catalog.", "citations": [rows[0]["id"]]})
+        json.dumps({"checked": ["x"],
+            "answer": "Orders are in the catalog.", "citations": [rows[0]["id"]],
+            "outcome": "answered"})
     )
     assert answer_question(state, "orders", config, client=good)["citations"] == [rows[0]["id"]]
-    bad = FakeClient(json.dumps({"answer": "Invented", "citations": ["unknown"]}))
+    bad = FakeClient(json.dumps({"checked": ["x"], "answer": "Invented", "citations": ["unknown"],
+        "outcome": "answered"}))
     assert answer_question(state, "orders", config, client=bad)["error"]["code"] == (
+        "MODEL_INVALID_CITATION"
+    )
+    lineage = FakeClient(
+        json.dumps({"checked": ["x"], "answer": "It flows into x.", "citations": [rows[0]["id"]],
+            "outcome": "answered"})
+    )
+    assert answer_question(state, "orders", config, client=lineage)["error"]["code"] == (
         "MODEL_UNAVAILABLE_OR_INVALID"
     )
-    assert answer_question(state, "show lineage", config)["error"]["code"] == (
-        "LINEAGE_REQUIRES_PLANNER"
-    )
+    # DEC-6: the word is not a refusal; only a claim in the answer is.
+    assert "error" not in answer_question(state, "show orders lineage", config, client=good)
 
 
 def test_authenticated_requester_api_and_payload_limit(tmp_path, monkeypatch):
@@ -153,7 +168,9 @@ def test_answer_telemetry_outage_does_not_hide_answer(tmp_path, monkeypatch):
         langfuse_public_key_env="LF_PUBLIC",
         langfuse_secret_key_env="LF_SECRET",  # noqa: S106 # C5: reason=environment variable name; approved=user, 2026-11-08; review=2027-05-08
     )
-    client = FakeClient(json.dumps({"answer": "Catalogued.", "citations": [rows[0]["id"]]}))
+    client = FakeClient(json.dumps({"checked": ["x"],
+        "answer": "Catalogued.", "citations": [rows[0]["id"]],
+        "outcome": "answered"}))
     assert answer_question(state, "orders", config, client=client)["answer"] == "Catalogued."
     assert "input" not in calls[0] and "output" not in calls[0]
     assert "canary-secret" not in json.dumps(calls[0])
@@ -278,9 +295,15 @@ def test_ask_retrieves_for_a_natural_question(tmp_path):
                 def create(**kwargs: object) -> SimpleNamespace:
                     items = json.loads(kwargs["messages"][-1]["content"])["items"]  # type: ignore[index]  # C5: reason=kwargs of the fake client are loosely typed; approved=user, 2026-11-08; review=2027-05-08
                     seen.extend(items)
-                    body = json.dumps({"answer": "ledger.addr", "citations": [items[0]["id"]]})
+                    body = json.dumps({"checked": ["x"],
+                        "answer": "ledger.addr", "citations": [items[0]["id"]],
+                        "outcome": "answered"})
                     return SimpleNamespace(
-                        choices=[SimpleNamespace(message=SimpleNamespace(content=body))]
+                        choices=[
+                            SimpleNamespace(
+                                finish_reason="stop", message=SimpleNamespace(content=body)
+                            )
+                        ]
                     )
 
     result = answer_question(state, "where do we keep the contact address?", config,
@@ -289,3 +312,122 @@ def test_ask_retrieves_for_a_natural_question(tmp_path):
     assert seen[0]["name"] == "addr"
     assert seen[0]["description"] == "Contact address for invoices", "comments reach the model"
     assert seen[0]["object_name"] == "ledger"
+
+
+def _answer_config() -> AnswerConfig:
+    return AnswerConfig(
+        base_url="http://127.0.0.1:8000/v1", model="private", model_digest="sha",
+        api_key_env="VLLM_KEY",
+    )
+
+
+@pytest.mark.parametrize("how", ["version", "digest"])
+def test_ask_on_a_stale_index_returns_the_code_and_the_http_routes_agree(
+    tmp_path, monkeypatch, how
+):
+    """A stale index (another index version, or a snapshot changed since indexing) is the same
+    typed error everywhere: `search` raises it, `ask` returns it as a code, and the HTTP search
+    route answers 409 with it, instead of a traceback or a 500."""
+    state = indexed(tmp_path, monkeypatch)
+    if how == "version":
+        database = sqlite3.connect(state / "catalog.sqlite3")
+        database.execute("DELETE FROM meta WHERE key='index_version'")
+        database.commit()
+        database.close()
+    else:
+        manifest = tmp_path / "snapshot" / "manifest.json"
+        changed = json.loads(manifest.read_text(encoding="utf-8"))
+        changed["completeness"] = "partial"
+        manifest.write_text(json.dumps(changed), encoding="utf-8")
+    assert answer_question(state, "orders", _answer_config()) == {"error": {"code": "STALE_INDEX"}}
+    monkeypatch.setenv("REQUESTER_TOKEN", "synthetic-api-token")
+    config = RequesterConfig(
+        snapshot_dir=tmp_path / "snapshot", state_dir=state, api_key_env="REQUESTER_TOKEN"
+    )
+    with TestClient(create_app(config)) as client:
+        response = client.get(
+            "/v1/catalogue/search?query=orders",
+            headers={"Authorization": "Bearer synthetic-api-token"},
+        )
+    assert response.status_code == 409 and response.json()["detail"] == {"code": "STALE_INDEX"}
+
+
+@pytest.mark.parametrize(
+    ("cause", "code"),
+    [(httpx.ConnectTimeout("x"), "MODEL_UNREACHABLE"), (httpx.ReadTimeout("x"), "MODEL_TIMEOUT")],
+)
+def test_a_connect_timeout_is_unreachable_and_a_read_timeout_is_a_timeout(
+    tmp_path, monkeypatch, cause, code
+):
+    """A host that never completes the connection is down or firewalled; only a slow reply is a
+    timeout the operator can fix with `timeout_seconds`."""
+    from openai import APITimeoutError
+
+    state = indexed(tmp_path, monkeypatch)
+
+    class Slow:
+        class chat:
+            class completions:
+                @staticmethod
+                def create(**kwargs: object) -> None:
+                    raise APITimeoutError(request=httpx.Request("POST", "http://x")) from cause
+
+    result = answer_question(state, "orders", _answer_config(), client=Slow())
+    assert result["error"]["code"] == code
+
+
+def test_post_search_matches_get_and_keeps_the_query_out_of_the_url(tmp_path, monkeypatch):
+    """DEC-17: the question travels in the body, so a server access log never sees it."""
+    state = indexed(tmp_path, monkeypatch)
+    monkeypatch.setenv("REQUESTER_TOKEN", "synthetic-api-token")
+    config = RequesterConfig(
+        snapshot_dir=tmp_path / "snapshot", state_dir=state, api_key_env="REQUESTER_TOKEN"
+    )
+    headers = {"Authorization": "Bearer synthetic-api-token"}
+    with TestClient(create_app(config)) as client:
+        assert client.post("/v1/catalogue/search", json={"query": "orders"}).status_code == 401
+        got = client.get("/v1/catalogue/search?query=orders", headers=headers)
+        posted = client.post("/v1/catalogue/search", json={"query": "orders"}, headers=headers)
+        unknown = client.post("/v1/catalogue/search", json={"nope": 1}, headers=headers)
+    assert posted.status_code == 200 and posted.json() == got.json()
+    assert posted.request.url.query == b""
+    assert unknown.status_code == 422
+
+
+def test_post_search_reports_a_stale_index_like_get(tmp_path, monkeypatch):
+    state = indexed(tmp_path, monkeypatch)
+    database = sqlite3.connect(state / "catalog.sqlite3")
+    database.execute("DELETE FROM meta WHERE key='index_version'")
+    database.commit()
+    database.close()
+    monkeypatch.setenv("REQUESTER_TOKEN", "synthetic-api-token")
+    config = RequesterConfig(
+        snapshot_dir=tmp_path / "snapshot", state_dir=state, api_key_env="REQUESTER_TOKEN"
+    )
+    with TestClient(create_app(config)) as client:
+        response = client.post(
+            "/v1/catalogue/search",
+            json={"query": "orders"},
+            headers={"Authorization": "Bearer synthetic-api-token"},
+        )
+    assert response.status_code == 409 and response.json()["detail"] == {"code": "STALE_INDEX"}
+
+
+@pytest.mark.parametrize(("flags", "expected"), [([], True), (["--no-access-log"], False)])
+def test_serve_passes_the_access_log_choice_to_uvicorn(tmp_path, monkeypatch, flags, expected):
+    from click.testing import CliRunner
+    from dbig_requester.cli import main
+
+    seen = {}
+    monkeypatch.setitem(
+        sys.modules, "uvicorn", SimpleNamespace(run=lambda app, **kwargs: seen.update(kwargs))
+    )
+    monkeypatch.setattr("dbig_requester.api.create_app", lambda config: object())
+    monkeypatch.setattr("dbig_requester.cli.load_config", lambda path: object())
+    config = tmp_path / "requester.toml"
+    config.write_text("", encoding="utf-8")
+    result = CliRunner().invoke(
+        main, ["serve", "--config", str(config), "--host", "127.0.0.1", "--port", "8080", *flags]
+    )
+    assert result.exit_code == 0, result.output
+    assert seen["access_log"] is expected

@@ -1,0 +1,4 @@
+[builder]
+signing_keys = { local = "DBIG_SIGNING_KEY" }
+# Diagnostic only (not a recommended setting): no top-k cut, to count drops exactly.
+top_k_per_field = 100

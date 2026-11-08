@@ -375,6 +375,11 @@ def render_plan(directory: Path, request: PlanRequest, config: PlannerConfig) ->
         raise ValueError("UNSUPPORTED_SOURCE_KIND")
     if path["status"] == "tentative":
         warnings.append("candidate relationship requires human review")
+    if "CROSS_SOURCE_CANDIDATES_UNVERIFIED" in path.get("warnings", []):
+        warnings.append(
+            "every hop is a candidate between different sources and no value overlap was "
+            "compared; the columns may hold unrelated data"
+        )
     if any(link["status"] == "observed" for link in links):
         warnings.append(
             "a hop comes from a join seen in query logs, not from a declared key; check that "

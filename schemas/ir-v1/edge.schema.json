@@ -26,6 +26,23 @@
       "title": "Evidence Ids",
       "type": "array"
     },
+    "evidence_tier": {
+      "anyOf": [
+        {
+          "enum": [
+            "verified",
+            "plausible",
+            "unverified_cross_source"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Evidence Tier"
+    },
     "explanation": {
       "default": "",
       "title": "Explanation",

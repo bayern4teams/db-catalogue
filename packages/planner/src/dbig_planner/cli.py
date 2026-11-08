@@ -62,10 +62,11 @@ def build(snapshot: Path, observations: Path, out: Path, mapping: Path | None) -
     )
 
 
-def _paths(graph: Path, from_id: str, to_id: str, kind: str) -> None:
-    result = find_paths(
-        graph, PathRequest(from_id=from_id, to_id=to_id), kind, PlannerConfig(graph_dir=graph)
-    )
+def _paths(
+    graph: Path, from_id: str, to_id: str, kind: str, include_unverified: bool = False
+) -> None:
+    config = PlannerConfig(graph_dir=graph, include_unverified_cross_source=include_unverified)
+    result = find_paths(graph, PathRequest(from_id=from_id, to_id=to_id), kind, config)
     click.echo(json.dumps(result, sort_keys=True))
 
 
@@ -81,8 +82,15 @@ def lineage_paths(graph: Path, from_id: str, to_id: str) -> None:
 @click.option("--graph", type=click.Path(path_type=Path, exists=True), required=True)
 @click.option("--from", "from_id", required=True)
 @click.option("--to", "to_id", required=True)
-def join_paths(graph: Path, from_id: str, to_id: str) -> None:
-    _paths(graph, from_id, to_id, "join")
+@click.option(
+    "--include-unverified-cross-source",
+    is_flag=True,
+    help="Also walk candidates between two sources with no positive measurement (F11-b)",
+)
+def join_paths(
+    graph: Path, from_id: str, to_id: str, include_unverified_cross_source: bool
+) -> None:
+    _paths(graph, from_id, to_id, "join", include_unverified_cross_source)
 
 
 @main.command("plan")

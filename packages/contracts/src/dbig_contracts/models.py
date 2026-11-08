@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 from pydantic import Field as PydanticField
 
 IR_VERSION = "1.0"
@@ -135,6 +135,9 @@ class Edge(Record):
     last_seen: datetime | None = None
     limitations: list[str] = PydanticField(default_factory=list)
     confidence: float | None = None
+    # Strength of the measured evidence for a REFERENCE_CANDIDATE (F11-b); None on other kinds and
+    # on snapshots written before it existed.
+    evidence_tier: Literal["verified", "plausible", "unverified_cross_source"] | None = None
 
 
 class Profile(Record):
@@ -168,6 +171,24 @@ class Profile(Record):
     average_width_bytes: int | None = PydanticField(default=None, ge=0)
     # Set when policy excludes this field from value-based comparison.
     value_comparison_excluded: bool = False
+    # Value-free format profile (P7-5 option C, F11-b): the length and character-class shape of the
+    # non-null values, never a value. `None` is "not measured"; the shares are fractions of the
+    # non-null values. `formats` maps a shape token (digits 9, letters a, punctuation kept, runs
+    # counted, so `a{2}-9{4}`) to its share; it holds the most common shapes, not all of them.
+    length_min: int | None = PydanticField(default=None, ge=0)
+    length_max: int | None = PydanticField(default=None, ge=0)
+    length_avg: float | None = PydanticField(default=None, ge=0.0)
+    digits_share: float | None = PydanticField(default=None, ge=0.0, le=1.0)
+    hex_share: float | None = PydanticField(default=None, ge=0.0, le=1.0)
+    uuid_share: float | None = PydanticField(default=None, ge=0.0, le=1.0)
+    alpha_share: float | None = PydanticField(default=None, ge=0.0, le=1.0)
+    formats: dict[str, Annotated[float, PydanticField(ge=0.0, le=1.0)]] | None = None
+    # True when `formats` lists only some of the shapes seen, so a shape missing from it is not a
+    # shape never seen. `None` is unknown (a reader then judges from the shares).
+    formats_truncated: bool | None = None
+    # True when the length and format numbers cover every value of the column; False when they come
+    # from a sample that did not reach the end (MongoDB). A sample may suggest, never rule out.
+    values_complete: bool | None = None
 
     @field_validator("stats_updated_at")
     @classmethod
@@ -210,6 +231,11 @@ class ValueTokens(Record):
     # True when `tokens` holds fewer than `distinct_count` entries, which makes containment a
     # lower bound rather than a measurement.
     truncated: bool = False
+    # True when the read saw the whole object: fewer rows came back than were asked for and no
+    # byte budget cut it. Only then is a value missing from these tokens absent from the object,
+    # so only then may a zero overlap against it be read as a measurement. Absent in a bundle
+    # written before the field existed, which therefore counts as a sample.
+    complete: bool = False
     tokens: list[str] = PydanticField(default_factory=list)
 
     @field_validator("tokens")
@@ -221,6 +247,31 @@ class ValueTokens(Record):
             raise ValueError("value tokens must be distinct")
         # Sorted so the file's bytes, and therefore its digest, do not depend on scan order.
         return sorted(value)
+
+
+class ValueRanges(Record):
+    """The smallest and largest value of one integer field, for a local range comparison only.
+
+    These are real values, so they follow the rule for `ValueTokens`: they live in a collector
+    bundle, a controlled transfer, never in a snapshot, a log, a trace or a model context. The
+    assembler reads them to compare two fields' ranges and publishes only whether they overlap.
+    """
+
+    record_type: Literal["value_ranges"] = "value_ranges"
+    field_id: str = PydanticField(min_length=1)
+    object_id: str = PydanticField(min_length=1)
+    # Exact integers: a float would round a 64-bit bound.
+    minimum: int = PydanticField(strict=True)
+    maximum: int = PydanticField(strict=True)
+    # True when the bounds cover the whole column (a SQL aggregate, or a MongoDB collection read
+    # to its end). A sampled bound is narrower than the true range, so it may mark but never drop.
+    complete: bool = True
+
+    @model_validator(mode="after")
+    def ordered(self) -> ValueRanges:
+        if self.minimum > self.maximum:
+            raise ValueError("a range minimum cannot exceed its maximum")
+        return self
 
 
 class Diagnostic(Record):
@@ -269,6 +320,10 @@ class Manifest(BaseModel):
     # `_unsigned` excludes `None`: an absent summary keeps an older producer's signature valid,
     # and a reader that finds none treats the summary as unreported rather than as zero.
     diagnostics: dict[str, int] | None = None
+    # Why a snapshot is `partial`, as code names. A snapshot carries no `diagnostics.jsonl`, so its
+    # reasons cannot ride in `diagnostics` (the reader checks that against the file). Additive and
+    # `None` when absent, so an older reader ignores it and a complete snapshot is unchanged.
+    partial_reasons: list[str] | None = None
     signature: Signature | None = None
 
     @field_validator("diagnostics")

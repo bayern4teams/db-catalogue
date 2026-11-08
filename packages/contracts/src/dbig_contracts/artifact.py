@@ -29,6 +29,7 @@ from .models import (
     Signature,
     SnapshotNode,
     Source,
+    ValueRanges,
     ValueTokens,
     utc_now,
 )
@@ -42,7 +43,11 @@ COLLECTOR_FILES = (
     "observations.jsonl",
     "diagnostics.jsonl",
     "tokens.jsonl",
+    "ranges.jsonl",
 )
+# Files a bundle may lack: one written before they existed, or one with no rows to put in them.
+# Local-only like `tokens.jsonl`, so a reader treats a missing one as empty.
+OPTIONAL_COLLECTOR_FILES = ("ranges.jsonl",)
 SNAPSHOT_FILES = ("nodes.jsonl", "edges.jsonl", "evidence.jsonl", "runs.jsonl")
 MODELS: dict[str, type[Record]] = {
     "sources.jsonl": Source,
@@ -54,6 +59,7 @@ MODELS: dict[str, type[Record]] = {
     "diagnostics.jsonl": Diagnostic,
     "profiles.jsonl": Profile,
     "tokens.jsonl": ValueTokens,
+    "ranges.jsonl": ValueRanges,
 }
 # `nodes.jsonl` carries three record types, so it validates against the discriminated union
 # rather than one model. `runs.jsonl` intentionally has no entry and stays a base `Record`.
@@ -150,6 +156,7 @@ def write_artifact(
     producer: str,
     source_run_ids: list[str],
     completeness: str = "complete",
+    partial_reasons: list[str] | None = None,
     signing_key: bytes | None = None,
     key_id: str | None = None,
 ) -> Manifest:
@@ -170,6 +177,10 @@ def write_artifact(
         entries: list[FileEntry] = []
         for name in expected:
             records = tables.get(name, ())
+            if name in OPTIONAL_COLLECTOR_FILES and not records:
+                # Left out when empty, so a bundle that has none stays readable by a reader that
+                # predates the file.
+                continue
             path = temporary / name
             digest = hashlib.sha256()
             size = 0
@@ -199,6 +210,9 @@ def write_artifact(
             "completeness": completeness,
             "files": entries,
         }
+        if partial_reasons:
+            # Code names only, never content; absent when complete so those bytes are unchanged.
+            fields["partial_reasons"] = sorted(partial_reasons)
         if "diagnostics.jsonl" in expected:
             # Derived here rather than passed in, so a producer cannot under-report what it
             # dropped. Snapshots carry no diagnostics file and so report no summary at all.
@@ -244,7 +258,11 @@ def read_artifact(
         if not hmac.compare_digest(expected_signature, manifest.signature.value):
             raise ValueError("invalid artifact signature")
     expected = COLLECTOR_FILES if manifest.content_type == "collector-bundle" else SNAPSHOT_FILES
-    if [entry.path for entry in manifest.files] != list(expected):
+    listed = [entry.path for entry in manifest.files]
+    older = [name for name in expected if name not in OPTIONAL_COLLECTOR_FILES]
+    if listed != list(expected) and not (
+        manifest.content_type == "collector-bundle" and listed == older
+    ):
         raise ValueError("artifact file set or order mismatch")
     result: dict[str, list[Record]] = {}
     all_ids: set[str] = set()

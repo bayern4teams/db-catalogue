@@ -12,5 +12,10 @@ base_url = "http://127.0.0.1:8000/v1"
 model = "replace-with-the-model-name-vllm-serves"
 model_digest = "replace-with-the-revision-you-pinned"  # recorded as provenance, not checked
 api_key_env = "VLLM_API_KEY"           # the same token you passed to `vllm serve --api-key`
-timeout_seconds = 60
+# The largest measured batch took 243 s; 900 leaves headroom for a reasoning model.
+timeout_seconds = 900
+# max_tokens is unset on purpose: no output limit (owner decision DEC-18). Set it only to cap one.
 max_candidates = 20
+# Candidates sent per model call. A reasoning model that runs out of max_tokens on 20 at once
+# usually finishes 5; the first failing batch ends the review and keeps earlier decisions.
+# batch_size = 5

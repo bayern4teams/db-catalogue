@@ -1,0 +1,18 @@
+### collect pg
+artifacts/run-20261020/bundle-pg-on
+exit 0 seconds 1.76
+### collect ch
+artifacts/run-20261020/bundle-ch-on
+exit 0 seconds 2.7
+### collect mongo
+artifacts/run-20261020/bundle-mongo-on
+exit 0 seconds 1.28
+### assemble
+{"ir_version":"1.0","content_type":"catalog-snapshot","producer":"dbig-builder/0.1.0","source_run_ids":["run:40b8719837803dc88ffc9e357ce3cb02","run:953e499ed737c742ab55807773813f16","run:a0187f4fa67dcdb7983d48ab8fde64dd","run:d53c92ddf904fdf169a796cd7a3ca3ec"],"created_at":"2026-10-20T05:50:33.049189Z","as_of":"2026-10-20T05:50:33.049189Z","completeness":"complete","files":[{"path":"nodes.jsonl","bytes":532931,"sha256":"fb2c104ed9beb1ab0f7fabf8d46db9f74ea8ddee7fa1b5fe739300cb21741288","count":1086},{"path":"edges.jsonl","bytes":68445,"sha256":"87447b96c44e20111aeeb8b35458d8618ec57f2de12171d0926e35c3db2acc2c","count":79},{"path":"evidence.jsonl","bytes":173733,"sha256":"3bcc90f6c6ae82feb6d5463b858b686e337379f28d705141152b2850d9622b52","count":316},{"path":"runs.jsonl","bytes":1212,"sha256":"042953fdfb11d014b6bed5cfdac7c03597986f35be9037b790e14c1638ce374a","count":4}],"classification":"metadata","diagnostics":null,"partial_reasons":null,"signature":null}
+exit 0 seconds 1.94
+### render
+{"candidates": 79, "declared_fks": 0, "diagnostics": 0, "fields": 1035, "objects": 48, "out": "artifacts/run-20261020/catalog-on.html", "sources": 3}
+exit 0 seconds 1.52
+### index
+e63560544a735b726de2c0176c244ccb1fc2bfa6403eb491e4cdfd45011f4103
+exit 0 seconds 0.84

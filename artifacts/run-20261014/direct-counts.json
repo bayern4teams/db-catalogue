@@ -1,0 +1,108 @@
+{
+ "ch_columns": 46,
+ "ch_columns_per_table": {
+  "Company": 15,
+  "CompanyIndustry": 4,
+  "Experience": 6,
+  "Industry": 4,
+  "Location": 8,
+  "Person": 6,
+  "PersonContact": 3
+ },
+ "ch_keys": {
+  "Company": {
+   "engine": "ReplacingMergeTree",
+   "primary_key": "(companyID)",
+   "sorting_key": "(companyID)"
+  },
+  "CompanyIndustry": {
+   "engine": "ReplacingMergeTree",
+   "primary_key": "companyID, industryID",
+   "sorting_key": "companyID, industryID"
+  },
+  "Experience": {
+   "engine": "ReplacingMergeTree",
+   "primary_key": "personID, companyID",
+   "sorting_key": "personID, companyID"
+  },
+  "Industry": {
+   "engine": "ReplacingMergeTree",
+   "primary_key": "(industryID)",
+   "sorting_key": "(industryID)"
+  },
+  "Location": {
+   "engine": "ReplacingMergeTree",
+   "primary_key": "(locationID)",
+   "sorting_key": "(locationID)"
+  },
+  "Person": {
+   "engine": "ReplacingMergeTree",
+   "primary_key": "(personID)",
+   "sorting_key": "(personID)"
+  },
+  "PersonContact": {
+   "engine": "ReplacingMergeTree",
+   "primary_key": "(freeMails)",
+   "sorting_key": "(freeMails)"
+  }
+ },
+ "ch_tables": 7,
+ "ch_version": "26.8.2.7",
+ "mongo_collections": 28,
+ "mongo_names": [
+  "diffbot_Company",
+  "diffbot_CompanyExperience",
+  "diffbot_CompanyIndustry",
+  "diffbot_CompanyInvestmentRound",
+  "diffbot__schemas",
+  "diffbot_contracts",
+  "diffbot_entities",
+  "diffbot_event",
+  "diffbot_evidence",
+  "diffbot_institution",
+  "diffbot_metadata",
+  "diffbot_products",
+  "zoominfo_Company",
+  "zoominfo_CompanyIndustry",
+  "zoominfo_Experience",
+  "zoominfo__schemas",
+  "zoominfo_contact_information",
+  "zoominfo_contracts",
+  "zoominfo_entities",
+  "zoominfo_event",
+  "zoominfo_evidence",
+  "zoominfo_industry",
+  "zoominfo_institution",
+  "zoominfo_location",
+  "zoominfo_metadata",
+  "zoominfo_products",
+  "zoominfo_source_profiles",
+  "zoominfo_staff"
+ ],
+ "mongo_version": "7.0.41",
+ "mongo_views": 0,
+ "pg_all_relations_info_schema": 13,
+ "pg_columns": 124,
+ "pg_columns_per_table": {
+  "company": 25,
+  "companycontact": 7,
+  "companyemployeecategory": 7,
+  "companyexperience": 8,
+  "companyfinancials": 9,
+  "companyindustry": 4,
+  "companyinvestmentround": 9,
+  "companyinvestor": 8,
+  "companyrelation": 10,
+  "companytechnographics": 8,
+  "industryclassification": 6,
+  "location": 15,
+  "person": 8
+ },
+ "pg_comments": 0,
+ "pg_fks": 0,
+ "pg_matviews": 0,
+ "pg_pk_unique": 0,
+ "pg_stats_rows": 124,
+ "pg_tables": 13,
+ "pg_version": "16.15"
+}

@@ -1,0 +1,17 @@
+# Connection JSON in CLICKHOUSE_CONNECTION: {"host", "port", "username", "password"}.
+# With TLS (the default) use the server's HTTPS port, 8443 unless your server says otherwise.
+[source]
+source_id = "ch-main"
+kind = "clickhouse"
+connection_env = "CLICKHOUSE_CONNECTION"
+signing_key_env = "DBIG_SIGNING_KEY"
+signing_key_id = "local"
+namespaces = ["testzoominfo_clone2"]               # ClickHouse databases to catalogue
+tls = false
+# tls_ca_file = "C:/certs/company-ca.pem"
+# Gate 2 (sampling on): same key and id in all three sources
+sample_rows = 25000
+value_token_key_env = "DBIG_TOKEN_KEY"
+value_token_key_id = "run-20261020"
+# DEC-19 (owner 2026-10-19)
+max_value_tokens = 4096

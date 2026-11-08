@@ -100,6 +100,16 @@ def create_app(config: RequesterConfig) -> FastAPI:
         except ValueError as error:
             raise HTTPException(status_code=409, detail={"code": str(error)}) from error
 
+    @app.post("/v1/catalogue/search")
+    def search_post_route(body: SearchRequest, authorization: str | None = Header(default=None)):
+        # Same search as the GET route with the query in the body, so it is not in the URL and
+        # therefore not in a server access log (user decision 2026-10-14, DEC-17).
+        authorize(authorization)
+        try:
+            return search(config.state_dir, body)
+        except ValueError as error:
+            raise HTTPException(status_code=409, detail={"code": str(error)}) from error
+
     @app.post("/v1/catalogue/questions")
     def question_route(body: QuestionBody, authorization: str | None = Header(default=None)):
         authorize(authorization)

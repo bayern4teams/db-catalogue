@@ -1,0 +1,37 @@
+{
+ "Company": {
+  "count": 100000,
+  "read_rows": 109737,
+  "ratio_to_cap": 1.1
+ },
+ "CompanyIndustry": {
+  "count": 100000,
+  "read_rows": 131072,
+  "ratio_to_cap": 1.31
+ },
+ "Experience": {
+  "count": 100000,
+  "read_rows": 114688,
+  "ratio_to_cap": 1.15
+ },
+ "Industry": {
+  "count": 37,
+  "read_rows": 37,
+  "ratio_to_cap": 0.0
+ },
+ "Location": {
+  "count": 100000,
+  "read_rows": 114688,
+  "ratio_to_cap": 1.15
+ },
+ "Person": {
+  "count": 100000,
+  "read_rows": 114688,
+  "ratio_to_cap": 1.15
+ },
+ "PersonContact": {
+  "count": 100000,
+  "read_rows": 114688,
+  "ratio_to_cap": 1.15
+ }
+}

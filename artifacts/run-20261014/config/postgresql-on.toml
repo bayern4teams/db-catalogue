@@ -1,0 +1,22 @@
+# One file per source. Copy, then edit `source_id` and `namespaces`.
+# Credentials never go in this file: `connection_env` names an environment variable that holds
+# a JSON object {"host", "port", "database", "user", "password"}.
+[source]
+source_id = "pg-main"                  # stable name for this source; appears in the catalogue
+kind = "postgresql"
+connection_env = "PG_CONNECTION"
+signing_key_env = "DBIG_SIGNING_KEY"   # the same key signs every bundle in one run
+signing_key_id = "local"
+namespaces = ["public"]                # PostgreSQL schemas to catalogue
+
+# Verified TLS is the default. For a server whose certificate comes from a company CA:
+# tls_ca_file = "C:/certs/company-ca.pem"
+tls = false
+
+
+# Optional: sample rows to measure cross-source value overlap. Reads up to this many rows per
+# table; only keyed digests leave the collector, never values. Needs both lines below.
+# Gate 2 (sampling on): same key and id in all three sources
+sample_rows = 100
+value_token_key_env = "DBIG_TOKEN_KEY"
+value_token_key_id = "run-20261014"

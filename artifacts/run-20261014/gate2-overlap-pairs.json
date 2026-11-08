@@ -1,0 +1,205 @@
+[
+ {
+  "id": "D1",
+  "group": "dropped",
+  "mark": true,
+  "child": "mongo.diffbot_Company.companyID",
+  "parent": "pg.companyindustry.companyid"
+ },
+ {
+  "id": "D2",
+  "group": "dropped",
+  "mark": true,
+  "child": "mongo.diffbot_Company.companyID",
+  "parent": "pg.location.companyid"
+ },
+ {
+  "id": "D3",
+  "group": "dropped",
+  "mark": true,
+  "child": "mongo.diffbot_CompanyExperience.companyID",
+  "parent": "pg.company.companyid"
+ },
+ {
+  "id": "D4",
+  "group": "dropped",
+  "mark": true,
+  "child": "mongo.diffbot_CompanyExperience.companyID",
+  "parent": "pg.companyindustry.companyid"
+ },
+ {
+  "id": "D5",
+  "group": "dropped",
+  "mark": true,
+  "child": "mongo.diffbot_CompanyExperience.companyID",
+  "parent": "pg.location.companyid"
+ },
+ {
+  "id": "D6",
+  "group": "dropped",
+  "mark": true,
+  "child": "mongo.diffbot_CompanyIndustry.companyID",
+  "parent": "pg.companyindustry.companyid"
+ },
+ {
+  "id": "D7",
+  "group": "dropped",
+  "mark": true,
+  "child": "mongo.diffbot_CompanyIndustry.companyID",
+  "parent": "pg.location.companyid"
+ },
+ {
+  "id": "D8",
+  "group": "dropped",
+  "mark": true,
+  "child": "mongo.diffbot_CompanyInvestmentRound.companyID",
+  "parent": "pg.company.companyid"
+ },
+ {
+  "id": "D9",
+  "group": "dropped",
+  "mark": true,
+  "child": "mongo.diffbot_CompanyInvestmentRound.companyID",
+  "parent": "pg.companyindustry.companyid"
+ },
+ {
+  "id": "D10",
+  "group": "dropped",
+  "mark": true,
+  "child": "mongo.diffbot_CompanyInvestmentRound.companyID",
+  "parent": "pg.location.companyid"
+ },
+ {
+  "id": "D11",
+  "group": "dropped",
+  "mark": true,
+  "child": "mongo.diffbot_CompanyInvestmentRound.investmentID",
+  "parent": "pg.companyinvestmentround.investmentid"
+ },
+ {
+  "id": "D12",
+  "group": "dropped",
+  "mark": true,
+  "child": "pg.companyfinancials.companyid",
+  "parent": "pg.company.companyid"
+ },
+ {
+  "id": "D13",
+  "group": "dropped",
+  "mark": false,
+  "child": "mongo.zoominfo_Company.companyID",
+  "parent": "pg.company.companyid"
+ },
+ {
+  "id": "D14",
+  "group": "dropped",
+  "mark": false,
+  "child": "mongo.zoominfo_Company.companyID",
+  "parent": "pg.companyindustry.companyid"
+ },
+ {
+  "id": "D15",
+  "group": "dropped",
+  "mark": false,
+  "child": "mongo.zoominfo_Company.companyID",
+  "parent": "pg.location.companyid"
+ },
+ {
+  "id": "D16",
+  "group": "dropped",
+  "mark": false,
+  "child": "mongo.zoominfo_CompanyIndustry.companyID",
+  "parent": "pg.company.companyid"
+ },
+ {
+  "id": "D17",
+  "group": "dropped",
+  "mark": false,
+  "child": "mongo.zoominfo_CompanyIndustry.companyID",
+  "parent": "pg.companyindustry.companyid"
+ },
+ {
+  "id": "D18",
+  "group": "dropped",
+  "mark": false,
+  "child": "mongo.zoominfo_CompanyIndustry.companyID",
+  "parent": "pg.location.companyid"
+ },
+ {
+  "id": "D19",
+  "group": "dropped",
+  "mark": false,
+  "child": "mongo.zoominfo_Experience.personID",
+  "parent": "pg.person.personid"
+ },
+ {
+  "id": "D20",
+  "group": "dropped",
+  "mark": false,
+  "child": "mongo.zoominfo_contact_information.personID",
+  "parent": "pg.person.personid"
+ },
+ {
+  "id": "D21",
+  "group": "dropped",
+  "mark": false,
+  "child": "mongo.zoominfo_contracts.company_id",
+  "parent": "pg.company.companyid"
+ },
+ {
+  "id": "D22",
+  "group": "dropped",
+  "mark": false,
+  "child": "mongo.zoominfo_evidence.company_id",
+  "parent": "pg.company.companyid"
+ },
+ {
+  "id": "D23",
+  "group": "dropped",
+  "mark": false,
+  "child": "mongo.zoominfo_staff.personID",
+  "parent": "pg.person.personid"
+ },
+ {
+  "id": "K1",
+  "group": "kept",
+  "mark": true,
+  "child": "mongo.diffbot_Company.companyID",
+  "parent": "pg.company.companyid"
+ },
+ {
+  "id": "K2",
+  "group": "kept",
+  "mark": true,
+  "child": "mongo.diffbot_CompanyExperience.personID",
+  "parent": "pg.person.personid"
+ },
+ {
+  "id": "K3",
+  "group": "kept",
+  "mark": true,
+  "child": "mongo.diffbot_CompanyIndustry.classificationID",
+  "parent": "pg.industryclassification.classificationid"
+ },
+ {
+  "id": "K4",
+  "group": "kept",
+  "mark": true,
+  "child": "pg.companycontact.companyid",
+  "parent": "pg.company.companyid"
+ },
+ {
+  "id": "K5",
+  "group": "kept",
+  "mark": true,
+  "child": "pg.companyindustry.classificationid",
+  "parent": "pg.industryclassification.classificationid"
+ },
+ {
+  "id": "K6",
+  "group": "kept",
+  "mark": true,
+  "child": "pg.companyexperience.companyid",
+  "parent": "pg.location.companyid"
+ }
+]

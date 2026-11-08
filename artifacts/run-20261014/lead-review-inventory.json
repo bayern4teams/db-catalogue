@@ -1,0 +1,110 @@
+{
+ "pg_version": "16.15",
+ "pg_user": "dbig_reader",
+ "pg_reltuples": {
+  "company": 3940,
+  "companycontact": 5330,
+  "companyemployeecategory": 5134,
+  "companyexperience": 1230,
+  "companyfinancials": 198,
+  "companyindustry": 3940,
+  "companyinvestmentround": 470,
+  "companyinvestor": 1260,
+  "companyrelation": 6174,
+  "companytechnographics": 20092,
+  "industryclassification": 339,
+  "location": 3506,
+  "person": 1215
+ },
+ "pg_rows": {
+  "company": 3940,
+  "companycontact": 5330,
+  "companyemployeecategory": 5134,
+  "companyexperience": 1230,
+  "companyfinancials": 198,
+  "companyindustry": 3940,
+  "companyinvestmentround": 470,
+  "companyinvestor": 1260,
+  "companyrelation": 6174,
+  "companytechnographics": 20092,
+  "industryclassification": 339,
+  "location": 3506,
+  "person": 1215
+ },
+ "ch_version": "26.8.2.7",
+ "ch_user": "dbig_reader",
+ "ch_tables": {
+  "Company": {
+   "engine": "ReplacingMergeTree",
+   "sorting_key": "(companyID)",
+   "primary_key": "(companyID)",
+   "total_rows": 1266268
+  },
+  "CompanyIndustry": {
+   "engine": "ReplacingMergeTree",
+   "sorting_key": "companyID, industryID",
+   "primary_key": "companyID, industryID",
+   "total_rows": 3545133
+  },
+  "Experience": {
+   "engine": "ReplacingMergeTree",
+   "sorting_key": "personID, companyID",
+   "primary_key": "personID, companyID",
+   "total_rows": 12338392
+  },
+  "Industry": {
+   "engine": "ReplacingMergeTree",
+   "sorting_key": "(industryID)",
+   "primary_key": "(industryID)",
+   "total_rows": 37
+  },
+  "Location": {
+   "engine": "ReplacingMergeTree",
+   "sorting_key": "(locationID)",
+   "primary_key": "(locationID)",
+   "total_rows": 1757532
+  },
+  "Person": {
+   "engine": "ReplacingMergeTree",
+   "sorting_key": "(personID)",
+   "primary_key": "(personID)",
+   "total_rows": 11795168
+  },
+  "PersonContact": {
+   "engine": "ReplacingMergeTree",
+   "sorting_key": "(freeMails)",
+   "primary_key": "(freeMails)",
+   "total_rows": 4336389
+  }
+ },
+ "mongo_counts": {
+  "diffbot_Company": 22,
+  "diffbot_CompanyExperience": 84,
+  "diffbot_CompanyIndustry": 22,
+  "diffbot_CompanyInvestmentRound": 11,
+  "diffbot__schemas": 10,
+  "diffbot_contracts": 20,
+  "diffbot_entities": 22,
+  "diffbot_event": 19,
+  "diffbot_evidence": 75,
+  "diffbot_institution": 14,
+  "diffbot_metadata": 0,
+  "diffbot_products": 267,
+  "zoominfo_Company": 93,
+  "zoominfo_CompanyIndustry": 261,
+  "zoominfo_Experience": 13518,
+  "zoominfo__schemas": 14,
+  "zoominfo_contact_information": 3781,
+  "zoominfo_contracts": 27,
+  "zoominfo_entities": 93,
+  "zoominfo_event": 93,
+  "zoominfo_evidence": 442,
+  "zoominfo_industry": 261,
+  "zoominfo_institution": 2,
+  "zoominfo_location": 103,
+  "zoominfo_metadata": 0,
+  "zoominfo_products": 1325,
+  "zoominfo_source_profiles": 1,
+  "zoominfo_staff": 13518
+ }
+}

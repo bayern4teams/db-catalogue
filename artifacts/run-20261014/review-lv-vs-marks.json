@@ -1,0 +1,151 @@
+{
+ "suggestions": [
+  {
+   "child": "mongo.diffbot_CompanyInvestmentRound.companyID",
+   "parent": "ch.Company.companyID",
+   "model": "supports",
+   "user_true": false,
+   "mark": "W-A"
+  },
+  {
+   "child": "mongo.diffbot_Company.companyID",
+   "parent": "ch.Company.companyID",
+   "model": "supports",
+   "user_true": false,
+   "mark": "W-A"
+  },
+  {
+   "child": "ch.Experience.companyID",
+   "parent": "pg.companyindustry.companyid",
+   "model": "supports",
+   "user_true": false,
+   "mark": "U-ci"
+  },
+  {
+   "child": "ch.Experience.companyID",
+   "parent": "ch.Company.companyID",
+   "model": "supports",
+   "user_true": true,
+   "mark": "CH"
+  },
+  {
+   "child": "pg.companyemployeecategory.companyid",
+   "parent": "ch.Company.companyID",
+   "model": "unknown",
+   "user_true": false,
+   "mark": "W-A"
+  },
+  {
+   "child": "pg.companytechnographics.companyid",
+   "parent": "pg.company.companyid",
+   "model": "supports",
+   "user_true": true,
+   "mark": "PG"
+  },
+  {
+   "child": "pg.person.personid",
+   "parent": "ch.Person.personID",
+   "model": "unknown",
+   "user_true": false,
+   "mark": "W-B"
+  },
+  {
+   "child": "pg.companyindustry.companyid",
+   "parent": "pg.location.companyid",
+   "model": "supports",
+   "user_true": true,
+   "mark": "U-loc"
+  },
+  {
+   "child": "pg.companyexperience.personid",
+   "parent": "pg.person.personid",
+   "model": "supports",
+   "user_true": true,
+   "mark": "PG"
+  },
+  {
+   "child": "pg.companyrelation.companyid",
+   "parent": "pg.companyindustry.companyid",
+   "model": "supports",
+   "user_true": true,
+   "mark": "U-ci"
+  },
+  {
+   "child": "mongo.diffbot_CompanyIndustry.classificationID",
+   "parent": "pg.industryclassification.classificationid",
+   "model": "supports",
+   "user_true": true,
+   "mark": "M26"
+  },
+  {
+   "child": "ch.CompanyIndustry.companyID",
+   "parent": "ch.Company.companyID",
+   "model": "supports",
+   "user_true": true,
+   "mark": "CH"
+  },
+  {
+   "child": "pg.companycontact.companyid",
+   "parent": "pg.companyindustry.companyid",
+   "model": "supports",
+   "user_true": true,
+   "mark": "U-ci"
+  },
+  {
+   "child": "mongo.zoominfo_Experience.companyID",
+   "parent": "pg.companyindustry.companyid",
+   "model": "unknown",
+   "user_true": false,
+   "mark": "U-ci"
+  },
+  {
+   "child": "ch.Experience.personID",
+   "parent": "ch.Person.personID",
+   "model": "unknown",
+   "user_true": true,
+   "mark": "CH"
+  },
+  {
+   "child": "pg.companyexperience.personid",
+   "parent": "ch.Person.personID",
+   "model": "unknown",
+   "user_true": false,
+   "mark": "W-B"
+  },
+  {
+   "child": "pg.companyindustry.companyid",
+   "parent": "ch.Company.companyID",
+   "model": "opposes",
+   "user_true": false,
+   "mark": "W-A"
+  },
+  {
+   "child": "pg.companycontact.companyid",
+   "parent": "pg.location.companyid",
+   "model": "supports",
+   "user_true": true,
+   "mark": "U-loc"
+  },
+  {
+   "child": "mongo.zoominfo_Experience.companyID",
+   "parent": "pg.company.companyid",
+   "model": "supports",
+   "user_true": false,
+   "mark": "#1"
+  },
+  {
+   "child": "mongo.diffbot_CompanyExperience.personID",
+   "parent": "pg.person.personid",
+   "model": "supports",
+   "user_true": true,
+   "mark": "#2"
+  }
+ ],
+ "model_decision_vs_user_mark": {
+  "supports|user_true=False": 4,
+  "supports|user_true=True": 10,
+  "unknown|user_true=False": 4,
+  "unknown|user_true=True": 1,
+  "opposes|user_true=False": 1
+ }
+}

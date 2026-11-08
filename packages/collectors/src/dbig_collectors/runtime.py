@@ -5,12 +5,15 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import math
 import re
 import socket
 import ssl
-from collections import defaultdict
+import unicodedata
+from collections import Counter, defaultdict
 from decimal import Decimal
 from importlib.metadata import version
+from itertools import groupby
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qsl
@@ -26,10 +29,11 @@ from dbig_contracts.models import (
     Profile,
     Record,
     Source,
+    ValueRanges,
     ValueTokens,
     utc_now,
 )
-from dbig_contracts.security import is_loopback_literal, secret_from_env
+from dbig_contracts.security import is_loopback_literal, key_from_env, secret_from_env
 
 from .config import SourceConfig
 
@@ -192,11 +196,7 @@ def _tokenize_postgresql(
     """
     if config.sample_rows <= 0 or not config.value_token_key_env:
         return
-    key = secret_from_env(
-        config.value_token_key_env, purpose="cross-source value tokenisation"
-    ).encode("utf-8")
-    if len(key) < 32:
-        raise ValueError("value token key must contain at least 32 bytes")
+    key = key_from_env(config.value_token_key_env, purpose="cross-source value tokenisation")
     key_id = config.value_token_key_id or ""
     identity = {oid: (schema, name) for oid, schema, name, kind, *_ in object_rows if kind in "rmp"}
     columns: dict[int, list[tuple[int, str]]] = defaultdict(list)
@@ -234,6 +234,8 @@ def _tokenize_postgresql(
                     observed_count=observed,
                     distinct_count=distinct,
                     truncated=truncated,
+                    # A `LIMIT` read that returned fewer rows than it allowed read the whole table.
+                    complete=len(rows) < config.sample_rows,
                     tokens=digests,
                     **common,
                 )
@@ -341,6 +343,520 @@ def _latest(*values: Any) -> Any:
     return max(present) if present else None
 
 
+# --- value-free format profiles (P7-5 option C, F11-b) --------------------------------------------
+
+_INTEGER_TYPES = frozenset(
+    {"integer", "bigint", "smallint", "int", "int2", "int4", "int8", "serial", "bigserial"}
+    | {f"{sign}int{bits}" for sign in ("", "u") for bits in (8, 16, 32, 64, 128, 256)}
+)
+_TEXT_TYPES = frozenset(
+    {"text", "character varying", "varchar", "character", "char", "bpchar", "citext",
+     "string", "fixedstring"}
+)
+_UUID_TYPES = frozenset({"uuid"})
+_DIGITS = re.compile(r"[0-9]+")
+_HEX = re.compile(r"[0-9a-fA-F]+")
+_UUID = re.compile(r"[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}")
+
+
+def _format_family(data_type: str) -> str | None:
+    """`integer`, `text` or `uuid` for the types a candidate can link, else nothing.
+
+    Mirrors the builder's type families; a wrapper such as ClickHouse `Nullable(...)` is looked
+    through, and a parameter such as `varchar(32)` or an array suffix is not part of the name.
+    """
+    name = data_type.casefold().strip()
+    if name.endswith("]"):
+        return None  # a PostgreSQL array: its text form is a list, not a value of the element type
+    while True:
+        for wrapper in ("nullable(", "lowcardinality("):
+            if name.startswith(wrapper) and name.endswith(")"):
+                name = name[len(wrapper) : -1].strip()
+                break
+        else:
+            break
+    name = name.split("(", 1)[0].strip()
+    if name in _INTEGER_TYPES:
+        return "integer"
+    if name in _TEXT_TYPES:
+        return "text"
+    return "uuid" if name in _UUID_TYPES else None
+
+
+# The only non-alphanumeric characters a shape keeps. Anything else (space, a control character,
+# a brace, a quote, a symbol, an emoji, a mark, a letter-like or digit-like sign that is neither)
+# becomes `_SHAPE_OTHER`, so no character of a value outside this list can survive into a profile.
+# The SQL statements use the same two constants.
+_SHAPE_PUNCT = "!#$&()+,-./:<=>@[]^_`|~"
+_SHAPE_OTHER = "*"
+
+
+def _shape_class(char: str) -> str:
+    """`9` for a decimal digit, `a` for a letter, the character itself if whitelisted, else `*`."""
+    if "0" <= char <= "9":
+        return "9"
+    category = unicodedata.category(char)
+    if category == "Nd":
+        return "9"
+    if category[0] == "L":
+        return "a"
+    return char if char in _SHAPE_PUNCT else _SHAPE_OTHER
+
+
+def _shape_token(text: str, limit: int) -> str:
+    """The shape of a value: digit runs `9{n}`, letter runs `a{n}`, whitelisted punctuation as is.
+
+    Every other character is one `*`. Made from the first `limit` characters, so a very long value
+    cannot make a very long token. The SQL profile statements make the same token; the two must
+    agree because a shape is only compared with a shape from another engine.
+    """
+    out: list[str] = []
+    for key, group in groupby(text[:limit], key=_shape_class):
+        size = len(list(group))
+        # Only a digit or letter run is keyed "9" or "a"; no other class is either.
+        out.append(f"{key}{{{size}}}" if key in ("9", "a") else key * size)
+    return "".join(out)
+
+
+class _Shape:
+    """Running format statistics for one MongoDB path, from sampled scalar values.
+
+    Only counts, lengths and shape tokens are kept; no value is stored. Numbers are text for the
+    shape (an integer's decimal digits), as the relational side reads them.
+    """
+
+    def __init__(self) -> None:
+        self.count = 0
+        self.length_min = self.length_max = self.length_sum = 0
+        self.digits = self.hex = self.uuid = self.alpha = 0
+        self.formats: Counter[str] = Counter()
+        self.integer_range: tuple[int, int] | None = None
+        self.only_integers = True
+
+    def add(self, value: Any, limit: int) -> None:
+        if value is None:
+            return
+        is_integer = isinstance(value, int) and not isinstance(value, bool)
+        if not is_integer and not isinstance(value, str):
+            self.only_integers = False
+            return
+        text = str(value)
+        size = len(text)
+        self.length_min = size if not self.count else min(self.length_min, size)
+        self.length_max = max(self.length_max, size)
+        self.length_sum += size
+        self.count += 1
+        self.digits += bool(_DIGITS.fullmatch(text))
+        self.hex += bool(_HEX.fullmatch(text))
+        self.uuid += bool(_UUID.fullmatch(text))
+        self.alpha += bool(text.isalpha())
+        self.formats[_shape_token(text, limit)] += 1
+        if is_integer:
+            low, high = self.integer_range or (value, value)
+            self.integer_range = (min(low, value), max(high, value))
+        else:
+            self.only_integers = False
+
+
+class _Shapes:
+    """The `_Shape` of every MongoDB path met in one collection's sample."""
+
+    def __init__(self, limit: int) -> None:
+        self.limit = limit
+        self.by_path: dict[str, _Shape] = {}
+
+    def add(self, path: str, value: Any) -> None:
+        self.by_path.setdefault(path, _Shape()).add(value, self.limit)
+
+
+def _finite(value: Any) -> float | None:
+    """A plain finite float, or nothing: ClickHouse averages over no rows are nan, and PostgreSQL
+    returns Decimal, which would be written as a JSON string."""
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) else None
+
+
+def _share(value: Any) -> float | None:
+    number = _finite(value)
+    return None if number is None else min(max(number, 0.0), 1.0)
+
+
+def _exact_int(value: Any) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, Decimal) and value == value.to_integral_value():
+        return int(value)
+    return None
+
+
+def _format_fields(
+    count: int | None,
+    length_min: Any,
+    length_max: Any,
+    length_avg: Any,
+    shares: tuple[Any, Any, Any, Any],
+    formats: dict[str, Any],
+    *,
+    shapes_seen: int | None = None,
+    complete: bool | None = None,
+) -> dict[str, Any]:
+    """The profile attributes, or nothing when no value was seen (an empty or all-null column)."""
+    low, high = _exact_int(length_min), _exact_int(length_max)
+    if (count is not None and count <= 0) or low is None or high is None or low < 0:
+        return {}
+    kept = {
+        token: share for token, value in formats.items() if (share := _share(value)) is not None
+    }
+    digits, hexadecimal, uuid, alpha = (_share(item) for item in shares)
+    return {
+        "length_min": low,
+        "length_max": high,
+        "length_avg": _finite(length_avg),
+        "digits_share": digits,
+        "hex_share": hexadecimal,
+        "uuid_share": uuid,
+        "alpha_share": alpha,
+        "formats": kept or None,
+        # Only a count larger than the list proves it was cut; no count is "unknown".
+        "formats_truncated": (shapes_seen > len(kept)) if shapes_seen is not None else None,
+        "values_complete": complete,
+    }
+
+
+def _format_records(
+    config: SourceConfig,
+    common: dict[str, Any],
+    field_id: str,
+    object_id: str,
+    names: list[str],
+    rows: list[Any],
+) -> list[Record]:
+    """Turn the rows of one profile statement into a profile and, for an integer, a range row.
+
+    Answered by output name, so the order of the statement's columns does not matter. The first
+    row carries the column-wide numbers; every row carries one format and its share.
+    """
+    if not rows:
+        return []
+    records = [dict(zip(names, row, strict=False)) for row in rows]
+    head = records[0]
+    count = _exact_int(head.get("value_count"))
+    fields = _format_fields(
+        count,
+        head.get("length_min"),
+        head.get("length_max"),
+        head.get("length_avg"),
+        (head.get("digits_share"), head.get("hex_share"), head.get("uuid_share"),
+         head.get("alpha_share")),
+        {
+            item["format_token"]: item.get("format_share")
+            for item in records
+            if item.get("format_token") is not None
+        },
+        shapes_seen=_exact_int(head.get("shape_count")),
+        complete=True,  # a SQL aggregate reads the whole column
+    )
+    if not fields:
+        return []
+    out: list[Record] = [
+        Profile(
+            id=stable_id(config.source_id, "profile", f"{field_id}:format"),
+            field_id=field_id,
+            object_id=object_id,
+            method="sample",
+            sample_count=count,
+            **fields,
+            **common,
+        )
+    ]
+    low, high = _exact_int(head.get("value_min")), _exact_int(head.get("value_max"))
+    if low is not None and high is not None and low <= high:
+        out.append(
+            ValueRanges(
+                id=stable_id(config.source_id, "ranges", field_id),
+                field_id=field_id,
+                object_id=object_id,
+                minimum=low,
+                maximum=high,
+                **common,
+            )
+        )
+    return out
+
+
+# One statement per column, one scan of it: the groups are the distinct shapes, and the column-wide
+# numbers are windows over them. `@NAME@` marks where a validated identifier or a configured
+# number goes; no value and no caller input reaches the text. No `%`, `{name:Type}` pair or `?`
+# appears, so neither driver reads anything as a parameter.
+_FORMAT_PG = """
+WITH v AS (SELECT @COL@::text AS dbig_t@XSEL@ FROM @REL@ WHERE @COL@ IS NOT NULL),
+w AS (SELECT dbig_t@XCARRY@, coalesce((SELECT string_agg(CASE
+  WHEN m.p[1] ~ '^[0-9]' THEN '9{' || length(m.p[1])::text || '}'
+  WHEN m.p[1] ~ '^[[:alpha:]]' THEN 'a{' || length(m.p[1])::text || '}'
+  WHEN strpos('@PUNCT@', m.p[1]) > 0 THEN m.p[1]
+  ELSE '@OTHER@' END, '' ORDER BY m.n)
+  FROM regexp_matches(left(v.dbig_t, @TOKEN@), '[0-9]+|[[:alpha:]]+|.', 'g')
+  WITH ORDINALITY AS m(p, n)), '') AS tok FROM v),
+grp AS (SELECT tok, count(*) AS c, sum(length(dbig_t)) AS len_sum, min(length(dbig_t)) AS len_lo,
+  max(length(dbig_t)) AS len_hi, sum((dbig_t ~ '^[0-9]+$')::int) AS dg,
+  sum((dbig_t ~ '^[0-9a-fA-F]+$')::int) AS hx,
+  sum((dbig_t ~* '^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$')::int) AS uu,
+  sum((dbig_t ~ '^[[:alpha:]]+$')::int) AS al@XGROUP@ FROM w GROUP BY tok)
+SELECT (sum(c) OVER ()) AS value_count, min(len_lo) OVER () AS length_min,
+  max(len_hi) OVER () AS length_max,
+  (sum(len_sum) OVER ())::float8 / (sum(c) OVER ()) AS length_avg,
+  (sum(dg) OVER ())::float8 / (sum(c) OVER ()) AS digits_share,
+  (sum(hx) OVER ())::float8 / (sum(c) OVER ()) AS hex_share,
+  (sum(uu) OVER ())::float8 / (sum(c) OVER ()) AS uuid_share,
+  (sum(al) OVER ())::float8 / (sum(c) OVER ()) AS alpha_share,
+  count(*) OVER () AS shape_count,
+  tok AS format_token, c::float8 / (sum(c) OVER ()) AS format_share@XOUT@
+FROM grp ORDER BY c DESC, tok LIMIT @FORMATS@
+"""
+_FORMAT_CH = r"""
+WITH v AS (SELECT @TEXT@ AS dbig_t@XSEL@ FROM @REL@ WHERE @COL@ IS NOT NULL),
+w AS (SELECT dbig_t@XCARRY@, arrayStringConcat(arrayMap(piece -> multiIf(
+  match(piece, '^\\p{Nd}'), concat('9{', toString(lengthUTF8(piece)), '}'),
+  match(piece, '^\\pL'), concat('a{', toString(lengthUTF8(piece)), '}'),
+  position('@PUNCT@', piece) > 0, piece, '@OTHER@'),
+  extractAll(leftUTF8(dbig_t, @TOKEN@), '\\p{Nd}+|\\pL+|[\\s\\S]'))) AS tok FROM v),
+grp AS (SELECT tok, count() AS c, sum(lengthUTF8(dbig_t)) AS len_sum,
+  min(lengthUTF8(dbig_t)) AS len_lo,
+  max(lengthUTF8(dbig_t)) AS len_hi, sum(match(dbig_t, '^[0-9]+$')) AS dg,
+  sum(match(dbig_t, '^[0-9a-fA-F]+$')) AS hx,
+  sum(match(dbig_t, '^[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$')) AS uu,
+  sum(match(dbig_t, '^\\pL+$')) AS al@XGROUP@ FROM w GROUP BY tok)
+SELECT toUInt64(sum(c) OVER ()) AS value_count, min(len_lo) OVER () AS length_min,
+  max(len_hi) OVER () AS length_max, sum(len_sum) OVER () / sum(c) OVER () AS length_avg,
+  sum(dg) OVER () / sum(c) OVER () AS digits_share, sum(hx) OVER () / sum(c) OVER () AS hex_share,
+  sum(uu) OVER () / sum(c) OVER () AS uuid_share, sum(al) OVER () / sum(c) OVER () AS alpha_share,
+  count() OVER () AS shape_count,
+  tok AS format_token, c / sum(c) OVER () AS format_share@XOUT@
+FROM grp ORDER BY c DESC, tok LIMIT @FORMATS@
+"""
+
+
+def _format_statement(
+    template: str,
+    config: SourceConfig,
+    relation: str,
+    column: str,
+    text: str,
+    integer: bool,
+) -> str:
+    """Fill a profile template. `relation` and `column` are already quoted (`_quoted`).
+
+    The working names (`dbig_t`, `dbig_x`) are unlikely column names: ClickHouse resolves an alias
+    across a whole query, so a column called like the alias would otherwise be read as the alias.
+    """
+    parts = {
+        "@REL@": relation,
+        "@COL@": column,
+        "@TEXT@": text,
+        "@TOKEN@": str(config.format_token_max_length),
+        "@FORMATS@": str(config.format_profile_max_formats),
+        "@PUNCT@": _SHAPE_PUNCT,
+        "@OTHER@": _SHAPE_OTHER,
+        "@XSEL@": f", {column} AS dbig_x" if integer else "",
+        "@XCARRY@": ", dbig_x" if integer else "",
+        "@XGROUP@": ", min(dbig_x) AS x_lo, max(dbig_x) AS x_hi" if integer else "",
+        "@XOUT@": (
+            ", min(x_lo) OVER () AS value_min, max(x_hi) OVER () AS value_max" if integer else ""
+        ),
+    }
+    for marker, value in parts.items():
+        template = template.replace(marker, value)
+    return " ".join(template.split())
+
+
+def _format_unavailable(config: SourceConfig, common: dict[str, Any], key: str) -> Record:
+    return Record.model_validate(
+        {
+            "record_type": "diagnostic",
+            "id": stable_id(config.source_id, "diagnostic", f"{key}:format"),
+            "code": "STATS_UNAVAILABLE",
+            "message": "format profile unavailable",
+            **common,
+        }
+    )
+
+
+def _format_skipped(config: SourceConfig, common: dict[str, Any], key: str, count: int) -> Record:
+    """One diagnostic for the profiles left unread because the query budget ran out: a count."""
+    return Record.model_validate(
+        {
+            "record_type": "diagnostic",
+            "id": stable_id(config.source_id, "diagnostic", f"{key}:format-skipped"),
+            "code": "FORMAT_PROFILES_SKIPPED",
+            "message": f"{count} format profiles not read: query budget reached",
+            **common,
+        }
+    )
+
+
+def _profile_formats_postgresql(
+    connection: Any,
+    cursor: Any,
+    config: SourceConfig,
+    budget: Budget,
+    tables: dict[str, list[Record]],
+    object_rows: list[Any],
+    field_rows: list[Any],
+    common: dict[str, Any],
+) -> None:
+    """One whole-column aggregate per text, integer or uuid column; see `_FORMAT_PG`.
+
+    Off unless `format_profiles`. Needs no sample and no token key. Each statement is charged to
+    the budget and runs inside the scan's read-only transaction under its `statement_timeout`.
+    The pass stops, with one count in a diagnostic, when the budget has no query left: an optional
+    read never uses the last queries up and so never costs the catalogue. A name the collector
+    will not quote, or a statement the server refuses or times out on, costs that column its
+    profile and leaves a code-only diagnostic; the failed transaction is rolled back and re-armed
+    so the scan goes on.
+    """
+    if not config.format_profiles:
+        return
+    identity = {oid: (schema, name) for oid, schema, name, kind, *_ in object_rows if kind in "rmp"}
+    skipped = 0
+    for oid, attnum, name, data_type, *_ in field_rows:
+        family = _format_family(str(data_type))
+        if family is None or oid not in identity:
+            continue
+        if budget.used >= budget.max_queries:
+            skipped += 1
+            continue
+        schema, table = identity[oid]
+        try:
+            statement = _format_statement(
+                _FORMAT_PG, config, f"{_quoted(schema)}.{_quoted(table)}", _quoted(name), "",
+                family == "integer",
+            )
+        except ValueError:  # a name that is no plain identifier: skipped, never an abort
+            tables["diagnostics.jsonl"].append(
+                _format_unavailable(config, common, f"{oid}:{attnum}")
+            )
+            continue
+        budget.charge()
+        try:
+            cursor.execute(statement)
+            names = [
+                item[0].decode() if isinstance(item[0], bytes) else str(item[0])
+                for item in cursor.description
+            ]
+            rows = cursor.fetchall()
+        except Exception:
+            connection.rollback()
+            cursor.execute("SET TRANSACTION READ ONLY")
+            cursor.execute(
+                "SELECT set_config('statement_timeout', %s, true)",
+                (str(config.read_timeout_seconds * 1000),),
+            )
+            tables["diagnostics.jsonl"].append(
+                _format_unavailable(config, common, f"{oid}:{attnum}")
+            )
+            continue
+        for record in _format_records(
+            config,
+            common,
+            stable_id(config.source_id, "field", f"{oid}:{attnum}"),
+            stable_id(config.source_id, "object", str(oid)),
+            names,
+            rows,
+        ):
+            tables["ranges.jsonl" if isinstance(record, ValueRanges) else "profiles.jsonl"].append(
+                record
+            )
+    if skipped:
+        tables["diagnostics.jsonl"].append(_format_skipped(config, common, "postgresql", skipped))
+
+
+def _profile_formats_clickhouse(
+    client: Any,
+    config: SourceConfig,
+    budget: Budget,
+    database: str,
+    identities: dict[str, str],
+    views: set[str],
+    columns: dict[str, list[tuple[str, str, str]]],
+    tables: dict[str, list[Record]],
+    common: dict[str, Any],
+) -> int:
+    """The ClickHouse counterpart of `_profile_formats_postgresql`, under `max_execution_time`.
+
+    A view is not read, since reading one runs its query. A column of an empty table has no
+    groups, so no row comes back and no profile is made: an empty column is never a [0, 0] range.
+    Returns how many profiles were skipped for want of budget; the caller reports the total.
+    """
+    skipped = 0
+    if not config.format_profiles:
+        return skipped
+    try:
+        quoted_database = _quoted(database)
+    except ValueError:  # a database that is no plain identifier: skipped, never an abort
+        tables["diagnostics.jsonl"].append(_format_unavailable(config, common, database))
+        return skipped
+    for table, entries in sorted(columns.items()):
+        if table in views:
+            continue
+        try:
+            relation = f"{quoted_database}.{_quoted(table)}"
+        except ValueError:
+            tables["diagnostics.jsonl"].append(
+                _format_unavailable(config, common, f"{database}:{table}")
+            )
+            continue
+        for field_id, name, data_type in entries:
+            family = _format_family(data_type)
+            if family is None:
+                continue
+            if budget.used >= budget.max_queries:
+                skipped += 1
+                continue
+            try:
+                quoted = _quoted(name)
+            except ValueError:
+                tables["diagnostics.jsonl"].append(
+                    _format_unavailable(config, common, f"{database}:{table}:{field_id}")
+                )
+                continue
+            statement = _format_statement(
+                _FORMAT_CH,
+                config,
+                relation,
+                quoted,
+                f"toStringCutToZero({quoted})"
+                if "fixedstring" in data_type.casefold()
+                else f"toString({quoted})",
+                family == "integer",
+            )
+            budget.charge()
+            try:
+                result = client.query(
+                    statement, settings={"max_execution_time": config.read_timeout_seconds}
+                )
+                rows, names = list(result.result_set), list(result.column_names)
+            except Exception:
+                tables["diagnostics.jsonl"].append(
+                    _format_unavailable(config, common, f"{database}:{table}:{name}")
+                )
+                continue
+            for record in _format_records(
+                config, common, field_id, stable_id(config.source_id, "object", identities[table]),
+                names, rows,
+            ):
+                tables[
+                    "ranges.jsonl" if isinstance(record, ValueRanges) else "profiles.jsonl"
+                ].append(record)
+    return skipped
+
+
 def discover_postgresql(
     connection: Any, config: SourceConfig, budget: Budget
 ) -> dict[str, list[Record]]:
@@ -420,6 +936,7 @@ def discover_postgresql(
                         definitions[int(item.native_id)].encode("utf-8")
                     ).hexdigest()
                     item.attributes["view_definition_available"] = True
+        field_rows: list[Any] = []
         if rows:
             budget.charge()
             cursor.execute(
@@ -510,6 +1027,11 @@ def discover_postgresql(
             _refuse_missing_namespaces(
                 config, [item for item in empty if item not in existing], "schema"
             )
+        # Last, and stopped at the budget limit instead of raising, so the optional column reads
+        # cost profiles and never the catalogue.
+        _profile_formats_postgresql(
+            connection, cursor, config, budget, tables, rows, field_rows, common
+        )
         connection.rollback()
     finally:
         cursor.close()
@@ -522,6 +1044,9 @@ def discover_clickhouse(
     common = _common(config)
     tables: dict[str, list[Record]] = defaultdict(list)
     listed: set[str] = set()
+    format_work: list[
+        tuple[str, dict[str, str], set[str], dict[str, list[tuple[str, str, str]]]]
+    ] = []
     for database in config.namespaces:
         budget.charge()
         rows = client.query(
@@ -537,7 +1062,9 @@ def discover_clickhouse(
         if rows:
             listed.add(database)
         identities: dict[str, str] = {}
+        views: set[str] = set()
         row_counts: dict[str, int] = {}
+        key_expressions: dict[str, dict[str, str]] = {}
         for (
             name,
             uuid,
@@ -564,6 +1091,8 @@ def discover_clickhouse(
                 )
                 continue
             identities[name] = uuid
+            if engine in {"View", "LiveView"}:
+                views.add(name)
             if total_rows is not None:
                 row_counts[name] = int(total_rows)
             attributes: dict[str, str | int | float | bool | None] = {
@@ -574,6 +1103,7 @@ def discover_clickhouse(
             if total_rows is not None:
                 attributes["row_count_estimate"] = int(total_rows)
                 attributes["row_count_method"] = "system.tables.total_rows"
+            key_expressions[name] = {"primary_key": primary_key, "sorting_key": sorting_key}
             for key, expression in (
                 ("partition", partition_key),
                 ("sort", sorting_key),
@@ -618,6 +1148,8 @@ def discover_clickhouse(
         ).result_set
         if len(columns) > config.max_fields:
             raise BudgetExhausted
+        column_names: dict[str, set[str]] = defaultdict(set)
+        probe_columns: dict[str, list[tuple[str, str, str]]] = defaultdict(list)
         for table, name, data_type, position, uncompressed, comment in columns:
             if table not in identities:
                 continue
@@ -636,6 +1168,8 @@ def discover_clickhouse(
                     **common,
                 )
             )
+            column_names[table].add(name)
+            probe_columns[table].append((field_id, name, str(data_type)))
             width = _average_width(uncompressed, row_counts.get(table))
             if width is not None:
                 tables["profiles.jsonl"].append(
@@ -648,6 +1182,54 @@ def discover_clickhouse(
                         method="source_statistic",
                         average_width_bytes=width,
                         **common,
+                    )
+                )
+        _tokenize_clickhouse(
+            client, config, budget, database, identities, views, probe_columns, tables, common
+        )
+        format_work.append((database, identities, views, probe_columns))
+        if config.cardinality_probe:
+            for table, probed in probe_columns.items():
+                _probe_clickhouse(
+                    client,
+                    config,
+                    budget,
+                    common,
+                    database,
+                    table,
+                    probed,
+                    stable_id(config.source_id, "object", identities[table]),
+                    tables["profiles.jsonl"],
+                    tables["diagnostics.jsonl"],
+                )
+        # A sorting or primary key that is one plain column is a weak parent claim (DEC-2): schema
+        # metadata, not values, and not a uniqueness guarantee. `index` is the existing kind that
+        # carries column names; the native ID suffix says it is a key claim, not a skip index.
+        # ponytail: expressions and multi-column keys are skipped; upgrade is parsing them.
+        for table, expressions in key_expressions.items():
+            for claim, expression in expressions.items():
+                column = (expression or "").strip()
+                # ClickHouse 26.8 reports `ORDER BY (companyID)` as "(companyID)" (live run
+                # 2026-10-17); one outer pair is not part of the name. "(a, b)" still fails below.
+                if column.startswith("(") and column.endswith(")"):
+                    column = column[1:-1].strip()
+                column = column.strip("`")
+                if not _PLAIN_COLUMN.fullmatch(column) or column not in column_names[table]:
+                    continue
+                if claim == "sorting_key" and expressions["primary_key"] == expression:
+                    continue
+                native = f"{identities[table]}:{claim}"
+                tables["constraints.jsonl"].append(
+                    Record.model_validate(
+                        {
+                            "record_type": "constraint",
+                            "id": stable_id(config.source_id, "constraint", native),
+                            "native_id": native,
+                            "kind": "index",
+                            "object_id": stable_id(config.source_id, "object", identities[table]),
+                            "field_names": [column],
+                            **common,
+                        }
                     )
                 )
     empty = [item for item in config.namespaces if item not in listed]
@@ -667,7 +1249,189 @@ def discover_clickhouse(
         _refuse_missing_namespaces(
             config, [item for item in empty if item not in existing], "database"
         )
+    # Last, and stopped at the budget limit instead of raising, so the optional column reads cost
+    # profiles and never the catalogue.
+    skipped = 0
+    for database, identities, views, probe_columns in format_work:
+        skipped += _profile_formats_clickhouse(
+            client, config, budget, database, identities, views, probe_columns, tables, common
+        )
+    if skipped:
+        tables["diagnostics.jsonl"].append(_format_skipped(config, common, "clickhouse", skipped))
     return tables
+
+
+_PLAIN_COLUMN = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+_NESTED_TYPE = re.compile(r"^(Nullable\(|LowCardinality\()*(Array|Map|Tuple|Nested|Object|JSON)")
+
+
+def _tokenize_clickhouse(
+    client: Any,
+    config: SourceConfig,
+    budget: Budget,
+    database: str,
+    identities: dict[str, str],
+    views: set[str],
+    columns: dict[str, list[tuple[str, str, str]]],
+    tables: dict[str, list[Record]],
+    common: dict[str, Any],
+) -> None:
+    """Keyed tokens for ClickHouse, as `_tokenize_postgresql` makes them (F7).
+
+    Off unless sampling and a token key are both configured. One bounded read per table, of the
+    first `sample_rows` rows, naming the plain, non-nested columns from the server's own catalog;
+    a view is not read, since reading one runs its query, but a materialized view holds stored
+    rows and is read, as on PostgreSQL. A read the server refuses (an EPHEMERAL column, a missing
+    backing file) costs that table its tokens and leaves a code-only diagnostic, as the probe
+    does, rather than ending the scan. `columns` holds (field_id, name, type).
+    ponytail: a table larger than `sample_rows` is never read whole, so a zero against it never
+    drops (P6-2); a full-column sketch read is the upgrade path (LEAD_REVIEW F5 option C).
+    """
+    if config.sample_rows <= 0 or not config.value_token_key_env:
+        return
+    key = key_from_env(config.value_token_key_env, purpose="cross-source value tokenisation")
+    for table, entries in sorted(columns.items()):
+        chosen = [
+            item
+            for item in entries
+            if _PLAIN_COLUMN.fullmatch(item[1]) and not _NESTED_TYPE.match(item[2])
+        ]
+        if table in views or not chosen or not _PLAIN_COLUMN.fullmatch(table):
+            continue
+        budget.charge()
+        selected = ",".join(_quoted(name) for _, name, _ in chosen)
+        try:
+            rows = client.query(
+                # Identifiers come from the server's catalog and pass `_quoted`; the row limit is
+                # a bound parameter. No caller input reaches this statement.
+                f"SELECT {selected} FROM {_quoted(database)}.{_quoted(table)} "  # noqa: S608 # C5: reason=identifiers pass _quoted and limits are bound parameters; approved=user, 2026-11-08; review=2027-05-08
+                "LIMIT {lim:UInt64}",
+                parameters={"lim": config.sample_rows},
+                settings={"max_execution_time": config.read_timeout_seconds},
+            ).result_set
+        except Exception:
+            tables["diagnostics.jsonl"].append(
+                Record.model_validate(
+                    {
+                        "record_type": "diagnostic",
+                        "id": stable_id(
+                            config.source_id, "diagnostic", f"{database}:{table}:sample"
+                        ),
+                        "code": "STATS_UNAVAILABLE",
+                        "message": "value sample unavailable",
+                        **common,
+                    }
+                )
+            )
+            continue
+        for position, (field_id, _, _) in enumerate(chosen):
+            digests, observed, distinct, truncated = _value_tokens(
+                [row[position] for row in rows], key=key, limit=config.max_value_tokens
+            )
+            if not digests:
+                continue
+            tables["tokens.jsonl"].append(
+                ValueTokens(
+                    id=stable_id(config.source_id, "tokens", field_id),
+                    field_id=field_id,
+                    object_id=stable_id(config.source_id, "object", identities[table]),
+                    key_id=config.value_token_key_id or "",
+                    sample_count=len(rows),
+                    sample_method=f"first_rows_limit:{config.sample_rows}",
+                    observed_count=observed,
+                    distinct_count=distinct,
+                    truncated=truncated,
+                    complete=len(rows) < config.sample_rows,
+                    tokens=digests,
+                    **common,
+                )
+            )
+
+
+def _probe_profile(
+    config: SourceConfig,
+    common: dict[str, Any],
+    field_id: str,
+    object_id: str,
+    rows: int,
+    distinct: int,
+) -> Profile | None:
+    """A distinct count over the rows the probe read, as a uniqueness measure; counts only.
+
+    ponytail: the rows are the first `cardinality_probe_max_rows`, so on a larger table this is
+    uniqueness within that prefix, a lower bound on duplicates, not a table-wide measurement
+    (`sample_count` says how many rows). Upgrade path: a table-wide `uniqExact` behind its own
+    budget.
+    """
+    if rows <= 0 or distinct < 0:
+        return None
+    return Profile(
+        id=stable_id(config.source_id, "profile", f"{field_id}:cardinality_probe"),
+        field_id=field_id,
+        object_id=object_id,
+        method="sample",
+        sample_count=rows,
+        distinct_estimate=float(distinct),
+        uniqueness=min(distinct / rows, 1.0),
+        **common,
+    )
+
+
+def _probe_clickhouse(
+    client: Any,
+    config: SourceConfig,
+    budget: Budget,
+    common: dict[str, Any],
+    database: str,
+    table: str,
+    columns: list[tuple[str, str, str]],
+    object_id: str,
+    out: list[Record],
+    diagnostics: list[Record],
+) -> None:
+    """One query: `count()` and `uniq()` of up to N plain columns over a bounded row prefix.
+
+    `columns` holds (field_id, name, type). Identifiers come from the server's own catalog and
+    pass `_quoted`; the row bound is a bound parameter. Counted through a `LIMIT` subquery on one
+    thread, the count covers exactly the cap and the server reads about one block more (F9,
+    measured on ClickHouse 26.8: about 2x, against 7.8x for `max_rows_to_read` with `break`).
+    """
+    chosen = [
+        item
+        for item in columns
+        if _PLAIN_COLUMN.fullmatch(item[1]) and not _NESTED_TYPE.match(item[2])
+    ][: config.cardinality_probe_max_columns]
+    if not chosen or budget.used >= budget.max_queries:
+        return
+    budget.charge()
+    select = ", ".join(["count()", *(f"uniq({_quoted(name)})" for _, name, _ in chosen)])
+    inner = ",".join(_quoted(name) for _, name, _ in chosen)
+    try:
+        result = client.query(
+            f"SELECT {select} FROM (SELECT {inner} "  # noqa: S608 # C5: reason=identifiers pass _quoted and limits are bound parameters; approved=user, 2026-11-08; review=2027-05-08
+            f"FROM {_quoted(database)}.{_quoted(table)} LIMIT {{lim:UInt64}})",
+            parameters={"lim": config.cardinality_probe_max_rows},
+            settings={"max_execution_time": config.read_timeout_seconds, "max_threads": 1},
+        ).result_set
+        row = result[0]
+        rows = int(row[0])
+    except Exception:
+        diagnostics.append(
+            Record.model_validate(
+                {
+                    "record_type": "diagnostic",
+                    "id": stable_id(config.source_id, "diagnostic", f"{database}:{table}:probe"),
+                    "code": "STATS_UNAVAILABLE",
+                    "message": "cardinality probe unavailable",
+                    **common,
+                }
+            )
+        )
+        return
+    for (field_id, _, _), distinct in zip(chosen, row[1:], strict=True):
+        profile = _probe_profile(config, common, field_id, object_id, rows, int(distinct))
+        if profile is not None:
+            out.append(profile)
 
 
 def _average_width(uncompressed: Any, rows: int | None) -> int | None:
@@ -689,6 +1453,70 @@ def _average_width(uncompressed: Any, rows: int | None) -> int | None:
     return width if width >= 0 else None
 
 
+_MONGO_PATH = re.compile(r"[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*")
+
+
+def _probe_mongo(
+    collection: Any,
+    config: SourceConfig,
+    budget: Budget,
+    common: dict[str, Any],
+    object_id: str,
+    native: str,
+    paths: dict[str, set[str]],
+    out: list[Record],
+    diagnostics: list[Record],
+) -> None:
+    """One aggregation: a bounded document prefix, then a distinct count per scalar path.
+
+    Only counts leave the server (`$facet` of `$group` then `$count`); no value is returned. Paths
+    that are arrays or sub-documents, or whose names are not plain, are skipped.
+    """
+    chosen = [
+        path
+        for path, types in sorted(paths.items())
+        if _MONGO_PATH.fullmatch(path) and not types & {"list", "dict", "array", "object"}
+    ][: config.cardinality_probe_max_columns]
+    if not chosen or budget.used >= budget.max_queries:
+        return
+    budget.charge()
+    facets: dict[str, Any] = {
+        f"p{index}": [{"$group": {"_id": f"${path}"}}, {"$count": "n"}]
+        for index, path in enumerate(chosen)
+    }
+    pipeline = [
+        {"$limit": config.cardinality_probe_max_rows},
+        {"$facet": {"rows": [{"$count": "n"}], **facets}},
+    ]
+    try:
+        result = list(
+            collection.aggregate(pipeline, maxTimeMS=config.read_timeout_seconds * 1000)
+        )[0]
+        rows = int(result["rows"][0]["n"]) if result["rows"] else 0
+        counts = [
+            int(result[f"p{index}"][0]["n"]) if result[f"p{index}"] else 0
+            for index in range(len(chosen))
+        ]
+    except Exception:
+        diagnostics.append(
+            Record.model_validate(
+                {
+                    "record_type": "diagnostic",
+                    "id": stable_id(config.source_id, "diagnostic", f"{native}:probe"),
+                    "code": "STATS_UNAVAILABLE",
+                    "message": "cardinality probe unavailable",
+                    **common,
+                }
+            )
+        )
+        return
+    for path, distinct in zip(chosen, counts, strict=True):
+        field_id = stable_id(config.source_id, "field", f"{native}:{path}")
+        profile = _probe_profile(config, common, field_id, object_id, rows, distinct)
+        if profile is not None:
+            out.append(profile)
+
+
 def _mongo_paths(
     document: dict[str, Any],
     prefix: str,
@@ -700,8 +1528,13 @@ def _mongo_paths(
     tokens: dict[str, set[str]] | None = None,
     observed: dict[str, int] | None = None,
     token_key: bytes | None = None,
+    cut: set[str] | None = None,
+    shapes: _Shapes | None = None,
 ) -> None:
     """Walk a sampled document for paths and types, and optionally key its scalar values.
+
+    `cut` collects the array paths where `array_limit` left elements unread, so their value
+    tokens are not marked complete.
 
     When tokenising, each scalar is keyed where it is met and only the digest is kept, so no
     buffer of raw source values ever exists, not even for the duration of one document.
@@ -715,21 +1548,29 @@ def _mongo_paths(
         if isinstance(value, dict):
             _mongo_paths(
                 value, path, depth + 1, limit, array_limit, found, present,
-                tokens, observed, token_key,
+                tokens, observed, token_key, cut, shapes,
             )
         elif isinstance(value, list):
+            if cut is not None and len(value) > array_limit:
+                cut.add(path + "[]")
             for element in value[:array_limit]:
                 found[path + "[]"].add(type(element).__name__)
                 present.add(path + "[]")
                 if isinstance(element, dict):
                     _mongo_paths(
                         element, path + "[]", depth + 1, limit, array_limit, found, present,
-                        tokens, observed, token_key,
+                        tokens, observed, token_key, cut, shapes,
                     )
-                elif token_key is not None and tokens is not None and observed is not None:
-                    _record_token(path + "[]", element, tokens, observed, token_key)
-        elif token_key is not None and tokens is not None and observed is not None:
-            _record_token(path, value, tokens, observed, token_key)
+                else:
+                    if shapes is not None:
+                        shapes.add(path + "[]", element)
+                    if token_key is not None and tokens is not None and observed is not None:
+                        _record_token(path + "[]", element, tokens, observed, token_key)
+        else:
+            if shapes is not None:
+                shapes.add(path, value)
+            if token_key is not None and tokens is not None and observed is not None:
+                _record_token(path, value, tokens, observed, token_key)
 
 
 def _record_token(
@@ -866,19 +1707,21 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
                         paths[field_name].add("unknown")
                         origins[field_name].add("index")
             sample_count = 0
+            # Set when `max_sample_bytes` stopped the read, which leaves the sample incomplete
+            # however few documents it holds.
+            byte_cut = False
+            array_cut: set[str] = set()
             present_counts: dict[str, int] = defaultdict(int)
             # Tokenising needs a key as well as a sample, and is off unless both are configured.
             token_key = (
-                secret_from_env(
-                    config.value_token_key_env, purpose="cross-source value tokenisation"
-                ).encode("utf-8")
+                key_from_env(config.value_token_key_env, purpose="cross-source value tokenisation")
                 if config.value_token_key_env
                 else None
             )
-            if token_key is not None and len(token_key) < 32:
-                raise ValueError("value token key must contain at least 32 bytes")
             path_tokens: dict[str, set[str]] = {}
             path_observed: dict[str, int] = {}
+            # Format profiles come from the same sample, so they cost no query (P7-5 option C).
+            shapes = _Shapes(config.format_token_max_length) if config.format_profiles else None
             if config.sample_rows and sampled_bytes_total >= config.max_sample_bytes:
                 # Said rather than skipped: without a sample a collection with no validator has
                 # no fields at all, which would otherwise look like an empty collection.
@@ -920,6 +1763,7 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
                                     }
                                 )
                             )
+                            byte_cut = True
                             break
                         sampled_bytes_total += document_bytes
                         sample_count += 1
@@ -935,6 +1779,8 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
                             path_tokens,
                             path_observed,
                             token_key,
+                            array_cut,
+                            shapes,
                         )
                         for path in present:
                             present_counts[path] += 1
@@ -966,6 +1812,7 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
                     # measure a type-only sample yields: no value was read, so nothing about
                     # distinctness is known and none is claimed.
                     field_id = stable_id(config.source_id, "field", field_native)
+                    shape = shapes.by_path.get(path) if shapes is not None else None
                     tables["profiles.jsonl"].append(
                         Profile(
                             id=stable_id(config.source_id, "profile", f"{field_id}:sample"),
@@ -976,9 +1823,59 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
                             null_fraction=max(
                                 0.0, min(1.0, 1.0 - present_counts[path] / sample_count)
                             ),
+                            **(
+                                _format_fields(
+                                    shape.count,
+                                    shape.length_min,
+                                    shape.length_max,
+                                    shape.length_sum / shape.count if shape.count else None,
+                                    (
+                                        shape.digits / shape.count if shape.count else None,
+                                        shape.hex / shape.count if shape.count else None,
+                                        shape.uuid / shape.count if shape.count else None,
+                                        shape.alpha / shape.count if shape.count else None,
+                                    ),
+                                    {
+                                        token: size / shape.count
+                                        for token, size in shape.formats.most_common(
+                                            config.format_profile_max_formats
+                                        )
+                                    },
+                                    shapes_seen=len(shape.formats),
+                                    # The numbers describe the sample: whole only if the read
+                                    # reached the end of the collection (as the tokens' flag).
+                                    complete=not byte_cut
+                                    and sample_count < config.sample_rows
+                                    and not any(
+                                        path == item or path.startswith(item + ".")
+                                        for item in array_cut
+                                    ),
+                                )
+                                if shape is not None
+                                else {}
+                            ),
                             **common,
                         )
                     )
+                    if (
+                        shape is not None
+                        and shape.only_integers
+                        and shape.integer_range is not None
+                        and "[]" not in path
+                    ):
+                        # A range from the documents read: whole only when the read reached the
+                        # end of the collection, otherwise it may mark an overlap but never drop.
+                        tables["ranges.jsonl"].append(
+                            ValueRanges(
+                                id=stable_id(config.source_id, "ranges", field_id),
+                                field_id=field_id,
+                                object_id=object_id,
+                                minimum=shape.integer_range[0],
+                                maximum=shape.integer_range[1],
+                                complete=not byte_cut and sample_count < config.sample_rows,
+                                **common,
+                            )
+                        )
                     if token_key is not None and path in path_tokens:
                         # The case the whole design exists for: a MongoDB identifier compared
                         # against a relational key. Same keying and same normalisation as the
@@ -1007,10 +1904,28 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
                                     observed_count=observed,
                                     distinct_count=distinct,
                                     truncated=truncated,
+                                    complete=not byte_cut
+                                    and sample_count < config.sample_rows
+                                    and not any(
+                                        path == item or path.startswith(item + ".")
+                                        for item in array_cut
+                                    ),
                                     tokens=digests,
                                     **common,
                                 )
                             )
+            if config.cardinality_probe and info.get("type", "collection") == "collection":
+                _probe_mongo(
+                    client[database][name],
+                    config,
+                    budget,
+                    common,
+                    object_id,
+                    native,
+                    paths,
+                    tables["profiles.jsonl"],
+                    tables["diagnostics.jsonl"],
+                )
             if info.get("type", "collection") == "collection" and budget.used < budget.max_queries:
                 budget.charge()
                 try:
@@ -1237,11 +2152,7 @@ def _collect(config: SourceConfig, destination: Path) -> None:
     )
     if not isinstance(connection, dict):
         raise ValueError("connection reference must contain a JSON object")
-    signing_key = secret_from_env(
-        config.signing_key_env, purpose="collector bundle signing"
-    ).encode("utf-8")
-    if len(signing_key) < 32:
-        raise ValueError("signing key must contain at least 32 bytes")
+    signing_key = key_from_env(config.signing_key_env, purpose="collector bundle signing")
     budget = Budget(config.max_queries)
     ca_file = str(config.tls_ca_file) if config.tls_ca_file is not None else None
     if config.kind == "postgresql":

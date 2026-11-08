@@ -873,3 +873,73 @@ def test_same_source_runs_join_in_one_query_and_never_across_a_gap():
     assert _runs(["a", "b", "c"], ["pg", "mongo", "pg"]) == [(0, 1), (1, 2), (2, 3)]
     assert _runs(["a", "b"], ["pg", "pg"]) == [(0, 2)]
     assert _runs(["a"], ["pg"]) == [(0, 1)]
+
+
+def _dec4_graph(tmp_path, *, cross_value_evidence=False):
+    """ch.exp -> ch.company directly (same source) and via pg.mid (two cross-source candidates)."""
+    now = datetime.now(UTC)
+    common = {"observed_at": now, "collector_version": "synthetic", "provenance": "fixture"}
+    sources = [
+        Source(id=name, source_id=name, kind=kind, name=name, **common)
+        for name, kind in (("ch", "clickhouse"), ("pg", "postgresql"))
+    ]
+    placement = {"exp": "ch", "company": "ch", "mid": "pg"}
+    objects = [
+        Object(id=name, source_id=source, native_id=name, kind="table", name=name, **common)
+        for name, source in placement.items()
+    ]
+    evidence = [Evidence(id="ev", source_id="ch", kind="fixture", subject_id="exp", **common)]
+    if cross_value_evidence:
+        evidence.append(
+            Evidence(id="ev-values", source_id="ch", kind="value_containment", subject_id="exp",
+                     **common)
+        )
+
+    def edge(name, left, right, cited):
+        return Edge.model_validate({
+            "id": name, "source_id": placement[left], "kind": "REFERENCE_CANDIDATE",
+            "from_id": left, "to_id": right, "status": "tentative", "evidence_ids": cited,
+            "field_pairs": [], **common,
+        })
+
+    cross = ["ev", "ev-values"] if cross_value_evidence else ["ev"]
+    edges = [
+        edge("direct", "exp", "company", ["ev"]),
+        edge("hop1", "exp", "mid", cross),
+        edge("hop2", "mid", "company", cross),
+    ]
+    snapshot = tmp_path / "snapshot"
+    write_artifact(
+        snapshot, "catalog-snapshot",
+        {"nodes.jsonl": [*sources, *objects], "edges.jsonl": edges, "evidence.jsonl": evidence},
+        producer="fixture", source_run_ids=[],
+    )
+    (tmp_path / "observations").mkdir()
+    config = PlannerConfig(graph_dir=tmp_path / "graph")
+    build_graph(snapshot, tmp_path / "observations", config.graph_dir, config)
+    return config
+
+
+def test_dec4_a_same_source_path_beats_the_roundabout_cross_source_one(tmp_path):
+    config = _dec4_graph(tmp_path)
+    found = find_paths(
+        config.graph_dir, PathRequest(from_id="exp", to_id="company", max_paths=5), "join", config
+    )
+    assert [item["object_ids"] for item in found["paths"]] == [["exp", "company"]]
+    assert "warnings" not in found["paths"][0]
+
+
+def test_dec4_a_path_of_only_unverified_cross_source_candidates_warns(tmp_path):
+    config = _dec4_graph(tmp_path)
+    found = find_paths(
+        config.graph_dir, PathRequest(from_id="exp", to_id="mid"), "join", config
+    )
+    assert found["paths"][0]["warnings"] == ["CROSS_SOURCE_CANDIDATES_UNVERIFIED"]
+
+
+def test_dec4_value_evidence_silences_the_warning(tmp_path):
+    config = _dec4_graph(tmp_path, cross_value_evidence=True)
+    found = find_paths(
+        config.graph_dir, PathRequest(from_id="exp", to_id="mid"), "join", config
+    )
+    assert "warnings" not in found["paths"][0]

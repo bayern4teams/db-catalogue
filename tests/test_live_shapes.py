@@ -345,7 +345,10 @@ def test_a_text_key_is_proposed_across_engines_and_its_plan_executes(catalogue):
     }
     assert ("Page Views", "regions", "region_code", "code") in proposed
 
-    config = PlannerConfig(graph_dir=catalogue["root"] / "graph")
+    # P7-5 (F11-b): a cross-source path over an unmeasured candidate is left out unless asked.
+    config = PlannerConfig(
+        graph_dir=catalogue["root"] / "graph", include_unverified_cross_source=True
+    )
     by_name = catalogue["by_name"]
     paths = find_paths(
         config.graph_dir,

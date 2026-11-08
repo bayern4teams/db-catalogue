@@ -51,3 +51,4 @@ actionlint
 zizmor
 deptry
 recs
+matviews

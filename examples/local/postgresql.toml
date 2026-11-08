@@ -17,3 +17,12 @@ namespaces = ["public"]                # PostgreSQL schemas to catalogue
 # sample_rows = 100
 # value_token_key_env = "DBIG_TOKEN_KEY"
 # value_token_key_id = "run-1"
+
+# Optional value-free format profiles (default off): per text, integer or uuid column, the value
+# length range, the share of digit, hex, uuid and letter values and the most common value shapes
+# (digits 9, letters a). One read-only query per column over the whole column, charged to max_queries.
+# Integer columns also write their smallest and largest value to the local-only ranges.jsonl.
+# Reads data (aggregates only), so a scan request needs the `sample` capability.
+# format_profiles = true
+# format_profile_max_formats = 8     # most common shapes kept per column
+# format_token_max_length = 64       # longest value prefix a shape is made from

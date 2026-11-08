@@ -1,0 +1,2361 @@
+{
+ "summary": {
+  "candidates": 79,
+  "by_mark": {
+   "true": 61,
+   "false": 18
+  },
+  "unmarked": [],
+  "true_missing": [
+   "CH ch.Location.companyID -> ch.Company.companyID",
+   "MG mongo.zoominfo_CompanyIndustry.companyID -> mongo.zoominfo_Company.companyID",
+   "MG mongo.zoominfo_Experience.companyID -> mongo.zoominfo_Company.companyID",
+   "MG mongo.zoominfo_location.companyID -> mongo.zoominfo_Company.companyID",
+   "MG mongo.zoominfo_contracts.company_id -> mongo.zoominfo_Company.companyID",
+   "MG mongo.zoominfo_evidence.company_id -> mongo.zoominfo_Company.companyID",
+   "MG mongo.zoominfo_CompanyIndustry.industryID -> mongo.zoominfo_industry.industryID",
+   "MG mongo.diffbot_CompanyExperience.companyID -> mongo.diffbot_Company.companyID",
+   "MG mongo.diffbot_CompanyIndustry.companyID -> mongo.diffbot_Company.companyID",
+   "MG mongo.diffbot_CompanyInvestmentRound.companyID -> mongo.diffbot_Company.companyID",
+   "P4-ch ch.Experience.personID -> ch.PersonContact.personID",
+   "P4-ch ch.Person.personID -> ch.PersonContact.personID",
+   "P4-ch ch.Person.personID -> ch.Experience.personID",
+   "P4-ch ch.PersonContact.personID -> ch.Experience.personID"
+  ],
+  "false_present": [
+   "W-A mongo.diffbot_Company.companyID -> ch.Company.companyID",
+   "W-A mongo.diffbot_CompanyExperience.companyID -> ch.Company.companyID",
+   "W-A mongo.diffbot_CompanyIndustry.companyID -> ch.Company.companyID",
+   "W-A mongo.diffbot_CompanyInvestmentRound.companyID -> ch.Company.companyID",
+   "W-A pg.company.companyid -> ch.Company.companyID",
+   "W-A pg.companycontact.companyid -> ch.Company.companyID",
+   "W-A pg.companyemployeecategory.companyid -> ch.Company.companyID",
+   "W-A pg.companyexperience.companyid -> ch.Company.companyID",
+   "W-A pg.companyfinancials.companyid -> ch.Company.companyID",
+   "W-A pg.companyindustry.companyid -> ch.Company.companyID",
+   "W-A pg.companyinvestmentround.companyid -> ch.Company.companyID",
+   "W-A pg.companyrelation.companyid -> ch.Company.companyID",
+   "W-A pg.companytechnographics.companyid -> ch.Company.companyID",
+   "W-A pg.location.companyid -> ch.Company.companyID",
+   "W-B mongo.diffbot_CompanyExperience.personID -> ch.Person.personID",
+   "W-B pg.companyexperience.personid -> ch.Person.personID",
+   "W-B pg.location.locationid -> ch.Location.locationID",
+   "W-B pg.person.personid -> ch.Person.personID"
+  ],
+  "original21": {
+   "#1": "absent (false)",
+   "#2": "present (true)",
+   "#3": "absent (false)",
+   "#4": "absent (false)",
+   "#5": "absent (false)",
+   "#6": "absent (false)",
+   "#7": "present (true)",
+   "#8": "present (true)",
+   "#9": "absent (false)",
+   "#10": "absent (false)",
+   "#11": "present (true)",
+   "#12": "present (true)",
+   "#13": "absent (false)",
+   "#14": "absent (false)",
+   "#15": "absent (false)",
+   "#16": "absent (false)",
+   "#17": "absent (false)",
+   "#18": "absent (false)",
+   "#19": "absent (false)",
+   "#20": "absent (false)",
+   "#21": "absent (false)"
+  },
+  "ch_pairs_with_numbers": [
+   "mongo.zoominfo_staff.personID -> ch.Person.personID: 10/2291",
+   "ch.CompanyIndustry.companyID -> ch.Company.companyID: 723/2896",
+   "mongo.zoominfo_evidence.company_id -> ch.Company.companyID: 0/19",
+   "pg.person.personid -> ch.Person.personID: 0/207",
+   "pg.companyexperience.personid -> ch.Person.personID: 0/207",
+   "pg.companyemployeecategory.companyid -> ch.Company.companyID: 0/96",
+   "ch.Experience.personID -> ch.Person.personID: 1001/4096",
+   "ch.Experience.companyID -> ch.Company.companyID: 31/2702",
+   "mongo.zoominfo_location.locationID -> ch.Location.locationID: 0/23",
+   "mongo.zoominfo_CompanyIndustry.industryID -> ch.Industry.industryID: 8/41",
+   "mongo.diffbot_CompanyExperience.personID -> ch.Person.personID: 0/12",
+   "mongo.zoominfo_contact_information.personID -> ch.Person.personID: 1/627",
+   "pg.companyindustry.companyid -> ch.Company.companyID: 0/711",
+   "pg.company.companyid -> ch.Company.companyID: 0/711",
+   "mongo.zoominfo_Experience.companyID -> ch.Company.companyID: 0/26",
+   "pg.companyinvestmentround.companyid -> ch.Company.companyID: 0/35",
+   "mongo.zoominfo_Company.companyID -> ch.Company.companyID: 0/26",
+   "pg.companyfinancials.companyid -> ch.Company.companyID: 0/6",
+   "mongo.zoominfo_CompanyIndustry.companyID -> ch.Company.companyID: 0/26",
+   "pg.location.companyid -> ch.Company.companyID: 0/628",
+   "mongo.zoominfo_industry.industryID -> ch.Industry.industryID: 8/41",
+   "pg.companytechnographics.companyid -> ch.Company.companyID: 0/137",
+   "pg.companycontact.companyid -> ch.Company.companyID: 0/612",
+   "pg.location.locationid -> ch.Location.locationID: 0/560",
+   "mongo.zoominfo_Experience.personID -> ch.Person.personID: 10/2291",
+   "ch.CompanyIndustry.industryID -> ch.Industry.industryID: 35/178",
+   "pg.companyrelation.companyid -> ch.Company.companyID: 0/46",
+   "pg.companyexperience.companyid -> ch.Company.companyID: 0/90",
+   "ch.PersonContact.personID -> ch.Person.personID: 5/4042"
+  ],
+  "not_measured_reasons": {
+   "sample_too_small": 5
+  },
+  "freeMails_or_ordinary": []
+ },
+ "candidates": [
+  {
+   "child": "mongo.zoominfo_staff.personID",
+   "parent": "ch.Person.personID",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_containment",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 2291,
+    "child_sample_count": 13518,
+    "child_sample_method": "first_documents_limit:25000",
+    "compared_in_common_hash_range": true,
+    "contained_fraction": 0.004365,
+    "jaccard": 0.001568,
+    "key_id": "run-20261020",
+    "lower_bound_only": true,
+    "minimum_support": 4,
+    "parent_complete": false,
+    "parent_distinct_sampled": 4096,
+    "parent_sample_count": 25000,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": true,
+    "shared_tokens": 10
+   },
+   "mark": "Z6",
+   "true": true
+  },
+  {
+   "child": "mongo.diffbot_CompanyInvestmentRound.companyID",
+   "parent": "ch.Company.companyID",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_overlap_not_measured",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 5,
+    "minimum_support": 4,
+    "parent_distinct_sampled": 25000,
+    "reason": "sample_too_small"
+   },
+   "mark": "W-A",
+   "true": false
+  },
+  {
+   "child": "mongo.diffbot_CompanyIndustry.companyID",
+   "parent": "pg.company.companyid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 22,
+    "child_sample_count": 22,
+    "child_sample_method": "first_documents_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 1.0,
+    "jaccard": 0.005584,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 3940,
+    "parent_sample_count": 3940,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 22
+   },
+   "mark": "#8",
+   "true": true
+  },
+  {
+   "child": "mongo.diffbot_CompanyExperience.personID",
+   "parent": "pg.person.personid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 84,
+    "child_sample_count": 84,
+    "child_sample_method": "first_documents_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 1.0,
+    "jaccard": 0.069136,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 1215,
+    "parent_sample_count": 1215,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 84
+   },
+   "mark": "#2",
+   "true": true
+  },
+  {
+   "child": "pg.companyexperience.personid",
+   "parent": "pg.person.personid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 1215,
+    "child_sample_count": 1230,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 0.999177,
+    "jaccard": 0.998355,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 1215,
+    "parent_sample_count": 1215,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 1214
+   },
+   "mark": "PG",
+   "true": true
+  },
+  {
+   "child": "pg.companytechnographics.companyid",
+   "parent": "pg.company.companyid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 814,
+    "child_sample_count": 20092,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 1.0,
+    "jaccard": 0.206599,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 3940,
+    "parent_sample_count": 3940,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 814
+   },
+   "mark": "PG",
+   "true": true
+  },
+  {
+   "child": "mongo.diffbot_Company.companyID",
+   "parent": "pg.location.companyid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 22,
+    "child_sample_count": 22,
+    "child_sample_method": "first_documents_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 0.954545,
+    "jaccard": 0.005988,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 3506,
+    "parent_sample_count": 3506,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 21
+   },
+   "mark": "U-loc",
+   "true": true
+  },
+  {
+   "child": "ch.CompanyIndustry.companyID",
+   "parent": "ch.Company.companyID",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_containment",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 2896,
+    "child_sample_count": 25000,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": true,
+    "contained_fraction": 0.249655,
+    "jaccard": 0.115329,
+    "key_id": "run-20261020",
+    "lower_bound_only": true,
+    "minimum_support": 4,
+    "parent_complete": false,
+    "parent_distinct_sampled": 4096,
+    "parent_sample_count": 25000,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": true,
+    "shared_tokens": 723
+   },
+   "mark": "CH",
+   "true": true
+  },
+  {
+   "child": "mongo.zoominfo_evidence.company_id",
+   "parent": "ch.Company.companyID",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_containment",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 19,
+    "child_sample_count": 442,
+    "child_sample_method": "first_documents_limit:25000",
+    "compared_in_common_hash_range": true,
+    "contained_fraction": 0.0,
+    "jaccard": 0.0,
+    "key_id": "run-20261020",
+    "lower_bound_only": true,
+    "minimum_support": 4,
+    "parent_complete": false,
+    "parent_distinct_sampled": 4096,
+    "parent_sample_count": 25000,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": true,
+    "reason": "parent_sampled",
+    "shared_tokens": 0
+   },
+   "mark": "Z9",
+   "true": true
+  },
+  {
+   "child": "pg.person.personid",
+   "parent": "ch.Person.personID",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_containment",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 207,
+    "child_sample_count": 1215,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": true,
+    "contained_fraction": 0.0,
+    "jaccard": 0.0,
+    "key_id": "run-20261020",
+    "lower_bound_only": true,
+    "minimum_support": 4,
+    "parent_complete": false,
+    "parent_distinct_sampled": 4096,
+    "parent_sample_count": 25000,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": true,
+    "reason": "parent_sampled",
+    "shared_tokens": 0
+   },
+   "mark": "W-B",
+   "true": false
+  },
+  {
+   "child": "pg.companyexperience.personid",
+   "parent": "ch.Person.personID",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_containment",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 207,
+    "child_sample_count": 1230,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": true,
+    "contained_fraction": 0.0,
+    "jaccard": 0.0,
+    "key_id": "run-20261020",
+    "lower_bound_only": true,
+    "minimum_support": 4,
+    "parent_complete": false,
+    "parent_distinct_sampled": 4096,
+    "parent_sample_count": 25000,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": true,
+    "reason": "parent_sampled",
+    "shared_tokens": 0
+   },
+   "mark": "W-B",
+   "true": false
+  },
+  {
+   "child": "pg.companyemployeecategory.companyid",
+   "parent": "ch.Company.companyID",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_containment",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 96,
+    "child_sample_count": 5134,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": true,
+    "contained_fraction": 0.0,
+    "jaccard": 0.0,
+    "key_id": "run-20261020",
+    "lower_bound_only": true,
+    "minimum_support": 4,
+    "parent_complete": false,
+    "parent_distinct_sampled": 4096,
+    "parent_sample_count": 25000,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": true,
+    "reason": "parent_sampled",
+    "shared_tokens": 0
+   },
+   "mark": "W-A",
+   "true": false
+  },
+  {
+   "child": "ch.Experience.personID",
+   "parent": "ch.Person.personID",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_containment",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 4096,
+    "child_sample_count": 25000,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": true,
+    "contained_fraction": 0.244385,
+    "jaccard": 0.140728,
+    "key_id": "run-20261020",
+    "lower_bound_only": true,
+    "minimum_support": 4,
+    "parent_complete": false,
+    "parent_distinct_sampled": 4018,
+    "parent_sample_count": 25000,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": true,
+    "shared_tokens": 1001
+   },
+   "mark": "CH",
+   "true": true
+  },
+  {
+   "child": "mongo.diffbot_CompanyIndustry.companyID",
+   "parent": "ch.Company.companyID",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_overlap_not_measured",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 22,
+    "minimum_support": 4,
+    "parent_distinct_sampled": 25000,
+    "reason": "sample_too_small"
+   },
+   "mark": "W-A",
+   "true": false
+  },
+  {
+   "child": "ch.Experience.companyID",
+   "parent": "ch.Company.companyID",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_containment",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 2702,
+    "child_sample_count": 25000,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": true,
+    "contained_fraction": 0.011473,
+    "jaccard": 0.004581,
+    "key_id": "run-20261020",
+    "lower_bound_only": true,
+    "minimum_support": 4,
+    "parent_complete": false,
+    "parent_distinct_sampled": 4096,
+    "parent_sample_count": 25000,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": true,
+    "shared_tokens": 31
+   },
+   "mark": "CH",
+   "true": true
+  },
+  {
+   "child": "mongo.zoominfo_location.locationID",
+   "parent": "ch.Location.locationID",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_containment",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 23,
+    "child_sample_count": 103,
+    "child_sample_method": "first_documents_limit:25000",
+    "compared_in_common_hash_range": true,
+    "contained_fraction": 0.0,
+    "jaccard": 0.0,
+    "key_id": "run-20261020",
+    "lower_bound_only": true,
+    "minimum_support": 4,
+    "parent_complete": false,
+    "parent_distinct_sampled": 4096,
+    "parent_sample_count": 25000,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": true,
+    "reason": "parent_sampled",
+    "shared_tokens": 0
+   },
+   "mark": "Z8",
+   "true": true
+  },
+  {
+   "child": "mongo.zoominfo_CompanyIndustry.industryID",
+   "parent": "ch.Industry.industryID",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_containment",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 41,
+    "child_sample_count": 261,
+    "child_sample_method": "first_documents_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 0.195122,
+    "jaccard": 0.114286,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 37,
+    "parent_sample_count": 37,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 8
+   },
+   "mark": "Z3",
+   "true": true
+  },
+  {
+   "child": "mongo.diffbot_CompanyExperience.personID",
+   "parent": "ch.Person.personID",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_containment",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 12,
+    "child_sample_count": 84,
+    "child_sample_method": "first_documents_limit:25000",
+    "compared_in_common_hash_range": true,
+    "contained_fraction": 0.0,
+    "jaccard": 0.0,
+    "key_id": "run-20261020",
+    "lower_bound_only": true,
+    "minimum_support": 4,
+    "parent_complete": false,
+    "parent_distinct_sampled": 4096,
+    "parent_sample_count": 25000,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": true,
+    "reason": "parent_sampled",
+    "shared_tokens": 0
+   },
+   "mark": "W-B",
+   "true": false
+  },
+  {
+   "child": "mongo.zoominfo_contact_information.personID",
+   "parent": "ch.Person.personID",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_containment",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 627,
+    "child_sample_count": 3781,
+    "child_sample_method": "first_documents_limit:25000",
+    "compared_in_common_hash_range": true,
+    "contained_fraction": 0.001595,
+    "jaccard": 0.000212,
+    "key_id": "run-20261020",
+    "lower_bound_only": true,
+    "minimum_support": 4,
+    "parent_complete": false,
+    "parent_distinct_sampled": 4096,
+    "parent_sample_count": 25000,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": true,
+    "shared_tokens": 1
+   },
+   "mark": "Z7",
+   "true": true
+  },
+  {
+   "child": "pg.companyrelation.companyid",
+   "parent": "pg.companyindustry.companyid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 245,
+    "child_sample_count": 6174,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 1.0,
+    "jaccard": 0.062183,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 3940,
+    "parent_sample_count": 3940,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 245
+   },
+   "mark": "U-ci",
+   "true": true
+  },
+  {
+   "child": "pg.companycontact.companyid",
+   "parent": "pg.companyindustry.companyid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 3362,
+    "child_sample_count": 5330,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 0.999703,
+    "jaccard": 0.852829,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 3940,
+    "parent_sample_count": 3940,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 3361
+   },
+   "mark": "U-ci",
+   "true": true
+  },
+  {
+   "child": "pg.companycontact.companyid",
+   "parent": "pg.location.companyid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 3362,
+    "child_sample_count": 5330,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 0.92326,
+    "jaccard": 0.824655,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 3506,
+    "parent_sample_count": 3506,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 3104
+   },
+   "mark": "U-loc",
+   "true": true
+  },
+  {
+   "child": "pg.companyindustry.companyid",
+   "parent": "pg.location.companyid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 3940,
+    "child_sample_count": 3940,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 0.889848,
+    "jaccard": 0.889848,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 3506,
+    "parent_sample_count": 3506,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 3506
+   },
+   "mark": "U-loc",
+   "true": true
+  },
+  {
+   "child": "pg.companyindustry.companyid",
+   "parent": "ch.Company.companyID",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_containment",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 711,
+    "child_sample_count": 3940,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": true,
+    "contained_fraction": 0.0,
+    "jaccard": 0.0,
+    "key_id": "run-20261020",
+    "lower_bound_only": true,
+    "minimum_support": 4,
+    "parent_complete": false,
+    "parent_distinct_sampled": 4096,
+    "parent_sample_count": 25000,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": true,
+    "reason": "parent_sampled",
+    "shared_tokens": 0
+   },
+   "mark": "W-A",
+   "true": false
+  },
+  {
+   "child": "mongo.diffbot_CompanyExperience.companyID",
+   "parent": "pg.location.companyid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 17,
+    "child_sample_count": 84,
+    "child_sample_method": "first_documents_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 1.0,
+    "jaccard": 0.004849,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 3506,
+    "parent_sample_count": 3506,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 17
+   },
+   "mark": "U-loc",
+   "true": true
+  },
+  {
+   "child": "mongo.diffbot_CompanyExperience.companyID",
+   "parent": "pg.company.companyid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 17,
+    "child_sample_count": 84,
+    "child_sample_method": "first_documents_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 1.0,
+    "jaccard": 0.004315,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 3940,
+    "parent_sample_count": 3940,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 17
+   },
+   "mark": "#12",
+   "true": true
+  },
+  {
+   "child": "mongo.diffbot_CompanyInvestmentRound.companyID",
+   "parent": "pg.location.companyid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 5,
+    "child_sample_count": 11,
+    "child_sample_method": "first_documents_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 1.0,
+    "jaccard": 0.001426,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 3506,
+    "parent_sample_count": 3506,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 5
+   },
+   "mark": "U-loc",
+   "true": true
+  },
+  {
+   "child": "mongo.diffbot_CompanyIndustry.companyID",
+   "parent": "pg.location.companyid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 22,
+    "child_sample_count": 22,
+    "child_sample_method": "first_documents_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 0.954545,
+    "jaccard": 0.005988,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 3506,
+    "parent_sample_count": 3506,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 21
+   },
+   "mark": "U-loc",
+   "true": true
+  },
+  {
+   "child": "mongo.zoominfo_contracts.company_id",
+   "parent": "ch.Company.companyID",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_overlap_not_measured",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 10,
+    "minimum_support": 4,
+    "parent_distinct_sampled": 25000,
+    "reason": "sample_too_small"
+   },
+   "mark": "Z10",
+   "true": true
+  },
+  {
+   "child": "mongo.diffbot_CompanyExperience.companyID",
+   "parent": "pg.companyindustry.companyid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 17,
+    "child_sample_count": 84,
+    "child_sample_method": "first_documents_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 1.0,
+    "jaccard": 0.004315,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 3940,
+    "parent_sample_count": 3940,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 17
+   },
+   "mark": "U-ci",
+   "true": true
+  },
+  {
+   "child": "pg.companyemployeecategory.companyid",
+   "parent": "pg.location.companyid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 618,
+    "child_sample_count": 5134,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 0.969256,
+    "jaccard": 0.169929,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 3506,
+    "parent_sample_count": 3506,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 599
+   },
+   "mark": "U-loc",
+   "true": true
+  },
+  {
+   "child": "pg.company.companyid",
+   "parent": "pg.companyindustry.companyid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 3940,
+    "child_sample_count": 3940,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 1.0,
+    "jaccard": 1.0,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 3940,
+    "parent_sample_count": 3940,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 3940
+   },
+   "mark": "U-ci",
+   "true": true
+  },
+  {
+   "child": "pg.company.companyid",
+   "parent": "pg.location.companyid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 3940,
+    "child_sample_count": 3940,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 0.889848,
+    "jaccard": 0.889848,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 3506,
+    "parent_sample_count": 3506,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 3506
+   },
+   "mark": "U-loc",
+   "true": true
+  },
+  {
+   "child": "pg.companytechnographics.companyid",
+   "parent": "pg.companyindustry.companyid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 814,
+    "child_sample_count": 20092,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 1.0,
+    "jaccard": 0.206599,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 3940,
+    "parent_sample_count": 3940,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 814
+   },
+   "mark": "U-ci",
+   "true": true
+  },
+  {
+   "child": "pg.companyfinancials.companyid",
+   "parent": "pg.location.companyid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 29,
+    "child_sample_count": 198,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 1.0,
+    "jaccard": 0.008272,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 3506,
+    "parent_sample_count": 3506,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 29
+   },
+   "mark": "U-loc",
+   "true": true
+  },
+  {
+   "child": "mongo.diffbot_CompanyInvestmentRound.companyID",
+   "parent": "pg.company.companyid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 5,
+    "child_sample_count": 11,
+    "child_sample_method": "first_documents_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 1.0,
+    "jaccard": 0.001269,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 3940,
+    "parent_sample_count": 3940,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 5
+   },
+   "mark": "#7",
+   "true": true
+  },
+  {
+   "child": "mongo.diffbot_CompanyIndustry.classificationID",
+   "parent": "pg.industryclassification.classificationid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 14,
+    "child_sample_count": 22,
+    "child_sample_method": "first_documents_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 1.0,
+    "jaccard": 0.041298,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 339,
+    "parent_sample_count": 339,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 14
+   },
+   "mark": "M26",
+   "true": true
+  },
+  {
+   "child": "mongo.diffbot_CompanyInvestmentRound.companyID",
+   "parent": "pg.companyindustry.companyid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 5,
+    "child_sample_count": 11,
+    "child_sample_method": "first_documents_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 1.0,
+    "jaccard": 0.001269,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 3940,
+    "parent_sample_count": 3940,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 5
+   },
+   "mark": "U-ci",
+   "true": true
+  },
+  {
+   "child": "pg.location.companyid",
+   "parent": "pg.company.companyid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 3506,
+    "child_sample_count": 3506,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 1.0,
+    "jaccard": 0.889848,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 3940,
+    "parent_sample_count": 3940,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 3506
+   },
+   "mark": "PG",
+   "true": true
+  },
+  {
+   "child": "mongo.diffbot_CompanyExperience.companyID",
+   "parent": "ch.Company.companyID",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_overlap_not_measured",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 17,
+    "minimum_support": 4,
+    "parent_distinct_sampled": 25000,
+    "reason": "sample_too_small"
+   },
+   "mark": "W-A",
+   "true": false
+  },
+  {
+   "child": "pg.company.companyid",
+   "parent": "ch.Company.companyID",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_containment",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 711,
+    "child_sample_count": 3940,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": true,
+    "contained_fraction": 0.0,
+    "jaccard": 0.0,
+    "key_id": "run-20261020",
+    "lower_bound_only": true,
+    "minimum_support": 4,
+    "parent_complete": false,
+    "parent_distinct_sampled": 4096,
+    "parent_sample_count": 25000,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": true,
+    "reason": "parent_sampled",
+    "shared_tokens": 0
+   },
+   "mark": "W-A",
+   "true": false
+  },
+  {
+   "child": "pg.companyemployeecategory.companyid",
+   "parent": "pg.companyindustry.companyid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 618,
+    "child_sample_count": 5134,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 1.0,
+    "jaccard": 0.156853,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 3940,
+    "parent_sample_count": 3940,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 618
+   },
+   "mark": "U-ci",
+   "true": true
+  },
+  {
+   "child": "mongo.zoominfo_Experience.companyID",
+   "parent": "ch.Company.companyID",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_containment",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 26,
+    "child_sample_count": 13518,
+    "child_sample_method": "first_documents_limit:25000",
+    "compared_in_common_hash_range": true,
+    "contained_fraction": 0.0,
+    "jaccard": 0.0,
+    "key_id": "run-20261020",
+    "lower_bound_only": true,
+    "minimum_support": 4,
+    "parent_complete": false,
+    "parent_distinct_sampled": 4096,
+    "parent_sample_count": 25000,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": true,
+    "reason": "parent_sampled",
+    "shared_tokens": 0
+   },
+   "mark": "Z4",
+   "true": true
+  },
+  {
+   "child": "pg.companyinvestmentround.companyid",
+   "parent": "ch.Company.companyID",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_containment",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 35,
+    "child_sample_count": 470,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": true,
+    "contained_fraction": 0.0,
+    "jaccard": 0.0,
+    "key_id": "run-20261020",
+    "lower_bound_only": true,
+    "minimum_support": 4,
+    "parent_complete": false,
+    "parent_distinct_sampled": 4096,
+    "parent_sample_count": 25000,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": true,
+    "reason": "parent_sampled",
+    "shared_tokens": 0
+   },
+   "mark": "W-A",
+   "true": false
+  },
+  {
+   "child": "pg.companyexperience.companyid",
+   "parent": "pg.company.companyid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 482,
+    "child_sample_count": 1230,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 1.0,
+    "jaccard": 0.122335,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 3940,
+    "parent_sample_count": 3940,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 482
+   },
+   "mark": "PG",
+   "true": true
+  },
+  {
+   "child": "mongo.zoominfo_Company.companyID",
+   "parent": "ch.Company.companyID",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_containment",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 26,
+    "child_sample_count": 93,
+    "child_sample_method": "first_documents_limit:25000",
+    "compared_in_common_hash_range": true,
+    "contained_fraction": 0.0,
+    "jaccard": 0.0,
+    "key_id": "run-20261020",
+    "lower_bound_only": true,
+    "minimum_support": 4,
+    "parent_complete": false,
+    "parent_distinct_sampled": 4096,
+    "parent_sample_count": 25000,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": true,
+    "reason": "parent_sampled",
+    "shared_tokens": 0
+   },
+   "mark": "Z1",
+   "true": true
+  },
+  {
+   "child": "pg.companyfinancials.companyid",
+   "parent": "ch.Company.companyID",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_containment",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 6,
+    "child_sample_count": 198,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": true,
+    "contained_fraction": 0.0,
+    "jaccard": 0.0,
+    "key_id": "run-20261020",
+    "lower_bound_only": true,
+    "minimum_support": 4,
+    "parent_complete": false,
+    "parent_distinct_sampled": 4096,
+    "parent_sample_count": 25000,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": true,
+    "reason": "parent_sampled",
+    "shared_tokens": 0
+   },
+   "mark": "W-A",
+   "true": false
+  },
+  {
+   "child": "pg.companyinvestmentround.companyid",
+   "parent": "pg.companyindustry.companyid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 154,
+    "child_sample_count": 470,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 1.0,
+    "jaccard": 0.039086,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 3940,
+    "parent_sample_count": 3940,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 154
+   },
+   "mark": "U-ci",
+   "true": true
+  },
+  {
+   "child": "pg.companyemployeecategory.companyid",
+   "parent": "pg.company.companyid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 618,
+    "child_sample_count": 5134,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 1.0,
+    "jaccard": 0.156853,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 3940,
+    "parent_sample_count": 3940,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 618
+   },
+   "mark": "PG",
+   "true": true
+  },
+  {
+   "child": "pg.companyinvestor.investmentid",
+   "parent": "pg.companyinvestmentround.investmentid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 394,
+    "child_sample_count": 1260,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 0.997462,
+    "jaccard": 0.834395,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 470,
+    "parent_sample_count": 470,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 393
+   },
+   "mark": "PG",
+   "true": true
+  },
+  {
+   "child": "mongo.zoominfo_CompanyIndustry.companyID",
+   "parent": "ch.Company.companyID",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_containment",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 26,
+    "child_sample_count": 261,
+    "child_sample_method": "first_documents_limit:25000",
+    "compared_in_common_hash_range": true,
+    "contained_fraction": 0.0,
+    "jaccard": 0.0,
+    "key_id": "run-20261020",
+    "lower_bound_only": true,
+    "minimum_support": 4,
+    "parent_complete": false,
+    "parent_distinct_sampled": 4096,
+    "parent_sample_count": 25000,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": true,
+    "reason": "parent_sampled",
+    "shared_tokens": 0
+   },
+   "mark": "Z2",
+   "true": true
+  },
+  {
+   "child": "pg.companyrelation.companyid",
+   "parent": "pg.location.companyid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 245,
+    "child_sample_count": 6174,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 0.987755,
+    "jaccard": 0.068966,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 3506,
+    "parent_sample_count": 3506,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 242
+   },
+   "mark": "U-loc",
+   "true": true
+  },
+  {
+   "child": "pg.location.companyid",
+   "parent": "ch.Company.companyID",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_containment",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 628,
+    "child_sample_count": 3506,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": true,
+    "contained_fraction": 0.0,
+    "jaccard": 0.0,
+    "key_id": "run-20261020",
+    "lower_bound_only": true,
+    "minimum_support": 4,
+    "parent_complete": false,
+    "parent_distinct_sampled": 4096,
+    "parent_sample_count": 25000,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": true,
+    "reason": "parent_sampled",
+    "shared_tokens": 0
+   },
+   "mark": "W-A",
+   "true": false
+  },
+  {
+   "child": "mongo.diffbot_CompanyInvestmentRound.investmentID",
+   "parent": "pg.companyinvestmentround.investmentid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 11,
+    "child_sample_count": 11,
+    "child_sample_method": "first_documents_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 1.0,
+    "jaccard": 0.023404,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 470,
+    "parent_sample_count": 470,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 11
+   },
+   "mark": "U-inv",
+   "true": true
+  },
+  {
+   "child": "pg.companycontact.companyid",
+   "parent": "pg.company.companyid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 3362,
+    "child_sample_count": 5330,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 0.999703,
+    "jaccard": 0.852829,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 3940,
+    "parent_sample_count": 3940,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 3361
+   },
+   "mark": "PG",
+   "true": true
+  },
+  {
+   "child": "mongo.diffbot_Company.companyID",
+   "parent": "ch.Company.companyID",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_overlap_not_measured",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 22,
+    "minimum_support": 4,
+    "parent_distinct_sampled": 25000,
+    "reason": "sample_too_small"
+   },
+   "mark": "W-A",
+   "true": false
+  },
+  {
+   "child": "pg.companyexperience.companyid",
+   "parent": "pg.location.companyid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 482,
+    "child_sample_count": 1230,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 0.983402,
+    "jaccard": 0.134889,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 3506,
+    "parent_sample_count": 3506,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 474
+   },
+   "mark": "U-loc",
+   "true": true
+  },
+  {
+   "child": "mongo.zoominfo_industry.industryID",
+   "parent": "ch.Industry.industryID",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_containment",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 41,
+    "child_sample_count": 261,
+    "child_sample_method": "first_documents_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 0.195122,
+    "jaccard": 0.114286,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 37,
+    "parent_sample_count": 37,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 8
+   },
+   "mark": "Z11",
+   "true": true
+  },
+  {
+   "child": "pg.companyinvestmentround.companyid",
+   "parent": "pg.company.companyid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 154,
+    "child_sample_count": 470,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 1.0,
+    "jaccard": 0.039086,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 3940,
+    "parent_sample_count": 3940,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 154
+   },
+   "mark": "PG",
+   "true": true
+  },
+  {
+   "child": "pg.companytechnographics.companyid",
+   "parent": "pg.location.companyid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 814,
+    "child_sample_count": 20092,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 0.970516,
+    "jaccard": 0.223796,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 3506,
+    "parent_sample_count": 3506,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 790
+   },
+   "mark": "U-loc",
+   "true": true
+  },
+  {
+   "child": "pg.companytechnographics.companyid",
+   "parent": "ch.Company.companyID",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_containment",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 137,
+    "child_sample_count": 20092,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": true,
+    "contained_fraction": 0.0,
+    "jaccard": 0.0,
+    "key_id": "run-20261020",
+    "lower_bound_only": true,
+    "minimum_support": 4,
+    "parent_complete": false,
+    "parent_distinct_sampled": 4096,
+    "parent_sample_count": 25000,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": true,
+    "reason": "parent_sampled",
+    "shared_tokens": 0
+   },
+   "mark": "W-A",
+   "true": false
+  },
+  {
+   "child": "pg.companyindustry.companyid",
+   "parent": "pg.company.companyid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 3940,
+    "child_sample_count": 3940,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 1.0,
+    "jaccard": 1.0,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 3940,
+    "parent_sample_count": 3940,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 3940
+   },
+   "mark": "PG",
+   "true": true
+  },
+  {
+   "child": "mongo.diffbot_Company.companyID",
+   "parent": "pg.company.companyid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 22,
+    "child_sample_count": 22,
+    "child_sample_method": "first_documents_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 1.0,
+    "jaccard": 0.005584,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 3940,
+    "parent_sample_count": 3940,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 22
+   },
+   "mark": "#11",
+   "true": true
+  },
+  {
+   "child": "pg.companyexperience.companyid",
+   "parent": "pg.companyindustry.companyid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 482,
+    "child_sample_count": 1230,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 1.0,
+    "jaccard": 0.122335,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 3940,
+    "parent_sample_count": 3940,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 482
+   },
+   "mark": "U-ci",
+   "true": true
+  },
+  {
+   "child": "pg.companycontact.companyid",
+   "parent": "ch.Company.companyID",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_containment",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 612,
+    "child_sample_count": 5330,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": true,
+    "contained_fraction": 0.0,
+    "jaccard": 0.0,
+    "key_id": "run-20261020",
+    "lower_bound_only": true,
+    "minimum_support": 4,
+    "parent_complete": false,
+    "parent_distinct_sampled": 4096,
+    "parent_sample_count": 25000,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": true,
+    "reason": "parent_sampled",
+    "shared_tokens": 0
+   },
+   "mark": "W-A",
+   "true": false
+  },
+  {
+   "child": "pg.companyfinancials.companyid",
+   "parent": "pg.company.companyid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 29,
+    "child_sample_count": 198,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 1.0,
+    "jaccard": 0.00736,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 3940,
+    "parent_sample_count": 3940,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 29
+   },
+   "mark": "PG",
+   "true": true
+  },
+  {
+   "child": "pg.location.companyid",
+   "parent": "pg.companyindustry.companyid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 3506,
+    "child_sample_count": 3506,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 1.0,
+    "jaccard": 0.889848,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 3940,
+    "parent_sample_count": 3940,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 3506
+   },
+   "mark": "U-ci",
+   "true": true
+  },
+  {
+   "child": "pg.location.locationid",
+   "parent": "ch.Location.locationID",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_containment",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 560,
+    "child_sample_count": 3506,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": true,
+    "contained_fraction": 0.0,
+    "jaccard": 0.0,
+    "key_id": "run-20261020",
+    "lower_bound_only": true,
+    "minimum_support": 4,
+    "parent_complete": false,
+    "parent_distinct_sampled": 4096,
+    "parent_sample_count": 25000,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": true,
+    "reason": "parent_sampled",
+    "shared_tokens": 0
+   },
+   "mark": "W-B",
+   "true": false
+  },
+  {
+   "child": "mongo.zoominfo_Experience.personID",
+   "parent": "ch.Person.personID",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_containment",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 2291,
+    "child_sample_count": 13518,
+    "child_sample_method": "first_documents_limit:25000",
+    "compared_in_common_hash_range": true,
+    "contained_fraction": 0.004365,
+    "jaccard": 0.001568,
+    "key_id": "run-20261020",
+    "lower_bound_only": true,
+    "minimum_support": 4,
+    "parent_complete": false,
+    "parent_distinct_sampled": 4096,
+    "parent_sample_count": 25000,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": true,
+    "shared_tokens": 10
+   },
+   "mark": "Z5",
+   "true": true
+  },
+  {
+   "child": "mongo.diffbot_Company.companyID",
+   "parent": "pg.companyindustry.companyid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 22,
+    "child_sample_count": 22,
+    "child_sample_method": "first_documents_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 1.0,
+    "jaccard": 0.005584,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 3940,
+    "parent_sample_count": 3940,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 22
+   },
+   "mark": "U-ci",
+   "true": true
+  },
+  {
+   "child": "pg.companyindustry.classificationid",
+   "parent": "pg.industryclassification.classificationid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 340,
+    "child_sample_count": 3940,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 0.997059,
+    "jaccard": 0.997059,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 339,
+    "parent_sample_count": 339,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 339
+   },
+   "mark": "PG",
+   "true": true
+  },
+  {
+   "child": "pg.companyrelation.companyid",
+   "parent": "pg.company.companyid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 245,
+    "child_sample_count": 6174,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 1.0,
+    "jaccard": 0.062183,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 3940,
+    "parent_sample_count": 3940,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 245
+   },
+   "mark": "PG",
+   "true": true
+  },
+  {
+   "child": "ch.CompanyIndustry.industryID",
+   "parent": "ch.Industry.industryID",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_containment",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 178,
+    "child_sample_count": 25000,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 0.196629,
+    "jaccard": 0.194444,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 37,
+    "parent_sample_count": 37,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 35
+   },
+   "mark": "CH",
+   "true": true
+  },
+  {
+   "child": "pg.companyrelation.companyid",
+   "parent": "ch.Company.companyID",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_containment",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 46,
+    "child_sample_count": 6174,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": true,
+    "contained_fraction": 0.0,
+    "jaccard": 0.0,
+    "key_id": "run-20261020",
+    "lower_bound_only": true,
+    "minimum_support": 4,
+    "parent_complete": false,
+    "parent_distinct_sampled": 4096,
+    "parent_sample_count": 25000,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": true,
+    "reason": "parent_sampled",
+    "shared_tokens": 0
+   },
+   "mark": "W-A",
+   "true": false
+  },
+  {
+   "child": "pg.companyfinancials.companyid",
+   "parent": "pg.companyindustry.companyid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 29,
+    "child_sample_count": 198,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 1.0,
+    "jaccard": 0.00736,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 3940,
+    "parent_sample_count": 3940,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 29
+   },
+   "mark": "U-ci",
+   "true": true
+  },
+  {
+   "child": "pg.companyexperience.companyid",
+   "parent": "ch.Company.companyID",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_containment",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 90,
+    "child_sample_count": 1230,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": true,
+    "contained_fraction": 0.0,
+    "jaccard": 0.0,
+    "key_id": "run-20261020",
+    "lower_bound_only": true,
+    "minimum_support": 4,
+    "parent_complete": false,
+    "parent_distinct_sampled": 4096,
+    "parent_sample_count": 25000,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": true,
+    "reason": "parent_sampled",
+    "shared_tokens": 0
+   },
+   "mark": "W-A",
+   "true": false
+  },
+  {
+   "child": "pg.companyinvestmentround.companyid",
+   "parent": "pg.location.companyid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 154,
+    "child_sample_count": 470,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 0.987013,
+    "jaccard": 0.04333,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 3506,
+    "parent_sample_count": 3506,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 152
+   },
+   "mark": "U-loc",
+   "true": true
+  },
+  {
+   "child": "mongo.diffbot_CompanyIndustry.companyID",
+   "parent": "pg.companyindustry.companyid",
+   "evidence": [
+    "compatible_type",
+    "measured_uniqueness",
+    "name_similarity",
+    "value_containment"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 22,
+    "child_sample_count": 22,
+    "child_sample_method": "first_documents_limit:25000",
+    "compared_in_common_hash_range": false,
+    "contained_fraction": 1.0,
+    "jaccard": 0.005584,
+    "key_id": "run-20261020",
+    "lower_bound_only": false,
+    "minimum_support": 4,
+    "parent_complete": true,
+    "parent_distinct_sampled": 3940,
+    "parent_sample_count": 3940,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": false,
+    "shared_tokens": 22
+   },
+   "mark": "U-ci",
+   "true": true
+  },
+  {
+   "child": "ch.PersonContact.personID",
+   "parent": "ch.Person.personID",
+   "evidence": [
+    "compatible_type",
+    "name_similarity",
+    "value_containment",
+    "weak_key_claim"
+   ],
+   "overlap": {
+    "child_distinct_sampled": 4042,
+    "child_sample_count": 25000,
+    "child_sample_method": "first_rows_limit:25000",
+    "compared_in_common_hash_range": true,
+    "contained_fraction": 0.001237,
+    "jaccard": 0.000615,
+    "key_id": "run-20261020",
+    "lower_bound_only": true,
+    "minimum_support": 4,
+    "parent_complete": false,
+    "parent_distinct_sampled": 4096,
+    "parent_sample_count": 25000,
+    "parent_sample_method": "first_rows_limit:25000",
+    "parent_truncated": true,
+    "shared_tokens": 5
+   },
+   "mark": "CH",
+   "true": true
+  }
+ ]
+}

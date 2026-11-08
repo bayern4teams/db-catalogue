@@ -1,0 +1,32 @@
+{
+ "S3": {
+  "seconds": 50.6,
+  "code": "MODEL_UNAVAILABLE_OR_INVALID",
+  "reply_chars": 3972,
+  "validation_errors": [
+   "value_error:Value error, answer too long"
+  ],
+  "exception": "ValidationError"
+ },
+ "C1": {
+  "seconds": 581.7,
+  "code": "answered",
+  "reply_chars": 2061,
+  "answer_chars": 1584
+ },
+ "C2": {
+  "seconds": 205.6,
+  "code": "MODEL_UNAVAILABLE_OR_INVALID",
+  "reply_chars": 6243,
+  "validation_errors": [
+   "value_error:Value error, answer too long"
+  ],
+  "exception": "ValidationError"
+ },
+ "I2": {
+  "seconds": 81.1,
+  "code": "NOT_ESTABLISHED_BY_CATALOGUE",
+  "reply_chars": 1369,
+  "answer_chars": 288
+ }
+}

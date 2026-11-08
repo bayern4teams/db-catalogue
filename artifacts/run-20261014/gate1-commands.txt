@@ -1,0 +1,18 @@
+### collect pg
+artifacts/run-20261014/bundle-pg-off
+exit 0 seconds 0.25
+### collect ch
+artifacts/run-20261014/bundle-ch-off
+exit 0 seconds 0.29
+### collect mongo
+artifacts/run-20261014/bundle-mongo-off
+exit 0 seconds 0.71
+### assemble
+{"ir_version":"1.0","content_type":"catalog-snapshot","producer":"dbig-builder/0.1.0","source_run_ids":["run:1bf2e569f67fa927c09bbec2065c08e0","run:48c4917f6ee5a5ba35bf228e55c02a28","run:a83e7d631f63b3eb33b4b8f3d23ed9d3","run:e4805874d5d967977029ab214718c8a8"],"created_at":"2026-10-17T05:05:47.254128Z","as_of":"2026-10-17T05:05:47.254128Z","completeness":"complete","files":[{"path":"nodes.jsonl","bytes":530270,"sha256":"518abde3e0f6488699b14b4b95db95c31e9468069d8c831f6f21be32802551aa","count":1086},{"path":"edges.jsonl","bytes":65691,"sha256":"560e91ea9c200fa5838aeb3ea8ede8768dbd187ca54b26a0171b7339f4aec8f8","count":71},{"path":"evidence.jsonl","bytes":133879,"sha256":"2f8b33697c6200c76d00ceb12c068178ae0342cb1d136bbd7220c6e187071522","count":284},{"path":"runs.jsonl","bytes":1181,"sha256":"983e09e51078aeb44b6d3edbe3fee149a5a789fbc47db6339a7edcf52e0f7eaa","count":4}],"classification":"metadata","diagnostics":null,"partial_reasons":null,"signature":null}
+exit 0 seconds 1.56
+### render
+{"candidates": 71, "declared_fks": 0, "diagnostics": 0, "fields": 1035, "objects": 48, "out": "artifacts/run-20261014/catalog-off.html", "sources": 3}
+exit 0 seconds 1.17
+### index
+17b8be28ec39a06ff2a3770dfa88e135abf023c67689e507919b469328646a4c
+exit 0 seconds 0.58

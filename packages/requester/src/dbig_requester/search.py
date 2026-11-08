@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import fnmatch
 import hashlib
+import itertools
 import json
 import os
 import re
@@ -14,20 +16,106 @@ from typing import Any, Literal
 
 from dbig_contracts.artifact import read_artifact
 from dbig_contracts.errors import OperatorError
-from dbig_contracts.models import Edge, Field, Object
+from dbig_contracts.models import Edge, Evidence, Field, Object, Source
 from pydantic import BaseModel, ConfigDict
 from pydantic import Field as PydanticField
 
 # Words that carry no catalogue meaning in a question. Dropped only for `match="any"`, which is
 # how `ask` retrieves: as a prefix match, "is" would otherwise hit every `is_active` column.
+# The last line is schema words: a question about "which column holds ..." matches any collection
+# that describes columns, so they cannot be what makes a question match. ponytail: a word list is
+# the ceiling; the deferred alternative is to require a minimum share of the meaningful words to
+# match.
 STOPWORDS = frozenset(
     "a an and any are as at be by can do does for from have how i in into is it its me my "
     "of on or show tell that the their there these this to what where which who why with "
-    "we you your all list find give get".split()
+    "we you your all list find give get "
+    "column table field number holds store stored".split()
 )
 # Relevance weights for bm25 over the indexed columns: name, context (owning table and schema),
 # description. A hit on the entry's own name matters most, its table's name next.
 WEIGHTS = (10.0, 4.0, 1.0)
+# Bump when what `index_snapshot` writes into the full-text table changes meaning. An index
+# written under another version is refused with STALE_INDEX instead of answering from words it
+# does not hold (a search would return nothing, as if the catalogue lacked the column).
+INDEX_VERSION = "9"
+
+
+class StaleIndexError(OperatorError):
+    """The index does not match the snapshot it was built from, or was written by another version.
+    The message is the bare code, which the HTTP route returns as it is; the remedy is always
+    `dbig-requester index`."""
+
+
+def _broken(name: str) -> str:
+    """The name with a space at every word break: lower to upper (`unitID`), the end of an
+    upper-case run before a capitalised word (`HTTPServer`), and letters to digits and back
+    (`In000s`). Case is read with `str.isupper`, so an accented or Cyrillic capital breaks too."""
+    out: list[str] = []
+    for index, char in enumerate(name):
+        if index:
+            before, after = name[index - 1], name[index + 1 : index + 2]
+            if (
+                (char.isupper() and before.islower())
+                or (char.isupper() and before.isupper() and after.islower())
+                or (char.isdigit() != before.isdigit() and char.isalnum() and before.isalnum())
+            ):
+                out.append(" ")
+        out.append(char)
+    return "".join(out)
+
+
+def _words(name: str) -> list[str]:
+    """The words of a name, lower-cased: `unitPriceIn000s` gives unit, price, in, 000, s;
+    `HTTPServerID` gives http, server, id; `URL` stays one word."""
+    return re.findall(r"[^\W_]+", _broken(name).casefold())
+
+
+# Folding a plural to its singular. Candidates, not one answer, because English is ambiguous
+# (`movies` is `movie`, `boxes` is `box`, `industries` is `industry`); each is tried as a whole
+# word. A fold below MIN_SINGULAR_LENGTH is refused (`pos` is not `po`, `gas` is not `ga`), and so
+# is a word in NON_PLURALS, which ends in `s` and is not one (`news` is not `new`).
+# ponytail: a finite list and two rules, not a stemmer; the FTS5 `porter` tokenizer drops the
+# exact form that ranks an exact name first. Ceilings: a two-letter singular (`ids`) is not
+# folded; a non-plural word ending in `s` missing from the list merges with its shorter word.
+MIN_SINGULAR_LENGTH = 3
+NON_PLURALS = frozenset("news lens series species bias alias canvas atlas".split())
+_NOT_PLURAL_ENDINGS = ("ss", "us", "is")  # address, status, analysis
+_SIBILANT_ENDINGS = ("s", "x", "z", "ch", "sh")  # a plural adds `es` after these
+
+
+def _ies_singular(word: str) -> str | None:
+    if word.endswith("ies") and word not in NON_PLURALS:
+        singular = word[: -len("ies")] + "y"
+        return singular if len(singular) >= MIN_SINGULAR_LENGTH else None
+    return None
+
+
+def _singulars(word: str) -> list[str]:
+    """The words `word` may be the plural of; empty when it is not a plural."""
+    if word in NON_PLURALS or not word.endswith("s") or word.endswith(_NOT_PLURAL_ENDINGS):
+        return []
+    candidates = [word[:-1]]
+    if word.endswith("ies"):
+        candidates.append(_ies_singular(word) or "")
+    elif word.endswith("es") and word[:-2].endswith(_SIBILANT_ENDINGS):
+        candidates.append(word[:-2])
+    return [item for item in candidates if len(item) >= MIN_SINGULAR_LENGTH]
+
+
+def _indexed_text(text: str | None) -> str:
+    """Text as indexed: whole, so `unitid` finds `unitID`, then its words when case or digits
+    split it, then the `-y` singular of every `-ies` word (`industries` also holds `industry`,
+    which a prefix match on `industry` cannot reach). Other plurals need nothing: the singular is
+    a prefix of them, and adding it would make `invoices` rank with `invoice`."""
+    if not text:
+        return ""
+    words = _words(text)
+    pieces = [text]
+    if _broken(text) != text:
+        pieces.append(" ".join(words))
+    pieces.extend(sorted({singular for word in words if (singular := _ies_singular(word))}))
+    return " ".join(pieces)
 
 
 class SearchRequest(BaseModel):
@@ -35,6 +123,10 @@ class SearchRequest(BaseModel):
 
     query: str = PydanticField(default="", max_length=256)
     source_id: str | None = None
+    # Several sources at once, set by `ask` when a question names an engine or a source.
+    source_ids: list[str] | None = None
+    # Only tables, collections and views, set by `ask` for a list question.
+    objects_only: bool = False
     kind: str | None = None
     data_type: str | None = None
     tag: str | None = None
@@ -53,7 +145,22 @@ def _database(state: Path) -> Path:
     return state / "catalog.sqlite3"
 
 
-def index_snapshot(snapshot: Path, state: Path) -> str:
+def _excluded(source_id: str, object_item: Object, exclude: dict[str, list[str]]) -> bool:
+    """Whether an operator's per-source exclude pattern (DEC-8) hides this object from search.
+    Patterns are case-insensitive globs on the object name or `namespace.name`."""
+    names = {object_item.name.casefold()}
+    if object_item.namespace:
+        names.add(f"{object_item.namespace}.{object_item.name}".casefold())
+    return any(
+        fnmatch.fnmatchcase(name, pattern.casefold())
+        for pattern in exclude.get(source_id, [])
+        for name in names
+    )
+
+
+def index_snapshot(
+    snapshot: Path, state: Path, exclude: dict[str, list[str]] | None = None
+) -> str:
     manifest, tables = read_artifact(snapshot)
     if manifest.content_type != "catalog-snapshot":
         raise ValueError("expected catalog snapshot")
@@ -76,6 +183,12 @@ def index_snapshot(snapshot: Path, state: Path) -> str:
             "capabilities TEXT, evidence_status TEXT, object_name TEXT, namespace TEXT, "
             "description TEXT)"
         )
+        connection.execute("CREATE TABLE sources(id TEXT PRIMARY KEY, kind TEXT, name TEXT)")
+        connection.execute(
+            "CREATE TABLE relationships(id TEXT PRIMARY KEY, from_id TEXT, to_id TEXT, "
+            "rank INTEGER, body TEXT)"
+        )
+        exclude = exclude or {}
         statuses: dict[str, set[str]] = {}
         for record in tables["edges.jsonl"]:
             edge = Edge.model_validate(record.model_dump(mode="json"))
@@ -86,7 +199,83 @@ def index_snapshot(snapshot: Path, state: Path) -> str:
             for record in tables["nodes.jsonl"]
             if record.record_type == "object"
         }
+        skipped = {
+            object_id
+            for object_id, item in owners.items()
+            if _excluded(item.source_id, item, exclude)
+        }
+        # What a source is called is searchable on every one of its entries, so "ClickHouse
+        # tables" finds the tables of the source whose engine kind is `clickhouse` (DEC-7).
+        source_words: dict[str, str] = {}
         for record in tables["nodes.jsonl"]:
+            if record.record_type == "source":
+                source_item = Source.model_validate(record.model_dump(mode="json"))
+                connection.execute(
+                    "INSERT INTO sources VALUES (?,?,?)",
+                    (source_item.id, source_item.kind, source_item.name),
+                )
+                source_words[source_item.id] = " ".join(
+                    {source_item.id, source_item.kind, source_item.name}
+                )
+        names = {
+            record.id: str(record.model_dump()["name"])
+            for record in tables["nodes.jsonl"]
+            if record.record_type in {"object", "field"}
+        }
+        # Where each end lives, so the model can see a relationship crosses two sources (F11).
+        # A field's namespace is its object's; an object without one stays None.
+        places = {}
+        for record in tables["nodes.jsonl"]:
+            if record.record_type in {"object", "field"}:
+                owner = owners.get(getattr(record, "object_id", record.id))
+                places[record.id] = (record.source_id, owner.namespace if owner else None)
+        # The containment measurement an edge cites, handed on unchanged (F14).
+        evidence = (
+            Evidence.model_validate(item.model_dump(mode="json"))
+            for item in tables["evidence.jsonl"]
+        )
+        containment = {
+            item.id: item.metrics for item in evidence if item.kind == "value_containment"
+        }
+        for record in tables["edges.jsonl"]:
+            edge = Edge.model_validate(record.model_dump(mode="json"))
+            if edge.kind not in RELATIONSHIP_KINDS or {edge.from_id, edge.to_id} & skipped:
+                continue
+            body: dict[str, Any] = {
+                "id": edge.id,
+                "kind": edge.kind,
+                "status": edge.status,
+                "evidence_tier": edge.evidence_tier,
+                "from": names.get(edge.from_id),
+                "to": names.get(edge.to_id),
+                "from_source": places.get(edge.from_id, (None, None))[0],
+                "from_namespace": places.get(edge.from_id, (None, None))[1],
+                "to_source": places.get(edge.to_id, (None, None))[0],
+                "to_namespace": places.get(edge.to_id, (None, None))[1],
+                "columns": [
+                    [names.get(left), names.get(right)]
+                    for left, right in edge.model_dump().get("field_pairs", [])
+                ],
+                "evidence": edge.explanation,
+            }
+            for evidence_id in edge.evidence_ids:
+                if "basis" in containment.get(evidence_id, {}):
+                    keys = ("basis", "estimate", "lower", "upper")
+                    body.update({key: containment[evidence_id].get(key) for key in keys})
+                    break
+            connection.execute(
+                "INSERT INTO relationships VALUES (?,?,?,?,?)",
+                (
+                    edge.id,
+                    edge.from_id,
+                    edge.to_id,
+                    STATUS_RANK.get(edge.status, len(STATUS_RANK)),
+                    json.dumps(body, ensure_ascii=False),
+                ),
+            )
+        for record in tables["nodes.jsonl"]:
+            if record.id in skipped or getattr(record, "object_id", None) in skipped:
+                continue
             row: tuple[str, str, str, str, str | None, str | None, str, str, str, str]
             extra: tuple[str | None, str | None, str | None]
             if record.record_type == "object":
@@ -131,7 +320,16 @@ def index_snapshot(snapshot: Path, state: Path) -> str:
             )
             connection.execute(
                 "INSERT INTO fts(id,name,context,description) VALUES (?,?,?,?)",
-                (row[0], row[3], " ".join(part for part in extra[:2] if part), extra[2] or ""),
+                (
+                    row[0],
+                    _indexed_text(row[3]),
+                    " ".join(
+                        _indexed_text(part)
+                        for part in (*extra[:2], source_words.get(row[1]))
+                        if part
+                    ),
+                    _indexed_text(extra[2]),
+                ),
             )
         connection.executemany(
             "INSERT INTO meta VALUES (?,?)",
@@ -139,6 +337,7 @@ def index_snapshot(snapshot: Path, state: Path) -> str:
                 ("snapshot", str(snapshot.resolve(strict=True))),
                 ("digest", digest),
                 ("completeness", manifest.completeness),
+                ("index_version", INDEX_VERSION),
             ),
         )
         connection.commit()
@@ -162,13 +361,27 @@ def search(state: Path, request: SearchRequest) -> dict:
         manifest, _ = read_artifact(snapshot)
         digest = hashlib.sha256((snapshot / "manifest.json").read_bytes()).hexdigest()
         if digest != metadata["digest"]:
-            raise ValueError("STALE_INDEX")
+            raise StaleIndexError("STALE_INDEX")
+        if metadata.get("index_version") != INDEX_VERSION:
+            # Same code and same remedy (`dbig-requester index`) as any other stale index. Refused
+            # here, not rebuilt: a search must not write to the state directory.
+            raise StaleIndexError("STALE_INDEX")
         terms = re.findall(r"\w+", request.query, flags=re.UNICODE)
         if request.match == "any":
-            terms = [term for term in terms if term.casefold() not in STOPWORDS and len(term) > 1]
-            if not terms:
+            # Checked on the word as asked and on what it may be the plural of, so `tables` is a
+            # schema word because `table` is.
+            terms = [
+                term
+                for term in terms
+                if len(term) > 1
+                and term.casefold() not in STOPWORDS
+                and not STOPWORDS.intersection(_singulars(term.casefold()))
+            ]
+            if not terms and not (request.objects_only and request.source_ids):
                 # A question made only of common words has nothing to look up. Returning every
-                # entry instead would hand a model an arbitrary slice of the catalogue.
+                # entry instead would hand a model an arbitrary slice of the catalogue. A list
+                # question scoped to a named source is the exception: its answer is that
+                # source's objects.
                 return _empty(manifest, digest, request)
         sql = "SELECT e.* FROM entries e"
         conditions = []
@@ -178,9 +391,11 @@ def search(state: Path, request: SearchRequest) -> dict:
             parameters.extend(WEIGHTS)
             conditions.append("fts MATCH ?")
             # Each term as a quoted prefix: `customer` finds `customers` and `customer_id`, and
-            # quoting keeps FTS5 operators in user input from being interpreted.
+            # quoting keeps FTS5 operators in user input from being interpreted. A plural also
+            # matches each of its singulars as a whole word (`industries` finds `industry`); the
+            # other way round, `industry` finds `industries`, the index holds the `-y` form.
             joiner = " AND " if request.match == "all" else " OR "
-            parameters.append(joiner.join('"' + term.replace('"', "") + '"*' for term in terms))
+            parameters.append(joiner.join(_term_query(term) for term in terms))
         for condition, value in (
             ("e.source_id=?", request.source_id),
             ("e.kind=?", request.kind),
@@ -189,13 +404,32 @@ def search(state: Path, request: SearchRequest) -> dict:
             if value is not None:
                 conditions.append(condition)
                 parameters.append(value)
+        if request.source_ids:
+            conditions.append(f"e.source_id IN ({','.join('?' * len(request.source_ids))})")
+            parameters.extend(request.source_ids)
+        if request.objects_only:
+            conditions.append("e.kind != 'field'")
         if conditions:
             sql += " WHERE " + " AND ".join(conditions)
-        sql += (
-            " ORDER BY rank, e.name COLLATE NOCASE, e.id"
-            if terms
-            else " ORDER BY e.name COLLATE NOCASE, e.id"
-        )
+        if terms and request.match == "any":
+            # A question that names a table or a topic gets that object before any column that
+            # merely mentions it (DEC-7): the object's own name is one of the question's words.
+            named = sorted(
+                {*(term.casefold() for term in terms)}
+                | {single for term in terms for single in _singulars(term.casefold())}
+            )
+            sql += (
+                f" ORDER BY (e.kind != 'field' AND lower(e.name) IN ({','.join('?' * len(named))}))"
+                " DESC, e.name = ? COLLATE NOCASE DESC, rank, e.name COLLATE NOCASE, e.id"
+            )
+            parameters.extend([*named, request.query.strip()])
+        elif terms:
+            # An entry named exactly as asked comes first: a plural query also matches its
+            # singular, and `invoices` must not rank below `invoice` for `invoices`.
+            sql += " ORDER BY e.name = ? COLLATE NOCASE DESC, rank, e.name COLLATE NOCASE, e.id"
+            parameters.append(request.query.strip())
+        else:
+            sql += " ORDER BY e.name COLLATE NOCASE, e.id"
         rows = []
         cutoff = (
             datetime.now(UTC) - timedelta(seconds=request.max_age_seconds)
@@ -229,6 +463,195 @@ def search(state: Path, request: SearchRequest) -> dict:
         "limit": request.limit,
         "offset": request.offset,
     }
+
+
+UNVERIFIED_CROSS_SOURCE = "unverified_cross_source"  # an `Edge.evidence_tier` value
+RELATIONSHIP_KINDS = frozenset({"DECLARES_FK", "REFERENCE_CANDIDATE"})
+# Strongest claim first, so a bounded list of relationships keeps the declared ones.
+STATUS_RANK = {"declared": 0, "executed": 0, "observed": 1, "tentative": 2}
+# Which relationship rows answer time may use (F11-b): never a rejected one, and a candidate
+# between two sources with no positive measurement only when the operator asked for it. Applied in
+# SQL so a left-out line never takes a slot of the limit. One `?`: the flag as 0 or 1.
+_VISIBLE = (
+    "json_extract(body, '$.status') IS NOT 'rejected' AND (? OR "
+    f"json_extract(body, '$.evidence_tier') IS NOT '{UNVERIFIED_CROSS_SOURCE}')"
+)
+
+
+def relationships_for(
+    state: Path, object_ids: set[str], limit: int, include_unverified: bool = False
+) -> list[dict]:
+    """Relationships touching these objects, strongest claim first, at most `limit`: metadata
+    only (names, status and the builder's evidence sentence), for the answering model (DEC-5)."""
+    if not object_ids or limit < 1:
+        return []
+    with closing(sqlite3.connect(_database(state))) as connection:
+        marks = ",".join("?" * len(object_ids))
+        query = (
+            f"SELECT body FROM relationships WHERE (from_id IN ({marks}) "  # noqa: S608 # C5: reason=only ? placeholders are interpolated, values are bound; approved=user, 2026-11-08; review=2027-05-08
+            f"OR to_id IN ({marks})) AND {_VISIBLE} "
+            f"ORDER BY (from_id IN ({marks}) AND to_id IN ({marks})) DESC, rank, id LIMIT ?"
+        )
+        ordered = sorted(object_ids)
+        # An edge between two retrieved objects is what the question is about; a hub's other
+        # links must not push it past the limit.
+        rows = connection.execute(
+            query,
+            [*ordered, *ordered, int(include_unverified), *ordered, *ordered, limit],
+        ).fetchall()
+    return [json.loads(row[0]) for row in rows]
+
+
+def _distances(
+    adjacent: dict[str, list[tuple[str, str]]], start: str, limit: int
+) -> dict[str, int]:
+    """Breadth-first edge counts from `start`, no further than `limit` edges."""
+    seen, frontier = {start: 0}, [start]
+    for depth in range(1, limit + 1):
+        frontier = [
+            node
+            for current in frontier
+            for node, _ in adjacent.get(current, ())
+            if seen.setdefault(node, depth) == depth
+        ]
+    return seen
+
+
+def bridge_paths(
+    state: Path, ends: set[str], max_hops: int, max_bridges: int, include_unverified: bool = False
+) -> tuple[list[dict], list[dict]]:
+    """F16, DEC-24: the tables on a shortest path of at most `max_hops` edges between two of the
+    `ends`, through tables that are not themselves ends, at most `max_bridges` of them, as index
+    rows with `role: path_only` (the table, then only the columns its path lines name), and the
+    path's relationship lines as stored (a candidate edge keeps its status). One read of the table.
+    shortcut: every shortest path of a pair is walked and sorted, so a dense hub of equal-length
+    paths is slow; the upgrade is to stop after a visit cap behind config.
+    A path is kept whole or not at all, and walks only the edges `relationships_for` may show."""
+    if len(ends) < 2 or max_hops < 2 or max_bridges < 1:
+        return [], []
+    with closing(sqlite3.connect(_database(state))) as connection:
+        edges: dict[str, tuple[str, str, str]] = {}
+        ranks: dict[str, int] = {}
+        for edge_id, left, right, body, rank in connection.execute(
+            "SELECT id, from_id, to_id, body, rank FROM relationships "  # noqa: S608 # C5: reason=only the constant _VISIBLE clause is interpolated, values are bound; approved=user, 2026-11-08; review=2027-05-08
+            f"WHERE {_VISIBLE} ORDER BY rank, id",
+            (int(include_unverified),),
+        ):
+            edges[edge_id] = (left, right, body)
+            ranks[edge_id] = rank
+        adjacent: dict[str, list[tuple[str, str]]] = {}
+        for edge_id, (left, right, _) in edges.items():
+            adjacent.setdefault(left, []).append((right, edge_id))
+            adjacent.setdefault(right, []).append((left, edge_id))
+        reach = {end: _distances(adjacent, end, max_hops) for end in sorted(ends & adjacent.keys())}
+
+        def walk(node: str, goal: str, hops: int, taken: tuple[str, ...], via: tuple[str, ...]):
+            # Steps that stay on a shortest path: one edge nearer the goal, one further from here.
+            if node == goal:
+                yield taken, via
+                return
+            for other, edge_id in adjacent[node]:
+                if reach[goal].get(other) == hops - 1 and reach[start].get(other) == len(via) + 1:
+                    yield from walk(other, goal, hops - 1, (*taken, other), (*via, edge_id))
+
+        kept: list[str] = []
+        used: dict[str, None] = {}
+        for start, goal in itertools.combinations(reach, 2):
+            hops = reach[start].get(goal, 0)
+            if hops < 2 or hops - 1 > max_bridges:  # no path, or a direct line (already shown)
+                continue
+            # The strongest path first: its sorted edge ranks, then its edge ids (D1).
+            ordered = sorted(
+                walk(start, goal, hops, (), ()),
+                key=lambda path: (sorted(ranks[e] for e in path[1]), path[1]),
+            )
+            for taken, via in ordered:
+                inner = taken[:-1]
+                new = [n for n in inner if n not in kept]
+                # A path through another end is two shorter paths, each found on its own.
+                if ends.intersection(inner) or len(kept) + len(new) > max_bridges:
+                    continue
+                kept += dict.fromkeys(new)
+                used.update(dict.fromkeys(via))
+        keys: dict[str, set[str]] = {}
+        for edge_id in used:
+            left, right, body = edges[edge_id]
+            for column_pair in json.loads(body)["columns"]:
+                for node, column in zip((left, right), column_pair, strict=True):
+                    keys.setdefault(node, set()).add(column)
+        connection.row_factory = sqlite3.Row
+        rows = {
+            row["id"]: dict(row)
+            for row in connection.execute(
+                f"SELECT * FROM entries WHERE id IN ({','.join('?' * len(kept))})",  # noqa: S608 # C5: reason=only ? placeholders are interpolated, values are bound; approved=user, 2026-11-08; review=2027-05-08
+                kept,
+            )
+        }
+    fields = fields_of(state, set(kept))
+    items = [
+        {**item, "role": "path_only"}
+        for node in kept
+        if node in rows
+        for item in (
+            rows[node],
+            *(f for f in fields if f["object_id"] == node and f["name"] in keys.get(node, ())),
+        )
+    ]
+    return items, [json.loads(edges[edge_id][2]) for edge_id in used]
+
+
+def fields_of(state: Path, object_ids: set[str]) -> list[dict]:
+    """Every field of these objects as stored index rows (list columns stay JSON text; the answer
+    context keeps only its own keys), by name. Not capped (DEC-18).
+    ponytail: a very wide table can exceed the model context; the upgrade path is a cap behind
+    config or indexing type text (LEAD_REVIEW F13 option C)."""
+    if not object_ids:
+        return []
+    with closing(sqlite3.connect(_database(state))) as connection:
+        connection.row_factory = sqlite3.Row
+        rows = connection.execute(
+            f"SELECT * FROM entries WHERE kind='field' "  # noqa: S608 # C5: reason=only ? placeholders are interpolated, values are bound; approved=user, 2026-11-08; review=2027-05-08
+            f"AND object_id IN ({','.join('?' * len(object_ids))}) "
+            "ORDER BY name COLLATE NOCASE, id",
+            sorted(object_ids),
+        ).fetchall()
+    return [dict(row) for row in rows]
+
+
+# Words that ask for a list of objects when plural ("which tables ...", "list the collections").
+OBJECT_WORDS = frozenset("table collection view".split())
+
+
+def question_scope(state: Path, question: str) -> tuple[list[str], bool, set[str]]:
+    """What a natural-language question names: the sources it mentions by ID, engine kind or
+    name, whether it asks for a list of objects, and the words that named the sources, which
+    filter the search and so need not also match (DEC-7). Reads the index only."""
+    database = _database(state)
+    if not database.is_file():
+        return [], False, set()
+    words = [word.casefold() for word in re.findall(r"\w+", question, flags=re.UNICODE)]
+    forms = {word: {word, *_singulars(word)} for word in words}
+    with closing(sqlite3.connect(database)) as connection:
+        try:
+            rows = connection.execute("SELECT id, kind, name FROM sources").fetchall()
+        except sqlite3.OperationalError:
+            return [], False, set()  # an old index: `search` refuses it with STALE_INDEX
+    named = {word for word, alternatives in forms.items() if alternatives & {
+        value.casefold() for row in rows for value in row
+    }}
+    sources = sorted(
+        row[0] for row in rows if {value.casefold() for value in row} & named
+    )
+    listing = any(
+        word.endswith("s") and OBJECT_WORDS.intersection(_singulars(word)) for word in words
+    )
+    return sources, listing, named if sources else set()
+
+
+def _term_query(term: str) -> str:
+    # `term` is word characters only (`\w+`), so it cannot carry a quote or an FTS5 operator.
+    alternatives = "".join(f' OR "{singular}"' for singular in _singulars(term.casefold()))
+    return f'("{term}"*{alternatives})' if alternatives else f'"{term}"*'
 
 
 def _empty(manifest: Any, digest: str, request: SearchRequest) -> dict:

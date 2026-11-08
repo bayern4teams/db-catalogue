@@ -172,6 +172,9 @@ def _plan(catalogue: dict, start: tuple[str, str], end: tuple[str, str]) -> dict
     paths = _tool(
         catalogue["env"], "dbig-planner", "join-paths", "--graph", str(catalogue["graph"]),
         "--from", ids[start], "--to", ids[end],
+        # P7-5 (F11-b): these plans cross sources over unmeasured candidates, which the planner
+        # leaves out unless asked.
+        "--include-unverified-cross-source",
     )
     assert paths["paths"], f"no path from {start} to {end}"
     shortest = min(paths["paths"], key=lambda item: len(item["object_ids"]))

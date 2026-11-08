@@ -1,0 +1,94 @@
+{
+ "Experience:probe_as_shipped": {
+  "count": 778240,
+  "read_rows": 778240
+ },
+ "Experience:B_subquery_limit": {
+  "count": 100000,
+  "read_rows": 720896
+ },
+ "Experience:B_limit_plus_block": {
+  "count": 100000,
+  "read_rows": 196608
+ },
+ "Experience:uniq_vs_uniqExact_prefix": {
+  "count": 99841,
+  "read_rows": 720896
+ },
+ "Person:probe_as_shipped": {
+  "count": 737280,
+  "read_rows": 737280
+ },
+ "Person:B_subquery_limit": {
+  "count": 100000,
+  "read_rows": 638976
+ },
+ "Person:B_limit_plus_block": {
+  "count": 100000,
+  "read_rows": 196608
+ },
+ "Person:uniq_vs_uniqExact_prefix": {
+  "count": 100000,
+  "read_rows": 638976
+ },
+ "Company:probe_as_shipped": {
+  "count": 476792,
+  "read_rows": 476792
+ },
+ "Company:B_subquery_limit": {
+  "count": 100000,
+  "read_rows": 416547
+ },
+ "Company:B_limit_plus_block": {
+  "count": 100000,
+  "read_rows": 166312
+ },
+ "Company:uniq_vs_uniqExact_prefix": {
+  "count": 100000,
+  "read_rows": 416547
+ },
+ "Experience:break+threads1": {
+  "count": 319488,
+  "read_rows": 319488
+ },
+ "Experience:break+threads1+block8192": {
+  "count": 131072,
+  "read_rows": 131072
+ },
+ "Experience:limit+threads1+block8192": {
+  "count": 100000,
+  "read_rows": 114688
+ },
+ "Experience:probe_as_shipped_again": {
+  "count": 778240,
+  "read_rows": 778240
+ },
+ "Company:break+threads1": {
+  "count": 181837,
+  "read_rows": 181837
+ },
+ "Company:break+threads1+block8192": {
+  "count": 122880,
+  "read_rows": 122880
+ },
+ "Company:limit+threads1+block8192": {
+  "count": 100000,
+  "read_rows": 114688
+ },
+ "Company:probe_as_shipped_again": {
+  "count": 476792,
+  "read_rows": 476792
+ },
+ "Experience:limit+threads1": {
+  "count": 100000,
+  "read_rows": 196608
+ },
+ "Company:limit+threads1": {
+  "count": 100000,
+  "read_rows": 166312
+ },
+ "Person:limit+threads1": {
+  "count": 100000,
+  "read_rows": 196608
+ }
+}

@@ -1,0 +1,19 @@
+### collect ch
+artifacts/run-20261014/bundle-ch-probe
+exit 0 seconds 0.99
+### collect mongo
+Error: mongodb source 'mongo-main': the server refused the login; check the user and password in MONGODB_CONNECTION and that the account exists on that server
+exit 1 seconds 0.74
+### assemble
+Usage: dbig-builder assemble [OPTIONS]
+Try 'dbig-builder assemble --help' for help.
+
+Error: Invalid value for '--bundle': Path 'artifacts/run-20261014/bundle-mongo-probe' does not exist.
+exit 2 seconds 1.01
+### retry 2026-10-18 after the user updated .env
+### collect mongo
+artifacts/run-20261014/bundle-mongo-probe
+exit 0 seconds 0.72
+### assemble
+{"ir_version":"1.0","content_type":"catalog-snapshot","producer":"dbig-builder/0.1.0","source_run_ids":["run:7f4b58e4363dc20eaf22741c0105975b","run:936fe062c90e9b2f033e7b80a60f1c69","run:c483a17e6b761e76802d1ebade7545da","run:df5a91242b61240f4723b763d8574e60"],"created_at":"2026-10-18T10:22:40.238263Z","as_of":"2026-10-18T10:22:40.238263Z","completeness":"complete","files":[{"path":"nodes.jsonl","bytes":532915,"sha256":"98081b4339744b1709a372b7ed0fafdf6d2f91e0c6cc783f8cae7d850dcda4b9","count":1086},{"path":"edges.jsonl","bytes":144495,"sha256":"edd06964a9aa42dc12d7e02ab08a43b1bd25aeb8040bdcdc19713df259eb45ad","count":162},{"path":"evidence.jsonl","bytes":327011,"sha256":"197fbb4ffd2afe8ff1c69b04755644f465e87413c81804417bc4ed991aed4f84","count":648},{"path":"runs.jsonl","bytes":1220,"sha256":"542f292a51470afb8f97fb451924436faf57760731ce354bdc2166baac12a1fa","count":4}],"classification":"metadata","diagnostics":null,"partial_reasons":null,"signature":null}
+exit 0 seconds 1.62

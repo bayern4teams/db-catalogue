@@ -16,6 +16,7 @@ from dbig_contracts.models import (
     Profile,
     SnapshotNode,
     Source,
+    ValueRanges,
     ValueTokens,
 )
 from dbig_contracts.scan import ScanReceipt, ScanRequest, SignedScanRequest
@@ -31,6 +32,7 @@ MODELS = {
     "diagnostic": Diagnostic,
     "profile": Profile,
     "value_tokens": ValueTokens,
+    "value_ranges": ValueRanges,
     "evidence": Evidence,
     "edge": Edge,
     "manifest": Manifest,

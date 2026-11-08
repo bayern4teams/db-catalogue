@@ -7,7 +7,7 @@ import click
 from dbig_contracts.artifact import read_artifact
 from dbig_contracts.errors import OperatorError
 from dbig_contracts.scan import SignedScanRequest
-from dbig_contracts.security import is_loopback_literal, secret_from_env
+from dbig_contracts.security import is_loopback_literal, key_from_env
 
 from .config import load_config
 from .runtime import collect
@@ -50,8 +50,8 @@ def collect_command(config_path: Path, out: Path) -> None:
 @click.option("--key-env", required=True, help="Environment variable holding the signing key")
 def validate_bundle(path: Path, key_env: str) -> None:
     # SecretAwareGroup converts a bad `--key-env` into a command error.
-    key = secret_from_env(key_env, purpose="collector bundle signature verification")
-    manifest, _ = read_artifact(path, signing_key=key.encode(), require_signature=True)
+    key = key_from_env(key_env, purpose="collector bundle signature verification")
+    manifest, _ = read_artifact(path, signing_key=key, require_signature=True)
     click.echo(manifest.model_dump_json())
 
 

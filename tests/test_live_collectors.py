@@ -120,6 +120,68 @@ def test_clickhouse_25_8_system_tables():
     assert {item.name for item in records["fields.jsonl"]} == {"id", "day"}
 
 
+def test_clickhouse_value_tokens_and_exact_probe_cap_on_a_larger_table(monkeypatch):
+    """P6-3 and P6-6 on a real server: a table larger than both limits gives tokens from its first
+    `sample_rows` rows (not complete) and a probe `sample_count` equal to the cap; a smaller table
+    gives its own row count and a complete token set. Nested columns get neither.
+    """
+    import clickhouse_connect
+
+    monkeypatch.setenv("DBIG_TOKENISER", "synthetic-value-tokenising-material-over-32-bytes")
+    client = _retry(lambda: clickhouse_connect.get_client(host="127.0.0.1", port=8123))
+    sample_rows, cap, small = 50, 500, 30  # the tables hold 2000 and 30 rows
+    try:
+        client.command("CREATE DATABASE IF NOT EXISTS dbig_cap ENGINE=Atomic")
+        client.command(
+            "CREATE TABLE dbig_cap.large (id UInt64, grp String, tags Array(String)) "
+            "ENGINE=MergeTree ORDER BY id"
+        )
+        client.command(
+            "INSERT INTO dbig_cap.large SELECT number, toString(number % 5), ['x'] "
+            "FROM numbers(2000)"
+        )
+        client.command("CREATE TABLE dbig_cap.small (id UInt64) ENGINE=MergeTree ORDER BY id")
+        client.command("INSERT INTO dbig_cap.small SELECT number FROM numbers(30)")
+        base = _config("clickhouse", "dbig_cap")
+        config = SourceConfig.model_validate(
+            {
+                **base.model_dump(),
+                "sample_rows": sample_rows,
+                "value_token_key_env": "DBIG_TOKENISER",
+                "value_token_key_id": "ci-run",
+                "cardinality_probe": True,
+                "cardinality_probe_max_rows": cap,
+            }
+        )
+        records = discover_clickhouse(client, config, Budget(12))
+    finally:
+        try:
+            client.command("DROP DATABASE IF EXISTS dbig_cap SYNC")
+        finally:
+            client.close()
+
+    objects = {item.name: item.id for item in records["objects.jsonl"]}
+    fields = {(item.object_id, item.name): item.id for item in records["fields.jsonl"]}
+
+    def tokens(table, column):
+        wanted = fields.get((objects[table], column))
+        return [item for item in records["tokens.jsonl"] if item.field_id == wanted]
+
+    (large_id,) = tokens("large", "id")
+    assert large_id.sample_count == sample_rows and large_id.complete is False
+    assert large_id.sample_method == f"first_rows_limit:{sample_rows}"
+    assert len(large_id.tokens) == sample_rows and large_id.truncated is False
+    (small_id,) = tokens("small", "id")
+    assert small_id.sample_count == small and small_id.complete is True
+    assert tokens("large", "tags") == [], "a nested type is neither read nor tokenised"
+    probes = {
+        item.field_id: item for item in records["profiles.jsonl"] if item.method == "sample"
+    }
+    assert probes[fields[(objects["large"], "id")]].sample_count == cap, "exactly the cap"
+    assert probes[fields[(objects["large"], "grp")]].distinct_estimate == 5.0
+    assert probes[fields[(objects["small"], "id")]].sample_count == small, "the whole table"
+
+
 def test_mongodb_7_collection_validator_and_index():
     from pymongo import MongoClient
 

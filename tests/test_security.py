@@ -83,3 +83,16 @@ def test_one_loopback_rule_for_every_boundary(host, expected):
     from dbig_contracts.security import is_loopback_literal
 
     assert is_loopback_literal(host) is expected
+
+
+def test_key_from_env_requires_32_bytes_and_never_echoes_the_key(monkeypatch):
+    import pytest
+    from dbig_contracts.errors import OperatorError
+    from dbig_contracts.security import key_from_env
+
+    monkeypatch.setenv("SOME_KEY", "short-key-value")
+    with pytest.raises(OperatorError) as raised:
+        key_from_env("SOME_KEY", purpose="testing")
+    assert "SOME_KEY" in str(raised.value) and "short-key-value" not in str(raised.value)
+    monkeypatch.setenv("SOME_KEY", "k" * 32)
+    assert key_from_env("SOME_KEY", purpose="testing") == b"k" * 32
