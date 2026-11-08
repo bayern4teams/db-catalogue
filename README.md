@@ -113,4 +113,4 @@ MIT. See [LICENSE](LICENSE). Licenses of the pinned dependencies are in `supply-
 - [GLOSSARY.md](GLOSSARY.md): terms.
 - [docs/LESSONS.md](docs/LESSONS.md): approaches that failed.
 - [docs/LOCAL_RUN.md](docs/LOCAL_RUN.md) and [docs/LIVE_TEST.md](docs/LIVE_TEST.md): run it on your databases.
-- [THREAT_MODEL.md](THREAT_MODEL.md), [TODO.md](TODO.md), [ARCHITECTURE_RESEARCH.md](ARCHITECTURE_RESEARCH.md), [AGENTS.md](AGENTS.md).
+- [THREAT_MODEL.md](docs/THREAT_MODEL.md), [TODO.md](TODO.md), [ARCHITECTURE_RESEARCH.md](docs/ARCHITECTURE_RESEARCH.md), [AGENTS.md](AGENTS.md).

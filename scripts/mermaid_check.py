@@ -25,7 +25,7 @@ def main(paths: list[str]) -> int:
                     (
                         "mmdc",
                         "-p",
-                        ".puppeteer.json",
+                        "scripts/puppeteer.json",
                         "-i",
                         str(source),
                         "-o",

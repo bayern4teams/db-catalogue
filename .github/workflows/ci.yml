@@ -76,7 +76,9 @@ jobs:
           uv run ruff check .
           uv run mypy packages
           uv run pytest
+          for package in packages/*/; do (cd "$package" && uv run --no-sync deptry .); done
           uv run pip-audit
+          uv run zizmor --no-progress .github/workflows
           python scripts/supply_chain.py
 
   package-isolation:

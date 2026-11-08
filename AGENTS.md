@@ -167,6 +167,7 @@ Read [TECHNICAL_IMPLEMENTATION.md](TECHNICAL_IMPLEMENTATION.md) and [TODO.md](TO
 - **Local reviewer and observability.** Use the v1 stack in TECHNICAL_IMPLEMENTATION.md: private vLLM on Linux or WSL2 GPU, a bounded LangGraph reviewer in the assembler, self-hosted Langfuse with metadata-only traces. Use the OpenAI-compatible client only with the configured private vLLM endpoint; no cloud fallback. No top-level LangChain or LangGraph Swarm without a measured need and approval. Never give the model source credentials, database tools, unredacted samples or authority to declare lineage. No automatic raw prompt, response or graph-state tracing until canary privacy tests prove masking; telemetry outages must not stop graph publication. Keep code-intelligence graphs separate from the product's database graph and from Langfuse traces. Why: private data must not leave the machine or enter traces.
 - **Requester and planner** follow TECHNICAL_IMPLEMENTATION.md §17. They are separate wheels, CLIs and optional HTTP JSON REST services; they share only versioned contracts and artifacts, never direct imports or source database credentials. The requester owns structured search, grounded private-LLM answers and authorized scan requests (signed scheduler bundles or private collector HTTP). The planner owns observed lineage, candidate joins and returned SQL/MongoDB or logical plans; it never executes them or calls an LLM. Keep lineage distinct from inferred references; mark cross-source staging unresolved until configured. Architecture and TODO came before runtime skeletons by the user's choice; claim no runtime that does not exist. Why: independent deployment and honest status.
 - **Cloud fix routine.** `artifacts/engineer-fixes.md` is implemented by `docs/plans/CATALOGUE_FIXES_IMPLEMENTATION_PLAN.md`, with live state in `docs/plans/catalogue-fixes/` (`HANDOFF.md`, `LOCAL_VERIFY.md`, `SUPERVISOR.md`, `LAUNCH.md`). Agents there never merge to `main`, never create the routine and never set `Autonomy`; an item needing a user decision stays `blocked` until the user writes the answer in `HANDOFF.md`. Cloud Graft is best effort only (plan §2.2). Phase 6 (live findings F5-F13, source of truth `artifacts/run-20261014/leader/LEAD_REVIEW.md`) runs on branch `fix/live-findings`. Why: unattended agents need hard limits.
+- **Test and file guards (user, 2026-11-08, "Take all recs" and later "Take recs").** Added: C5, L1 and L4 in `scripts/rule_check.py`; M1 and M2 in `scripts/ci_check.py` (root files listed in `ROOT_FILES`); deptry, gitleaks (`.github/gitleaks.toml`), actionlint and zizmor (`.github/zizmor.yml`) in CI. Not chosen: locked contract tests, mutation testing and the red-team reviewer; ask again if wanted. Old `noqa`, `type: ignore` and skips without a C5 line stay as they are; only added lines are checked. Why: K4, and a check never forgets.
 - **Doc and rule checks.** `scripts/rule_check.py` (C4 and J13) and the docs workflow run in CI; source paths for both checks are `packages/` and `scripts/`. Why: K4.
 
 ## 5. Before you push
@@ -179,7 +180,10 @@ python scripts/graph_sync.py
 uv sync --locked --all-extras --dev
 uv run ruff check . && uv run mypy packages
 uv run pytest
+for package in packages/*/; do (cd "$package" && uv run --no-sync deptry .); done
 uv run pip-audit && python scripts/supply_chain.py
+python scripts/install_check_tools.py && uv run zizmor --no-progress .github/workflows
+actionlint && gitleaks git --no-banner --redact --config .github/gitleaks.toml
 uv build --all-packages && python scripts/package_isolation.py
 python scripts/rule_check.py
 ```

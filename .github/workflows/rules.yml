@@ -1,6 +1,7 @@
 name: Rule checks
 
-# AGENTS.md K4: C4 (no new TODO/FIXME in source) and J13 (a Docs: line per source commit).
+# AGENTS.md K4: C4 (no new TODO/FIXME in source), J13 (a Docs: line per source commit), C5, L1, L4,
+# and B6 (gitleaks on all history) plus actionlint on the workflow files.
 on:
   pull_request:
   push:
@@ -31,3 +32,11 @@ jobs:
                && git cat-file -e "$PUSH_BEFORE" 2>/dev/null; then base="$PUSH_BEFORE"
           else base="origin/main"; fi
           python scripts/rule_check.py --base "$base"
+      - name: Install pinned gitleaks and actionlint
+        run: |
+          python scripts/install_check_tools.py "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Secret scan of all history (B6)
+        run: gitleaks git --no-banner --redact --config .github/gitleaks.toml
+      - name: Lint workflow files
+        run: actionlint

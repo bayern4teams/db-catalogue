@@ -74,6 +74,11 @@
     "evidence": "legacy-license-field",
     "release_url": "https://pypi.org/pypi/defusedxml/0.7.1/json"
   },
+  "deptry==0.25.1": {
+    "declaration": "MIT",
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/deptry/0.25.1/json"
+  },
   "distro==1.9.0": {
     "declaration": "Apache License, Version 2.0",
     "evidence": "legacy-license-field",
@@ -429,6 +434,11 @@
     "evidence": "legacy-license-field",
     "release_url": "https://pypi.org/pypi/requests/2.34.2/json"
   },
+  "requirements-parser==0.13.1": {
+    "declaration": "Apache-2.0",
+    "evidence": "legacy-license-field",
+    "release_url": "https://pypi.org/pypi/requirements-parser/0.13.1/json"
+  },
   "rich==15.0.0": {
     "declaration": "MIT",
     "evidence": "legacy-license-field",
@@ -524,6 +534,11 @@
     "evidence": "spdx-expression",
     "release_url": "https://pypi.org/pypi/uvicorn/0.53.0/json"
   },
+  "vulture==2.16": {
+    "declaration": "License :: OSI Approved :: MIT License",
+    "evidence": "classifier-review",
+    "release_url": "https://pypi.org/pypi/vulture/2.16/json"
+  },
   "websockets==16.1.1": {
     "declaration": "BSD-3-Clause",
     "evidence": "spdx-expression",
@@ -538,6 +553,11 @@
     "declaration": "BSD-2-Clause",
     "evidence": "legacy-license-field",
     "release_url": "https://pypi.org/pypi/xxhash/4.0.1/json"
+  },
+  "zizmor==1.32.0": {
+    "declaration": "MIT",
+    "evidence": "legacy-license-field",
+    "release_url": "https://pypi.org/pypi/zizmor/1.32.0/json"
   },
   "zstandard==0.25.0": {
     "declaration": "BSD-3-Clause",

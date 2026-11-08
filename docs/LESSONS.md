@@ -2,6 +2,16 @@
 
 What was tried and did not work, so nobody tries it again. Rule J14 in [AGENTS.md](../AGENTS.md). Each row links its source; the source holds the detail. "Reason not recorded" means the source does not say why.
 
+## Test and CI guards
+
+<!-- verified: f30780c -->
+
+| Date | Tried | Measured result and why dropped | Replaced by | Source |
+| --- | --- | --- | --- | --- |
+| 2026-11-08 | Ruff `RUF100` run with only `PGH004,RUF100,PT011` selected | 82 `noqa` lines reported unused, because rules such as `S603` were not selected in that run. Only 21 were truly unused. | Run it with the project's own rule selection | `pyproject.toml` `[tool.ruff.lint]` |
+| 2026-11-08 | A `# zizmor: ignore[...]` comment inside a `run:` block | zizmor still reported the finding: the comment sits in a shell script, not in the workflow YAML. | An ignore list in `.github/zizmor.yml` | [.github/zizmor.yml](../.github/zizmor.yml) |
+| 2026-11-08 | Installing the zizmor binary from its GitHub release with a hash check | The download returned an error page, so the hash did not match and the install stopped. | The pinned PyPI package in `uv.lock`, whose hashes `uv` checks | `pyproject.toml` dev group |
+
 ## Relationship inference
 
 <!-- verified: bce5fee -->
@@ -14,7 +24,7 @@ What was tried and did not work, so nobody tries it again. Rule J14 in [AGENTS.m
 | found before 2026-10-05 | Suffix rule that needs an underscore (`_id`, `_code`) | `camelCase` keys (`AccountID`, `customerId`) were never compared. | Split at case boundaries; `key_name` rule (rules 5 and 6) | TECHNICAL_IMPLEMENTATION.md §8b |
 | 2026-09-30 | One edge and evidence ID per pair of tables for composite keys | Two composite keys on one parent that one child matched produced one candidate, because the second overwrote the first. Found by review before tests existed. | IDs that include the key | [TODO.md](../TODO.md), "Finished composite-key candidates" |
 | 2026-10-12 | Name-based candidate rules on real databases | 5 of 21 proposed relationships were true and 16 false; 40 confirmed relationships were missing. | Fixes planned (items A1 to D9), not merged | [artifacts/live-test-report.md](../artifacts/live-test-report.md), section 8; [artifacts/candidate-trace.md](../artifacts/candidate-trace.md) |
-| date not recorded | A fixed weighted similarity sum shown as "confidence" | Rejected in research: a similarity is not a probability. Reason for rejection is in the source; no measurement. | `confidence` stays null until calibrated | [ARCHITECTURE_RESEARCH.md](../ARCHITECTURE_RESEARCH.md) |
+| date not recorded | A fixed weighted similarity sum shown as "confidence" | Rejected in research: a similarity is not a probability. Reason for rejection is in the source; no measurement. | `confidence` stays null until calibrated | [ARCHITECTURE_RESEARCH.md](ARCHITECTURE_RESEARCH.md) |
 
 ## Collectors and values
 

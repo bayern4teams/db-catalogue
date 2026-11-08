@@ -1,6 +1,6 @@
 # Technical implementation contract
 
-Status: binding design baseline, with all five package roles implemented and tested on synthetic inputs and, in CI, on live PostgreSQL, ClickHouse and MongoDB containers. This file records decisions with their dates and the code map. Open items and live verification are in [TODO.md](TODO.md). The research behind the decisions is in [ARCHITECTURE_RESEARCH.md](ARCHITECTURE_RESEARCH.md). Terms are defined in [GLOSSARY.md](GLOSSARY.md).
+Status: binding design baseline, with all five package roles implemented and tested on synthetic inputs and, in CI, on live PostgreSQL, ClickHouse and MongoDB containers. This file records decisions with their dates and the code map. Open items and live verification are in [TODO.md](TODO.md). The research behind the decisions is in [ARCHITECTURE_RESEARCH.md](docs/ARCHITECTURE_RESEARCH.md). Terms are defined in [GLOSSARY.md](GLOSSARY.md).
 
 ## Package map and dependencies
 
@@ -641,17 +641,33 @@ Secret references resolve through one function, `dbig_contracts.security.secret_
 
 Use read-only accounts, TLS verification, per-query timeouts, connection pooling limits, process separation by source, and explicit allowlists. Bundle receiver enforces size limits, path traversal rejection, digest verification and trusted transport; optional signatures become mandatory if transfer is not otherwise authenticated. Require workload identity or equivalent secret delivery in production. Scrub logs and crash reports. Keep source-side raw sample in RAM only. Retention schedules apply to manifests and profiler tokens. Provide key rotation and rerun semantics. Run each collector on a schedule agreed with source owners; source load metrics and budgets are visible in diagnostics.
 
-[THREAT_MODEL.md](THREAT_MODEL.md) records the trust boundaries, the eleven modelled threats and their controls, and the known gaps. Each mitigation there names the test that holds it, a mitigation without a test is listed as a gap rather than as a control, and `test_the_threat_model_cites_only_tests_that_exist` fails if a cited test is renamed or removed. Threat tests: malicious bundle path/JSON, oversized record, duplicate ID, HMAC mismatch, prompt injection in comments/SQL, model hallucinated IDs, timeout, collector privilege failure, and stale manifest replay. The LLM prompt treats source metadata as data, never instructions.
+[THREAT_MODEL.md](docs/THREAT_MODEL.md) records the trust boundaries, the eleven modelled threats and their controls, and the known gaps. Each mitigation there names the test that holds it, a mitigation without a test is listed as a gap rather than as a control, and `test_the_threat_model_cites_only_tests_that_exist` fails if a cited test is renamed or removed. Threat tests: malicious bundle path/JSON, oversized record, duplicate ID, HMAC mismatch, prompt injection in comments/SQL, model hallucinated IDs, timeout, collector privilege failure, and stale manifest replay. The LLM prompt treats source metadata as data, never instructions.
 
 ## 14. Test and acceptance plan
 
-<!-- verified: bce5fee -->
+<!-- verified: f30780c -->
 
 Unit/contract: IR schema round-trips, versioning, stable IDs, atomic bundle write/read, digest tamper rejection, bounded budget accounting, normalization and scoring, SQL resolver known/unknown cases, LLM schema rejection and timeout, deterministic graph diff. Integration: disposable PostgreSQL, ClickHouse, MongoDB with representative keys, composite joins, arrays/nested paths, views, materialized views, and pipeline events; test least-privilege roles and source failures. Golden fixtures include true/false relationships, ambiguous names, sparse/low-cardinality fields and observed transformations. Measure candidate precision/recall at fixed review budgets; report coverage and abstention separately. Measure no-LLM and local-LLM accuracy and latency on the same held-out corpus. Acceptance thresholds require user approval after a labeled corpus exists; do not invent success percentages.
 
 Performance: benchmark at the stated 10/200/1,000 scale with per-source load and bundle bytes, assembler wall time/RAM, LLM p50/p95, cache hit rate. Security: dependency vulnerability/license report, secrets scan, least-privilege integration checks, malformed bundle fuzz/property tests. CI cannot test live private databases; those run in a separate authorized environment.
 
-The suite has 546 tests (`uv run pytest --collect-only -q` on this commit). Tests in `tests/test_live_*.py` run only with `DBIG_RUN_INTEGRATION=1` against real servers, which the `source-integration` CI job starts. Scale was measured on 2026-10-04 with `scripts/scale_benchmark.py` at 10 sources, 200 objects and 1,000 fields on the latest server releases: every command finished in under 3 s; assemble peaked at 110 MiB and each collector at most 44 MiB; in-process search is 87 ms median and 129 ms p95, while a CLI invocation adds about 0.8 s of interpreter start-up. Figures and caveats are in TODO.md (verification fixes 1-10, item 9). Model latency remains unmeasured until a GPU host exists.
+The suite has 561 tests (`uv run pytest --collect-only -q` on this commit). Tests in `tests/test_live_*.py` run only with `DBIG_RUN_INTEGRATION=1` against real servers, which the `source-integration` CI job starts. Scale was measured on 2026-10-04 with `scripts/scale_benchmark.py` at 10 sources, 200 objects and 1,000 fields on the latest server releases: every command finished in under 3 s; assemble peaked at 110 MiB and each collector at most 44 MiB; in-process search is 87 ms median and 129 ms p95, while a CLI invocation adds about 0.8 s of interpreter start-up. Figures and caveats are in TODO.md (verification fixes 1-10, item 9). Model latency remains unmeasured until a GPU host exists.
+
+### 14.1 Test guards
+
+Cheap checks keep the tests honest; each runs in CI on every push and pull request. A rule that needs judgement (L2, L3, L5) has no check.
+
+| Rule | Check | Where |
+| --- | --- | --- |
+| C5 | Ruff `PGH004` and `RUF100`; an added `noqa`, `type: ignore`, skip or xfail must carry `C5: reason=...; approved=...; review=...` on the same line | `pyproject.toml` `[tool.ruff.lint]`; `scripts/rule_check.py::check_exceptions` |
+| L1 | A removed test function needs a `C5:` line in a commit message | `scripts/rule_check.py::check_removed_tests` |
+| L4 | Ruff `PT` rules (`PT018` left out, see the comment in `pyproject.toml`); an added or edited test needs an assertion | `scripts/rule_check.py::check_assertions` |
+| B6 | gitleaks over all history; the allowlist in `.github/gitleaks.toml` names two false-positive families by path and line pattern | `.github/workflows/rules.yml` |
+| M1, M2 | Only files in `ROOT_FILES` sit in the root; no tracked file is git-ignored | `scripts/ci_check.py::ROOT_FILES` |
+| M4 | `deptry` per package, plus the import check in `ci_check.py` | `ci.yml` job `application-quality` |
+| CI files | `actionlint`, and `zizmor` with `.github/zizmor.yml` | `rules.yml`, `ci.yml` |
+
+`scripts/install_check_tools.py` installs gitleaks and actionlint at pinned versions and verifies each SHA-256. `deptry`, `vulture` and `zizmor` are pinned dev dependencies. `vulture` (dead code) is for audits only and never blocks, because it reports false positives. `tests/test_rule_check.py` runs the C5, L1 and L4 checks against a throwaway git repository. `pytest` runs strict: `xfail_strict`, `--strict-markers`, `--strict-config`.
 
 ## 15. Git, graph tooling, Ponytail and CI/CD contract
 

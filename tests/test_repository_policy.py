@@ -417,7 +417,7 @@ def test_every_mismatched_graph_tool_is_reported_together(
 
 
 def _cited_test_names() -> set[str]:
-    document = (ROOT / "THREAT_MODEL.md").read_text(encoding="utf-8")
+    document = (ROOT / "docs" / "THREAT_MODEL.md").read_text(encoding="utf-8")
     return set(re.findall(r"`(test_[a-z0-9_]+)`", document))
 
 
