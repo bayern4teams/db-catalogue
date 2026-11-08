@@ -22,7 +22,7 @@ from pathlib import Path
 
 import pytest
 
-pytestmark = pytest.mark.skipif(
+pytestmark = pytest.mark.skipif(  # C5: reason=opt-in; approved=user, 2026-11-08; review=2027-05-08
     os.environ.get("DBIG_RUN_INTEGRATION") != "1", reason="live source containers unavailable"
 )
 
@@ -39,18 +39,18 @@ PLAINTEXT = {**CONNECTIONS, "clickhouse": {"host": "127.0.0.1", "port": 8123}}
 POSTGRES_SEED = (
     f"DROP SCHEMA IF EXISTS {NAMESPACE} CASCADE",
     f"CREATE SCHEMA {NAMESPACE}",
-    f"CREATE TABLE {NAMESPACE}.customers (id integer PRIMARY KEY, email text)",  # noqa: S608
-    f"INSERT INTO {NAMESPACE}.customers VALUES (1, 'a'), (2, 'b'), (3, NULL)",  # noqa: S608
+    f"CREATE TABLE {NAMESPACE}.customers (id integer PRIMARY KEY, email text)",
+    f"INSERT INTO {NAMESPACE}.customers VALUES (1, 'a'), (2, 'b'), (3, NULL)",  # noqa: S608 # C5: reason=fixture SQL built from constant names; approved=user, 2026-11-08; review=2027-05-08
     f"COMMENT ON TABLE {NAMESPACE}.customers IS 'Everyone who has bought something'",
     f"COMMENT ON COLUMN {NAMESPACE}.customers.email IS 'Contact address'",
     # A declared chain inside PostgreSQL, so a path from another engine runs through several
     # PostgreSQL tables in a row and the planner must join them in one query.
-    f"CREATE TABLE {NAMESPACE}.invoices (id integer PRIMARY KEY, "  # noqa: S608
+    f"CREATE TABLE {NAMESPACE}.invoices (id integer PRIMARY KEY, "
     f"customer_id integer REFERENCES {NAMESPACE}.customers(id))",
-    f"INSERT INTO {NAMESPACE}.invoices VALUES (10, 1), (11, 2)",  # noqa: S608
-    f"CREATE TABLE {NAMESPACE}.invoice_lines (id integer PRIMARY KEY, "  # noqa: S608
+    f"INSERT INTO {NAMESPACE}.invoices VALUES (10, 1), (11, 2)",  # noqa: S608 # C5: reason=fixture SQL built from constant names; approved=user, 2026-11-08; review=2027-05-08
+    f"CREATE TABLE {NAMESPACE}.invoice_lines (id integer PRIMARY KEY, "
     f"invoice_id integer REFERENCES {NAMESPACE}.invoices(id))",
-    f"INSERT INTO {NAMESPACE}.invoice_lines VALUES (100, 10), (101, 10), (102, 11)",  # noqa: S608
+    f"INSERT INTO {NAMESPACE}.invoice_lines VALUES (100, 10), (101, 10), (102, 11)",  # noqa: S608 # C5: reason=fixture SQL built from constant names; approved=user, 2026-11-08; review=2027-05-08
     f"ANALYZE {NAMESPACE}.customers",
 )
 
@@ -149,7 +149,7 @@ def _collect(
         }
     )
     bundle = tmp_path / f"bundle-{kind}"
-    result = subprocess.run(  # noqa: S603 - fixed argv, no shell, paths from tmp_path
+    result = subprocess.run(  # noqa: S603 # C5: reason=fixed argv, no shell, paths from tmp_path; approved=user, 2026-11-08; review=2027-05-08
         [str(executable), "collect", "--config", str(config), "--out", str(bundle)],
         capture_output=True, text=True, env=env, timeout=120,
     )
@@ -209,13 +209,13 @@ def test_one_catalogue_from_all_three_engines(tmp_path):
     )
     env = {**os.environ, "DBIG_SIGNING_KEY": SIGNING_KEY}
     bundle_args = [argument for bundle in bundles for argument in ("--bundle", str(bundle))]
-    assembled = subprocess.run(  # noqa: S603 - fixed argv, no shell
+    assembled = subprocess.run(  # noqa: S603 # C5: reason=fixed argv, no shell; approved=user, 2026-11-08; review=2027-05-08
         [str(SCRIPTS / "dbig-builder"), "assemble", "--config", str(tmp_path / "builder.toml"),
          *bundle_args, "--out", str(tmp_path / "snapshot")],
         capture_output=True, text=True, env=env, timeout=120,
     )
     assert assembled.returncode == 0, assembled.stderr
-    rendered = subprocess.run(  # noqa: S603 - fixed argv, no shell
+    rendered = subprocess.run(  # noqa: S603 # C5: reason=fixed argv, no shell; approved=user, 2026-11-08; review=2027-05-08
         [str(SCRIPTS / "dbig-builder"), "render", "--snapshot", str(tmp_path / "snapshot"),
          *bundle_args, "--config", str(tmp_path / "builder.toml"),
          "--out", str(tmp_path / "catalog.html")],
@@ -313,7 +313,7 @@ def _tool(env: dict[str, str], name: str, *arguments: str) -> dict:
     executable = SCRIPTS / name
     if not executable.exists():
         pytest.fail(f"the `{name}` console script is not installed")
-    result = subprocess.run(  # noqa: S603 - fixed argv, no shell
+    result = subprocess.run(  # noqa: S603 # C5: reason=fixed argv, no shell; approved=user, 2026-11-08; review=2027-05-08
         [str(executable), *arguments], capture_output=True, text=True, env=env, timeout=120,
     )
     assert result.returncode == 0, f"{name} {arguments[0]}: {result.stderr}"

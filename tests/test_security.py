@@ -63,7 +63,7 @@ def test_the_purpose_is_reported_so_the_operator_knows_which_secret(
 def test_a_refusal_never_contains_the_secret_value(monkeypatch: pytest.MonkeyPatch) -> None:
     """A blank-looking but non-empty value must still not be echoed into the error text."""
     monkeypatch.setenv("DBIG_TEST_SECRET", " ")
-    with pytest.raises(ValueError) as failure:
+    with pytest.raises(ValueError, match="is empty") as failure:
         secret_from_env("DBIG_TEST_SECRET", purpose="test")
     assert " " not in str(failure.value)
 
@@ -72,7 +72,7 @@ def test_a_refusal_never_contains_the_secret_value(monkeypatch: pytest.MonkeyPat
     ("host", "expected"),
     [
         ("127.0.0.1", True), ("127.8.9.10", True), ("::1", True), ("[::1]", True),
-        (" 127.0.0.1 ", True), ("localhost", False), ("0.0.0.0", False), ("10.0.0.5", False),  # noqa: S104
+        (" 127.0.0.1 ", True), ("localhost", False), ("0.0.0.0", False), ("10.0.0.5", False),  # noqa: S104 # C5: reason=bind-all address is test data for a validator, nothing binds it; approved=user, 2026-11-08; review=2027-05-08
         ("::", False), ("[::]", False), ("", False), ("example.com", False), ("[127.0.0.1", False),
     ],
 )

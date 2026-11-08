@@ -23,13 +23,13 @@ from pathlib import Path
 
 import pytest
 
-pytestmark = pytest.mark.skipif(
+pytestmark = pytest.mark.skipif(  # C5: reason=opt-in; approved=user, 2026-11-08; review=2027-05-08
     os.environ.get("DBIG_RUN_INTEGRATION") != "1", reason="live source containers unavailable"
 )
 
 SCRIPTS = Path(sys.executable).parent
 SIGNING_KEY = "synthetic-scan-signing-key-well-over-32-bytes"
-COLLECTOR_TOKEN = "synthetic-collector-http-token"  # noqa: S105 - fixture token
+COLLECTOR_TOKEN = "synthetic-collector-http-token"  # noqa: S105 # C5: reason=fixture token; approved=user, 2026-11-08; review=2027-05-08
 NAMESPACE = "dbig_scans"
 SOURCE = "scan-postgresql"
 
@@ -153,7 +153,7 @@ def _request(site: dict, name: str, *, scopes: list[str] | None = None) -> Path:
 
 
 def _run(site: dict, name: str, *arguments: str, ok: bool = True):
-    result = subprocess.run(  # noqa: S603 - fixed argv, no shell
+    result = subprocess.run(  # noqa: S603 # C5: reason=fixed argv, no shell; approved=user, 2026-11-08; review=2027-05-08
         [str(SCRIPTS / name), *arguments],
         capture_output=True, text=True, env=site["env"], timeout=120,
     )
@@ -197,7 +197,7 @@ def test_a_scan_handed_over_as_a_signed_file_runs_on_the_real_server(site):
 
 
 def test_a_scan_sent_over_private_http_runs_on_the_real_server(site):
-    server = subprocess.Popen(  # noqa: S603 - fixed argv, no shell
+    server = subprocess.Popen(  # noqa: S603 # C5: reason=fixed argv, no shell; approved=user, 2026-11-08; review=2027-05-08
         [str(SCRIPTS / "dbig"), "serve", "--config", str(site["collector"]),
          "--queue-db", str(site["queue"]), "--host", "127.0.0.1", "--port", str(site["port"])],
         env=site["env"], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
@@ -220,11 +220,11 @@ def test_a_scan_sent_over_private_http_runs_on_the_real_server(site):
         done = _process(site)
         assert done["status"] == "complete", done
         assert _bundle_objects(done["bundle_path"]) == {"accounts", "payments"}
-        status = urllib.request.Request(  # noqa: S310 - loopback fixture URL
+        status = urllib.request.Request(
             f"http://127.0.0.1:{site['port']}/v1/collector/scan-requests/http-1",
             headers={"Authorization": f"Bearer {COLLECTOR_TOKEN}"},
         )
-        with urllib.request.urlopen(status, timeout=10) as response:  # noqa: S310
+        with urllib.request.urlopen(status, timeout=10) as response:  # noqa: S310 # C5: reason=loopback fixture URL; approved=user, 2026-11-08; review=2027-05-08
             assert json.loads(response.read())["status"] == "complete"
     finally:
         server.terminate()

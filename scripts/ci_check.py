@@ -15,7 +15,7 @@ REQUIRED = (
     "README.md",
     "LICENSE",
     "TECHNICAL_IMPLEMENTATION.md",
-    "ARCHITECTURE_RESEARCH.md",
+    "docs/ARCHITECTURE_RESEARCH.md",
     "TODO.md",
     "AGENTS.md",
     "supply-chain/licenses.json",
@@ -25,6 +25,15 @@ REQUIRED = (
     ".githooks/post-commit",
 )
 
+# M1: the only files that may sit in the repository root (folders are not checked).
+ROOT_FILES = frozenset(
+    {
+        "AGENTS.md", "CLAUDE.md", "README.md", "ARCHITECTURE.md", "TECHNICAL_IMPLEMENTATION.md",
+        "GLOSSARY.md", "TODO.md", "LICENSE", "pyproject.toml", "uv.lock", ".python-version",
+        ".gitignore", ".gitattributes", ".ignore", ".gitlab-ci.yml", ".env.example", ".mcp.json",
+        ".markdownlint-cli2.jsonc", ".vale.ini",
+    }
+)
 
 SETUP_UV_STEP = re.compile(r"^(?P<indent>\s*)-\s+uses:\s*astral-sh/setup-uv@\S+")
 STEP_VERSION = re.compile(r"^\s*version:\s*['\"]?(?P<version>[^'\"\s#]+)", re.MULTILINE)
@@ -223,6 +232,24 @@ def main() -> None:
     }
     if forbidden:
         raise SystemExit("Forbidden tracked files: " + ", ".join(sorted(forbidden)))
+
+    stray = sorted(name for name in tracked_names if "/" not in name and name not in ROOT_FILES)
+    if stray:
+        raise SystemExit(
+            "Files not allowed in the root (M1): " + ", ".join(stray)
+            + "\nFix: move each into its home (docs/, scripts/, ...), or add it to ROOT_FILES in "
+            "scripts/ci_check.py with the reason."
+        )
+
+    ignored = subprocess.run(
+        ("git", "ls-files", "-ci", "--exclude-standard"), cwd=ROOT, capture_output=True, text=True,
+        check=True,
+    ).stdout.split()
+    if ignored:
+        raise SystemExit(
+            "Tracked files that .gitignore covers (M2): " + ", ".join(ignored)
+            + "\nFix: `git rm --cached <file>`, or remove the .gitignore rule."
+        )
 
     if (ROOT / "AGENT.md").exists():
         raise SystemExit("Use only the canonical AGENTS.md; remove AGENT.md")

@@ -26,7 +26,7 @@ SIGNING_KEY = "tls-test-signing-key-of-sufficient-length"
 MAKE_CERTS = Path(__file__).parents[1] / "scripts" / "make_ci_certs.py"
 
 
-class Connected(Exception):  # noqa: N818 - a sentinel, not an error condition
+class Connected(Exception):
     """Raised by a stand-in driver once it has recorded its arguments."""
 
 
@@ -43,11 +43,11 @@ def calls(monkeypatch: pytest.MonkeyPatch) -> list[dict]:
         return connect
 
     dbapi = types.ModuleType("pg8000.dbapi")
-    dbapi.connect = record("postgresql")  # type: ignore[attr-defined]
+    dbapi.connect = record("postgresql")  # type: ignore[attr-defined]  # C5: reason=mypy cannot see attributes set on a fake module; approved=user, 2026-11-08; review=2027-05-08
     pg8000 = types.ModuleType("pg8000")
-    pg8000.dbapi = dbapi  # type: ignore[attr-defined]
+    pg8000.dbapi = dbapi  # type: ignore[attr-defined]  # C5: reason=mypy cannot see attributes set on a fake module; approved=user, 2026-11-08; review=2027-05-08
     clickhouse = types.ModuleType("clickhouse_connect")
-    clickhouse.get_client = record("clickhouse")  # type: ignore[attr-defined]
+    clickhouse.get_client = record("clickhouse")  # type: ignore[attr-defined]  # C5: reason=mypy cannot see attributes set on a fake module; approved=user, 2026-11-08; review=2027-05-08
 
     def parse_uri(uri: str, **_: object) -> dict:
         if uri.startswith("mongodb+srv://"):
@@ -62,10 +62,10 @@ def calls(monkeypatch: pytest.MonkeyPatch) -> list[dict]:
         return {"nodelist": nodes}
 
     uri_parser = types.ModuleType("pymongo.uri_parser")
-    uri_parser.parse_uri = parse_uri  # type: ignore[attr-defined]
+    uri_parser.parse_uri = parse_uri  # type: ignore[attr-defined]  # C5: reason=mypy cannot see attributes set on a fake module; approved=user, 2026-11-08; review=2027-05-08
     pymongo = types.ModuleType("pymongo")
-    pymongo.MongoClient = record("mongodb")  # type: ignore[attr-defined]
-    pymongo.uri_parser = uri_parser  # type: ignore[attr-defined]
+    pymongo.MongoClient = record("mongodb")  # type: ignore[attr-defined]  # C5: reason=mypy cannot see attributes set on a fake module; approved=user, 2026-11-08; review=2027-05-08
+    pymongo.uri_parser = uri_parser  # type: ignore[attr-defined]  # C5: reason=mypy cannot see attributes set on a fake module; approved=user, 2026-11-08; review=2027-05-08
     for name, module in {
         "pg8000": pg8000, "pg8000.dbapi": dbapi, "clickhouse_connect": clickhouse,
         "pymongo": pymongo, "pymongo.uri_parser": uri_parser,
@@ -244,9 +244,9 @@ def test_the_bundle_records_how_the_source_was_reached(monkeypatch, tmp_path, tl
             pass
 
     dbapi = types.ModuleType("pg8000.dbapi")
-    dbapi.connect = lambda **_: Client()  # type: ignore[attr-defined]
+    dbapi.connect = lambda **_: Client()  # type: ignore[attr-defined]  # C5: reason=mypy cannot see attributes set on a fake module; approved=user, 2026-11-08; review=2027-05-08
     pg8000 = types.ModuleType("pg8000")
-    pg8000.dbapi = dbapi  # type: ignore[attr-defined]
+    pg8000.dbapi = dbapi  # type: ignore[attr-defined]  # C5: reason=mypy cannot see attributes set on a fake module; approved=user, 2026-11-08; review=2027-05-08
     monkeypatch.setitem(sys.modules, "pg8000", pg8000)
     monkeypatch.setitem(sys.modules, "pg8000.dbapi", dbapi)
     monkeypatch.setattr(runtime, "discover_postgresql", lambda *_: {"diagnostics.jsonl": []})
@@ -338,7 +338,7 @@ def test_a_wrapped_certificate_failure_in_a_runtime_error_is_still_explained(
         except ssl.SSLError as inner:
             raise RuntimeError("driver wrapper") from inner
 
-    sys.modules["pg8000.dbapi"].connect = fails  # type: ignore[attr-defined]
+    sys.modules["pg8000.dbapi"].connect = fails  # type: ignore[attr-defined]  # C5: reason=mypy cannot see attributes set on a fake module; approved=user, 2026-11-08; review=2027-05-08
     with pytest.raises(OperatorError, match="set tls_ca_file"):
         _collect(monkeypatch, tmp_path, "postgresql", PG_REMOTE)
 
@@ -354,9 +354,9 @@ def test_a_reached_limit_is_reported_with_the_limits_to_raise(monkeypatch, tmp_p
         raise runtime.BudgetExhausted
 
     dbapi = types.ModuleType("pg8000.dbapi")
-    dbapi.connect = lambda **_: Client()  # type: ignore[attr-defined]
+    dbapi.connect = lambda **_: Client()  # type: ignore[attr-defined]  # C5: reason=mypy cannot see attributes set on a fake module; approved=user, 2026-11-08; review=2027-05-08
     pg8000 = types.ModuleType("pg8000")
-    pg8000.dbapi = dbapi  # type: ignore[attr-defined]
+    pg8000.dbapi = dbapi  # type: ignore[attr-defined]  # C5: reason=mypy cannot see attributes set on a fake module; approved=user, 2026-11-08; review=2027-05-08
     monkeypatch.setitem(sys.modules, "pg8000", pg8000)
     monkeypatch.setitem(sys.modules, "pg8000.dbapi", dbapi)
     monkeypatch.setattr(runtime, "discover_postgresql", exhausted)
@@ -371,6 +371,6 @@ def test_other_runtime_errors_are_not_disguised(monkeypatch, tmp_path, calls):
     def broken(*_: object, **__: object) -> None:
         raise RuntimeError("a genuine bug")
 
-    sys.modules["pg8000.dbapi"].connect = broken  # type: ignore[attr-defined]
+    sys.modules["pg8000.dbapi"].connect = broken  # type: ignore[attr-defined]  # C5: reason=mypy cannot see attributes set on a fake module; approved=user, 2026-11-08; review=2027-05-08
     with pytest.raises(RuntimeError, match="a genuine bug"):
         _collect(monkeypatch, tmp_path, "postgresql", PG_LOOPBACK, tls=False)

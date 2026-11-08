@@ -51,9 +51,11 @@ def test_the_env_example_loads_as_the_guide_says_and_names_every_variable():
 
     bash = shutil.which("bash")
     if bash is None:
-        pytest.skip("bash is needed to load the file the way the guide says")
+        pytest.skip(  # C5: reason=see message; approved=user, 2026-11-08; review=2027-05-08
+            "bash is needed to load the file the way the guide says"
+        )
     root = Path(__file__).resolve().parents[1]
-    loaded = subprocess.run(  # noqa: S603 - fixed argv, repository file
+    loaded = subprocess.run(  # noqa: S603 # C5: reason=fixed argv, repository file; approved=user, 2026-11-08; review=2027-05-08
         [bash, "-c", "set -a; . ./.env.example; set +a; env -0"],
         cwd=root, capture_output=True, check=True,
     ).stdout.decode()

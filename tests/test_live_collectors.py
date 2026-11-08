@@ -12,7 +12,7 @@ from dbig_collectors.runtime import (
     discover_postgresql,
 )
 
-pytestmark = pytest.mark.skipif(
+pytestmark = pytest.mark.skipif(  # C5: reason=opt-in; approved=user, 2026-11-08; review=2027-05-08
     os.environ.get("DBIG_RUN_INTEGRATION") != "1", reason="ephemeral CI services unavailable"
 )
 

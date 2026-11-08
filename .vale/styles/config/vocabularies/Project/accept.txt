@@ -45,3 +45,9 @@ Vale
 vLLM
 wheel
 zeroization
+xfail
+gitleaks
+actionlint
+zizmor
+deptry
+recs

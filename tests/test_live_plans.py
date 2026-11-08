@@ -24,7 +24,7 @@ from pathlib import Path
 
 import pytest
 
-pytestmark = pytest.mark.skipif(
+pytestmark = pytest.mark.skipif(  # C5: reason=opt-in; approved=user, 2026-11-08; review=2027-05-08
     os.environ.get("DBIG_RUN_INTEGRATION") != "1", reason="live source containers unavailable"
 )
 
@@ -83,12 +83,12 @@ def catalogue(tmp_path_factory) -> dict:
             f"customer_id integer REFERENCES {NAMESPACE}.customers(id), total integer)",
             f"CREATE TABLE {NAMESPACE}.refunds (id integer PRIMARY KEY, "
             f"order_id integer REFERENCES {NAMESPACE}.orders(id), amount integer)",
-            f"INSERT INTO {NAMESPACE}.customers SELECT g, 'c' || g "  # noqa: S608
+            f"INSERT INTO {NAMESPACE}.customers SELECT g, 'c' || g "  # noqa: S608 # C5: reason=fixture SQL built from constant names; approved=user, 2026-11-08; review=2027-05-08
             f"FROM generate_series(1, {CUSTOMERS}) g",
             # Two orders per customer, and a refund on every third order.
-            f"INSERT INTO {NAMESPACE}.orders SELECT g, 1 + (g - 1) / 2, g "  # noqa: S608
+            f"INSERT INTO {NAMESPACE}.orders SELECT g, 1 + (g - 1) / 2, g "  # noqa: S608 # C5: reason=fixture SQL built from constant names; approved=user, 2026-11-08; review=2027-05-08
             f"FROM generate_series(1, {CUSTOMERS * 2}) g",
-            f"INSERT INTO {NAMESPACE}.refunds SELECT g, g * 3, 1 "  # noqa: S608
+            f"INSERT INTO {NAMESPACE}.refunds SELECT g, g * 3, 1 "  # noqa: S608 # C5: reason=fixture SQL built from constant names; approved=user, 2026-11-08; review=2027-05-08
             f"FROM generate_series(1, {CUSTOMERS * 2 // 3}) g",
             f"ANALYZE {NAMESPACE}.customers",
         ):
@@ -105,7 +105,7 @@ def catalogue(tmp_path_factory) -> dict:
             "ENGINE=MergeTree ORDER BY id"
         )
         client.command(
-            f"INSERT INTO {NAMESPACE}.page_views SELECT number, "  # noqa: S608
+            f"INSERT INTO {NAMESPACE}.page_views SELECT number, "  # noqa: S608 # C5: reason=fixture SQL built from constant names; approved=user, 2026-11-08; review=2027-05-08
             "toInt32(150 + number % 10) FROM numbers(30)"
         )
     finally:
@@ -160,7 +160,7 @@ def catalogue(tmp_path_factory) -> dict:
 
 
 def _tool(env: dict[str, str], name: str, *arguments: str) -> dict:
-    result = subprocess.run(  # noqa: S603 - fixed argv, no shell
+    result = subprocess.run(  # noqa: S603 # C5: reason=fixed argv, no shell; approved=user, 2026-11-08; review=2027-05-08
         [str(SCRIPTS / name), *arguments], capture_output=True, text=True, env=env, timeout=120,
     )
     assert result.returncode == 0, f"{name} {arguments[0]}: {result.stderr}"
@@ -343,7 +343,7 @@ def test_the_run_plan_helper_reproduces_the_true_cross_source_join(catalogue):
     plan = _plan(catalogue, ("plans-mongodb", "tickets"), ("plans-postgresql", "refunds"))
     (root / "plan.json").write_text(json.dumps(plan), encoding="utf-8")
     script = Path(__file__).resolve().parents[1] / "scripts" / "run_plan.py"
-    result = subprocess.run(  # noqa: S603 - fixed argv, no shell
+    result = subprocess.run(  # noqa: S603 # C5: reason=fixed argv, no shell; approved=user, 2026-11-08; review=2027-05-08
         [sys.executable, str(script), "--plan", str(root / "plan.json"), *configs],
         capture_output=True, text=True, env=env, timeout=120,
     )

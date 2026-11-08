@@ -1,0 +1,9 @@
+# zizmor config. The three ad-hoc installs below use an exact pinned version; the npm tools have
+# no lockfile in this repository. Ignores are by line, so move them if the lines move.
+# C5: reason=exact version pinned, no lockfile for npm tools; approved=user, 2026-11-08; review=2027-05-08
+rules:
+  adhoc-packages:
+    ignore:
+      - ci.yml:50
+      - docs.yml:33
+      - release.yml:46

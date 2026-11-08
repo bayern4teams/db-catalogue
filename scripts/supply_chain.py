@@ -26,10 +26,10 @@ def _release_metadata(component: dict[str, object]) -> tuple[str, dict[str, obje
     name = str(component["name"])
     version = str(component["version"])
     url = f"https://pypi.org/pypi/{quote(name, safe='')}/{quote(version, safe='')}/json"
-    request = Request(  # noqa: S310 - URL is constructed with a fixed HTTPS PyPI origin.
+    request = Request(  # noqa: S310 # C5: reason=URL is constructed with a fixed HTTPS PyPI origin; approved=user, 2026-11-08; review=2027-05-08
         url, headers={"Accept": "application/json", "User-Agent": "dbig-license-inventory/1.0"}
     )
-    with urlopen(request, timeout=20) as response:  # noqa: S310
+    with urlopen(request, timeout=20) as response:  # noqa: S310 # C5: reason=fixed HTTPS PyPI origin; approved=user, 2026-11-08; review=2027-05-08
         data = json.load(response)
     info = data["info"]
     if info["version"] != version:
@@ -74,7 +74,7 @@ def _uv_executable() -> str:
 
 
 def _uv_version(executable: str) -> str:
-    result = subprocess.run(  # noqa: S603
+    result = subprocess.run(  # noqa: S603 # C5: reason=fixed argv, no shell; approved=user, 2026-11-08; review=2027-05-08
         [executable, "--version"], cwd=ROOT, capture_output=True, text=True
     )
     return result.stdout.strip() or result.stderr.strip() or "unknown"
@@ -86,7 +86,7 @@ def _export_sbom(path: Path) -> list[dict[str, object]]:
         executable, "export", "--locked", "--all-packages", "--all-extras", "--all-groups",
         "--format", "cyclonedx1.5", "--output-file", str(path), "--quiet",
     ]
-    result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)  # noqa: S603
+    result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)  # noqa: S603 # C5: reason=fixed argv, no shell; approved=user, 2026-11-08; review=2027-05-08
     if result.returncode != 0:
         # `cyclonedx1.5` is a preview format that older uv releases reject during argument
         # parsing, before uv consults `[tool.uv] required-version`. Report uv's own message plus

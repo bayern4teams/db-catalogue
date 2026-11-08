@@ -25,7 +25,7 @@ from test_builder import source_bundle
 BUNDLE_KEY = "synthetic-key-12345678901234567890"
 SCAN_KEY = "synthetic-key-with-more-than-thirty-two-bytes"
 # Fixture data describing a query someone else ran. This code never builds or executes it.
-OBSERVED_JOIN = "SELECT * FROM orders JOIN customers ON orders.customer_id = customers.id"  # noqa: S608
+OBSERVED_JOIN = "SELECT * FROM orders JOIN customers ON orders.customer_id = customers.id"
 
 
 def _write(path: Path, text: str) -> Path:
@@ -353,7 +353,7 @@ def test_process_scans_on_an_empty_queue_is_not_an_error(collector_config, tmp_p
         ("requester", []),
     ],
 )
-@pytest.mark.parametrize("host", ["0.0.0.0", "10.0.0.5", "192.168.1.10"])  # noqa: S104
+@pytest.mark.parametrize("host", ["0.0.0.0", "10.0.0.5", "192.168.1.10"])  # noqa: S104 # C5: reason=bind-all address is test data for a validator, nothing binds it; approved=user, 2026-11-08; review=2027-05-08
 def test_serve_refuses_a_non_loopback_bind(command, extra, host, tmp_path, monkeypatch):
     mains = {"collector": collector_main, "planner": planner_main, "requester": requester_main}
     config = _write(tmp_path / "any.toml", "[unused]\n")

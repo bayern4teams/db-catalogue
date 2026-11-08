@@ -58,7 +58,9 @@ application-quality:
     - uv run ruff check .
     - uv run mypy packages
     - uv run pytest
+    - for package in packages/*/; do (cd "$package" && uv run --no-sync deptry .); done
     - uv run pip-audit
+    - uv run zizmor --no-progress .github/workflows
     - python scripts/supply_chain.py
 
 package-isolation-linux:
@@ -145,13 +147,16 @@ rule-check:
   script:
     - git fetch -q origin "+refs/heads/${CI_DEFAULT_BRANCH}:refs/remotes/origin/${CI_DEFAULT_BRANCH}"
     - python scripts/rule_check.py --base "origin/${CI_DEFAULT_BRANCH}"
+    - python scripts/install_check_tools.py /usr/local/bin
+    - gitleaks git --no-banner --redact --config .github/gitleaks.toml
+    - actionlint
 
 docs:
   stage: checks
   needs: [repository-policy]
   image: node:22-bookworm
   rules:
-    - changes: ["**/*.md", ".vale.ini", ".vale/styles/config/**/*", ".markdownlint-cli2.jsonc", ".puppeteer.json", "scripts/mermaid_check.py"]
+    - changes: ["**/*.md", ".vale.ini", ".vale/styles/config/**/*", ".markdownlint-cli2.jsonc", "scripts/puppeteer.json", "scripts/mermaid_check.py"]
   variables:
     PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium
   script:

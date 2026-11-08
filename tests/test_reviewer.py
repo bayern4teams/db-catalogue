@@ -141,7 +141,7 @@ def test_langfuse_span_is_metadata_only(monkeypatch):
         config(
             langfuse_url="http://127.0.0.1:3000",
             langfuse_public_key_env="LF_PUBLIC",
-            langfuse_secret_key_env="LF_SECRET",  # noqa: S106 - environment variable name
+            langfuse_secret_key_env="LF_SECRET",  # noqa: S106 # C5: reason=environment variable name; approved=user, 2026-11-08; review=2027-05-08
         ),
         2,
     )

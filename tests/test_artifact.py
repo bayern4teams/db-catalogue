@@ -155,7 +155,8 @@ def test_bundle_accepts_visible_object_parent(tmp_path):
 def test_published_schema_accepts_synthetic_object():
     schema_path = Path(__file__).resolve().parents[1] / "schemas/ir-v1/object.schema.json"
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
-    Draft202012Validator(schema).validate(records()["objects.jsonl"][0].model_dump(mode="json"))
+    record = records()["objects.jsonl"][0].model_dump(mode="json")
+    assert Draft202012Validator(schema).is_valid(record)
 
 
 @pytest.mark.parametrize(
@@ -350,7 +351,7 @@ def test_snapshot_refuses_a_node_missing_its_types_required_field(tmp_path):
     incomplete = {"record_type": "object", "id": "broken", "native_id": "9", "name": "x", **common}
     incomplete["observed_at"] = incomplete["observed_at"].isoformat()
     tables["nodes.jsonl"] = [*tables["nodes.jsonl"], incomplete]
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Field required"):
         publish_snapshot(tmp_path / "snapshot", tables)
 
 
@@ -533,7 +534,7 @@ def test_a_bundle_from_a_producer_predating_the_summary_still_verifies(tmp_path)
 @pytest.mark.parametrize("code", ["", "lowercase", "HAS SPACE", "1LEADING", "X" * 65])
 def test_a_diagnostic_code_that_cannot_be_summarised_is_refused(tmp_path, code):
     """Counts can only add up to the row count if every row has exactly one well-formed code."""
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"Diagnostic\ncode"):
         validate_row(
             "diagnostics.jsonl",
             {
@@ -560,7 +561,7 @@ def test_a_diagnostic_without_a_code_is_refused_on_write(tmp_path):
             "provenance": "synthetic",
         }
     ]
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"Diagnostic\ncode\n  Field required"):
         write_artifact(
             tmp_path / "bundle",
             "collector-bundle",

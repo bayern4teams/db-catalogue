@@ -24,7 +24,7 @@ from pathlib import Path
 
 import pytest
 
-pytestmark = pytest.mark.skipif(
+pytestmark = pytest.mark.skipif(  # C5: reason=opt-in; approved=user, 2026-11-08; review=2027-05-08
     os.environ.get("DBIG_RUN_INTEGRATION") != "1", reason="live source containers unavailable"
 )
 
@@ -42,11 +42,11 @@ CONNECTION = json.dumps(
 SEED_STATEMENTS = (
     f"DROP SCHEMA IF EXISTS {NAMESPACE} CASCADE",
     f"CREATE SCHEMA {NAMESPACE}",
-    f"CREATE TABLE {NAMESPACE}.customers (id integer PRIMARY KEY)",  # noqa: S608
-    f"INSERT INTO {NAMESPACE}.customers VALUES (1), (2), (3)",  # noqa: S608
-    f"CREATE TABLE {NAMESPACE}.orders (id integer PRIMARY KEY, "  # noqa: S608
+    f"CREATE TABLE {NAMESPACE}.customers (id integer PRIMARY KEY)",
+    f"INSERT INTO {NAMESPACE}.customers VALUES (1), (2), (3)",  # noqa: S608 # C5: reason=fixture SQL built from constant names; approved=user, 2026-11-08; review=2027-05-08
+    f"CREATE TABLE {NAMESPACE}.orders (id integer PRIMARY KEY, "
     f"customer_id integer REFERENCES {NAMESPACE}.customers(id))",
-    f"INSERT INTO {NAMESPACE}.orders VALUES (1, 1), (2, 1), (3, 2)",  # noqa: S608
+    f"INSERT INTO {NAMESPACE}.orders VALUES (1, 1), (2, 1), (3, 2)",  # noqa: S608 # C5: reason=fixture SQL built from constant names; approved=user, 2026-11-08; review=2027-05-08
     f"ANALYZE {NAMESPACE}.customers",
     f"ANALYZE {NAMESPACE}.orders",
 )
@@ -61,7 +61,7 @@ def _run(command: list[str], env: dict[str, str]) -> subprocess.CompletedProcess
         # claimed as verified when it had never run. Opting in with DBIG_RUN_INTEGRATION=1 means
         # the scripts must be there.
         pytest.fail(f"{command[0]} console script is not installed")
-    return subprocess.run(  # noqa: S603 - fixed argv, no shell
+    return subprocess.run(  # noqa: S603 # C5: reason=fixed argv, no shell; approved=user, 2026-11-08; review=2027-05-08
         [str(executable), *command[1:]], capture_output=True, text=True, env=env, timeout=240
     )
 

@@ -1,0 +1,20 @@
+# gitleaks config (AGENTS.md B6). Two known false-positive families, each limited to a path AND a
+# line pattern so a real key elsewhere, or a different key in the same file, is still found.
+# C5: reason=synthetic test keys and sha256 sort-key fields, reviewed by context only; approved=user, 2026-11-08; review=2027-05-08
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Synthetic signing and bundle keys that tests set as fixtures"
+condition = "AND"
+paths = ['''^tests/''']
+regexTarget = "line"
+regexes = ['''(BUNDLE_KEY|SIGNING_KEY|WRONG_KEY)''']
+
+[[allowlists]]
+description = "sha256 sort-key fields in recorded live-run evidence"
+condition = "AND"
+paths = ['''^artifacts/''']
+regexTarget = "line"
+regexes = ['''sort_key_sha256''']

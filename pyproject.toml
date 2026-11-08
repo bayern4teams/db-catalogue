@@ -47,6 +47,9 @@ dev = [
   "ruff>=0.13,<0.14",
   "mypy>=1.18,<2",
   "pip-audit>=2.9,<3",
+  "deptry==0.25.1",
+  "vulture==2.16",
+  "zizmor==1.32.0",
 ]
 
 [tool.uv.sources]
@@ -63,7 +66,11 @@ target-version = "py312"
 extend-exclude = ["artifacts"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "B", "UP", "S"]
+# PGH004 blanket noqa, RUF100 unused noqa, PT pytest style (L4, C5). PT018 is left out: it only
+# asks to split `assert a and b`, which says nothing about whether a test proves anything.
+# C5: reason=style-only rule, no quality signal; approved=user 2026-11-08 ("Take all recs"); review=2027-05-08
+select = ["E", "F", "I", "B", "UP", "S", "PGH004", "RUF100", "PT"]
+ignore = ["PT018"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101"]
