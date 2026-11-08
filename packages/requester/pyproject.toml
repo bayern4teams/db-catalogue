@@ -3,7 +3,7 @@ name = "dbig-catalogue-requester"
 version = "0.1.0"
 license = "MIT"
 requires-python = ">=3.12"
-dependencies = ["dbig-contracts==0.1.0", "click>=8.2,<9", "openai>=2,<3", "langfuse>=4,<5"]
+dependencies = ["dbig-contracts==0.1.0", "click>=8.2,<9", "pydantic>=2.11,<3", "openai>=2,<3", "langfuse>=4,<5"]
 
 [project.optional-dependencies]
 api = ["fastapi>=0.120,<1", "uvicorn>=0.35,<1"]

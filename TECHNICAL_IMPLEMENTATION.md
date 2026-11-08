@@ -227,7 +227,7 @@ Use a `uv` workspace for development, but publish separate wheels: contracts, co
 | Language and build | Python 3.12+, `pyproject.toml`, `uv`, `uv.lock`, hatchling or equivalent build backend after packaging spike | Reproducible environment; verify Windows/Linux wheel availability and lock all extras. |
 | CLI | Click | Four command groups: `dbig`, `dbig-builder`, `dbig-requester`, `dbig-planner`. Commands are listed in §12. Exit codes and operator errors as in §12a. |
 | Config and IR | `tomllib`, Pydantic v2, standard `typing.Protocol` | TOML config, typed records, strict validation, secret references; no arbitrary YAML. |
-| Serialization | standard `json`, `hashlib`, `pathlib`, `tempfile`; `jsonschema` for published contract | Canonical UTF-8 JSONL, digests, schema validation, atomic replace. |
+| Serialization | standard `json`, `hashlib`, `pathlib`, `tempfile`; `jsonschema` as a dev dependency only | Canonical UTF-8 JSONL, digests, atomic replace. Pydantic validates records at run time; `jsonschema` checks the published schemas in tests and `scripts/export_schemas.py`. |
 | PostgreSQL | `pg8000` | Read-only direct catalog SQL, timeouts and TLS. No ORM and no Psycopg in permissive core. |
 | ClickHouse | `clickhouse-connect` | `system.*`, engine metadata, bounded queries and permitted query log. |
 | MongoDB | `pymongo` bundled `bson` | Collection/index/validator metadata, sampled documents; never install unrelated `bson`. |
@@ -719,11 +719,11 @@ The user selected **both** separately installable packages/CLIs exchanging versi
 
 | Distribution | Owns | Required application dependencies | Optional dependencies |
 | --- | --- | --- | --- |
-| `dbig-contracts` | IR v1, JSON Schema, manifests, validation, stable IDs, signatures | Pydantic v2, `jsonschema`, Python standard library | None |
-| `dbig-collectors` | Site-specific discovery, profiles, signed bundles, scan intake | `dbig-contracts`, Click, standard library | `pg8000`, `clickhouse-connect` or `pymongo` by source extra; FastAPI and Uvicorn `api` extra |
-| `dbig-catalog-builder` | Cross-source evidence, reference candidates, deterministic snapshot, bounded semantic review | `dbig-contracts`, Click, RapidFuzz, LangGraph, OpenAI-compatible Python client, Langfuse SDK, SQLite stdlib | NetworkX only if builder-side traversal proves necessary |
-| `dbig-catalogue-requester` | Structured catalogue search, grounded local-LLM answers, scan dispatch | `dbig-contracts`, Click, SQLite/FTS5 stdlib, OpenAI-compatible Python client, Langfuse SDK | FastAPI and Uvicorn `api` extra |
-| `dbig-lineage-planner` | Observed lineage import, lineage and join paths, SQL/Mongo/query-plan rendering | `dbig-contracts`, SQLGlot, NetworkX, Click | FastAPI/Uvicorn `api` extra; `openlineage-python` only for typed event emission |
+| `dbig-contracts` | IR v1, JSON Schema, manifests, validation, stable IDs, signatures | Pydantic v2, Python standard library | None |
+| `dbig-collectors` | Site-specific discovery, profiles, signed bundles, scan intake | `dbig-contracts`, Click, Pydantic v2, standard library | `pg8000`, `clickhouse-connect` or `pymongo` by source extra; FastAPI and Uvicorn `api` extra |
+| `dbig-catalog-builder` | Cross-source evidence, reference candidates, deterministic snapshot, bounded semantic review | `dbig-contracts`, Click, Pydantic v2, RapidFuzz, LangGraph, OpenAI-compatible Python client, Langfuse SDK, SQLite stdlib | NetworkX only if builder-side traversal proves necessary |
+| `dbig-catalogue-requester` | Structured catalogue search, grounded local-LLM answers, scan dispatch | `dbig-contracts`, Click, Pydantic v2, SQLite/FTS5 stdlib, OpenAI-compatible Python client, Langfuse SDK | FastAPI and Uvicorn `api` extra |
+| `dbig-lineage-planner` | Observed lineage import, lineage and join paths, SQL/Mongo/query-plan rendering | `dbig-contracts`, SQLGlot, NetworkX, Click, Pydantic v2 | FastAPI/Uvicorn `api` extra; `openlineage-python` only for typed event emission |
 
 The names are intended distribution names, subject to package-index availability and final lock audit. Do not introduce imports from requester to planner or vice versa. Source credentials and drivers are confined to collectors. The planner makes no LLM call; path selection and rendering use validated IR and deterministic policies. The requester may call the same private vLLM server used by the builder, but the packages share no process state or direct Python dependency. No top-level LangChain, LangGraph Swarm, Amundsen, Elasticsearch, Neo4j, Marquez, OpenLineage SQL parser, or second SQL parser is required. Graphify/Graft/Codebase Memory remain developer-only graphs.
 

@@ -3,7 +3,7 @@ name = "dbig-contracts"
 version = "0.1.0"
 license = "MIT"
 requires-python = ">=3.12"
-dependencies = ["pydantic>=2.11,<3", "jsonschema>=4.25,<5"]
+dependencies = ["pydantic>=2.11,<3"]
 
 [build-system]
 requires = ["hatchling>=1.27,<2"]

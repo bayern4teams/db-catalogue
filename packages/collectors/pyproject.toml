@@ -3,7 +3,7 @@ name = "dbig-collectors"
 version = "0.1.0"
 license = "MIT"
 requires-python = ">=3.12"
-dependencies = ["dbig-contracts==0.1.0", "click>=8.2,<9"]
+dependencies = ["dbig-contracts==0.1.0", "click>=8.2,<9", "pydantic>=2.11,<3"]
 
 [project.optional-dependencies]
 postgresql = ["pg8000>=1.31,<2"]
