@@ -88,13 +88,14 @@ def check_removed_tests(base: str) -> list[str]:
     return []
 
 
-def _asserts(function: ast.AST) -> bool:
+def _asserts(function: ast.AST, helpers: frozenset[str] = frozenset()) -> bool:
     for node in ast.walk(function):
         if isinstance(node, ast.Assert):
             return True
         if isinstance(node, ast.Call):
             name = getattr(node.func, "attr", getattr(node.func, "id", ""))
-            if name in CHECKS or name.lstrip("_").startswith(("assert", "check", "verify")):
+            named = name.lstrip("_").startswith(("assert", "check", "verify"))
+            if name in CHECKS | helpers or named:
                 return True
     return False
 
@@ -107,12 +108,20 @@ def check_assertions(base: str) -> list[str]:
     found = []
     for path, numbers in touched.items():
         tree = ast.parse(Path(path).read_text(encoding="utf-8"))
+        # ponytail: one level only, a helper that merely calls another asserting helper is missed
+        helpers = frozenset(
+            node.name
+            for node in ast.walk(tree)
+            if isinstance(node, ast.FunctionDef)
+            and not node.name.startswith("test")
+            and _asserts(node)
+        )
         for node in ast.walk(tree):
             if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
                 continue
             if node.name.startswith("test"):
                 span = set(range(node.lineno, node.end_lineno + 1))
-                if span & numbers and not _asserts(node):
+                if span & numbers and not _asserts(node, helpers):
                     found.append(f"{path}:{node.lineno}: {node.name}")
     return found
 

@@ -96,3 +96,15 @@ def test_tests_that_assert_or_expect_an_error_pass(repo: Path) -> None:
     )
     result = change(repo, {"tests/test_new.py": text})
     assert result.returncode == 0, result.stdout
+
+
+def test_a_test_that_calls_a_helper_which_asserts_passes(repo: Path) -> None:
+    text = (
+        "def _expect_even(number):\n    assert number % 2 == 0\n\n"
+        "def test_even():\n    _expect_even(4)\n\n"
+        "def _just_prints(number):\n    print(number)\n\n"
+        "def test_print():\n    _just_prints(4)\n"
+    )
+    result = change(repo, {"tests/test_new.py": text})
+    assert "tests/test_new.py:5: test_even" not in result.stdout
+    assert "L4: test with no assertion: tests/test_new.py:10: test_print" in result.stdout
