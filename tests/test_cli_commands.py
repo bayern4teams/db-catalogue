@@ -353,7 +353,7 @@ def test_process_scans_on_an_empty_queue_is_not_an_error(collector_config, tmp_p
         ("requester", []),
     ],
 )
-@pytest.mark.parametrize("host", ["0.0.0.0", "10.0.0.5", "192.168.1.10"])  # noqa: S104
+@pytest.mark.parametrize("host", ["0.0.0.0", "10.0.0.5", "192.168.1.10"])  # noqa: S104 # C5: reason=bind-all address is test data for a validator, nothing binds it; approved=user, 2026-11-08; review=2027-05-08
 def test_serve_refuses_a_non_loopback_bind(command, extra, host, tmp_path, monkeypatch):
     mains = {"collector": collector_main, "planner": planner_main, "requester": requester_main}
     config = _write(tmp_path / "any.toml", "[unused]\n")

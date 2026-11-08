@@ -211,7 +211,7 @@ def _tokenize_postgresql(
         cursor.execute(
             # Identifiers are quoted from the server's own catalog and validated by `_quoted`;
             # the row limit is bound. No caller input reaches this statement.
-            f"SELECT {selected} FROM {_quoted(schema)}.{_quoted(table)} "  # noqa: S608
+            f"SELECT {selected} FROM {_quoted(schema)}.{_quoted(table)} "  # noqa: S608 # C5: reason=only placeholder tokens or quoted identifiers are interpolated, values are bound; approved=user, 2026-11-08; review=2027-05-08
             "LIMIT %s",
             (config.sample_rows,),
         )
@@ -275,7 +275,7 @@ def _profile_postgresql(
     budget.charge()
     # Only placeholder tokens are interpolated; schema names remain bound values.
     cursor.execute(
-        "SELECT s.schemaname, s.tablename, s.attname, s.null_frac, s.n_distinct, "  # noqa: S608
+        "SELECT s.schemaname, s.tablename, s.attname, s.null_frac, s.n_distinct, "  # noqa: S608 # C5: reason=only placeholder tokens or quoted identifiers are interpolated, values are bound; approved=user, 2026-11-08; review=2027-05-08
         "s.avg_width, a.last_analyze, a.last_autoanalyze, c.reltuples "
         "FROM pg_catalog.pg_stats s "
         "JOIN pg_catalog.pg_class c ON c.relname = s.tablename "
@@ -358,7 +358,7 @@ def discover_postgresql(
         budget.charge()
         # Only placeholder tokens are interpolated; schema names remain bound values.
         cursor.execute(
-            "SELECT c.oid, n.nspname, c.relname, c.relkind, c.reltuples, "  # noqa: S608
+            "SELECT c.oid, n.nspname, c.relname, c.relkind, c.reltuples, "  # noqa: S608 # C5: reason=only placeholder tokens or quoted identifiers are interpolated, values are bound; approved=user, 2026-11-08; review=2027-05-08
             "c.relispartition, i.inhparent, pg_catalog.obj_description(c.oid, 'pg_class') "
             "FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n "
             "ON n.oid = c.relnamespace "
@@ -502,7 +502,7 @@ def discover_postgresql(
             # one is a typo. pg_namespace lists every schema whatever the account's privileges.
             budget.charge()
             cursor.execute(
-                "SELECT nspname FROM pg_catalog.pg_namespace "  # noqa: S608
+                "SELECT nspname FROM pg_catalog.pg_namespace "  # noqa: S608 # C5: reason=only placeholder tokens or quoted identifiers are interpolated, values are bound; approved=user, 2026-11-08; review=2027-05-08
                 f"WHERE nspname IN ({','.join(['%s'] * len(empty))})",
                 tuple(empty),
             )

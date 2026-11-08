@@ -36,7 +36,7 @@ def _run(command: list[str], env: dict[str, str]) -> subprocess.CompletedProcess
         # A failure, not a skip: a skip here once hid a misnamed command in the live pipeline
         # test, whose whole chain then "passed" in CI without running.
         pytest.fail(f"{command[0]} console script is not installed in this environment")
-    return subprocess.run(  # noqa: S603 - fixed argv, no shell, paths from tmp_path
+    return subprocess.run(  # noqa: S603 # C5: reason=fixed argv, no shell, paths from tmp_path; approved=user, 2026-11-08; review=2027-05-08
         [str(executable), *command[1:]], capture_output=True, text=True, env=env, timeout=180
     )
 
@@ -177,7 +177,9 @@ def test_a_plan_can_be_rendered_for_a_join_path_only(pipeline):
 
     joins = json.loads(pipeline["steps"]["joins"].stdout)
     if not joins["paths"]:
-        pytest.skip("this fixture produced no join path to render")
+        pytest.skip(  # C5: reason=see message; approved=user, 2026-11-08; review=2027-05-08
+            "this fixture produced no join path to render"
+        )
     rendered = _run(
         ["dbig-planner", "plan", "--graph", str(pipeline["root"] / "graph"),
          "--path-id", joins["paths"][0]["path_id"]],

@@ -34,12 +34,12 @@ def main() -> None:
         wheel = next(distribution.glob(f"{name}-*.whl"))
         with tempfile.TemporaryDirectory(prefix=f"{name}-") as temporary:
             env = Path(temporary) / "env"
-            subprocess.run([uv, "venv", str(env), "--python", sys.executable], check=True)  # noqa: S603
+            subprocess.run([uv, "venv", str(env), "--python", sys.executable], check=True)  # noqa: S603 # C5: reason=fixed argv, no shell; approved=user, 2026-11-08; review=2027-05-08
             python = env / ("Scripts/python.exe" if sys.platform == "win32" else "bin/python")
             executable = env / (
                 f"Scripts/{command}.exe" if sys.platform == "win32" else f"bin/{command}"
             )
-            subprocess.run(  # noqa: S603
+            subprocess.run(  # noqa: S603 # C5: reason=fixed argv, no shell; approved=user, 2026-11-08; review=2027-05-08
                 [
                     uv,
                     "pip",
@@ -62,8 +62,8 @@ def main() -> None:
                 "assert all(importlib.util.find_spec(name) is None for name in "
                 "(sys.argv[3], 'dbig_collectors', 'pg8000', 'clickhouse_connect', 'pymongo'))"
             )
-            subprocess.run([str(python), "-c", source, module, str(env), other], check=True)  # noqa: S603
-            subprocess.run([str(executable), "--help"], check=True, capture_output=True)  # noqa: S603
+            subprocess.run([str(python), "-c", source, module, str(env), other], check=True)  # noqa: S603 # C5: reason=fixed argv, no shell; approved=user, 2026-11-08; review=2027-05-08
+            subprocess.run([str(executable), "--help"], check=True, capture_output=True)  # noqa: S603 # C5: reason=fixed argv, no shell; approved=user, 2026-11-08; review=2027-05-08
             print(f"{name}: clean wheel, isolated imports, and CLI passed")
 
 

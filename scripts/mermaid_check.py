@@ -21,7 +21,7 @@ def main(paths: list[str]) -> int:
             for number, block in enumerate(BLOCK.findall(Path(name).read_text("utf-8")), 1):
                 source = Path(tmp) / "block.mmd"
                 source.write_text(block, "utf-8")
-                result = subprocess.run(  # noqa: S603
+                result = subprocess.run(  # noqa: S603 # C5: reason=fixed argv, no shell; approved=user, 2026-11-08; review=2027-05-08
                     (
                         "mmdc",
                         "-p",

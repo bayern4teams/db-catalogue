@@ -34,7 +34,7 @@ def _openssl(*arguments: str) -> None:
     executable = shutil.which("openssl")
     if executable is None:
         raise SystemExit("openssl is required to generate CI fixture certificates")
-    result = subprocess.run(  # noqa: S603 - fixed executable, arguments built here
+    result = subprocess.run(  # noqa: S603 # C5: reason=fixed executable, arguments built here; approved=user, 2026-11-08; review=2027-05-08
         [executable, *arguments], capture_output=True, text=True
     )
     if result.returncode != 0:

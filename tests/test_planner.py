@@ -46,7 +46,9 @@ def test_observation_directory_rejects_linked_root(tmp_path):
     try:
         link.symlink_to(directory, target_is_directory=True)
     except OSError:
-        pytest.skip("directory symlinks unavailable on this host")
+        pytest.skip(  # C5: reason=see message; approved=user, 2026-11-08; review=2027-05-08
+            "directory symlinks unavailable on this host"
+        )
     with pytest.raises(ValueError, match="UNSAFE_OBSERVATION_DIRECTORY"):
         read_lines(link, max_bytes=100, max_records=10)
 

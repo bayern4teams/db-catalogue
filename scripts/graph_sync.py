@@ -37,7 +37,7 @@ def pinned_tools() -> dict[str, dict[str, str]]:
 
 def reported_version(name: str) -> str:
     """Return the X.Y.Z a tool reports, ignoring any upgrade notice it prints alongside."""
-    result = subprocess.run(  # noqa: S603
+    result = subprocess.run(  # noqa: S603 # C5: reason=fixed argv, no shell; approved=user, 2026-11-08; review=2027-05-08
         (shutil.which(executable(name)) or executable(name), "--version"),
         cwd=ROOT,
         capture_output=True,
@@ -83,7 +83,7 @@ def run(*args: str) -> None:
     command = executable(args[0])
     if os.name == "nt" and args[0] == "graft":
         command = shutil.which("graft.cmd") or command
-    subprocess.run((command, *args[1:]), cwd=ROOT, check=True)  # noqa: S603
+    subprocess.run((command, *args[1:]), cwd=ROOT, check=True)  # noqa: S603 # C5: reason=fixed argv, no shell; approved=user, 2026-11-08; review=2027-05-08
 
 
 def refresh_codebase_memory() -> None:
@@ -100,7 +100,7 @@ def refresh_codebase_memory() -> None:
     )
     for attempt in range(3):
         print("+", *command, flush=True)
-        result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)  # noqa: S603
+        result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)  # noqa: S603 # C5: reason=fixed argv, no shell; approved=user, 2026-11-08; review=2027-05-08
         print(result.stdout, end="")
         print(result.stderr, end="", file=sys.stderr)
         if result.returncode == 0:
@@ -154,7 +154,7 @@ def main() -> int:
         # Warn-only mode: a stale graph must never block a commit or a session.
         try:
             strict = [sys.executable, str(Path(__file__).resolve())]
-            result = subprocess.run(strict, cwd=ROOT, capture_output=True, text=True)  # noqa: S603
+            result = subprocess.run(strict, cwd=ROOT, capture_output=True, text=True)  # noqa: S603 # C5: reason=fixed argv, no shell; approved=user, 2026-11-08; review=2027-05-08
         except OSError as error:
             print(f"warning: graph refresh did not start: {error}", file=sys.stderr)
             return 0

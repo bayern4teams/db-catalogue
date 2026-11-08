@@ -20,14 +20,14 @@ from pathlib import Path
 
 import pytest
 
-pytestmark = pytest.mark.skipif(
+pytestmark = pytest.mark.skipif(  # C5: reason=opt-in; approved=user, 2026-11-08; review=2027-05-08
     os.environ.get("DBIG_RUN_INTEGRATION") != "1", reason="live source containers unavailable"
 )
 
 SCRIPTS = Path(sys.executable).parent
 SIGNING_KEY = "synthetic-operator-error-signing-key-over-32-bytes"
 USER = "dbig_error_probe"
-PASSWORD = "probe-password-that-must-not-leak"  # noqa: S105 - throwaway fixture account
+PASSWORD = "probe-password-that-must-not-leak"  # noqa: S105 # C5: reason=throwaway fixture account; approved=user, 2026-11-08; review=2027-05-08
 WRONG = "wrong-password-that-must-not-leak"
 EXISTING = "dbig_errors"
 EMPTY = "dbig_errors_empty"
@@ -119,7 +119,7 @@ def _collect(
         if key not in {"SSL_CERT_FILE", "SSL_CERT_DIR"}
     }
     env.update({"DBIG_CONNECTION": json.dumps(connection), "DBIG_SIGNING_KEY": SIGNING_KEY})
-    return subprocess.run(  # noqa: S603 - fixed argv, no shell, paths from tmp_path
+    return subprocess.run(  # noqa: S603 # C5: reason=fixed argv, no shell, paths from tmp_path; approved=user, 2026-11-08; review=2027-05-08
         [
             str(SCRIPTS / "dbig"), "collect", "--config", str(config),
             "--out", str(tmp_path / f"bundle-{kind}"),

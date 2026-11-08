@@ -205,7 +205,7 @@ def review_candidates(
         return {"suggestions": suggestions}
 
     graph = StateGraph(ReviewState)
-    graph.add_node("redact", redact)  # type: ignore[call-overload]
+    graph.add_node("redact", redact)  # type: ignore[call-overload]  # C5: reason=mypy does not resolve the langgraph add_node overload; approved=user, 2026-11-08; review=2027-05-08
     graph.add_node("request", request)
     graph.add_node("validate", validate)
     graph.add_node("record", record)

@@ -38,7 +38,7 @@ def site_config():
         signing_key_id="test",
         namespaces=["public"],
         authorized_requesters=["catalogue"],
-        http_token_env="SITE_TOKEN",  # noqa: S106 - environment variable name
+        http_token_env="SITE_TOKEN",  # noqa: S106 # C5: reason=environment variable name; approved=user, 2026-11-08; review=2027-05-08
     )
 
 
@@ -156,7 +156,7 @@ def test_private_http_dispatch_uses_signed_body(tmp_path, monkeypatch):
         key_id="test",
         allowed_sources={"site-a": ["public"]},
         collector_urls={"site-a": "https://10.0.0.2"},
-        http_token_env="SITE_TOKEN",  # noqa: S106 - environment variable name
+        http_token_env="SITE_TOKEN",  # noqa: S106 # C5: reason=environment variable name; approved=user, 2026-11-08; review=2027-05-08
     )
     receipt = dispatch_scan(request(), config, tmp_path / "state", "http")
     assert receipt.status == "queued"

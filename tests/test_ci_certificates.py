@@ -111,7 +111,9 @@ def test_the_bundle_keeps_the_system_trust_store(certificates):
     break every other TLS connection in the CI job."""
     system = Path(ssl.get_default_verify_paths().cafile or "")
     if not system.is_file():
-        pytest.skip("no system CA bundle to compare against")
+        pytest.skip(  # C5: reason=see message; approved=user, 2026-11-08; review=2027-05-08
+            "no system CA bundle to compare against"
+        )
     bundle = certificates["bundle"].read_bytes()
     assert bundle.count(b"BEGIN CERTIFICATE") > system.read_bytes().count(b"BEGIN CERTIFICATE")
     assert certificates["ca"].read_bytes().strip() in bundle

@@ -26,7 +26,7 @@ from dbig_planner.cli import main as planner_main
 from dbig_requester.cli import main as requester_main
 from test_builder import source_bundle
 
-SECRET = "leaky-secret-in-driver-text"  # noqa: S105 - asserted absent from every message
+SECRET = "leaky-secret-in-driver-text"  # noqa: S105 # C5: reason=asserted absent from every message; approved=user, 2026-11-08; review=2027-05-08
 
 
 def _source_config(kind: str = "postgresql") -> SourceConfig:
@@ -54,7 +54,8 @@ def _driver(module: str, name: str) -> type[BaseException]:
     """A driver's own exception type. The drivers are optional extras of the collector, absent
     from the application-quality job, so those cases skip there and run in source-integration,
     which installs every extra."""
-    return getattr(pytest.importorskip(module), name)
+    m = pytest.importorskip(module)  # C5: reason=dep; approved=user, 2026-11-08; review=2027-05-08
+    return getattr(m, name)
 
 
 def _pg_error(code: str) -> BaseException:

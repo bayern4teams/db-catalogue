@@ -101,7 +101,7 @@ def dispatch_scan(
         token = secret_from_env(
             config.http_token_env, purpose="collector HTTP bearer token"
         )
-        message = Request(  # noqa: S310 - URL is validated as a private HTTP(S) address
+        message = Request(  # noqa: S310 # C5: reason=URL is validated as a private HTTP(S) address; approved=user, 2026-11-08; review=2027-05-08
             base + "/v1/collector/scan-requests",
             data=payload,
             headers={"Content-Type": "application/json", "Authorization": "Bearer " + token},

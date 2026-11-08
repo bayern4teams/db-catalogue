@@ -32,7 +32,7 @@ from dbig_builder.config import ReviewConfig
 from dbig_builder.reviewer import review_candidates
 from dbig_contracts.models import Edge, Evidence, Object
 
-pytestmark = pytest.mark.skipif(
+pytestmark = pytest.mark.skipif(  # C5: reason=opt-in; approved=user, 2026-11-08; review=2027-05-08
     os.environ.get("DBIG_RUN_LIVE_MODEL") != "1",
     reason="live model endpoint not enabled; set DBIG_RUN_LIVE_MODEL=1 with a reachable endpoint",
 )
@@ -49,7 +49,9 @@ def _candidates() -> tuple[list[str], str]:
     raw = os.environ.get("DBIG_MODEL_CANDIDATES", "")
     models = [name.strip() for name in raw.split(",") if name.strip()]
     if not models:
-        pytest.skip("DBIG_MODEL_CANDIDATES is empty")
+        pytest.skip(  # C5: reason=see message; approved=user, 2026-11-08; review=2027-05-08
+            "DBIG_MODEL_CANDIDATES is empty"
+        )
     return models, os.environ["DBIG_MODEL_BASE_URL"]
 
 
@@ -126,7 +128,9 @@ def working_model() -> tuple[str, object]:
             continue
         print(f"\nlive model in use: {model}")
         return model, client
-    pytest.skip(f"no candidate model answered: {'; '.join(failures)}")
+    pytest.skip(  # C5: reason=see message; approved=user, 2026-11-08; review=2027-05-08
+        f"no candidate model answered: {'; '.join(failures)}"
+    )
 
 
 def test_a_real_model_round_trip_returns_a_typed_status(working_model):
@@ -148,7 +152,9 @@ def test_every_citation_from_a_real_model_resolves_in_the_snapshot(working_model
         [edge], nodes, proof, _config(model), client=client
     )
     if status != "OK":
-        pytest.skip(f"model did not return a usable response: {status}")
+        pytest.skip(  # C5: reason=see message; approved=user, 2026-11-08; review=2027-05-08
+            f"model did not return a usable response: {status}"
+        )
     for suggestion in suggestions:
         assert suggestion.kind == "model_suggestion", "a model may add only weak evidence"
         assert suggestion.subject_id in nodes or suggestion.subject_id in proof

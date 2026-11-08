@@ -31,7 +31,7 @@ from pathlib import Path
 
 import pytest
 
-pytestmark = pytest.mark.skipif(
+pytestmark = pytest.mark.skipif(  # C5: reason=opt-in; approved=user, 2026-11-08; review=2027-05-08
     os.environ.get("DBIG_RUN_INTEGRATION") != "1", reason="live source containers unavailable"
 )
 
@@ -104,7 +104,7 @@ def _ca_file() -> Path:
 
 
 def _tool(env: dict[str, str], name: str, *arguments: str) -> dict:
-    result = subprocess.run(  # noqa: S603 - fixed argv, no shell
+    result = subprocess.run(  # noqa: S603 # C5: reason=fixed argv, no shell; approved=user, 2026-11-08; review=2027-05-08
         [str(SCRIPTS / name), *arguments], capture_output=True, text=True, env=env, timeout=120,
     )
     assert result.returncode == 0, f"{name} {arguments[0]}: {result.stderr}"
@@ -194,7 +194,7 @@ def catalogue(tmp_path_factory) -> dict:
     (root / "observations").mkdir()
     # A join an application runs on ClickHouse, with no key or candidate behind it.
     (root / "observations" / "queries.jsonl").write_text(
-        json.dumps({  # noqa: S608 - fixed fixture SQL, written to a file, never executed here
+        json.dumps({  # noqa: S608 # C5: reason=fixed fixture SQL, written to a file, never executed here; approved=user, 2026-11-08; review=2027-05-08
             "kind": "sql", "id": "ch-join", "source_id": "shapes-clickhouse",
             "dialect": "clickhouse", "status": "executed", "observed_at": "2026-10-01T10:00:00Z",
             "sql": "SELECT v.id, d.ver FROM shapes.`Page Views` AS v "

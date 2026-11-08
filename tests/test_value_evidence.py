@@ -62,10 +62,10 @@ def test_a_token_key_without_an_id_is_refused():
     can match, and an ID without a key claims a comparison that was never computed."""
     with pytest.raises(ValueError, match="value_token_key_env and value_token_key_id"):
         _config(
-            value_token_key_env="DBIG_TOKENISER"  # noqa: S106 - variable name
+            value_token_key_env="DBIG_TOKENISER"  # noqa: S106 # C5: reason=variable name; approved=user, 2026-11-08; review=2027-05-08
         )
     with pytest.raises(ValueError, match="value_token_key_env and value_token_key_id"):
-        _config(value_token_key_id="run-1")  # noqa: S106 - identifier, not a key
+        _config(value_token_key_id="run-1")  # noqa: S106 # C5: reason=identifier, not a key; approved=user, 2026-11-08; review=2027-05-08
 
 
 # --- collector: tokens are opt-in twice over --------------------------------------------
@@ -75,8 +75,8 @@ def test_no_tokens_without_sampling(monkeypatch):
     """A token can only come from a value that was read, and reading values is not the default."""
     monkeypatch.setenv("DBIG_TOKENISER", SYNTHETIC_MATERIAL)
     configured = _config(
-        value_token_key_env="DBIG_TOKENISER",  # noqa: S106 - environment variable name
-        value_token_key_id="run-1",  # noqa: S106 - a key identifier, not a key
+        value_token_key_env="DBIG_TOKENISER",  # noqa: S106 # C5: reason=environment variable name; approved=user, 2026-11-08; review=2027-05-08
+        value_token_key_id="run-1",  # noqa: S106 # C5: reason=a key identifier, not a key; approved=user, 2026-11-08; review=2027-05-08
     )
     records = discover_postgresql(PgConnection(), configured, Budget(50))
     assert records["tokens.jsonl"] == []

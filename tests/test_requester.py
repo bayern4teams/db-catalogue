@@ -151,7 +151,7 @@ def test_answer_telemetry_outage_does_not_hide_answer(tmp_path, monkeypatch):
         api_key_env="VLLM_KEY",
         langfuse_url="http://127.0.0.1:3000",
         langfuse_public_key_env="LF_PUBLIC",
-        langfuse_secret_key_env="LF_SECRET",  # noqa: S106 - environment variable name
+        langfuse_secret_key_env="LF_SECRET",  # noqa: S106 # C5: reason=environment variable name; approved=user, 2026-11-08; review=2027-05-08
     )
     client = FakeClient(json.dumps({"answer": "Catalogued.", "citations": [rows[0]["id"]]}))
     assert answer_question(state, "orders", config, client=client)["answer"] == "Catalogued."
@@ -191,8 +191,8 @@ def test_a_question_of_only_common_words_retrieves_nothing(tmp_path, monkeypatch
 def test_fts_operators_in_a_query_are_data(tmp_path, monkeypatch):
     state = indexed(tmp_path, monkeypatch)
     for query in ('customer" OR "x', "NEAR(customer orders)", "customer*", "-customer"):
-        search(state, SearchRequest(query=query))
-        search(state, SearchRequest(query=query, match="any"))
+        assert isinstance(search(state, SearchRequest(query=query))["results"], list)
+        assert isinstance(search(state, SearchRequest(query=query, match="any"))["results"], list)
 
 
 def test_ask_never_falls_back_to_an_arbitrary_slice(tmp_path, monkeypatch):
@@ -276,7 +276,7 @@ def test_ask_retrieves_for_a_natural_question(tmp_path):
             class completions:
                 @staticmethod
                 def create(**kwargs: object) -> SimpleNamespace:
-                    items = json.loads(kwargs["messages"][-1]["content"])["items"]  # type: ignore[index]
+                    items = json.loads(kwargs["messages"][-1]["content"])["items"]  # type: ignore[index]  # C5: reason=kwargs of the fake client are loosely typed; approved=user, 2026-11-08; review=2027-05-08
                     seen.extend(items)
                     body = json.dumps({"answer": "ledger.addr", "citations": [items[0]["id"]]})
                     return SimpleNamespace(

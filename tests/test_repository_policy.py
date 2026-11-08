@@ -490,7 +490,9 @@ def test_an_import_name_is_matched_to_its_distribution(
     """`yaml` is provided by PyYAML, so declaring `PyYAML` covers `import yaml`."""
     package = make_package(tmp_path, ["PyYAML>=6"], "import yaml\n")
     if "yaml" not in importlib.metadata.packages_distributions():
-        pytest.skip("PyYAML is not installed in this environment")
+        pytest.skip(  # C5: reason=see message; approved=user, 2026-11-08; review=2027-05-08
+            "PyYAML is not installed in this environment"
+        )
     assert ci_check._import_dependency_problems(package) == []
 
 

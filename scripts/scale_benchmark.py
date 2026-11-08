@@ -61,7 +61,7 @@ def _seed() -> None:
                     f"name text, amount numeric(12,2), created_at timestamptz{parent})"
                 )
                 cursor.execute(
-                    f"INSERT INTO {schema}.{entity}s (id, name, amount, created_at) "  # noqa: S608
+                    f"INSERT INTO {schema}.{entity}s (id, name, amount, created_at) "  # noqa: S608 # C5: reason=names come from the script's own constants; approved=user, 2026-11-08; review=2027-05-08
                     "SELECT g, 'n' || g, g, now() FROM generate_series(1, 200) g"
                 )
         cursor.execute("ANALYZE")
@@ -81,7 +81,7 @@ def _seed() -> None:
                     "ENGINE = MergeTree ORDER BY id"
                 )
                 client.command(
-                    f"INSERT INTO {database}.{entity}_events SELECT number, "  # noqa: S608
+                    f"INSERT INTO {database}.{entity}_events SELECT number, "  # noqa: S608 # C5: reason=names come from the script's own constants; approved=user, 2026-11-08; review=2027-05-08
                     "toInt32(1 + number % 200), 'k', number, now() FROM numbers(1000)"
                 )
     finally:
@@ -106,7 +106,7 @@ def _measured(env: dict[str, str], *argv: str) -> dict:
     """Run one command and report its wall time and its own peak resident memory."""
     before = resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss
     start = time.perf_counter()
-    result = subprocess.run(  # noqa: S603 - fixed argv built here, no shell
+    result = subprocess.run(  # noqa: S603 # C5: reason=fixed argv built here, no shell; approved=user, 2026-11-08; review=2027-05-08
         [str(SCRIPTS / argv[0]), *argv[1:]], capture_output=True, text=True, env=env,
         timeout=600,
     )

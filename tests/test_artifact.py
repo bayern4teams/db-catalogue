@@ -155,7 +155,8 @@ def test_bundle_accepts_visible_object_parent(tmp_path):
 def test_published_schema_accepts_synthetic_object():
     schema_path = Path(__file__).resolve().parents[1] / "schemas/ir-v1/object.schema.json"
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
-    Draft202012Validator(schema).validate(records()["objects.jsonl"][0].model_dump(mode="json"))
+    record = records()["objects.jsonl"][0].model_dump(mode="json")
+    assert Draft202012Validator(schema).is_valid(record)
 
 
 @pytest.mark.parametrize(

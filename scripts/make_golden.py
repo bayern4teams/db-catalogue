@@ -138,7 +138,7 @@ def snapshot_tables() -> dict[str, list[Record]]:
 
 def main() -> None:
     original = artifact_module.utc_now
-    artifact_module.utc_now = lambda: FROZEN  # type: ignore[assignment]
+    artifact_module.utc_now = lambda: FROZEN  # type: ignore[assignment]  # C5: reason=the clock is replaced on purpose to freeze output; approved=user, 2026-11-08; review=2027-05-08
     try:
         shutil.rmtree(GOLDEN, ignore_errors=True)
         GOLDEN.mkdir(parents=True)
@@ -162,7 +162,7 @@ def main() -> None:
             key_id="golden",
         )
     finally:
-        artifact_module.utc_now = original  # type: ignore[assignment]
+        artifact_module.utc_now = original  # type: ignore[assignment]  # C5: reason=the clock is replaced on purpose to freeze output; approved=user, 2026-11-08; review=2027-05-08
     print(f"golden artifacts written to {GOLDEN.relative_to(ROOT)}")
 
 
