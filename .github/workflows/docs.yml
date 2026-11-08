@@ -43,12 +43,20 @@ jobs:
       - name: Select the documents
         run: |
           files=$(ls README.md ARCHITECTURE.md TECHNICAL_IMPLEMENTATION.md GLOSSARY.md docs/LESSONS.md AGENTS.md 2>/dev/null || true)
-          echo "DOCS=$(echo $files)" >> "$GITHUB_ENV"
+          echo "DOCS=$(echo "$files" | tr '\n' ' ')" >> "$GITHUB_ENV"
       - name: markdownlint
-        run: markdownlint-cli2 $DOCS
+        run: |
+          # shellcheck disable=SC2086 # C5: reason=DOCS is a space-separated file list that must split; approved=user, 2026-11-08; review=2027-05-08
+          markdownlint-cli2 $DOCS
       - name: Vale
-        run: vale sync && vale $DOCS
+        run: |
+          # shellcheck disable=SC2086 # C5: reason=DOCS is a space-separated file list that must split; approved=user, 2026-11-08; review=2027-05-08
+          vale sync && vale $DOCS
       - name: Links (local files; external links are not fetched)
-        run: lychee --offline --no-progress $DOCS
+        run: |
+          # shellcheck disable=SC2086 # C5: reason=DOCS is a space-separated file list that must split; approved=user, 2026-11-08; review=2027-05-08
+          lychee --offline --no-progress $DOCS
       - name: Mermaid blocks render
-        run: python scripts/mermaid_check.py $DOCS
+        run: |
+          # shellcheck disable=SC2086 # C5: reason=DOCS is a space-separated file list that must split; approved=user, 2026-11-08; review=2027-05-08
+          python scripts/mermaid_check.py $DOCS

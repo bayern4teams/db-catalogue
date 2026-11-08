@@ -9,6 +9,7 @@ What was tried and did not work, so nobody tries it again. Rule J14 in [AGENTS.m
 | Date | Tried | Measured result and why dropped | Replaced by | Source |
 | --- | --- | --- | --- | --- |
 | 2026-11-08 | Ruff `RUF100` run with only `PGH004,RUF100,PT011` selected | 82 `noqa` lines reported unused, because rules such as `S603` were not selected in that run. Only 21 were truly unused. | Run it with the project's own rule selection | `pyproject.toml` `[tool.ruff.lint]` |
+| 2026-11-08 | `actionlint` run locally without `shellcheck` installed | It passed here, but CI (which has `shellcheck`) failed on 6 unquoted `$DOCS` in `docs.yml`. | Install `shellcheck` before running `actionlint`, and fix the findings | [.github/workflows/docs.yml](../.github/workflows/docs.yml) |
 | 2026-11-08 | A `# zizmor: ignore[...]` comment inside a `run:` block | zizmor still reported the finding: the comment sits in a shell script, not in the workflow YAML. | An ignore list in `.github/zizmor.yml` | [.github/zizmor.yml](../.github/zizmor.yml) |
 | 2026-11-08 | Installing the zizmor binary from its GitHub release with a hash check | The download returned an error page, so the hash did not match and the install stopped. | The pinned PyPI package in `uv.lock`, whose hashes `uv` checks | `pyproject.toml` dev group |
 

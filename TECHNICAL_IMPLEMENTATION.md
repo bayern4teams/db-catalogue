@@ -667,7 +667,7 @@ Cheap checks keep the tests honest; each runs in CI on every push and pull reque
 | M4 | `deptry` per package, plus the import check in `ci_check.py` | `ci.yml` job `application-quality` |
 | CI files | `actionlint`, and `zizmor` with `.github/zizmor.yml` | `rules.yml`, `ci.yml` |
 
-`scripts/install_check_tools.py` installs gitleaks and actionlint at pinned versions and verifies each SHA-256. `deptry`, `vulture` and `zizmor` are pinned dev dependencies. `vulture` (dead code) is for audits only and never blocks, because it reports false positives. `tests/test_rule_check.py` runs the C5, L1 and L4 checks against a throwaway git repository. `pytest` runs strict: `xfail_strict`, `--strict-markers`, `--strict-config`.
+`scripts/install_check_tools.py` installs gitleaks and actionlint at pinned versions and verifies each SHA-256. `deptry`, `vulture` and `zizmor` are pinned dev dependencies. `actionlint` also runs `shellcheck` on `run:` scripts when `shellcheck` is on the path, so install it locally to see what CI sees. `vulture` (dead code) is for audits only and never blocks, because it reports false positives. `tests/test_rule_check.py` runs the C5, L1 and L4 checks against a throwaway git repository. `pytest` runs strict: `xfail_strict`, `--strict-markers`, `--strict-config`.
 
 ## 15. Git, graph tooling, Ponytail and CI/CD contract
 
