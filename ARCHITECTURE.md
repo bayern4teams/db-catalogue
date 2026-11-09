@@ -4,7 +4,7 @@ How the system fits together, runs, stores data and what it guarantees. For what
 
 ## System context
 
-<!-- verified: bce5fee -->
+<!-- verified: 6e43d33 -->
 
 ```mermaid
 flowchart LR
@@ -29,7 +29,7 @@ The only things that cross a trust boundary are signed bundles, a snapshot and s
 
 ## Deployment
 
-<!-- verified: bce5fee -->
+<!-- verified: 6e43d33 -->
 
 No container image or orchestration file ships with this project. Each role is a Python process started by its own command. The host, port and every secret come from the operator.
 
@@ -71,11 +71,11 @@ Each `serve` command refuses a non-loopback host and takes `--port` as a require
 
 ## Main data flow
 
-<!-- verified: bce5fee -->
+<!-- verified: 6e43d33 -->
 
 ```mermaid
 flowchart LR
-  S[(source catalog)] --> BUN["bundle: objects, fields, constraints, profiles, diagnostics"]
+  S[(source catalog)] --> BUN["bundle: catalog files, profiles, tokens, ranges, diagnostics"]
   BUN --> CAND[candidate engine]
   CAND --> SNAP["snapshot: nodes, edges, evidence, runs"]
   SNAP --> IDX[search index]
@@ -90,7 +90,7 @@ The snapshot is the interchange contract. The search index and the path graph ar
 
 ## Data contract
 
-<!-- verified: bce5fee -->
+<!-- verified: 6e43d33 -->
 
 ```mermaid
 erDiagram
@@ -103,15 +103,15 @@ erDiagram
   SOURCE ||--o{ DIAGNOSTIC : "source_id"
   OBJECT { string native_id string kind string name }
   FIELD { string native_id string data_type }
-  EDGE { string kind string status float confidence }
+  EDGE { string kind string status float confidence string evidence_tier }
   EVIDENCE { string kind string subject_id }
 ```
 
-`NODE` stands for a source, object or field row. A snapshot has no diagnostics file. `confidence` stays null until calibrated.
+`NODE` stands for a source, object or field row. A snapshot has no diagnostics file. `confidence` stays null until calibrated; `evidence_tier` carries the strength of a candidate.
 
 ## Main workflow
 
-<!-- verified: bce5fee -->
+<!-- verified: 6e43d33 -->
 
 ```mermaid
 sequenceDiagram
@@ -134,11 +134,11 @@ A question is answered only from retrieved entries, and a plan is returned, neve
 
 ## Guarantees and limits
 
-<!-- verified: bce5fee -->
+<!-- verified: 6e43d33 -->
 
 | Guarantee | Held by |
 | --- | --- |
-| A collector reads metadata only by default. Sampling, history and value tokens are opt-in per source. | `packages/collectors/src/dbig_collectors/config.py::SourceConfig` |
+| A collector reads metadata only by default. Sampling, history, cardinality probes, format profiles and value tokens are opt-in per source. | `packages/collectors/src/dbig_collectors/config.py::SourceConfig` |
 | A consumer rejects an unknown major version, a bad signature, an unsafe path or a digest mismatch. | `packages/contracts/src/dbig_contracts/artifact.py::read_artifact` |
 | An object with no server-assigned identity is not catalogued, and a diagnostic says so. | `packages/collectors/src/dbig_collectors/runtime.py::discover_clickhouse` |
 | An incremental run that lacks a complete scan keeps the last complete bundle of that source and marks the snapshot `partial`. | `packages/catalog-builder/src/dbig_builder/state.py::assemble_incremental` |
@@ -146,23 +146,23 @@ A question is answered only from retrieved entries, and a plan is returned, neve
 | The planner opens no source database connection and runs no plan. | `packages/planner/src/dbig_planner/plans.py::render_plan` |
 | A scan request that is unsigned, expired, replayed or out of scope is refused. | `packages/collectors/src/dbig_collectors/scan.py::accept_scan` |
 
-Measured quality is limited. On the one live run, 5 of 21 proposed relationships were true and 16 were false ([artifacts/live-test-report.md](artifacts/live-test-report.md), section 8). Fixes for that run are on unmerged branches. See [README.md](README.md#limits).
+Measured quality is limited. On the one live run, 5 of 21 proposed relationships were true and 16 were false ([artifacts/live-test-report.md](artifacts/live-test-report.md), section 8). Phase 1 to 7 fixes for that run are merged to `main`. A later PostgreSQL and ClickHouse run, scored with the owner's rule that every cross-source pair is false, found 35 true and 13 false of 48 candidates ([summary](artifacts/run-20261020-pgch/summary.md), step 1). The two runs use different data and scoring, so do not compare them. See [README.md](README.md#limits).
 
 ## Security and personal data
 
-<!-- verified: bce5fee -->
+<!-- verified: 6e43d33 -->
 
-The catalogue holds names, types, statistics and optional owner comments. It holds no row values. Value tokens exist only in bundles, are keyed per run, and never enter a snapshot. Source text, such as comments and SQL, is untrusted data: pages escape it and models see it marked as data. Every secret is a named environment variable that `dbig_contracts.security.secret_from_env` resolves. [THREAT_MODEL.md](docs/THREAT_MODEL.md) lists the eleven modelled threats, each control and its test, and the known gaps. Details are in [TECHNICAL_IMPLEMENTATION.md](TECHNICAL_IMPLEMENTATION.md) §13.
+The catalogue holds names, types, statistics and optional owner comments. It holds no row values. Value tokens and value ranges exist only in bundles, are keyed per run, and never enter a snapshot. Source text, such as comments and SQL, is untrusted data: pages escape it and models see it marked as data. Every secret is a named environment variable that `dbig_contracts.security.secret_from_env` resolves. [THREAT_MODEL.md](docs/THREAT_MODEL.md) lists the eleven modelled threats, each control and its test, and the known gaps. Details are in [TECHNICAL_IMPLEMENTATION.md](TECHNICAL_IMPLEMENTATION.md) §13.
 
 ## Performance
 
-<!-- verified: bce5fee -->
+<!-- verified: 6e43d33 -->
 
-At 10 sources, 200 objects and 1,000 fields, every command finished in under 3 s, with assemble peaking at 110 MiB and each collector at most 44 MiB, and an in-process search had a 87 ms median. These come from `scripts/scale_benchmark.py` run on 2026-10-04 and recorded in [TODO.md](TODO.md) (change: verification fixes 1-10, item 9). Model latency is unmeasured on a GPU host. Method and caveats: [TECHNICAL_IMPLEMENTATION.md](TECHNICAL_IMPLEMENTATION.md) §14.
+At 10 sources, 200 objects and 1,000 fields, every command finished in under 3 s, with assemble peaking at 110 MiB and each collector at most 44 MiB, and an in-process search had a 87 ms median. These come from `scripts/scale_benchmark.py` run on 2026-10-04 and recorded in [TODO.md](TODO.md) (change: verification fixes 1-10, item 9). The benchmark predates the Phase 1 to 7 changes and was not repeated. Model latency is unmeasured on a GPU host. Method and caveats: [TECHNICAL_IMPLEMENTATION.md](TECHNICAL_IMPLEMENTATION.md) §14.
 
 ## Libraries, standards and external services
 
-<!-- verified: bce5fee -->
+<!-- verified: 6e43d33 -->
 
 | Item | Role | Where it is confined |
 | --- | --- | --- |
