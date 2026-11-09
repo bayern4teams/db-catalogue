@@ -676,28 +676,38 @@ def _format_statement(
     return " ".join(template.split())
 
 
-def _format_unavailable(config: SourceConfig, common: dict[str, Any], key: str) -> Record:
+def _diagnostic(
+    config: SourceConfig, common: dict[str, Any], key: str, code: str, message: str
+) -> Record:
     return Record.model_validate(
         {
             "record_type": "diagnostic",
-            "id": stable_id(config.source_id, "diagnostic", f"{key}:format"),
-            "code": "STATS_UNAVAILABLE",
-            "message": "format profile unavailable",
+            "id": stable_id(config.source_id, "diagnostic", key),
+            "code": code,
+            "message": message,
             **common,
         }
     )
 
 
+def _format_unavailable(config: SourceConfig, common: dict[str, Any], key: str) -> Record:
+    return _diagnostic(
+        config,
+        common,
+        f"{key}:format",
+        "STATS_UNAVAILABLE",
+        "format profile unavailable",
+    )
+
+
 def _format_skipped(config: SourceConfig, common: dict[str, Any], key: str, count: int) -> Record:
     """One diagnostic for the profiles left unread because the query budget ran out: a count."""
-    return Record.model_validate(
-        {
-            "record_type": "diagnostic",
-            "id": stable_id(config.source_id, "diagnostic", f"{key}:format-skipped"),
-            "code": "FORMAT_PROFILES_SKIPPED",
-            "message": f"{count} format profiles not read: query budget reached",
-            **common,
-        }
+    return _diagnostic(
+        config,
+        common,
+        f"{key}:format-skipped",
+        "FORMAT_PROFILES_SKIPPED",
+        f"{count} format profiles not read: query budget reached",
     )
 
 
@@ -982,14 +992,12 @@ def discover_postgresql(
             for oid, owner_oid, target_oid, kind, keys, target_keys in constraint_rows:
                 if kind == "f" and target_oid not in discovered_oids:
                     tables["diagnostics.jsonl"].append(
-                        Record.model_validate(
-                            {
-                                "record_type": "diagnostic",
-                                "id": stable_id(config.source_id, "diagnostic", str(oid)),
-                                "code": "OUT_OF_SCOPE_REFERENCE",
-                                "message": "foreign key target outside approved scan scope",
-                                **common,
-                            }
+                        _diagnostic(
+                            config,
+                            common,
+                            str(oid),
+                            "OUT_OF_SCOPE_REFERENCE",
+                            "foreign key target outside approved scan scope",
                         )
                     )
                     continue
@@ -1079,14 +1087,12 @@ def discover_clickhouse(
         ) in rows:
             if not uuid or uuid == "00000000-0000-0000-0000-000000000000":
                 tables["diagnostics.jsonl"].append(
-                    Record.model_validate(
-                        {
-                            "record_type": "diagnostic",
-                            "id": stable_id(config.source_id, "diagnostic", f"{database}:{name}"),
-                            "code": "IDENTITY_UNAVAILABLE",
-                            "message": "table UUID unavailable",
-                            **common,
-                        }
+                    _diagnostic(
+                        config,
+                        common,
+                        f"{database}:{name}",
+                        "IDENTITY_UNAVAILABLE",
+                        "table UUID unavailable",
                     )
                 )
                 continue
@@ -1311,16 +1317,12 @@ def _tokenize_clickhouse(
             ).result_set
         except Exception:
             tables["diagnostics.jsonl"].append(
-                Record.model_validate(
-                    {
-                        "record_type": "diagnostic",
-                        "id": stable_id(
-                            config.source_id, "diagnostic", f"{database}:{table}:sample"
-                        ),
-                        "code": "STATS_UNAVAILABLE",
-                        "message": "value sample unavailable",
-                        **common,
-                    }
+                _diagnostic(
+                    config,
+                    common,
+                    f"{database}:{table}:sample",
+                    "STATS_UNAVAILABLE",
+                    "value sample unavailable",
                 )
             )
             continue
@@ -1417,14 +1419,12 @@ def _probe_clickhouse(
         rows = int(row[0])
     except Exception:
         diagnostics.append(
-            Record.model_validate(
-                {
-                    "record_type": "diagnostic",
-                    "id": stable_id(config.source_id, "diagnostic", f"{database}:{table}:probe"),
-                    "code": "STATS_UNAVAILABLE",
-                    "message": "cardinality probe unavailable",
-                    **common,
-                }
+            _diagnostic(
+                config,
+                common,
+                f"{database}:{table}:probe",
+                "STATS_UNAVAILABLE",
+                "cardinality probe unavailable",
             )
         )
         return
@@ -1499,14 +1499,12 @@ def _probe_mongo(
         ]
     except Exception:
         diagnostics.append(
-            Record.model_validate(
-                {
-                    "record_type": "diagnostic",
-                    "id": stable_id(config.source_id, "diagnostic", f"{native}:probe"),
-                    "code": "STATS_UNAVAILABLE",
-                    "message": "cardinality probe unavailable",
-                    **common,
-                }
+            _diagnostic(
+                config,
+                common,
+                f"{native}:probe",
+                "STATS_UNAVAILABLE",
+                "cardinality probe unavailable",
             )
         )
         return
@@ -1636,29 +1634,23 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
             native = str(info.get("info", {}).get("uuid", ""))
             if not native:
                 tables["diagnostics.jsonl"].append(
-                    Record.model_validate(
-                        {
-                            "record_type": "diagnostic",
-                            "id": stable_id(
-                                config.source_id, "diagnostic", f"{database}:{info['name']}"
-                            ),
-                            # A view is a saved query, not stored data, and has no UUID to give it a
-                            # stable identity. Its own code keeps it out of the catalogue without
-                            # marking the scan partial (user decision 2026-10-05).
-                            "code": (
-                                "VIEW_NOT_CATALOGUED"
-                                if info.get("type") == "view"
-                                else "IDENTITY_UNAVAILABLE"
-                            ),
-                            "message": (
-                                "MongoDB views have no collection UUID, so this view has no "
-                                "stable identity and is left out; the collection it reads is "
-                                "catalogued"
-                                if info.get("type") == "view"
-                                else "collection UUID unavailable"
-                            ),
-                            **common,
-                        }
+                    # A view is a saved query, not stored data, and has no UUID to give it a
+                    # stable identity. Its own code keeps it out of the catalogue without
+                    # marking the scan partial (user decision 2026-10-05).
+                    _diagnostic(
+                        config,
+                        common,
+                        f"{database}:{info['name']}",
+                        "VIEW_NOT_CATALOGUED"
+                        if info.get("type") == "view"
+                        else "IDENTITY_UNAVAILABLE",
+                        (
+                            "MongoDB views have no collection UUID, so this view has no "
+                            "stable identity and is left out; the collection it reads is "
+                            "catalogued"
+                            if info.get("type") == "view"
+                            else "collection UUID unavailable"
+                        ),
                     )
                 )
                 continue
@@ -1726,17 +1718,12 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
                 # Said rather than skipped: without a sample a collection with no validator has
                 # no fields at all, which would otherwise look like an empty collection.
                 tables["diagnostics.jsonl"].append(
-                    Record.model_validate(
-                        {
-                            "record_type": "diagnostic",
-                            "id": stable_id(
-                                config.source_id, "diagnostic", f"{native}:sample-bytes"
-                            ),
-                            "code": "SAMPLE_BYTE_LIMIT",
-                            "message": "not sampled: earlier collections used the source's "
-                            "max_sample_bytes",
-                            **common,
-                        }
+                    _diagnostic(
+                        config,
+                        common,
+                        f"{native}:sample-bytes",
+                        "SAMPLE_BYTE_LIMIT",
+                        "not sampled: earlier collections used the source's max_sample_bytes",
                     )
                 )
             elif config.sample_rows:
@@ -1751,16 +1738,12 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
                         document_bytes = len(str(document).encode("utf-8"))
                         if sampled_bytes_total + document_bytes > config.max_sample_bytes:
                             tables["diagnostics.jsonl"].append(
-                                Record.model_validate(
-                                    {
-                                        "record_type": "diagnostic",
-                                        "id": stable_id(
-                                            config.source_id, "diagnostic", f"{native}:sample-bytes"
-                                        ),
-                                        "code": "SAMPLE_BYTE_LIMIT",
-                                        "message": "type-only sample stopped at byte budget",
-                                        **common,
-                                    }
+                                _diagnostic(
+                                    config,
+                                    common,
+                                    f"{native}:sample-bytes",
+                                    "SAMPLE_BYTE_LIMIT",
+                                    "type-only sample stopped at byte budget",
                                 )
                             )
                             byte_cut = True
@@ -1934,16 +1917,12 @@ def discover_mongodb(client: Any, config: SourceConfig, budget: Budget) -> dict[
                     )
                 except Exception:
                     tables["diagnostics.jsonl"].append(
-                        Record.model_validate(
-                            {
-                                "record_type": "diagnostic",
-                                "id": stable_id(
-                                    config.source_id, "diagnostic", f"{native}:row-count"
-                                ),
-                                "code": "STATS_UNAVAILABLE",
-                                "message": "collection count estimate unavailable",
-                                **common,
-                            }
+                        _diagnostic(
+                            config,
+                            common,
+                            f"{native}:row-count",
+                            "STATS_UNAVAILABLE",
+                            "collection count estimate unavailable",
                         )
                     )
                 else:
