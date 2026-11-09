@@ -28,7 +28,7 @@ flowchart LR
 
 <!-- verified: 6e43d33 -->
 
-All four parts work and pass their tests (last recorded full run, 2026-10-27: 1,266 passed, 80 skipped, 1 expected failure, in [TODO.md](TODO.md)), including live tests on PostgreSQL, ClickHouse and MongoDB containers in CI. One live run on real databases found problems, listed under Results. The fixes for those findings (plan phases 1 to 7) are on `main` as commit `cf7a5c3`, described in [docs/plans/CATALOGUE_FIXES_IMPLEMENTATION_PLAN.md](docs/plans/CATALOGUE_FIXES_IMPLEMENTATION_PLAN.md). Open work: [TODO.md](TODO.md).
+All four parts work and pass their tests (last recorded full run, 2026-11-09: 1,282 passed, 80 skipped, 1 expected failure, in [TODO.md](TODO.md)), including live tests on PostgreSQL, ClickHouse and MongoDB containers in CI. One live run on real databases found problems, listed under Results. The fixes for those findings (plan phases 1 to 7) are on `main` as commit `cf7a5c3`, described in [docs/plans/CATALOGUE_FIXES_IMPLEMENTATION_PLAN.md](docs/plans/CATALOGUE_FIXES_IMPLEMENTATION_PLAN.md). Open work: [TODO.md](TODO.md).
 
 ## Quickstart
 
