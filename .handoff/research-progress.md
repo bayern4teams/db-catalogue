@@ -1,6 +1,6 @@
 # Improvement report: research progress
 
-Updated 2026-11-09. Part 1 is written in `docs/improvement-report.md` and pushed. Parts 2-4 not started; they wait for the lead. Measured since the first note: Vale 92 errors, attack tests 37 real plus 17 missing-driver failures. The first-note sections below are the evidence record and are superseded by the report where they differ.
+Updated 2026-11-09. All parts of `docs/improvement-report.md` are written and pushed. Next: answer implementer questions and keep the report current; D1-D8, H4 and H5 await the owner. The sections below are the evidence record and are superseded by the report where they differ.
 
 Stopped on 2026-11-09 because the 5-hour usage reached 83% (limit 80%). Branch `docs/improvement-report`, cut from `main` at 3ff51f3 (`git ls-remote origin refs/heads/main` showed 3ff51f3).
 
