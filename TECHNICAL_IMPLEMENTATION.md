@@ -4,7 +4,7 @@ Status: binding design baseline, with all five package roles implemented and tes
 
 ## Package map and dependencies
 
-<!-- verified: bce5fee -->
+<!-- verified: 6e43d33 -->
 
 ```mermaid
 flowchart LR
@@ -23,11 +23,11 @@ flowchart LR
   PLN --> NX[networkx]
 ```
 
-No role imports another role. Every internal import goes to `dbig_contracts`, checked in all four packages on this commit. `scripts/package_isolation.py` and the `package-isolation` CI job prove from the built wheels that the requester and planner install and import without each other. For the other roles the rule rests on import review. The versions and the reason for each library are in §4 and §17.1.
+No role imports another role. Every internal import goes to `dbig_contracts`, checked in all five packages at 6e43d33. `scripts/package_isolation.py` and the `package-isolation` CI job prove from the built wheels that the requester and planner install and import without each other. For the other roles the rule rests on import review. The versions and the reason for each library are in §4 and §17.1.
 
 ## Module map
 
-<!-- verified: bce5fee -->
+<!-- verified: 6e43d33 -->
 
 | Package | Module | Owns | Entry point |
 | --- | --- | --- | --- |
@@ -48,11 +48,11 @@ No role imports another role. Every internal import goes to `dbig_contracts`, ch
 | | `observations.py` | Observation and OpenLineage models, SQL relations | `observations.py::sql_relations` |
 | | `paths.py`, `plans.py` | Path search, SQL and MongoDB rendering | `paths.py::find_paths`, `plans.py::render_plan` |
 
-Each package also has `cli.py`, `config.py` and, for the three services, `api.py`. Tests are in `tests/`, helper scripts in `scripts/`, published JSON Schemas in `schemas/ir-v1/`, example configurations in `examples/local/`.
+Each role package (not `contracts`) has `cli.py` and `config.py`; collectors, requester and planner also have `api.py`. Tests are in `tests/`, helper scripts in `scripts/`, published JSON Schemas in `schemas/ir-v1/`, example configurations in `examples/local/`.
 
 ## Workflows
 
-<!-- verified: bce5fee -->
+<!-- verified: 6e43d33 -->
 
 **Collect.** One run reads one source and writes one bundle or nothing.
 
@@ -78,13 +78,13 @@ A reached limit or a missing namespace raises an operator error and writes no bu
 flowchart LR
   A["_read_signed: verify and read"] --> B[nodes and declared edges]
   B --> C["candidates by blocking rules"]
-  C --> D["_containment evidence"]
+  C --> D["_overlap evidence"]
   D --> E["_composite_candidates"]
   E --> F["review_candidates"]
   F --> G["write_artifact: snapshot"]
 ```
 
-`assemble` marks the snapshot `partial` for a partial bundle, a foreign key whose target is outside the snapshot, a reused earlier bundle, or a failed review (`builder.py::assemble`). A failed review still publishes the deterministic snapshot.
+`assemble` marks the snapshot `partial` for a partial bundle, a foreign key whose target is outside the snapshot, a reused earlier bundle, or a failed review (`builder.py::assemble`). The manifest field `partial_reasons` lists the causes. A failed review still publishes the deterministic snapshot.
 
 **Ask.** The requester refuses before the model when it can.
 
@@ -95,8 +95,8 @@ sequenceDiagram
   participant S as search
   participant M as private model
   U->>A: question
-  A->>A: refuse empty, long or lineage question
-  A->>S: match any, top retrieval_limit
+  A->>A: refuse empty or over-long question
+  A->>S: scope by named source, match any, top retrieval_limit
   S-->>A: entries
   A->>M: entries as data, strict JSON schema
   M-->>A: answer and citations
@@ -104,7 +104,7 @@ sequenceDiagram
   A-->>U: answer or typed error
 ```
 
-Typed errors: `INVALID_QUESTION`, `LINEAGE_REQUIRES_PLANNER`, `NO_CATALOGUE_MATCH` (no model call), `MODEL_UNAVAILABLE_OR_INVALID` (`answer.py::answer_question`).
+Typed errors: `INVALID_QUESTION`, `NO_CATALOGUE_MATCH` (no model call), `STALE_INDEX` and the `MODEL_*` codes, such as `MODEL_UNAVAILABLE_OR_INVALID`, `MODEL_UNREACHABLE`, `MODEL_TIMEOUT` and `MODEL_INVALID_CITATION` (`answer.py::answer_question`). A question that names lineage is allowed; only a model answer that claims lineage is rejected (`LINEAGE_CLAIM`).
 
 **Plan.** The planner never touches a source.
 
@@ -138,7 +138,7 @@ sequenceDiagram
 
 ## Status life cycles
 
-<!-- verified: bce5fee -->
+<!-- verified: 6e43d33 -->
 
 ```mermaid
 stateDiagram-v2
@@ -150,11 +150,11 @@ stateDiagram-v2
   queued --> failed: request expired before processing
 ```
 
-Scan status values are `ScanReceipt.status` in `packages/contracts/src/dbig_contracts/scan.py`. The `Edge` model allows `declared`, `strong`, `tentative`, `rejected` and `observed`. The builder sets `declared` and `tentative`; the planner sets `observed` on observed joins; `strong` and `rejected` are reserved. Planner lineage links are `executed` or `defined`. A path status is `found` or `unavailable` (`paths.py::find_paths`). A plan status is `ready_for_review`, `review_required` or `unresolved` (`plans.py::render_plan`).
+Scan status values are `ScanReceipt.status` in `packages/contracts/src/dbig_contracts/scan.py`. The `Edge` model allows `declared`, `strong`, `tentative`, `rejected` and `observed`. The builder sets `declared` and `tentative`, and `rejected` for a candidate the owner rejected in `decisions_file`; the planner sets `observed` on observed joins; `strong` is reserved. Planner lineage links are `executed` or `defined`. A path result is `found` or `unavailable`; a path itself is `declared`, `observed`, `defined`, `partial` or `tentative` (`paths.py::find_paths`). A plan status is `ready_for_review`, `review_required` or `unresolved` (`plans.py::render_plan`).
 
 ## Key types
 
-<!-- verified: bce5fee -->
+<!-- verified: 6e43d33 -->
 
 ```mermaid
 classDiagram
@@ -168,6 +168,7 @@ classDiagram
   Record <|-- Evidence
   Record <|-- Edge
   Record <|-- Diagnostic
+  Record <|-- ValueRanges
   class Manifest
   Manifest *-- FileEntry
   Manifest *-- Signature
@@ -257,7 +258,7 @@ Secrets are never passed on command lines. Collector has least-privilege read pe
 
 ## 6. IR and artifact contract
 
-Use append-style JSONL files in a bundle directory plus a manifest written last. Planned files: `sources.jsonl`, `objects.jsonl`, `fields.jsonl`, `constraints.jsonl`, `profiles.jsonl`, `observations.jsonl`, `diagnostics.jsonl`. The assembler output adds `nodes.jsonl`, `edges.jsonl`, `evidence.jsonl`, `runs.jsonl`, and `manifest.json`. Canonical JSON uses stable key ordering and UTF-8; IDs are deterministic from normalized source identity and source-native stable identifiers where available. Do not base IDs on display names alone. Every record has `ir_version`, `record_type`, `id`, `source_id`, `observed_at`, `collector_version`, and provenance where applicable.
+Use append-style JSONL files in a bundle directory plus a manifest written last. Files: `sources.jsonl`, `objects.jsonl`, `fields.jsonl`, `constraints.jsonl`, `profiles.jsonl`, `observations.jsonl`, `diagnostics.jsonl`, `tokens.jsonl` and an optional `ranges.jsonl`. The assembler output adds `nodes.jsonl`, `edges.jsonl`, `evidence.jsonl`, `runs.jsonl`, and `manifest.json`. Canonical JSON uses stable key ordering and UTF-8; IDs are deterministic from normalized source identity and source-native stable identifiers where available. Do not base IDs on display names alone. Every record has `ir_version`, `record_type`, `id`, `source_id`, `observed_at`, `collector_version`, and provenance where applicable.
 
 Manifest fields: format/IR version, source/run ID, creation window, collector build, scope hash, file paths, sizes, SHA-256 digests, counts, content classification, key ID if tokenized, optional signature metadata, diagnostics summary, optional `partial_reasons` (code names saying why a snapshot is `partial`; absent when complete, ignored by older readers), and completion status. Readers reject unknown major versions, duplicate IDs, unsafe paths, missing files, digest mismatches, invalid JSON, impossible timestamps, missing references, and record counts that disagree with the manifest. Minor additions must be backward compatible. The producer writes temp files, fsyncs, validates, and atomically renames the manifest last; the consumer never reads an incomplete directory.
 
@@ -337,7 +338,7 @@ compatibility test signs an older-shaped manifest and reads it back to hold that
 
 Candidate review (2026-10-13, DEC-10): `[builder.review] batch_size` (default 5) candidates per model call, `max_candidates` overall; the first failing batch ends the review, keeps the decisions already made and reports that batch's failure code. Keys (2026-10-13, E1): `dbig_contracts.security.key_from_env` requires 32 bytes and turns a shorter key into a one-line command error naming the variable.
 
-Common protocol: `discover(config, budget) -> DiscoveryResult`, `profile(object, budget) -> ProfileResult`, `observe_lineage(config, budget) -> ObservationResult`, `emit_bundle(result, destination) -> Manifest`. Budget accounting covers queries, wall time, rows, bytes and source-specific concurrency. Cancel on expiry, emit partial diagnostics, and respect source read-only transactions where supported. No unrestricted `SELECT *` on large tables.
+Each engine has a `discover_<engine>` function in `runtime.py`; `collect` runs it under a `Budget` and writes the bundle. Budget accounting covers queries, wall time, rows, bytes and source-specific concurrency. Cancel on expiry, emit partial diagnostics, and respect source read-only transactions where supported. No unrestricted `SELECT *` on large tables.
 
 PostgreSQL: query `pg_catalog` for namespaces, relations, attributes, keys, FK constraints, indexes, view/materialized-view definitions, statistics and comments where allowed. Use quoted identifiers and parameterized dynamic values. Prefer catalog row estimates and existing statistics; use bounded sample queries only when permitted. Record partitioning and composite key order. Capture observed SQL only from configured logs/audit/job metadata, never assume `pg_stat_statements` includes result data or execution time history sufficient for lineage.
 
@@ -347,7 +348,7 @@ MongoDB: list databases/collections, indexes, validator JSON Schema, collection 
 
 Optional value-free column profiles (`format_profiles`): one whole-column read-only aggregate per text, integer or UUID column on PostgreSQL and ClickHouse, the same profile from the existing sample on MongoDB, and the integer minimum and maximum in the local-only `ranges.jsonl` (written only when it has rows); see 8b.
 
-Collector errors become codes such as `PERMISSION_DENIED`, `TIMEOUT`, `UNSUPPORTED_VERSION`, `PARSE_UNRESOLVED`, `BUDGET_EXHAUSTED`, `PARTIAL_SCAN`; never silently substitute empty results for unavailable metadata.
+Collector problems become diagnostic codes such as `IDENTITY_UNAVAILABLE`, `STATS_UNAVAILABLE`, `FORMAT_PROFILES_SKIPPED`, `SAMPLE_BYTE_LIMIT` and `OUT_OF_SCOPE_REFERENCE`, and an exhausted budget stops the run with `BUDGET_EXHAUSTED`; the design names `PERMISSION_DENIED`, `TIMEOUT`, `UNSUPPORTED_VERSION` and `PARTIAL_SCAN` were never implemented; never silently substitute empty results for unavailable metadata.
 
 ### 7a. Transport security and the readable catalogue (settled 2026-09-30)
 
@@ -636,7 +637,7 @@ OpenLineage import maps dataset namespace/name to source/object IDs and run/job 
 
 ## 10. Local LLM review in version 1
 
-After deterministic scoring, a bounded LangGraph `StateGraph` runs `redact -> request_vllm -> validate -> record_suggestion` for ambiguous candidate batches within configured token, request and time budgets. The trial model is Qwen3 `8B`; final model, quantization and digest depend on GPU VRAM and measured latency/accuracy. vLLM runs on a Linux or WSL2 GPU host; the assembler calls its private OpenAI-compatible endpoint through the `openai` Python client. This API compatibility does not authorize an OpenAI cloud call. Prompt includes normalized object/field labels, types, structural metrics, sanitized descriptions, source context and evidence IDs. It excludes raw rows, token sets, SQL literals and connection details. Require schema-constrained output: candidate ID, decision (`supports`, `opposes`, `unknown`), short reason, cited evidence IDs, and any suggested follow-up. Validate again with Pydantic and check all IDs; reject malformed, uncited or invented evidence. Persist model/digest, prompt/schema versions and response hash for audit; redact response text as necessary. Verify vLLM's pinned structured-output behavior against the schema before deployment. As implemented until 2026-10-04 the prompt carried only the two object names and the evidence; it now also carries each candidate's column pairs (left referencing, right referenced) with names and types, which this paragraph always required. Sanitized descriptions and source context are still not sent to the reviewer.
+After deterministic scoring, a bounded LangGraph `StateGraph` runs `redact -> request -> validate -> record` for ambiguous candidate batches within configured token, request and time budgets. The trial model is Qwen3 `8B`; final model, quantization and digest depend on GPU VRAM and measured latency/accuracy. vLLM runs on a Linux or WSL2 GPU host; the assembler calls its private OpenAI-compatible endpoint through the `openai` Python client. This API compatibility does not authorize an OpenAI cloud call. Prompt includes normalized object/field labels, types, structural metrics, sanitized descriptions, source context and evidence IDs. It excludes raw rows, token sets, SQL literals and connection details. Require schema-constrained output: candidate ID, decision (`supports`, `opposes`, `unknown`), short reason, cited evidence IDs, and any suggested follow-up. Validate again with Pydantic and check all IDs; reject malformed, uncited or invented evidence. Persist model/digest, prompt/schema versions and response hash for audit; redact response text as necessary. Verify vLLM's pinned structured-output behavior against the schema before deployment. As implemented until 2026-10-04 the prompt carried only the two object names and the evidence; it now also carries each candidate's column pairs (left referencing, right referenced) with names and types, which this paragraph always required. Sanitized descriptions and source context are still not sent to the reviewer.
 
 The reviewer adds only `MODEL_SUGGESTION` evidence and can reprioritize review; it cannot convert a candidate into a declared FK or an observed lineage edge. A timeout, local server outage or invalid output produces a typed diagnostic and the deterministic graph still publishes. The v1 deployment enables review for ambiguous cases, then compares precision/recall and latency with the no-LLM baseline. LangGraph is a fixed workflow, not a free-running agent: no model tool calls, autonomous query planning, peer-agent handoffs or cloud API. Top-level LangChain and LangGraph Swarm add no needed v1 capability; reconsider only if a measured workflow requires their features.
 
@@ -652,7 +653,7 @@ Partial runs identify which sources and capabilities were unavailable. A graph c
 
 ## 12. Command and error contract
 
-<!-- verified: bce5fee -->
+<!-- verified: 6e43d33 -->
 
 Commands as implemented (`packages/*/src/*/cli.py`). Option names come from the Click declarations on this commit.
 
@@ -671,10 +672,10 @@ dbig-requester index --config <requester.toml>
 dbig-requester search --config <requester.toml> [--query <text>] [--match <all|any> --source-id --kind --data-type --tag --capability --evidence-status --max-age-seconds --limit --offset]
 dbig-requester ask --config <requester.toml> --question <text>
 dbig-requester request-scan --config <requester.toml> --request <request.json> --dispatch <bundle|http>
-dbig-requester serve --config <requester.toml> --host <loopback-ip> --port <port>
+dbig-requester serve --config <requester.toml> --host <loopback-ip> --port <port> [--no-access-log]
 dbig-planner build --snapshot <dir> --observations <dir> --out <graph-dir> [--mapping <file>]
 dbig-planner lineage-paths --graph <dir> --from <id> --to <id>
-dbig-planner join-paths --graph <dir> --from <id> --to <id>
+dbig-planner join-paths --graph <dir> --from <id> --to <id> [--include-unverified-cross-source]
 dbig-planner plan --graph <dir> --path-id <id> [--max-rows <1-100000>]
 dbig-planner serve --config <planner.toml> --host <loopback-ip> --port <port>
 ```
@@ -814,7 +815,7 @@ Artifact publication validates each object parent against another object in the 
 
 On 2026-09-27 the user decided items 4, 5, 6, 8, 9, 10 and 11 above, and the conservative 2026-09-23 profile stands unchanged where they overlap. Three of those decisions widen no behaviour and only make an existing default binding: metadata-only collection, per-run keyed tokens and the private-network HTTP posture are what the code already does, and they are now a contract rather than a starting point. Four of them add scope. The supported version matrix may name only versions an integration fixture actually exercised, so a version the fixtures do not run is reported as unsupported instead of untested. Rename handling gains a source-native identity path: PostgreSQL `pg_class.oid` and a ClickHouse table UUID prove that a renamed object is the same object, MongoDB offers no such identifier, so a collection rename yields a hint from structural similarity and, while unverified, a delete plus an add rather than a silent merge. Calibration gains an instrument before it gains numbers: a labeled synthetic corpus of declared-FK positives, deliberately hard negatives, ambiguous names and sparse low-cardinality fields, plus an evaluation command reporting precision-recall and calibration, with no threshold and no published probability until the user approves measured values. The consumer decision bounds what compatibility means: because the requester and planner are the only machine readers, golden-bundle and compatibility tests exist for an internal reason, namely that an independently installed older consumer must behave predictably against a newer snapshot, and not to satisfy an external product's schema.
 
-Two decisions remain open and are not implied by these. The GPU host and model identity stay unmeasured, so live vLLM and Langfuse behaviour is still untested by user decision. The source of observed SQL and job metadata is still unchosen, which is why executed lineage remains unavailable; defined lineage from view definitions is unaffected, and no edge asserts execution without that evidence.
+Two decisions remain open and are not implied by these. The GPU host and model identity stay unmeasured, so live vLLM and Langfuse behaviour was untested by user decision at that date. Later, a private OpenAI-compatible model served by llama.cpp ran the live questions (results in `artifacts/run-20261014/` and `artifacts/run-20261020-pgch/`); Langfuse has not run live. The source of observed SQL and job metadata is still unchosen, which is why executed lineage remains unavailable; defined lineage from view definitions is unaffected, and no edge asserts execution without that evidence.
 
 The first live metadata compatibility matrix was established by CI run 35911699728: PostgreSQL 16.15 (catalog read through a role granted schema usage and table SELECT), ClickHouse 25.8.33.6 (`system.tables` and `system.columns`), and MongoDB 7.0.41 (`listCollections` and indexes). The three tests passed with synthetic schemas. The CI `source-integration` job now also runs `tests/test_live_tls.py` against a throwaway CA; production authentication is untested. Only these exact tested versions have empirical metadata compatibility evidence; this is not a claim that adjacent versions or secure production connections have passed.
 

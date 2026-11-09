@@ -4,7 +4,7 @@ Finds the tables, fields and likely relationships in your PostgreSQL, ClickHouse
 
 ## What it is
 
-<!-- verified: bce5fee -->
+<!-- verified: 6e43d33 -->
 
 Four parts, each its own installable Python package:
 
@@ -26,13 +26,13 @@ flowchart LR
 
 ## Status
 
-<!-- verified: bce5fee -->
+<!-- verified: 6e43d33 -->
 
-All four parts work and pass 546 tests, including live tests on PostgreSQL, ClickHouse and MongoDB containers in CI. One live run on real databases found problems, listed under Results. Fixes are on unmerged branches (`feat/catalogue-fixes`, `fix/live-findings`, `fix/phase7`), described in [docs/plans/CATALOGUE_FIXES_IMPLEMENTATION_PLAN.md](docs/plans/CATALOGUE_FIXES_IMPLEMENTATION_PLAN.md). Open work: [TODO.md](TODO.md).
+All four parts work and pass their tests (last recorded full run: 1,276 passed, 70 skipped, 1 expected failure, in [TODO.md](TODO.md)), including live tests on PostgreSQL, ClickHouse and MongoDB containers in CI. One live run on real databases found problems, listed under Results. The fixes for those findings (plan phases 1 to 7) are on `main` as commit `cf7a5c3`, described in [docs/plans/CATALOGUE_FIXES_IMPLEMENTATION_PLAN.md](docs/plans/CATALOGUE_FIXES_IMPLEMENTATION_PLAN.md). Open work: [TODO.md](TODO.md).
 
 ## Quickstart
 
-<!-- verified: bce5fee -->
+<!-- verified: 6e43d33 -->
 
 You need Python 3.12 and [uv](https://github.com/astral-sh/uv) 0.10 or later.
 
@@ -45,7 +45,7 @@ To catalogue your own databases, follow [docs/LOCAL_RUN.md](docs/LOCAL_RUN.md). 
 
 ## Worked example
 
-<!-- verified: bce5fee -->
+<!-- verified: 6e43d33 -->
 
 This builds a snapshot from the synthetic bundle that the tests keep in `tests/golden/ir-v1`, then searches it. The key below is the public test key for that fixture, not a credential.
 
@@ -72,9 +72,9 @@ The search returns the table `customers` and its field `id` from source `golden-
 
 ## Results
 
-<!-- verified: bce5fee -->
+<!-- verified: 6e43d33 -->
 
-One live run on real PostgreSQL 16.15, ClickHouse 26.8.2.7 and MongoDB 7.0.41 databases, plaintext on loopback, 2026-10-06 to 2026-10-12, at commit `2e87fa7` (an ancestor of `main`). Source: [artifacts/live-test-report.md](artifacts/live-test-report.md).
+First live run, before the fixes, on real PostgreSQL 16.15, ClickHouse 26.8.2.7 and MongoDB 7.0.41 databases, plaintext on loopback, 2026-10-06 to 2026-10-12, at commit `2e87fa7` (an ancestor of `main`). Source: [artifacts/live-test-report.md](artifacts/live-test-report.md).
 
 | Check | Result |
 | --- | --- |
@@ -87,16 +87,18 @@ One live run on real PostgreSQL 16.15, ClickHouse 26.8.2.7 and MongoDB 7.0.41 da
 | Natural-language questions | 0 of 30 answered |
 | TLS | not tested |
 
+A later run on PostgreSQL and ClickHouse only (2026-10-20, code at Phase 6, scored by the owner's rule that every cross-source pair is false) proposed 48 candidates, 35 true and 13 false, and 56 after the ClickHouse probe (39 true, 17 false). It ran 40 questions: 28 answered, 9 `NOT_ESTABLISHED`, 2 `NO_CATALOGUE_MATCH` and 1 `MODEL_UNAVAILABLE_OR_INVALID`. Source: [artifacts/run-20261020-pgch/summary.md](artifacts/run-20261020-pgch/summary.md). The data differs from the first run, so the two are not comparable.
+
 Performance at 10 sources, 200 objects and 1,000 fields is in [ARCHITECTURE.md](ARCHITECTURE.md#performance).
 
 ## Limits
 
-<!-- verified: bce5fee -->
+<!-- verified: 6e43d33 -->
 
 - The relationship proposals are weak on real data. Treat each as a candidate to review, not as a fact.
 - Executed lineage is unavailable until you choose a source of query history. OpenLineage events work (a completed run is `executed`, a job event is `defined`).
 - A cross-source plan stays `unresolved` until you configure a staging target.
-- The model features need a private vLLM server. No GPU host has passed the acceptance gate.
+- The model features need a private OpenAI-compatible model server (vLLM is the documented target). No GPU host has passed the acceptance gate.
 - The services bind to loopback only. Remote access needs your own TLS proxy.
 - Only the database versions that CI runs are supported.
 
