@@ -84,10 +84,10 @@
     "evidence": "legacy-license-field",
     "release_url": "https://pypi.org/pypi/distro/1.9.0/json"
   },
-  "dnspython==2.8.0": {
+  "dnspython==2.9.0": {
     "declaration": "ISC",
-    "evidence": "legacy-license-field",
-    "release_url": "https://pypi.org/pypi/dnspython/2.8.0/json"
+    "evidence": "spdx-expression",
+    "release_url": "https://pypi.org/pypi/dnspython/2.9.0/json"
   },
   "fastapi==0.141.1": {
     "declaration": "MIT",
@@ -384,10 +384,10 @@
     "evidence": "spdx-expression",
     "release_url": "https://pypi.org/pypi/pygments/2.21.0/json"
   },
-  "pymongo==4.18.1": {
+  "pymongo==4.18.3": {
     "declaration": "Apache-2.0",
     "evidence": "spdx-expression",
-    "release_url": "https://pypi.org/pypi/pymongo/4.18.1/json"
+    "release_url": "https://pypi.org/pypi/pymongo/4.18.3/json"
   },
   "pyparsing==3.3.3": {
     "declaration": "MIT",
