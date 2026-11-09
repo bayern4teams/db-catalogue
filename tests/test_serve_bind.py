@@ -56,7 +56,7 @@ def test_serve_binds_and_answers_one_authenticated_request(tmp_path, package, se
     config, (method, path, extra), expected = setup(tmp_path)
     port = _free_port()
     base = f"http://127.0.0.1:{port}"
-    process = subprocess.Popen(  # noqa: S603 # C5: reason=fixed argv of this interpreter, no shell; approved=user, 2026-11-09 (report A5, lead's scope); review=2027-05-09
+    process = subprocess.Popen(  # noqa: S603 # C5: reason=fixed argv of this interpreter, no shell; approved=lead session for the owner, 2026-11-09; review=2027-05-09
         [
             sys.executable, "-c", f"from {package}.cli import main; main()",
             "serve", "--config", str(config), "--host", "127.0.0.1", "--port", str(port),
