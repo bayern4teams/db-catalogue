@@ -6,4 +6,4 @@ rules:
     ignore:
       - ci.yml:50
       - docs.yml:33
-      - release.yml:46
+      - release.yml:45
