@@ -549,6 +549,8 @@ Until step 4 finishes, the existing `STALE_INDEX` code tells a caller to wait. W
 
 ### Decisions for the owner
 
+Lead rulings of 2026-11-09: D3, D4, D5 and D7 accepted as option (a). D1, D2, D6 (network boundary) and D8 (retires a test assertion, L1) await the owner. In the ideas table below, the recommendations are accepted and none is in scope now.
+
 | # | Decision | Options | Recommendation |
 | --- | --- | --- | --- |
 | D1 | TLS between services on the LAN | (a) Uvicorn TLS with a private CA and IP-based certificates, extending `scripts/make_ci_certs.py`; (b) mTLS; (c) plain HTTP, relaxing `private_base_url` | (a). A plain key can be read by any LAN host, and [NIST SP 800-207](https://csrc.nist.gov/pubs/sp/800/207/final) rejects trust by location. No sixth proxy container is needed. |
