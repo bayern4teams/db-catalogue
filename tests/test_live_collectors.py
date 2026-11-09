@@ -49,6 +49,9 @@ def test_postgresql_16_catalog_and_read_only_role():
     )
     try:
         cursor = admin.cursor()
+        # Dropped first so the test re-runs on the same containers (CI's are fresh).
+        cursor.execute("DROP SCHEMA IF EXISTS dbig_ci CASCADE")
+        cursor.execute("DROP ROLE IF EXISTS dbig_reader")
         cursor.execute("CREATE SCHEMA dbig_ci")
         cursor.execute("CREATE TABLE dbig_ci.customers (id integer PRIMARY KEY)")
         cursor.execute("INSERT INTO dbig_ci.customers VALUES (1)")
@@ -105,6 +108,7 @@ def test_clickhouse_25_8_system_tables():
 
     client = _retry(lambda: clickhouse_connect.get_client(host="127.0.0.1", port=8123))
     try:
+        client.command("DROP DATABASE IF EXISTS dbig_ci SYNC")
         client.command("CREATE DATABASE dbig_ci ENGINE=Atomic")
         client.command(
             "CREATE TABLE dbig_ci.orders (id UInt64, day Date) ENGINE=MergeTree "
@@ -188,6 +192,7 @@ def test_mongodb_7_collection_validator_and_index():
     client = MongoClient("mongodb://127.0.0.1:27017", serverSelectionTimeoutMS=2000)
     _retry(lambda: client.admin.command("ping"))
     try:
+        client.drop_database("dbig_ci")
         collection = client.dbig_ci.create_collection(
             "orders",
             validator={"$jsonSchema": {"properties": {"customer_id": {"bsonType": "int"}}}},

@@ -54,7 +54,7 @@ application-quality:
   stage: checks
   needs: [repository-policy]
   script:
-    - uv sync --locked --all-extras --dev
+    - uv sync --locked --all-packages --all-extras --dev
     - uv run ruff check .
     - uv run mypy packages
     - uv run pytest

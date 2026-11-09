@@ -31,8 +31,7 @@ jobs:
         run: |
           test -f pyproject.toml
           test -f uv.lock
-          test -d src
-          uv sync --locked --all-extras --dev
+          uv sync --locked --all-packages --all-extras --dev
       - name: Verify code, tests and dependencies
         run: |
           python scripts/ci_check.py
@@ -46,7 +45,7 @@ jobs:
           npm install --global @nanonets/graft@0.29.0
           python scripts/graph_sync.py
       - name: Build wheel and source distribution
-        run: uv build
+        run: uv build --all-packages
       - name: Generate checksums
         run: sha256sum dist/* > dist/SHA256SUMS.txt
       - name: Publish verified GitHub release artifacts

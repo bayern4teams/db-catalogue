@@ -700,14 +700,17 @@ def _format_unavailable(config: SourceConfig, common: dict[str, Any], key: str) 
     )
 
 
-def _format_skipped(config: SourceConfig, common: dict[str, Any], key: str, count: int) -> Record:
+def _format_skipped(
+    config: SourceConfig, common: dict[str, Any], key: str, count: int, budget: Budget
+) -> Record:
     """One diagnostic for the profiles left unread because the query budget ran out: a count."""
     return _diagnostic(
         config,
         common,
         f"{key}:format-skipped",
         "FORMAT_PROFILES_SKIPPED",
-        f"{count} format profiles not read: query budget reached",
+        f"{count} format profiles not read: query budget reached; "
+        f"set max_queries to at least {budget.used + count} for this source to read them",
     )
 
 
@@ -784,7 +787,9 @@ def _profile_formats_postgresql(
                 record
             )
     if skipped:
-        tables["diagnostics.jsonl"].append(_format_skipped(config, common, "postgresql", skipped))
+        tables["diagnostics.jsonl"].append(
+            _format_skipped(config, common, "postgresql", skipped, budget)
+        )
 
 
 def _profile_formats_clickhouse(
@@ -1263,7 +1268,9 @@ def discover_clickhouse(
             client, config, budget, database, identities, views, probe_columns, tables, common
         )
     if skipped:
-        tables["diagnostics.jsonl"].append(_format_skipped(config, common, "clickhouse", skipped))
+        tables["diagnostics.jsonl"].append(
+            _format_skipped(config, common, "clickhouse", skipped, budget)
+        )
     return tables
 
 

@@ -1,6 +1,6 @@
 # Threat model
 
-Scope: the v1 pipeline as implemented — source-local collectors, signed bundles, the assembler,
+Scope: the v1 pipeline as implemented—source-local collectors, signed bundles, the assembler,
 and the independent requester and planner. Written against the code on 2026-09-27, so it
 describes what holds today, and says plainly where it does not.
 
@@ -28,7 +28,7 @@ scanned.
 
 ## Threats and controls
 
-### T1 — A collector holds more privilege than it needs, or overloads a source
+### T1: A collector holds more privilege than it needs, or overloads a source
 
 A read-only identity per source, separable metadata and profiling grants, per-source query
 budgets, statement timeouts and bounded samples. Reaching `max_queries`, `max_objects` or
@@ -45,7 +45,7 @@ MongoDB document count: it is skipped when no budget remains, and a count that f
 *Gap:* ClickHouse `readonly`, memory and read-row limits are specified but not asserted by a
 test against a live server.
 
-### T2 — A bundle is tampered with, truncated or swapped in transit
+### T2: A bundle is tampered with, truncated or swapped in transit
 
 Each file carries a SHA-256 digest and a record count in the manifest; the manifest is signed
 with HMAC-SHA256 under a per-run key referenced by environment variable, never written into any
@@ -57,7 +57,7 @@ the manifest is renamed last, so a consumer never reads a partial directory.
 `test_validate_bundle_refuses_an_unsigned_artifact`, `test_a_tampered_golden_row_is_refused`,
 `test_the_manifest_digests_still_match_the_committed_files`.
 
-### T3 — A scan request is forged, replayed or exceeds its authorization
+### T3: A scan request is forged, replayed or exceeds its authorization
 
 A scan request is signed; the collector verifies the signature, checks the requester against
 `authorized_requesters`, checks each scope against the allow-list, and refuses a second request
@@ -69,7 +69,7 @@ is refused outright.
 `test_accept_scan_refuses_a_request_signed_with_the_wrong_key`,
 `test_collector_http_auth_and_signature`, `test_private_http_dispatch_uses_signed_body`.
 
-### T4 — A secret leaks into an artifact, a log, an error or a code graph
+### T4: A secret leaks into an artifact, a log, an error or a code graph
 
 Every secret is resolved from an environment variable *reference* held in validated
 configuration, through one resolver that fails closed on a missing, blank, unset or empty
@@ -86,7 +86,7 @@ serve without their token.
 *Gap:* a driver exception could still carry connection detail. `test_mongo_count_respects_budget_and_reports_driver_failure`
 asserts a value-free diagnostic for one such path; the others are not individually covered.
 
-### T5 — The reviewer model is prompted into inventing or escalating a claim
+### T5: The reviewer model is prompted into inventing or escalating a claim
 
 Source metadata, SQL text and comments are treated as untrusted data, never as instructions. The
 model's response must satisfy a strict schema; every cited evidence ID is validated against the
@@ -113,7 +113,7 @@ be turned off per source with `include_comments = false`. Comments do not reach 
 reviewer. *Tests:* `test_a_comment_is_cleaned_and_bounded`,
 `test_ask_retrieves_for_a_natural_question`, `test_comments_are_shown_escaped_and_searchable`.
 
-### T6 — Unsafe or unresolvable SQL produces a wrong or dangerous claim
+### T6: Unsafe or unresolvable SQL produces a wrong or dangerous claim
 
 SQL is parsed, never executed. Unresolvable or ambiguous references abstain with a diagnostic
 rather than guessing a column. A `SELECT` yields read usage and possible join evidence, never
@@ -127,7 +127,7 @@ The planner never executes anything it renders.
 `test_openlineage_job_event_paths_are_defined_not_observed`,
 `test_join_paths_and_lineage_paths_are_different_questions`.
 
-### T7 — Raw values or low-entropy tokens disclose data
+### T7: Raw values or low-entropy tokens disclose data
 
 Metadata-only is the default; sampling, query history and cross-source token comparison are
 opt-in per source. Samples contribute type unions, presence flags and bounded counts, never
@@ -152,7 +152,7 @@ tokens are keyed; replacing the HMAC with a bare digest is caught by
 `test_a_token_is_the_keyed_digest_of_the_normalised_text`. Python cannot guarantee memory
 zeroization, so deployment isolation and short retention remain part of the control.
 
-### T8 — A rename or a partial scan corrupts identity or deletes real objects
+### T8: A rename or a partial scan corrupts identity or deletes real objects
 
 IDs derive from server-assigned identifiers, so a rename keeps identity. An object with no
 native identifier is dropped with an `IDENTITY_UNAVAILABLE` diagnostic rather than given a
@@ -167,7 +167,7 @@ entities in place. The manifest counts diagnostics by code, so a drop cannot pas
 `test_an_unidentifiable_object_never_reaches_a_published_bundle`,
 `test_a_manifest_that_under_reports_dropped_objects_is_refused`.
 
-### T9 — The HTTP surface is exposed beyond the trusted network
+### T9: The HTTP surface is exposed beyond the trusted network
 
 Per the 2026-09-27 decision the adapters target a private network. All three `serve` commands
 refuse a non-loopback bind address and refuse a hostname rather than resolving it, since a name
@@ -182,7 +182,7 @@ enforces a configured request body limit.
 *Explicitly out of scope:* rate limiting per caller, authorization scopes, audit logging and
 TLS termination. Public exposure is unsupported, not partially hardened.
 
-### T10 — Source metadata or credentials cross a network in plaintext, or to an impostor
+### T10: Source metadata or credentials cross a network in plaintext, or to an impostor
 
 `collect` connects with verified TLS by default for all three engines: chain and hostname
 verification through each driver, with `tls_ca_file` passed explicitly to pg8000, ClickHouse
@@ -203,7 +203,7 @@ connection, private CA reaching every driver, the failure message; 16 of 16 muta
 verified TLS through `tls_ca_file` alone with `SSL_CERT_FILE` removed, refusal of a certificate
 from an untrusted CA on every engine, and the plaintext loopback opt-out.
 
-### T11 — A hostile database name executes in the catalogue page
+### T11: A hostile database name executes in the catalogue page
 
 Every object, column, constraint and diagnostic name on the page comes from a database. The
 renderer escapes all text including quotes, derives anchors from stable IDs rather than names,

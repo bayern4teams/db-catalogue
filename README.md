@@ -37,7 +37,7 @@ All four parts work and pass their tests (last recorded full run, 2026-11-09: 1,
 You need Python 3.12 and [uv](https://github.com/astral-sh/uv) 0.10 or later.
 
 ```bash
-uv sync --locked --all-extras --dev
+uv sync --locked --all-packages --all-extras --dev
 uv run pytest
 ```
 

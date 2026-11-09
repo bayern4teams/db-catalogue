@@ -177,7 +177,7 @@ Run these from the repository root, in batches with memory caps (G1), and confir
 ```bash
 python -m compileall -q scripts && python scripts/ci_check.py
 python scripts/graph_sync.py
-uv sync --locked --all-extras --dev
+uv sync --locked --all-packages --all-extras --dev
 uv run ruff check . && uv run mypy packages
 uv run pytest
 for package in packages/*/; do (cd "$package" && uv run --no-sync deptry .); done

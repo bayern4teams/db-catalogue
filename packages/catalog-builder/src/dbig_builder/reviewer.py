@@ -11,7 +11,7 @@ from typing import Any, Literal, TypedDict
 from dbig_contracts.ids import stable_id
 from dbig_contracts.models import Edge, Evidence, Object, Record
 from dbig_contracts.models import Field as CatalogField
-from dbig_contracts.security import secret_from_env
+from dbig_contracts.security import cap_model_client_logs, secret_from_env
 from langgraph.graph import END, START, StateGraph
 from openai import APIConnectionError, APIStatusError, APITimeoutError, OpenAI, omit
 from pydantic import BaseModel, ConfigDict, field_validator
@@ -196,6 +196,7 @@ def _review_batch(
     client: Any | None,
 ) -> tuple[list[Evidence], str]:
     known = {edge.id: set(edge.evidence_ids) for edge in selected}
+    cap_model_client_logs()
     try:
         model_client = client or OpenAI(
             base_url=config.base_url,

@@ -1382,3 +1382,12 @@ def test_the_design_document_names_the_new_settings_and_the_local_only_file():
     text = (ROOT / "TECHNICAL_IMPLEMENTATION.md").read_text(encoding="utf-8")
     for name in (FLAG, THRESHOLD, RANGES_FILE, "numeric_ranges_overlap"):
         assert name in text, f"TECHNICAL_IMPLEMENTATION.md does not mention {name}"
+
+
+def test_c2_the_skipped_message_names_the_setting_and_the_count_needed():
+    """J11: the query budget message tells the operator what to set, not only what happened."""
+    _, records, spent = discover_pg(True, budget=4)
+    (skipped,) = [r for r in records["diagnostics.jsonl"] if r.code == "FORMAT_PROFILES_SKIPPED"]
+    count = int(skipped.message.split()[0])
+    assert count > 0
+    assert f"max_queries to at least {spent.used + count}" in skipped.message

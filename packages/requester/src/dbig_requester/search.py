@@ -47,6 +47,19 @@ class StaleIndexError(OperatorError):
     `dbig-requester index`."""
 
 
+def _read_snapshot(snapshot: Path) -> tuple[Any, dict[str, Any]]:
+    try:
+        return read_artifact(snapshot)
+    except ValueError as error:
+        # The requester holds no snapshot key: the builder writes snapshots unsigned.
+        if str(error) == "signature key unavailable":
+            raise OperatorError(
+                f"snapshot {snapshot} is signed, and the requester reads only unsigned snapshots; "
+                "point snapshot_dir at the output of `dbig-builder assemble`"
+            ) from error
+        raise
+
+
 def _broken(name: str) -> str:
     """The name with a space at every word break: lower to upper (`unitID`), the end of an
     upper-case run before a capitalised word (`HTTPServer`), and letters to digits and back
@@ -161,7 +174,7 @@ def _excluded(source_id: str, object_item: Object, exclude: dict[str, list[str]]
 def index_snapshot(
     snapshot: Path, state: Path, exclude: dict[str, list[str]] | None = None
 ) -> str:
-    manifest, tables = read_artifact(snapshot)
+    manifest, tables = _read_snapshot(snapshot)
     if manifest.content_type != "catalog-snapshot":
         raise ValueError("expected catalog snapshot")
     digest = hashlib.sha256((snapshot / "manifest.json").read_bytes()).hexdigest()
@@ -358,7 +371,7 @@ def search(state: Path, request: SearchRequest) -> dict:
         connection.row_factory = sqlite3.Row
         metadata = dict(connection.execute("SELECT key,value FROM meta"))
         snapshot = Path(metadata["snapshot"])
-        manifest, _ = read_artifact(snapshot)
+        manifest, _ = _read_snapshot(snapshot)
         digest = hashlib.sha256((snapshot / "manifest.json").read_bytes()).hexdigest()
         if digest != metadata["digest"]:
             raise StaleIndexError("STALE_INDEX")
@@ -517,6 +530,51 @@ def _distances(
     return seen
 
 
+def _visible_edges(
+    connection: sqlite3.Connection, include_unverified: bool
+) -> tuple[dict[str, tuple[str, str, str]], dict[str, int], dict[str, list[tuple[str, str]]]]:
+    """The relationships answer time may use, by id, their ranks, and the adjacency between them."""
+    edges: dict[str, tuple[str, str, str]] = {}
+    ranks: dict[str, int] = {}
+    for edge_id, left, right, body, rank in connection.execute(
+        "SELECT id, from_id, to_id, body, rank FROM relationships "  # noqa: S608 # C5: reason=only the constant _VISIBLE clause is interpolated, values are bound; approved=user, 2026-11-08; review=2027-05-08
+        f"WHERE {_VISIBLE} ORDER BY rank, id",
+        (int(include_unverified),),
+    ):
+        edges[edge_id] = (left, right, body)
+        ranks[edge_id] = rank
+    adjacent: dict[str, list[tuple[str, str]]] = {}
+    for edge_id, (left, right, _) in edges.items():
+        adjacent.setdefault(left, []).append((right, edge_id))
+        adjacent.setdefault(right, []).append((left, edge_id))
+    return edges, ranks, adjacent
+
+
+def _shortest_paths(
+    adjacent: dict[str, list[tuple[str, str]]],
+    reach: dict[str, dict[str, int]],
+    ranks: dict[str, int],
+    start: str,
+    goal: str,
+) -> list[tuple[tuple[str, ...], tuple[str, ...]]]:
+    """Every shortest path as (nodes after `start`, edge ids), strongest first: its sorted edge
+    ranks, then its edge ids (D1)."""
+
+    def walk(node: str, hops: int, taken: tuple[str, ...], via: tuple[str, ...]):
+        # Steps that stay on a shortest path: one edge nearer the goal, one further from here.
+        if node == goal:
+            yield taken, via
+            return
+        for other, edge_id in adjacent[node]:
+            if reach[goal].get(other) == hops - 1 and reach[start].get(other) == len(via) + 1:
+                yield from walk(other, hops - 1, (*taken, other), (*via, edge_id))
+
+    return sorted(
+        walk(start, reach[start][goal], (), ()),
+        key=lambda path: (sorted(ranks[e] for e in path[1]), path[1]),
+    )
+
+
 def bridge_paths(
     state: Path, ends: set[str], max_hops: int, max_bridges: int, include_unverified: bool = False
 ) -> tuple[list[dict], list[dict]]:
@@ -530,42 +588,15 @@ def bridge_paths(
     if len(ends) < 2 or max_hops < 2 or max_bridges < 1:
         return [], []
     with closing(sqlite3.connect(_database(state))) as connection:
-        edges: dict[str, tuple[str, str, str]] = {}
-        ranks: dict[str, int] = {}
-        for edge_id, left, right, body, rank in connection.execute(
-            "SELECT id, from_id, to_id, body, rank FROM relationships "  # noqa: S608 # C5: reason=only the constant _VISIBLE clause is interpolated, values are bound; approved=user, 2026-11-08; review=2027-05-08
-            f"WHERE {_VISIBLE} ORDER BY rank, id",
-            (int(include_unverified),),
-        ):
-            edges[edge_id] = (left, right, body)
-            ranks[edge_id] = rank
-        adjacent: dict[str, list[tuple[str, str]]] = {}
-        for edge_id, (left, right, _) in edges.items():
-            adjacent.setdefault(left, []).append((right, edge_id))
-            adjacent.setdefault(right, []).append((left, edge_id))
+        edges, ranks, adjacent = _visible_edges(connection, include_unverified)
         reach = {end: _distances(adjacent, end, max_hops) for end in sorted(ends & adjacent.keys())}
-
-        def walk(node: str, goal: str, hops: int, taken: tuple[str, ...], via: tuple[str, ...]):
-            # Steps that stay on a shortest path: one edge nearer the goal, one further from here.
-            if node == goal:
-                yield taken, via
-                return
-            for other, edge_id in adjacent[node]:
-                if reach[goal].get(other) == hops - 1 and reach[start].get(other) == len(via) + 1:
-                    yield from walk(other, goal, hops - 1, (*taken, other), (*via, edge_id))
-
         kept: list[str] = []
         used: dict[str, None] = {}
         for start, goal in itertools.combinations(reach, 2):
             hops = reach[start].get(goal, 0)
             if hops < 2 or hops - 1 > max_bridges:  # no path, or a direct line (already shown)
                 continue
-            # The strongest path first: its sorted edge ranks, then its edge ids (D1).
-            ordered = sorted(
-                walk(start, goal, hops, (), ()),
-                key=lambda path: (sorted(ranks[e] for e in path[1]), path[1]),
-            )
-            for taken, via in ordered:
+            for taken, via in _shortest_paths(adjacent, reach, ranks, start, goal):
                 inner = taken[:-1]
                 new = [n for n in inner if n not in kept]
                 # A path through another end is two shorter paths, each found on its own.
@@ -598,6 +629,46 @@ def bridge_paths(
         )
     ]
     return items, [json.loads(edges[edge_id][2]) for edge_id in used]
+
+
+def chained_paths(
+    state: Path,
+    ends: set[str],
+    tables: set[str],
+    shown: set[str],
+    max_hops: int,
+    include_unverified: bool = False,
+) -> list[dict]:
+    """B4 (N-I10): for each two of the `ends` with no direct line, the strongest shortest path of
+    at most `max_hops` edges over the `shown` relationships (`relationship_limit` still bounds what
+    the model sees, DEC-5) that stays inside `tables`, as table names and relationship ids. A chain
+    contained in a longer one is left out."""
+    if len(ends) < 2 or max_hops < 2:
+        return []
+    with closing(sqlite3.connect(_database(state))) as connection:
+        edges, ranks, adjacent = _visible_edges(connection, include_unverified)
+    adjacent = {
+        node: [step for step in steps if step[1] in shown] for node, steps in adjacent.items()
+    }
+    names = {
+        node: name
+        for left, right, body in edges.values()
+        for node, name in ((left, json.loads(body)["from"]), (right, json.loads(body)["to"]))
+    }
+    reach = {end: _distances(adjacent, end, max_hops) for end in sorted(ends & adjacent.keys())}
+    chains = []
+    for start, goal in itertools.combinations(reach, 2):
+        if reach[start].get(goal, 0) < 2:
+            continue
+        for taken, via in _shortest_paths(adjacent, reach, ranks, start, goal):
+            if tables.issuperset(taken):
+                chains.append({"tables": [names[start], *map(names.get, taken)], "via": via})
+                break
+    return [
+        {"tables": chain["tables"], "relationships": list(chain["via"])}
+        for chain in chains
+        if not any(set(chain["via"]) < set(other["via"]) for other in chains)
+    ]
 
 
 def fields_of(state: Path, object_ids: set[str]) -> list[dict]:

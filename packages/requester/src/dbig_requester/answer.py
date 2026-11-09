@@ -9,7 +9,7 @@ from http import HTTPStatus
 from pathlib import Path
 from typing import Any, Literal, get_args
 
-from dbig_contracts.security import secret_from_env
+from dbig_contracts.security import cap_model_client_logs, secret_from_env
 from openai import APIConnectionError, APIStatusError, APITimeoutError, OpenAI, omit
 from pydantic import BaseModel, ConfigDict, ValidationError
 
@@ -18,6 +18,7 @@ from .search import (
     SearchRequest,
     StaleIndexError,
     bridge_paths,
+    chained_paths,
     fields_of,
     question_scope,
     relationships_for,
@@ -74,6 +75,12 @@ LINEAGE_CLAIM = re.compile(r"\b(derived\s+from|flows\s+into|writes\s+to)\b", re.
 CORRECTION = (
     "Your last reply gave a verdict without an explanation. Reply again with the same fields: "
     "list in checked what you looked at, and explain the verdict in answer in a full sentence."
+)
+# The same, after an `answered` reply that cited nothing (B2).
+CITATION_CORRECTION = (
+    "Your last reply set outcome to answered but cited nothing. Reply again with the same fields: "
+    "put the returned IDs your answer rests on in citations, or set outcome to not_established "
+    "if the retrieved metadata does not show it."
 )
 _OUTCOME_WORDS = {
     re.sub(r"[\W_]+", " ", word).strip().casefold()
@@ -274,6 +281,16 @@ def answer_question(
     relationships += [
         line for line in path_lines if line["id"] not in {item["id"] for item in relationships}
     ]
+    # B4: every chain joining two retrieved objects inside the context, written out, because a
+    # model handed the separate lines did not connect them (N-I10).
+    chains = chained_paths(
+        state,
+        owners,
+        owners | {item["id"] for item in bridges},
+        {item["id"] for item in relationships},
+        config.path_max_hops,
+        config.include_unverified_cross_source,
+    )
     allowed |= {item["id"] for item in relationships}
     try:
         span = _trace(config, len(context))
@@ -282,6 +299,7 @@ def answer_question(
     choice = None  # stays None when no reply arrived
     attempts = 0
     failure: dict | None = None
+    cap_model_client_logs()
     try:
         model_client = client or OpenAI(
             base_url=config.base_url,
@@ -304,12 +322,19 @@ def answer_question(
                 "Put the verdict only in the outcome field. "
                 "List in checked what you looked at, and explain the verdict in answer. "
                 "A relationship between objects of two different sources cannot be joined "
-                "in one query; say so instead of writing one.",
+                "in one query; say so instead of writing one. "
+                "Each entry of paths is a chain of tables joined by the listed relationships: "
+                "when a path connects what is asked, follow it and cite its relationships.",
             },
             {
                 "role": "user",
                 "content": json.dumps(
-                    {"question": question, "items": context, "relationships": relationships},
+                    {
+                        "question": question,
+                        "items": context,
+                        "relationships": relationships,
+                        **({"paths": chains} if chains else {}),
+                    },
                     ensure_ascii=False,
                 ),
             },
@@ -333,22 +358,23 @@ def answer_question(
             if choice.finish_reason == FINISH_REASON_LENGTH:
                 raise _ModelFailure(TRUNCATED)
             parsed = Answer.model_validate_json(choice.message.content or "")
-            if not _unexplained(parsed):
+            unexplained = _unexplained(parsed)
+            if not unexplained and (parsed.citations or parsed.outcome == "not_established"):
                 break
             if attempts > config.answer_retries:
-                raise _ModelFailure(ANSWER_UNEXPLAINED)
+                if unexplained:
+                    raise _ModelFailure(ANSWER_UNEXPLAINED)
+                raise _ModelFailure(INVALID_CITATION, "none")
             messages = [
                 *messages,
                 {"role": "assistant", "content": choice.message.content or ""},
-                {"role": "user", "content": CORRECTION},
+                {"role": "user", "content": CORRECTION if unexplained else CITATION_CORRECTION},
             ]
         if config.max_answer_chars is not None and len(parsed.answer) > config.max_answer_chars:
             raise _ModelFailure(ANSWER_TOO_LONG)
         not_established = parsed.outcome == "not_established"
         if not set(parsed.citations) <= allowed:
             raise _ModelFailure(INVALID_CITATION, "unknown_id")
-        if not (parsed.citations or not_established):
-            raise _ModelFailure(INVALID_CITATION, "none")
         if LINEAGE_CLAIM.search(parsed.answer):
             raise ValueError("model asserted lineage")
     except Exception as error:

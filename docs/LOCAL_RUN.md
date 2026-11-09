@@ -9,7 +9,7 @@ and, if you enable it, your own vLLM.
 
 The flow is three commands per run, then as many questions as you like:
 
-```
+```text
 dbig collect            one signed bundle per database     (reads catalog metadata)
 dbig-builder assemble   one snapshot from all bundles      (infers relationships)
 dbig-builder render     one HTML page                      (what you open)
@@ -36,7 +36,7 @@ releases as of 2026-10-04, PostgreSQL 18.6, ClickHouse 26.9.10.4 and MongoDB 9.0
   across databases as well;
 - scan requests through both routes in step 10;
 - the one-line messages in the troubleshooting table for a refused login, an unreachable server
-  and a misspelt namespace.
+  and a misspelled namespace.
 
 Not verified: versions between and outside those two sets (they will probably work), your
 network, your certificates, your data's shapes, and anything involving a real model: the review
@@ -319,7 +319,7 @@ observation file is one JSON object:
 {"kind": "sql", "id": "q1", "source_id": "pg-main", "dialect": "postgres", "status": "executed", "observed_at": "2026-10-01T10:00:00Z", "sql": "SELECT ... FROM public.visits v JOIN public.accounts a ON v.account_ref = a.acct_no"}
 ```
 
-`lineage-paths` answers "where did this data come from", which needs a record of what actually
+`lineage-paths` answers "where did this data come from," which needs a record of what actually
 ran: SQL logs or pipeline events placed as JSON lines in the `observations` directory. With the
 directory empty, lineage paths are empty; relationships between tables still come from
 `join-paths`. The observation format is in `TECHNICAL_IMPLEMENTATION.md`.
@@ -347,8 +347,8 @@ leave the collector; the key never enters any file, and digests from different r
 compared.
 
 A measured zero overlap removes a candidate only when the parent's read was complete (fewer rows
-than `sample_rows`); against a sampled parent the candidate stays, marked "parent sampled, a zero
-is not a measurement". So `sample_rows` should cover your parent tables: the owner's live run uses
+than `sample_rows`); against a sampled parent the candidate stays, marked `parent sampled, a zero
+is not a measurement`. So `sample_rows` should cover your parent tables: the owner's live run uses
 `sample_rows = 25000`, `max_value_tokens = 4096` and, for MongoDB, `max_sample_bytes = 16777216`
 (the first 25,000 documents of all collections measured about 10 MB). These are run settings, not
 code defaults; each read costs up to `sample_rows` rows per table per collect.
@@ -367,7 +367,7 @@ known. See the commented keys in `examples/local/clickhouse.toml` and `mongodb.t
 
 ### What the overlap does to candidates
 
-With sampling on, a cross-source candidate whose child values were compared and found **0 of N** (N at least `min_token_support`, default 4, in the `[builder]` file) is dropped. A candidate with some overlap, even 21 % to 27 %, stays and shows its number and sample size: overlap ranks and warns, it never decides alone. A sample smaller than `min_token_support` keeps the candidate, marked "sample too small". With sampling off every candidate says "values not compared". A measured overlap is shown with a Wilson confidence interval (`overlap_confidence_level` in `[builder]`, default 0.95, strictly between 0 and 1); when the parent was only partly read the number is a floor and reads "at least". Two optional `[builder]` lists restrict candidates by source: `source_groups` (sources in different groups are not linked) and `forbidden_source_pairs`; both default to empty. See `examples/local/builder.toml`.
+With sampling on, a cross-source candidate whose child values were compared and found **0 of N** (N at least `min_token_support`, default 4, in the `[builder]` file) is dropped. A candidate with some overlap, even 21 % to 27 %, stays and shows its number and sample size: overlap ranks and warns, it never decides alone. A sample smaller than `min_token_support` keeps the candidate, marked `sample too small`. With sampling off every candidate says `values not compared`. A measured overlap is shown with a Wilson confidence interval (`overlap_confidence_level` in `[builder]`, default 0.95, strictly between 0 and 1); when the parent was only partly read the number is a floor and reads `at least`. Two optional `[builder]` lists restrict candidates by source: `source_groups` (sources in different groups are not linked) and `forbidden_source_pairs`; both default to empty. See `examples/local/builder.toml`.
 
 Other settings added after the live test, all optional, with defaults in the example files: `[builder.review] batch_size = 5` (candidates per model call); `[requester] exclude_objects` (per source glob list, hides schema-description collections; re-run `dbig-requester index`); `[requester.answer] relationship_limit = 20` (relationships given to the model, 0 turns them off); planner `cross_source_candidate_weight = 4` (how much longer a cross-source path must be to lose against a same-source one). `ask` can reply `NOT_ESTABLISHED_BY_CATALOGUE`: that is an answer ("the catalogue does not show this"), not an error.
 
@@ -413,7 +413,7 @@ choice; the model is told to treat them as data, not instructions.
 The JSON schema sent to the server no longer carries length or item bounds (`maxLength`,
 `minLength`, `maxItems`, `minItems`): llama.cpp refuses them ("failed to parse grammar"), and the
 limits are checked after the reply is parsed instead. Failures now have their own code:
-`MODEL_UNREACHABLE` (host down or firewalled), `MODEL_TIMEOUT`, `MODEL_REJECTED_REQUEST` (an HTTP 4xx),
+`MODEL_UNREACHABLE` (host down or behind a firewall), `MODEL_TIMEOUT`, `MODEL_REJECTED_REQUEST` (an HTTP 4xx),
 `MODEL_TRUNCATED` (the server stopped on `max_tokens`), `MODEL_INVALID_CITATION` and `MODEL_ANSWER_TOO_LONG` (longer than
 `max_answer_chars`, unset by default). Other causes keep
 `MODEL_UNAVAILABLE_OR_INVALID`.
@@ -468,12 +468,12 @@ A failed scan's receipt carries `error`, the same one-line message `collect` wou
 ## 11. Troubleshooting
 
 | Message | Meaning and fix |
-|---|---|
+| --- | --- |
 | `the server's TLS certificate did not verify` | Set `tls_ca_file` to your company CA, or check it is the right CA; connect with the host name the certificate names. |
 | `the server refused the login` | Wrong user or password in the connection variable it names, or the account does not exist on that server. |
-| `the database named in ... does not exist` | The PostgreSQL `database` in the connection variable is misspelt. |
+| `the database named in ... does not exist` | The PostgreSQL `database` in the connection variable is misspelled. |
 | `could not reach the server` | Wrong host or port, a firewall in between, or a slow network: raise `read_timeout_seconds`. |
-| `... listed in namespaces does not exist or is not visible to this account` | A misspelt schema or database in `namespaces`, or the account has no grant on it. No bundle was written. |
+| `... listed in namespaces does not exist or is not visible to this account` | A misspelled schema or database in `namespaces`, or the account has no grant on it. No bundle was written. |
 | `configuration ... is invalid` / `is not valid TOML` | The message names the setting and line; fix the file. |
 | `observation <file>:<line> is invalid` | That line of an observation file does not match the format in `TECHNICAL_IMPLEMENTATION.md`. |
 | `the scan reached a configured limit` | Raise `max_queries` (MongoDB needs about 3 × collections + databases), `max_objects` or `max_fields`. No bundle was written. |

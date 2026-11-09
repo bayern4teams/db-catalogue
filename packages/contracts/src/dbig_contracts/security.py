@@ -1,10 +1,18 @@
 """Boundary validation shared by private model, telemetry and secret-reference callers."""
 
+import logging
 import os
 from ipaddress import ip_address
 from urllib.parse import urlsplit
 
 from .errors import OperatorError
+
+
+def cap_model_client_logs() -> None:
+    """At DEBUG the model client's libraries log whole requests and replies (B1, AGENTS.md: no raw
+    prompt or response tracing). Called where a model client is used, so no setup can undo it."""
+    for name in ("openai", "httpx", "httpcore"):
+        logging.getLogger(name).setLevel(logging.WARNING)
 
 
 def is_loopback_literal(host: str) -> bool:

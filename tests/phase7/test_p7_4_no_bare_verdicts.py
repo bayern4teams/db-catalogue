@@ -39,7 +39,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "catalogue_fixes"))
 
 import pytest
 from catalogue_fixture_kit import MODEL_KEY, build_snapshot, schema_bounds
-from dbig_requester.answer import Answer, answer_question
+from dbig_requester.answer import CORRECTION, Answer, answer_question
 from dbig_requester.config import AnswerConfig
 from dbig_requester.search import index_snapshot
 
@@ -371,3 +371,48 @@ def test_nothing_from_the_exchange_reaches_the_log(tmp_path, monkeypatch, caplog
     out = "\n".join(r.getMessage() for r in caplog.records) + json.dumps(result)
     for word in ("zorblax", "gizmo-canary", "quokka-canary", MODEL_KEY):
         assert word not in out, word
+
+
+# --- B2: an answer with no citation gets the same bounded retry, with its own text ------------
+
+
+def test_an_answer_with_no_citation_is_retried_and_then_succeeds(tmp_path, monkeypatch):
+    uncited = reply("The gadget table has a website column.", cite=False)
+    result, requests = ask(tmp_path, monkeypatch, [uncited, EXPLAINED])
+    assert result["citations"], result
+    assert len(requests) == 2
+    correction = requests[1]["messages"][-1]
+    assert correction["role"] == "user"
+    assert correction["content"] != CORRECTION, "CORRECTION is about a missing explanation"
+    assert "citations" in correction["content"]
+
+
+def test_an_answer_that_never_cites_is_refused_after_the_retry(tmp_path, monkeypatch):
+    uncited = reply("The gadget table has a website column.", cite=False)
+    result, requests = ask(tmp_path, monkeypatch, [uncited, uncited])
+    assert result["error"]["code"] == "MODEL_INVALID_CITATION"
+    assert result["error"]["reason"]["citation_check"] == "none"
+    assert len(requests) == 2
+
+
+def test_no_retry_for_a_missing_citation_when_retries_are_off(tmp_path, monkeypatch):
+    uncited = reply("The gadget table has a website column.", cite=False)
+    result, requests = ask(tmp_path, monkeypatch, [uncited, EXPLAINED], answer_retries=0)
+    assert result["error"]["code"] == "MODEL_INVALID_CITATION"
+    assert len(requests) == 1
+
+
+# --- B1: the SDK's DEBUG log never holds the question or the reply ----------------------------
+
+
+def test_debug_logging_holds_neither_question_nor_reply(tmp_path, monkeypatch, caplog):
+    caplog.set_level(logging.DEBUG)
+    for name in ("openai", "httpx", "httpcore"):
+        caplog.set_level(logging.DEBUG, logger=name)
+    leaky = reply("not_established", outcome="not_established", cite=False,
+                  checked=["reply-canary-text"])
+    _, requests = ask(tmp_path, monkeypatch, [leaky, leaky])
+    assert len(requests) == 2
+    out = "\n".join(record.getMessage() for record in caplog.records)
+    assert "reply-canary-text" not in out
+    assert QUESTION_ONE not in out

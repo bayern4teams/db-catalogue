@@ -431,3 +431,31 @@ def test_serve_passes_the_access_log_choice_to_uvicorn(tmp_path, monkeypatch, fl
     )
     assert result.exit_code == 0, result.output
     assert seen["access_log"] is expected
+
+
+def test_index_of_a_signed_snapshot_is_one_line_with_the_fix(tmp_path):
+    """B8: a signed snapshot, which the requester holds no key for, is an operator error."""
+    from click.testing import CliRunner
+    from dbig_contracts.artifact import write_artifact
+    from dbig_requester.cli import main
+
+    snapshot = tmp_path / "snapshot"
+    write_artifact(
+        snapshot,
+        "catalog-snapshot",
+        {"nodes.jsonl": [], "edges.jsonl": [], "evidence.jsonl": [], "runs.jsonl": []},
+        producer="test/1",
+        source_run_ids=[],
+        signing_key=b"k" * 32,
+        key_id="k1",
+    )
+    config = tmp_path / "requester.toml"
+    config.write_text(
+        f'[requester]\nsnapshot_dir = "{snapshot}"\nstate_dir = "{tmp_path / "state"}"\n'
+        'api_key_env = "REQ_KEY"\n',
+        encoding="utf-8",
+    )
+    result = CliRunner().invoke(main, ["index", "--config", str(config)])
+    assert result.exit_code == 1, result.output
+    assert isinstance(result.exception, SystemExit), repr(result.exception)
+    assert "unsigned" in result.output

@@ -302,7 +302,7 @@ same command with a new `--out`: it must still publish, marked `partial` with
 - HTTP services: `dbig-requester serve` / `dbig-planner serve` on `127.0.0.1` with a token; a
   request without the token must get 401. Send a question to search with `POST /v1/catalogue/search`
   (JSON body, same fields as the query string of the `GET` route): the `GET` route puts the query in
-  the URL, and uvicorn's access log would record it. Start the service with `--no-access-log` to
+  the URL, and Uvicorn's access log would record it. Start the service with `--no-access-log` to
   keep request lines out of the log altogether.
 - Scan requests (`docs/LOCAL_RUN.md` step 10).
 

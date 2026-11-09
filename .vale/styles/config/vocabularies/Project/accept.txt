@@ -52,3 +52,15 @@ zizmor
 deptry
 recs
 matviews
+SQLLineage
+Metanome
+Desbordante
+Polars
+asyncpg
+chardet
+igraph
+rustworkx
+jsonschema
+DBRef
+joinability
+[Kk]eyness

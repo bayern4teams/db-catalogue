@@ -386,3 +386,39 @@ def test_the_limits_are_not_hard_coded_outside_the_config():
         "path_max_hops" in p.read_text(encoding="utf-8") for p in source.glob("*.py")
         if p.name != "config.py"
     ), "no module outside config.py reads path_max_hops"
+
+
+# --- B4: a chain through retrieved tables is written out, not left for the model to assemble ----
+
+
+def _chains(payload: dict) -> list[list[str]]:
+    return [chain["tables"] for chain in payload.get("paths", [])]
+
+
+def test_a_path_through_bridge_tables_is_written_as_one_chain(tmp_path, monkeypatch):
+    _, payload, _ = _ask(_state(tmp_path, monkeypatch, THREE_HOP), monkeypatch)
+    expected = ["gizmo", "hopone", "hoptwo", "sprocket"]
+    assert _chains(payload) in ([expected], [expected[::-1]])
+
+
+def test_a_chain_through_retrieved_tables_is_written_once_at_full_length(tmp_path, monkeypatch):
+    state = _state(tmp_path, monkeypatch, THREE_HOP)
+    _, payload, _ = _ask(state, monkeypatch, "How are gizmo hopone hoptwo and sprocket connected?")
+    expected = ["gizmo", "hopone", "hoptwo", "sprocket"]
+    assert _chains(payload) in ([expected], [expected[::-1]]), "sub-chains are not repeated"
+
+
+def test_every_chain_relationship_is_a_line_the_model_can_cite(tmp_path, monkeypatch):
+    state = _state(tmp_path, monkeypatch, THREE_HOP)
+    _, payload, _ = _ask(state, monkeypatch, "How are gizmo hopone hoptwo and sprocket connected?")
+    lines = {line["id"] for line in payload["relationships"]}
+    (chain,) = payload["paths"]
+    assert len(chain["relationships"]) == 3
+    assert set(chain["relationships"]) <= lines
+
+
+def test_no_chain_when_relationships_are_off_or_nothing_connects(tmp_path, monkeypatch):
+    state = _state(tmp_path / "a", monkeypatch, THREE_HOP)
+    assert "paths" not in _ask(state, monkeypatch, relationship_limit=0)[1]
+    state = _state(tmp_path / "b", monkeypatch, NO_PATH)
+    assert "paths" not in _ask(state, monkeypatch)[1]

@@ -234,7 +234,7 @@ def test_success_after_retry_is_clean_shape(tmp_path, monkeypatch):
 
 
 def test_debug_logs_bare_reply(tmp_path, monkeypatch, caplog):
-    """Informational: what the SDK logs at DEBUG when the bare reply is re-sent."""
+    """B1: the SDK's DEBUG log holds neither text when the bare reply is re-sent."""
     caplog.set_level(logging.DEBUG)
     leaky = reply(
         "not_established", outcome="not_established", cite=False, checked=["gizmo-canary-reply"]
@@ -242,9 +242,8 @@ def test_debug_logs_bare_reply(tmp_path, monkeypatch, caplog):
     _, requests = ask(tmp_path, monkeypatch, [leaky, leaky])
     assert len(requests) == 2, "the bare reply is re-sent once"
     out = "\n".join(r.getMessage() for r in caplog.records)
-    print(
-        "DEBUG has reply canary:", "gizmo-canary-reply" in out, "question canary:", "zorblax" in out
-    )
+    assert "gizmo-canary-reply" not in out
+    assert "zorblax" not in out
 
 
 def test_info_logs_clean_and_telemetry_attempts_on_success(tmp_path, monkeypatch, caplog):
