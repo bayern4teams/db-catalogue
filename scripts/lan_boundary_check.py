@@ -42,7 +42,7 @@ def _firewall():
 
 
 def _run(*arguments: str) -> str:
-    return subprocess.run(  # noqa: S603 # C5: reason=fixed tool names, arguments built here from deploy/.env; approved=owner via lead (Part 3 start), 2026-11-10; review=2027-05-10
+    return subprocess.run(  # noqa: S603 # C5: reason=fixed tool names, arguments built here from deploy/.env; approved=not yet, asked the lead session, 2026-11-10; review=2027-05-10
         arguments, capture_output=True, text=True, check=False
     ).stdout
 

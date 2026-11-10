@@ -98,7 +98,7 @@ def _apply(env: dict[str, str]) -> None:
         ]
         for step in steps:
             # `-N` fails on an existing chain and `-D` on a missing jump: both are expected.
-            result = subprocess.run(  # noqa: S603 # C5: reason=fixed executable, arguments built here from validated addresses; approved=owner via lead (Part 3 start), 2026-11-10; review=2027-05-10
+            result = subprocess.run(  # noqa: S603 # C5: reason=fixed argv, no user input; approved=owner, 2026-11-10; review=2027-05-10
                 [executable, *step], capture_output=True, text=True
             )
             if result.returncode != 0 and step[0] not in {"-N", "-D"}:

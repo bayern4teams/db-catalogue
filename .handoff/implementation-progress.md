@@ -20,7 +20,11 @@ Stopped 2026-11-10 at 92% of the 5-hour plan limit (80% rule). Resume from here.
 
 ## Next, in order
 
-1. B3 (D8): waits on the researcher's answer on the response shape (asked 2026-11-10).
+0. Stopped again at 94%; the 5-hour window resets 16:40 UTC. Then, in this order:
+   a. Read-only TLS check on the remote databases (owner yes, TODO.md), result per database
+      in TODO.md, one line each to the lead.
+   b. Rulings 1 to 3 of milestone 1 (TODO.md).
+1. B3 (D8): shape agreed with the researcher (TODO.md).
 2. Full-stack smoke test: `docker compose up` with generated secrets and config in scratch,
    LAN_IP=127.0.0.1, `/healthz` on all five, one assembly, reindex and graph through the API.
 3. Stamp `<!-- verified: PENDING -->` in ARCHITECTURE.md (Deployment) and

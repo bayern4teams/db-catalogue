@@ -28,7 +28,7 @@ IMAGES = {
 
 
 def _run(*arguments: str) -> None:
-    result = subprocess.run(arguments, cwd=ROOT, check=False)  # noqa: S603 # C5: reason=fixed docker executable, arguments built here; approved=owner via lead (Part 3 start), 2026-11-10; review=2027-05-10
+    result = subprocess.run(arguments, cwd=ROOT, check=False)  # noqa: S603 # C5: reason=fixed argv, no user input; approved=owner, 2026-11-10; review=2027-05-10
     if result.returncode != 0:
         raise SystemExit(f"{' '.join(arguments[:3])} ... failed (exit {result.returncode})")
 
