@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import importlib.metadata
 import importlib.util
+import ipaddress
 import re
 import sys
 from pathlib import Path
@@ -498,3 +499,37 @@ def test_an_import_name_is_matched_to_its_distribution(
 
 def test_every_package_in_the_repository_declares_what_it_imports(ci_check: ModuleType) -> None:
     ci_check._check_import_dependencies()
+
+
+# --- T1: deploy/compose.yaml keeps the LAN policy (report Part 3.4) ----------------------------
+
+HARDENED = {
+    "read_only": True, "cap_drop": ["ALL"], "security_opt": ["no-new-privileges:true"],
+    "user": "10001:10001", "mem_limit": "1073741824", "pids_limit": 128, "tmpfs": ["/scratch"],
+}
+
+
+def _service(**changes):
+    return {**HARDENED, "ports": [{"target": 8443, "host_ip": "192.168.1.10"}], **changes}
+
+
+def test_a_hardened_service_on_a_private_host_ip_passes(ci_check):
+    assert ci_check.compose_problems({"services": {"one": _service()}}) == []
+
+
+@pytest.mark.parametrize(
+    ("changes", "word"),
+    [
+        ({"ports": [{"target": 8443, "host_ip": str(ipaddress.IPv4Address(0))}]}, "host_ip"),
+        ({"ports": [{"target": 8443}]}, "host_ip"),
+        ({"ports": [{"target": 8443, "host_ip": "8.8.8.8"}]}, "host_ip"),
+        ({"privileged": True}, "privileged"),
+        ({"network_mode": "host"}, "network_mode"),
+        ({"read_only": False}, "read_only"),
+        ({"cap_drop": []}, "cap_drop"),
+        ({"pids_limit": None}, "pids_limit"),
+    ],
+)
+def test_each_break_of_the_lan_policy_is_named(ci_check, changes, word):
+    problems = ci_check.compose_problems({"services": {"one": _service(**changes)}})
+    assert any(word in problem for problem in problems), problems

@@ -1,10 +1,13 @@
 import json
+import sqlite3
+import threading
+import time
 from datetime import UTC, datetime, timedelta
 
 import pytest
 from dbig_collectors.api import create_app as collector_app
 from dbig_collectors.config import SourceConfig
-from dbig_collectors.scan import accept_scan, process_next
+from dbig_collectors.scan import accept_scan, process_next, run_worker, scan_status
 from dbig_contracts.scan import ScanReceipt, ScanRequest, SignedScanRequest, sign_scan
 from dbig_requester.config import ScanConfig
 from dbig_requester.scan import dispatch_scan
@@ -187,3 +190,30 @@ def test_a_queue_from_before_failure_reasons_keeps_working(tmp_path):
     assert (receipt.status, receipt.bundle_path, receipt.error) == (
         "complete", "/bundles/old-1", None,
     )
+
+
+def test_the_serve_worker_requeues_a_crashed_scan_and_processes_it(tmp_path, monkeypatch):
+    """Report Part 3: a scan left `running` by a crash goes back to the queue when the worker
+    starts, and the worker then processes it. The request has expired by then, so processing
+    ends in its EXPIRED_REQUEST failure without any database."""
+    monkeypatch.setenv("DBIG_SIGNING_KEY", KEY)
+    queue = tmp_path / "site-queue.sqlite3"
+    short = request().model_copy(update={"expires_at": datetime.now(UTC) + timedelta(seconds=1)})
+    accept_scan(sign_scan(short, "test", KEY.encode()), site_config(), queue)
+    with sqlite3.connect(queue) as connection:
+        connection.execute("UPDATE scans SET status='running'")
+    time.sleep(1.2)
+    stop = threading.Event()
+    config = site_config().model_copy(update={"scan_poll_seconds": 0.05})
+    worker = threading.Thread(target=run_worker, args=(config, queue, tmp_path / "out", stop))
+    worker.start()
+    try:
+        deadline = time.monotonic() + 10
+        while scan_status(queue, "request-1").status != "failed":
+            assert time.monotonic() < deadline, "the worker never processed the requeued scan"
+            time.sleep(0.05)
+    finally:
+        stop.set()
+        worker.join(timeout=5)
+    assert not worker.is_alive()
+    assert scan_status(queue, "request-1").error.startswith("EXPIRED_REQUEST")

@@ -1,9 +1,15 @@
 """Boundary validation shared by private model, telemetry and secret-reference callers."""
 
+import hashlib
+import hmac
 import logging
 import os
+from datetime import UTC, datetime
 from ipaddress import ip_address
+from pathlib import Path
 from urllib.parse import urlsplit
+
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, ValidationError
 
 from .errors import OperatorError
 
@@ -72,9 +78,20 @@ def secret_from_env(reference: str | None, *, purpose: str) -> str:
             f"{purpose} requires a non-empty environment variable reference"
         )
     value = os.environ.get(reference)
+    file_reference = os.environ.get(f"{reference}_FILE")
+    if value is None and file_reference:
+        # A mounted secret file (report Part 3: secrets as files, not in the environment).
+        try:
+            value = Path(file_reference).read_text(encoding="utf-8").strip()
+        except (OSError, UnicodeDecodeError) as error:
+            raise SecretReferenceError(
+                f"{purpose} reads the file named by {reference}_FILE, which cannot be read "
+                f"({type(error).__name__}); mount it readable by the service user"
+            ) from None
     if value is None:
         raise SecretReferenceError(
-            f"{purpose} reads environment variable {reference}, which is not set"
+            f"{purpose} reads environment variable {reference}, which is not set; set it, or "
+            f"set {reference}_FILE to a file that holds it"
         )
     if not value.strip():
         raise SecretReferenceError(
@@ -104,3 +121,118 @@ def key_from_env(reference: str | None, *, purpose: str) -> bytes:
             f"{MIN_KEY_BYTES} bytes; generate a longer one"
         )
     return key
+
+
+def bind_refusal(host: str, *, tls: bool) -> str | None:
+    """Why `serve` must not bind `host`, as a one-line fix, or None when it may.
+
+    The one bind rule for every service (report Part 3, layer L1): a loopback literal binds as
+    before; a private IP literal binds only with TLS (owner decision D1, 2026-11-10: "TLS,
+    private CA"), because a key sent in plain text can be read by any host on the LAN. A name,
+    an all-interfaces address and a public address never bind.
+    """
+    if is_loopback_literal(host):
+        return None
+    candidate = host.strip()
+    if candidate.startswith("[") and candidate.endswith("]"):
+        candidate = candidate[1:-1]
+    try:
+        address = ip_address(candidate)
+    except ValueError:
+        return "bind to a loopback or private IP literal, not a name, which can resolve anywhere"
+    if address.is_unspecified:
+        return "never bind all interfaces (0.0.0.0 or ::); bind loopback or the one LAN address"
+    if not address.is_private:
+        return "bind only to a loopback or private LAN address"
+    if not tls:
+        return "without TLS only loopback binds; a LAN bind needs --tls-cert and --tls-key"
+    return None
+
+
+def serve_refusal(host: str, tls_cert: object | None, tls_key: object | None) -> str | None:
+    """`bind_refusal` for a `serve` command's `--host`, `--tls-cert` and `--tls-key`."""
+    if (tls_cert is None) != (tls_key is None):
+        return "give both --tls-cert and --tls-key, or neither"
+    return bind_refusal(host, tls=tls_cert is not None)
+
+
+class CallerKey(BaseModel):
+    """One caller's key, stored only as the SHA-256 of the key text (report Part 3, layer L5)."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    caller: str = Field(min_length=1, max_length=64)
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    scopes: frozenset[str] = Field(min_length=1)
+    expires_at: AwareDatetime
+
+
+class _CallerKeyFile(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    keys: list[CallerKey] = Field(min_length=1)
+
+
+ANY_SCOPE = "*"
+
+
+def load_caller_keys(path: Path) -> list[CallerKey]:
+    """The keys in one service's mounted key file (owner ruling D4: one file per service).
+
+    The file is JSON, `{"keys": [{"caller", "sha256", "scopes", "expires_at"}]}`. A key rotates
+    by listing a second hash for the same caller until the old one is removed or expires.
+    """
+    try:
+        return _CallerKeyFile.model_validate_json(path.read_bytes()).keys
+    except OSError as error:
+        raise SecretReferenceError(
+            f"caller key file {path} cannot be read ({type(error).__name__}); mount it read-only"
+        ) from None
+    except ValidationError as error:
+        problems = sorted({".".join(map(str, item["loc"])) for item in error.errors()})
+        raise SecretReferenceError(
+            f"caller key file {path} is invalid at {', '.join(problems)}; each key needs a "
+            "caller, a 64-hex sha256, at least one scope and an expires_at with a time zone"
+        ) from None
+
+
+def token_caller_key(token: str) -> CallerKey:
+    """The single bearer token of earlier releases, as one key with every scope."""
+    return CallerKey(
+        caller="token",
+        sha256=hashlib.sha256(token.encode("utf-8")).hexdigest(),
+        scopes=frozenset({ANY_SCOPE}),
+        expires_at=datetime.max.replace(tzinfo=UTC),
+    )
+
+
+def authenticate(
+    keys: list[CallerKey], authorization: str | None, now: datetime | None = None
+) -> CallerKey | None:
+    """The unexpired key whose hash matches a `Bearer` header, or None. Every listed hash is
+    compared, in constant time, so the time taken does not tell which one was close."""
+    if not authorization or not authorization.startswith("Bearer "):
+        return None
+    supplied = hashlib.sha256(authorization[len("Bearer ") :].encode("utf-8")).hexdigest()
+    moment = now or datetime.now(UTC)
+    found = None
+    for key in keys:
+        if hmac.compare_digest(supplied, key.sha256) and key.expires_at > moment:
+            found = key
+    return found
+
+
+def permits(key: CallerKey, scope: str) -> bool:
+    return ANY_SCOPE in key.scopes or scope in key.scopes
+
+
+KEYS_FILE_ENV = "DBIG_CALLER_KEYS_FILE"
+
+
+def service_keys(token_env: str | None, *, purpose: str) -> list[CallerKey]:
+    """The caller keys a service accepts: the key file named by `DBIG_CALLER_KEYS_FILE` when set
+    (owner ruling D4), else the single bearer token of earlier releases from `token_env`."""
+    keys_file = os.environ.get(KEYS_FILE_ENV)
+    if keys_file:
+        return load_caller_keys(Path(keys_file))
+    return [token_caller_key(secret_from_env(token_env, purpose=purpose))]

@@ -1,17 +1,18 @@
 """Collector site command line."""
 
 import json
+import threading
 from pathlib import Path
 
 import click
 from dbig_contracts.artifact import read_artifact
 from dbig_contracts.errors import OperatorError
 from dbig_contracts.scan import SignedScanRequest
-from dbig_contracts.security import is_loopback_literal, key_from_env
+from dbig_contracts.security import key_from_env, serve_refusal
 
 from .config import load_config
 from .runtime import collect
-from .scan import accept_scan, process_next
+from .scan import accept_scan, process_next, run_worker
 
 
 class SecretAwareGroup(click.Group):
@@ -85,13 +86,42 @@ def process_scans_command(config_path: Path, queue_db: Path, out_root: Path) -> 
     "--config", "config_path", type=click.Path(path_type=Path, exists=True), required=True
 )
 @click.option("--queue-db", type=click.Path(path_type=Path), required=True)
+@click.option(
+    "--bundle-root",
+    type=click.Path(path_type=Path, file_okay=False),
+    help="Run the scan worker in this process, writing bundles here.",
+)
 @click.option("--host", required=True)
 @click.option("--port", type=int, required=True)
-def serve(config_path: Path, queue_db: Path, host: str, port: int) -> None:
-    if not is_loopback_literal(host):
-        raise click.UsageError("collector API binds only to loopback; use a private TLS proxy")
+@click.option("--tls-cert", type=click.Path(path_type=Path, exists=True, dir_okay=False))
+@click.option("--tls-key", type=click.Path(path_type=Path, exists=True, dir_okay=False))
+def serve(
+    config_path: Path,
+    queue_db: Path,
+    bundle_root: Path | None,
+    host: str,
+    port: int,
+    tls_cert: Path | None,
+    tls_key: Path | None,
+) -> None:
+    # The one bind rule, before any configuration is read.
+    if refusal := serve_refusal(host, tls_cert, tls_key):
+        raise click.UsageError(refusal)
     import uvicorn
 
     from .api import create_app
 
-    uvicorn.run(create_app(load_config(config_path), queue_db), host=host, port=port)
+    config = load_config(config_path)
+    app = create_app(config, queue_db)
+    stop = threading.Event()
+    if bundle_root is not None:
+        threading.Thread(
+            target=run_worker, args=(config, queue_db, bundle_root, stop), daemon=True
+        ).start()
+    uvicorn.run(
+        app,
+        host=host,
+        port=port,
+        ssl_certfile=tls_cert,
+        ssl_keyfile=tls_key,
+    )

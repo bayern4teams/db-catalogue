@@ -7,7 +7,7 @@ from typing import Literal
 import click
 from dbig_contracts.errors import OperatorError
 from dbig_contracts.scan import ScanRequest
-from dbig_contracts.security import is_loopback_literal
+from dbig_contracts.security import serve_refusal
 
 from .answer import answer_question
 from .config import load_config
@@ -145,13 +145,28 @@ def request_scan(config_path: Path, request_path: Path, adapter: str) -> None:
     is_flag=True,
     help="Do not log request lines; the GET search route carries the query in the URL.",
 )
-def serve(config_path: Path, host: str, port: int, no_access_log: bool) -> None:
-    if not is_loopback_literal(host):
-        raise click.UsageError("requester API binds only to loopback; use a private TLS proxy")
+@click.option("--tls-cert", type=click.Path(path_type=Path, exists=True, dir_okay=False))
+@click.option("--tls-key", type=click.Path(path_type=Path, exists=True, dir_okay=False))
+def serve(
+    config_path: Path,
+    host: str,
+    port: int,
+    no_access_log: bool,
+    tls_cert: Path | None,
+    tls_key: Path | None,
+) -> None:
+    # The one bind rule, before any configuration is read.
+    if refusal := serve_refusal(host, tls_cert, tls_key):
+        raise click.UsageError(refusal)
     import uvicorn
 
     from .api import create_app
 
     uvicorn.run(
-        create_app(load_config(config_path)), host=host, port=port, access_log=not no_access_log
+        create_app(load_config(config_path)),
+        host=host,
+        port=port,
+        access_log=not no_access_log,
+        ssl_certfile=tls_cert,
+        ssl_keyfile=tls_key,
     )

@@ -337,16 +337,25 @@ dependencies = [
     { name = "rapidfuzz" },
 ]
 
+[package.optional-dependencies]
+api = [
+    { name = "fastapi" },
+    { name = "uvicorn" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "click", specifier = ">=8.2,<9" },
     { name = "dbig-contracts", editable = "packages/contracts" },
+    { name = "fastapi", marker = "extra == 'api'", specifier = ">=0.120,<1" },
     { name = "langfuse", specifier = ">=4,<5" },
     { name = "langgraph", specifier = ">=1.2,<2" },
     { name = "openai", specifier = ">=2,<3" },
     { name = "pydantic", specifier = ">=2.11,<3" },
     { name = "rapidfuzz", specifier = ">=3.14,<4" },
+    { name = "uvicorn", marker = "extra == 'api'", specifier = ">=0.35,<1" },
 ]
+provides-extras = ["api"]
 
 [[package]]
 name = "dbig-catalogue-requester"
@@ -424,8 +433,19 @@ dependencies = [
     { name = "pydantic" },
 ]
 
+[package.optional-dependencies]
+api = [
+    { name = "fastapi" },
+    { name = "uvicorn" },
+]
+
 [package.metadata]
-requires-dist = [{ name = "pydantic", specifier = ">=2.11,<3" }]
+requires-dist = [
+    { name = "fastapi", marker = "extra == 'api'", specifier = ">=0.120,<1" },
+    { name = "pydantic", specifier = ">=2.11,<3" },
+    { name = "uvicorn", marker = "extra == 'api'", specifier = ">=0.35,<1" },
+]
+provides-extras = ["api"]
 
 [[package]]
 name = "dbig-lineage-planner"

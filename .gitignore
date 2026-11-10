@@ -5,6 +5,8 @@
 *.pem
 *.key
 *.p12
+# Deployment secrets and generated certificates (deploy/compose.yaml mounts them)
+deploy/secrets/
 
 # Python and test products
 .venv/

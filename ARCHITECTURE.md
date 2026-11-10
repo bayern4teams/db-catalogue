@@ -29,45 +29,57 @@ The only things that cross a trust boundary are signed bundles, a snapshot and s
 
 ## Deployment
 
-<!-- verified: 6e43d33 -->
+<!-- verified: PENDING -->
 
-No container image or orchestration file ships with this project. Each role is a Python process started by its own command. The host, port and every secret come from the operator.
+Two ways to run it. Each role can run as a Python process started by its own command, as before. Or the five packages run as five containers on one LAN host, from `deploy/compose.yaml` (report Part 3; owner decisions D1, D2 and D6 of 2026-11-10).
 
 ```mermaid
-flowchart TB
-  subgraph site[Source site]
-    DB[(source database)]
-    COL["dbig collect, accept-scan, process-scans, serve"]
-    DB --> COL
-  end
-  subgraph central[Central host]
-    BLD["dbig-builder assemble"]
-    REQ["dbig-requester serve"]
-    PLN["dbig-planner serve"]
-  end
-  GPU["private vLLM, Linux or WSL2 GPU"]
-  LF["self-hosted Langfuse"]
-  PROXY["private TLS proxy"]
-  COL -->|bundle files| BLD
-  BLD -->|snapshot files| REQ
-  BLD -->|snapshot files| PLN
-  BLD --> GPU
-  BLD --> LF
-  REQ --> LF
-  REQ --> GPU
-  PROXY -->|loopback| REQ
-  PROXY -->|loopback| PLN
+flowchart LR
+  caller[program on the LAN] -->|HTTPS, caller key| requester
+  caller -->|HTTPS, caller key| planner
+  caller -->|HTTPS, caller key| builder
+  caller -->|HTTPS, caller key| contracts
+  requester -->|signed scan request| collectors
+  requester --> vllm[private vLLM]
+  collectors -->|verified TLS| dbs[(databases)]
+  collectors --> bundles[(bundles volume)]
+  bundles --> builder
+  builder --> snapshots[(snapshots volume)]
+  snapshots --> requester
+  snapshots --> planner
 ```
 
-| Process | Command | Network | Needs |
+| Container | Command | State | Outbound |
 | --- | --- | --- | --- |
-| Collector | `dbig collect` (one run) | Outbound to its source, verified TLS by default | Source connection and signing key, as secret references |
-| Collector intake | `dbig serve` | Loopback bind, bearer token | Signing keys for scan requests |
-| Builder | `dbig-builder assemble` (one run) | Outbound to vLLM and Langfuse only when review is configured | Signing keys to verify bundles |
-| Requester | `dbig-requester serve` | Loopback bind, bearer token | Snapshot, state directory, optional vLLM |
-| Planner | `dbig-planner serve` | Loopback bind, bearer token | Graph directory from `dbig-planner build` |
+| `collectors` | `dbig serve --bundle-root ...`: scan intake and the worker in one process | queue SQLite, `bundles` read-write | its databases, over verified TLS |
+| `builder` | `dbig-builder serve`: assembly jobs | `bundles` read-only, `snapshots` read-write, job SQLite | vLLM and Langfuse when review is on |
+| `requester` | `dbig-requester serve` | `snapshots` read-only, search index | vLLM, the collector, Langfuse |
+| `planner` | `dbig-planner serve` | `snapshots` read-only, graph | none |
+| `contracts` | `dbig-contracts serve`: the IR schemas and a record check | none | none |
 
-Each `serve` command refuses a non-loopback host and takes `--port` as a required argument. Remote access needs a TLS proxy that you run. A public exposure is unsupported. See [TECHNICAL_IMPLEMENTATION.md](TECHNICAL_IMPLEMENTATION.md) §17.3 for the routes and §5 for configuration precedence.
+The caller runs the pipeline (lead ruling D3 (a)): it asks the requester for a scan, starts an assembly on the builder, then calls `POST /v1/catalogue/reindex` and `POST /v1/planner/graph`. The builder points `snapshots/current` at each new snapshot. Until the reindex, search answers `STALE_INDEX`.
+
+**The LAN boundary.** No inbound traffic from outside the LAN and no outbound traffic beyond it, held by five layers:
+
+| Layer | Mechanism | Where |
+| --- | --- | --- |
+| L1 host bind | each published port has `host_ip` set to the LAN address, never all interfaces | `deploy/compose.yaml`, checked by `scripts/ci_check.py::compose_problems` (T1) |
+| L2 inbound firewall | `DOCKER-USER` drops LAN-interface traffic from outside the LAN CIDR | `deploy/lan_firewall.py`, `deploy/dbig-firewall.service` |
+| L3 egress firewall | the compose subnet reaches only the listed database, model and Langfuse addresses | same |
+| L4 application | every model, Langfuse and collector URL passes `private_base_url`; a `serve` binds only loopback, or a private IP literal with TLS | `packages/contracts/src/dbig_contracts/security.py::bind_refusal` |
+| L5 caller identity | a key per caller, stored as SHA-256 with scopes and an expiry; two hashes per caller let a key rotate | `packages/contracts/src/dbig_contracts/service.py::ServiceGuard` |
+
+Every service serves TLS with an IP-SAN certificate from a private CA (`scripts/make_ci_certs.py --ip`). Docker's `iptables` backend is required, because the `nftables` backend has no `DOCKER-USER` chain. Containers run read-only as uid 10001 with every capability dropped. Secrets are files under `deploy/secrets/`, read through `<NAME>_FILE`. Images are built on a machine with internet and loaded on the host from one `docker save` tarball (`scripts/build_images.py`), so the host needs no outbound access. `scripts/lan_boundary_check.py` checks the boundary on the host (T4, T5, T7). Those live checks have not run yet.
+
+| Setting | Where | Example |
+| --- | --- | --- |
+| LAN address, LAN CIDR, interface | `deploy/.env` | `LAN_IP`, `LAN_CIDR`, `LAN_INTERFACE` |
+| Compose subnet and one address per service | `deploy/.env` | `DBIG_SUBNET`, `REQUESTER_IP` |
+| Allowed outbound targets | `deploy/.env` | `DBIG_EGRESS=ip:port,...` |
+| Caller keys, one file per service | `deploy/secrets/<service>-keys.json` | `{"keys": [{"caller", "sha256", "scopes", "expires_at"}]}` |
+| Service configuration | `deploy/config/<service>.toml` | the same TOML as the CLIs |
+
+Without Compose, each `serve` command still binds loopback by default, and a LAN bind needs `--tls-cert` and `--tls-key`. A public exposure is unsupported. See [TECHNICAL_IMPLEMENTATION.md](TECHNICAL_IMPLEMENTATION.md) §17.3 for the routes and §5 for configuration precedence.
 
 ## Main data flow
 

@@ -72,6 +72,8 @@ class SourceConfig(BaseModel):
     max_request_bytes: int = Field(default=65_536, ge=1)
     max_queued_scans: int = Field(default=20, ge=1)
     max_request_ttl_seconds: int = Field(default=3600, ge=1)
+    # Seconds the `serve` worker waits before looking again when the queue is empty.
+    scan_poll_seconds: float = Field(default=5.0, gt=0, le=3600)
 
     @model_validator(mode="after")
     def token_key_needs_an_id(self) -> SourceConfig:

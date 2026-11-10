@@ -1,0 +1,9 @@
+# Only what the image installs; caches, graphs, artifacts and .env never enter the build context.
+*
+!pyproject.toml
+!uv.lock
+!README.md
+!LICENSE
+!packages/
+packages/**/__pycache__
+packages/**/*.egg-info

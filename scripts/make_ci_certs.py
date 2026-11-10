@@ -14,6 +14,14 @@ because `SSL_CERT_FILE` replaces the whole trust store: pointing it at a lone th
 break every other TLS connection in the job.
 
     uv run python scripts/make_ci_certs.py --out /tmp/certs
+
+The same script issues the services' LAN certificates (owner decision D1, 2026-11-10: "TLS,
+private CA"). Run it on the operator's machine, once per service, into one folder: the first run
+makes the CA, later runs reuse it. Keep `ca.key` off the LAN host; copy each service's `.crt`
+and `.key`, and `ca.crt` as the trust bundle, into `deploy/secrets/`.
+
+    python scripts/make_ci_certs.py --out ../dbig-ca --name requester --ip 172.30.0.12 \
+        --ip 192.0.2.10 --days 397
 """
 
 from __future__ import annotations
@@ -22,6 +30,7 @@ import argparse
 import shutil
 import ssl
 import subprocess
+from ipaddress import ip_address
 from pathlib import Path
 
 # The fixtures are reached over loopback, so the certificate must carry an IP SAN. A DNS name
@@ -43,40 +52,42 @@ def _openssl(*arguments: str) -> None:
         )
 
 
-def generate(out: Path) -> dict[str, Path]:
-    """Write a CA, a server key and certificate, a combined PEM and a trust bundle."""
+def generate(
+    out: Path, *, name: str = "server", ips: tuple[str, ...] = (), days: str = DAYS
+) -> dict[str, Path]:
+    """Write a CA (unless `out` holds one), a server key and certificate for `ips` (default
+    loopback), a combined PEM and a trust bundle."""
     out.mkdir(parents=True, exist_ok=True)
     ca_key, ca_crt = out / "ca.key", out / "ca.crt"
-    server_key, server_csr, server_crt = out / "server.key", out / "server.csr", out / "server.crt"
+    server_key, server_crt = out / f"{name}.key", out / f"{name}.crt"
+    server_csr = out / f"{name}.csr"
+    alt_names = ",".join(f"IP:{ip_address(ip)}" for ip in ips) if ips else SUBJECT_ALT_NAME
+    common_name = str(ip_address(ips[0])) if ips else "127.0.0.1"
 
-    _openssl("req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", DAYS,
-             "-keyout", str(ca_key), "-out", str(ca_crt),
-             "-subj", "/CN=dbig-ci-throwaway-ca",
-             # Python 3.13 verifies with VERIFY_X509_STRICT, which rejects a CA without
-             # keyUsage and a leaf without an authority key identifier.
-             "-addext", "basicConstraints=critical,CA:TRUE",
-             "-addext", "keyUsage=critical,keyCertSign,cRLSign")
+    if not (ca_key.is_file() and ca_crt.is_file()):
+        # The CI CA keeps its throwaway name; one made for LAN addresses is the private CA.
+        _make_ca(ca_key, ca_crt, days, "dbig-private-ca" if ips else "dbig-ci-throwaway-ca")
     _openssl("req", "-newkey", "rsa:2048", "-nodes",
              "-keyout", str(server_key), "-out", str(server_csr),
-             "-subj", "/CN=127.0.0.1")
+             "-subj", f"/CN={common_name}")
     # The SAN goes in an extension file: `openssl x509 -req` does not carry extensions over
     # from the request, so without this the certificate would have no SAN and `check_hostname`
     # would reject it however correct the CA chain was.
-    extensions = out / "server.ext"
+    extensions = out / f"{name}.ext"
     extensions.write_text(
-        f"subjectAltName={SUBJECT_ALT_NAME}\nbasicConstraints=CA:FALSE\n"
+        f"subjectAltName={alt_names}\nbasicConstraints=CA:FALSE\n"
         "keyUsage=digitalSignature,keyEncipherment\nextendedKeyUsage=serverAuth\n"
         "authorityKeyIdentifier=keyid,issuer\nsubjectKeyIdentifier=hash\n",
         encoding="utf-8",
     )
-    _openssl("x509", "-req", "-in", str(server_csr), "-days", DAYS,
+    _openssl("x509", "-req", "-in", str(server_csr), "-days", days,
              "-CA", str(ca_crt), "-CAkey", str(ca_key), "-CAcreateserial",
              "-out", str(server_crt), "-extfile", str(extensions))
     server_csr.unlink()
     extensions.unlink()
 
     # MongoDB wants one file holding key and certificate together.
-    combined = out / "server.pem"
+    combined = out / f"{name}.pem"
     combined.write_bytes(server_key.read_bytes() + server_crt.read_bytes())
 
     # The system store plus this CA, so other TLS in the job keeps working.
@@ -98,10 +109,27 @@ def generate(out: Path) -> dict[str, Path]:
     }
 
 
+def _make_ca(ca_key: Path, ca_crt: Path, days: str, common_name: str) -> None:
+    _openssl("req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", days,
+             "-keyout", str(ca_key), "-out", str(ca_crt),
+             "-subj", f"/CN={common_name}",
+             # Python 3.13 verifies with VERIFY_X509_STRICT, which rejects a CA without
+             # keyUsage and a leaf without an authority key identifier.
+             "-addext", "basicConstraints=critical,CA:TRUE",
+             "-addext", "keyUsage=critical,keyCertSign,cRLSign")
+    ca_key.chmod(0o600)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, required=True)
-    written = generate(parser.parse_args().out)
+    parser.add_argument("--name", default="server", help="file stem of the server key and cert")
+    parser.add_argument("--ip", action="append", default=[], help="an IP SAN; repeat for more")
+    parser.add_argument("--days", default=DAYS, help="validity of a new CA and of the cert")
+    arguments = parser.parse_args()
+    written = generate(
+        arguments.out, name=arguments.name, ips=tuple(arguments.ip), days=arguments.days
+    )
     for name, path in written.items():
         print(f"{name}={path}")
 

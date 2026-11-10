@@ -85,3 +85,61 @@ def test_serve_binds_and_answers_one_authenticated_request(tmp_path, package, se
         process.terminate()
         process.wait(timeout=10)
         process.stderr.close()
+
+
+def test_serve_over_tls_with_a_caller_key_file(tmp_path):
+    """Report Part 3 (owner D1 and D4): `serve --tls-cert --tls-key` answers HTTPS that verifies
+    against the private CA, `/healthz` needs no key, and a key from the mounted key file is
+    accepted. Plain HTTP on the same port gets no answer."""
+    import hashlib
+    import importlib.util
+    import json
+    import ssl
+    from datetime import UTC, datetime, timedelta
+    from pathlib import Path
+
+    spec = importlib.util.spec_from_file_location(
+        "make_ci_certs", Path(__file__).parents[1] / "scripts" / "make_ci_certs.py"
+    )
+    certs = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(certs)
+    made = certs.generate(tmp_path / "certs")
+    keys = tmp_path / "keys.json"
+    keys.write_text(json.dumps({"keys": [{
+        "caller": "pipeline", "sha256": hashlib.sha256(BEARER.encode()).hexdigest(),
+        "scopes": ["search"], "expires_at": (datetime.now(UTC) + timedelta(days=1)).isoformat(),
+    }]}), encoding="utf-8")
+    config, (method, path, extra), expected = _requester(tmp_path)
+    port = _free_port()
+    process = subprocess.Popen(  # noqa: S603 # C5: reason=fixed argv of this interpreter, no shell; approved=owner via lead (Part 3 start), 2026-11-10; review=2027-05-10
+        [
+            sys.executable, "-c", "from dbig_requester.cli import main; main()",
+            "serve", "--config", str(config), "--host", "127.0.0.1", "--port", str(port),
+            "--tls-cert", str(made["cert"]), "--tls-key", str(made["key"]),
+        ],
+        env={**os.environ, "DBIG_CALLER_KEYS_FILE": str(keys)},
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+    )
+    secure = httpx.Client(verify=ssl.create_default_context(cafile=made["ca"]), base_url=f"https://127.0.0.1:{port}")
+    try:
+        deadline = time.monotonic() + 30
+        while True:
+            try:
+                health = secure.get("/healthz")
+                break
+            except httpx.TransportError:
+                assert process.poll() is None, process.stderr.read().decode()
+                assert time.monotonic() < deadline, "the server never bound its port"
+                time.sleep(0.2)
+        assert (health.status_code, health.json()) == (200, {"status": "ok"})
+        assert secure.request(method, path, **extra).status_code == 401
+        reply = secure.request(method, path, headers={"Authorization": f"Bearer {BEARER}"}, **extra)
+        assert reply.status_code == expected, reply.text
+        with pytest.raises(httpx.TransportError):
+            httpx.get(f"http://127.0.0.1:{port}/healthz", timeout=5)
+    finally:
+        secure.close()
+        process.terminate()
+        process.wait(timeout=10)
+        process.stderr.close()

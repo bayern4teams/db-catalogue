@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import ast
 import importlib.metadata
+import json
 import re
+import shutil
 import subprocess
 import sys
 import tomllib
@@ -213,6 +215,55 @@ def _check_import_dependencies() -> None:
         )
 
 
+# Test T1 (report Part 3.4): what every service in deploy/compose.yaml must carry.
+HARDENING = {"read_only": True, "cap_drop": ["ALL"], "security_opt": ["no-new-privileges:true"]}
+HARDENING_PRESENT = ("user", "mem_limit", "pids_limit", "tmpfs")
+
+
+def compose_problems(config: dict) -> list[str]:
+    """T1 on the output of `docker compose config --format json`: every published port binds a
+    private `host_ip`, no host network or privileged container, and the hardening keys."""
+    import ipaddress
+
+    problems = []
+    for name, service in config.get("services", {}).items():
+        if service.get("privileged"):
+            problems.append(f"{name}: privileged")
+        if service.get("network_mode") == "host":
+            problems.append(f"{name}: network_mode host")
+        for key, value in HARDENING.items():
+            if service.get(key) != value:
+                problems.append(f"{name}: {key} must be {value}")
+        problems += [f"{name}: {key} missing" for key in HARDENING_PRESENT if not service.get(key)]
+        for port in service.get("ports", []):
+            try:
+                address = ipaddress.ip_address(port.get("host_ip", ""))
+            except ValueError:
+                address = None
+            if address is None or address.is_unspecified or not address.is_private:
+                problems.append(f"{name}: port {port.get('target')} needs a private host_ip")
+    return problems
+
+
+def _check_compose() -> None:
+    if shutil.which("docker") is None:
+        # C5 exception, said aloud rather than silent. Reason: the GitLab repository-policy
+        # image has no Docker, so T1 runs where Docker is (GitHub runners, local). Approval:
+        # pending, asked the lead session on 2026-11-10. Review: 2026-12-10.
+        print("T1 compose policy: not checked here, docker not found")
+        return
+    rendered = subprocess.run(
+        ("docker", "compose", "--env-file", "deploy/.env.example", "-f", "deploy/compose.yaml",
+         "config", "--format", "json"),
+        cwd=ROOT, capture_output=True, text=True, check=False,
+    )
+    if rendered.returncode != 0:
+        raise SystemExit(f"deploy/compose.yaml does not render: {rendered.stderr.strip()}")
+    problems = compose_problems(json.loads(rendered.stdout))
+    if problems:
+        raise SystemExit("deploy/compose.yaml breaks the LAN policy (T1): " + "; ".join(problems))
+
+
 def main() -> None:
     missing = [name for name in REQUIRED if not (ROOT / name).is_file()]
     if missing:
@@ -282,6 +333,7 @@ def main() -> None:
     _check_uv_pins()
     _check_graph_tool_pins()
     _check_import_dependencies()
+    _check_compose()
 
     subprocess.run(("git", "diff", "--check"), cwd=ROOT, check=True)
     subprocess.run(("git", "diff", "--cached", "--check"), cwd=ROOT, check=True)

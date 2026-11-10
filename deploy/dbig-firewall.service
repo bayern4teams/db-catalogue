@@ -1,0 +1,17 @@
+# Installs the LAN boundary rules after Docker starts (report Part 3.3, B10). Install with an
+# owner yes: copy to /etc/systemd/system/, set WorkingDirectory to the checkout, then
+# `systemctl enable --now dbig-firewall.service`.
+[Unit]
+Description=DBIG LAN boundary firewall (DOCKER-USER rules)
+After=docker.service
+Requires=docker.service
+PartOf=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/dbig
+ExecStart=/usr/bin/python3 deploy/lan_firewall.py --env deploy/.env --apply
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target docker.service

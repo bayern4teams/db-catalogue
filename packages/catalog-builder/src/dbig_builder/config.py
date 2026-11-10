@@ -69,6 +69,21 @@ class Decision(BaseModel):
     decision: Literal["confirmed", "rejected"]
 
 
+class ServiceConfig(BaseModel):
+    """`[builder.service]`: what `dbig-builder serve` reads and writes (report Part 3.2)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    bundles_root: Path
+    snapshots_root: Path
+    jobs_db: Path
+    # The single bearer token of earlier releases, when no caller key file is mounted.
+    api_key_env: str | None = Field(default=None, pattern=r"^[A-Z][A-Z0-9_]*$")
+    max_request_bytes: int = Field(default=65_536, ge=1)
+    max_requests_per_minute: int = Field(default=60, ge=1)
+    poll_seconds: float = Field(default=5.0, gt=0, le=3600)
+
+
 class BuilderConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -99,6 +114,7 @@ class BuilderConfig(BaseModel):
     source_groups: list[list[str]] = Field(default_factory=list)
     forbidden_source_pairs: list[tuple[str, str]] = Field(default_factory=list)
     review: ReviewConfig | None = None
+    service: ServiceConfig | None = None
     _decisions: list[Decision] = PrivateAttr(default_factory=list)
 
     @model_validator(mode="after")

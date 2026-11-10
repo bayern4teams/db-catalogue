@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import logging
 import sqlite3
+import threading
 from contextlib import closing
 from datetime import UTC, datetime
 from pathlib import Path
 
 from dbig_contracts.errors import OperatorError
+from dbig_contracts.jobs import open_queue
 from dbig_contracts.scan import ScanReceipt, ScanRequest, SignedScanRequest, verify_scan
 from dbig_contracts.security import key_from_env
 
@@ -16,13 +19,13 @@ from .runtime import collect
 
 
 def _open_queue(path: Path) -> sqlite3.Connection:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    connection = sqlite3.connect(path)
-    connection.execute(
+    # WAL and a busy timeout: the HTTP routes read status while the worker thread writes.
+    connection = open_queue(
+        path,
         "CREATE TABLE IF NOT EXISTS scans("
         "id TEXT PRIMARY KEY, idempotency_key TEXT UNIQUE NOT NULL, "
         "signature TEXT NOT NULL, request TEXT NOT NULL, status TEXT NOT NULL, "
-        "received_at TEXT NOT NULL, bundle_path TEXT, error TEXT)"
+        "received_at TEXT NOT NULL, bundle_path TEXT, error TEXT)",
     )
     # A queue created before failure reasons were recorded gains the column in place.
     columns = {row[1] for row in connection.execute("PRAGMA table_info(scans)")}
@@ -164,3 +167,29 @@ def process_next(config: SourceConfig, queue_path: Path, output_root: Path) -> S
         )
         connection.commit()
     return scan_status(queue_path, request.id)
+
+
+def requeue_running(queue_path: Path) -> int:
+    """Put back scans left `running` by a crash. Only for start-up of the one worker that owns
+    this queue file (report Part 3: the collector runs one worker per container)."""
+    with closing(_open_queue(queue_path)) as connection:
+        cursor = connection.execute("UPDATE scans SET status='queued' WHERE status='running'")
+        connection.commit()
+    return cursor.rowcount
+
+
+def run_worker(
+    config: SourceConfig, queue_path: Path, output_root: Path, stop: threading.Event
+) -> None:
+    """Process queued scans until `stop` is set, waiting `scan_poll_seconds` when idle."""
+    requeue_running(queue_path)
+    while not stop.is_set():
+        try:
+            busy = process_next(config, queue_path, output_root) is not None
+        except Exception:
+            # A queue the worker cannot read must not end the service; the cause stays in the
+            # scan row where `process_next` could record it.
+            logging.getLogger(__name__).error("scan worker step failed")
+            busy = False
+        if not busy:
+            stop.wait(config.scan_poll_seconds)

@@ -1,12 +1,14 @@
 """Assemble and inspect sealed catalog snapshots."""
 
 import json
+import threading
 from pathlib import Path
 
 import click
 from dbig_contracts.artifact import read_artifact
 from dbig_contracts.errors import OperatorError
 from dbig_contracts.models import Edge
+from dbig_contracts.security import serve_refusal
 
 from .builder import assemble
 from .config import load_config
@@ -122,3 +124,28 @@ def render_command(
     config = load_config(config_path) if config_path else None
     counts = render_catalog(snapshot, list(bundles), out, config)
     click.echo(json.dumps({"out": str(out), **counts}, sort_keys=True))
+
+
+@main.command("serve")
+@click.option(
+    "--config", "config_path", type=click.Path(path_type=Path, exists=True), required=True
+)
+@click.option("--host", required=True)
+@click.option("--port", type=int, required=True)
+@click.option("--tls-cert", type=click.Path(path_type=Path, exists=True, dir_okay=False))
+@click.option("--tls-key", type=click.Path(path_type=Path, exists=True, dir_okay=False))
+def serve(
+    config_path: Path, host: str, port: int, tls_cert: Path | None, tls_key: Path | None
+) -> None:
+    """Serve assembly jobs over HTTP and run them in this process (`[builder.service]`)."""
+    # The one bind rule, before any configuration is read.
+    if refusal := serve_refusal(host, tls_cert, tls_key):
+        raise click.UsageError(refusal)
+    import uvicorn
+
+    from .api import create_app, run_worker
+
+    config = load_config(config_path)
+    app = create_app(config)
+    threading.Thread(target=run_worker, args=(config, threading.Event()), daemon=True).start()
+    uvicorn.run(app, host=host, port=port, ssl_certfile=tls_cert, ssl_keyfile=tls_key)

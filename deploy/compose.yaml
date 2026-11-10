@@ -1,0 +1,207 @@
+# Five services on one LAN host (report Part 3.2 and 3.3). Values that differ per host come from
+# an untracked `deploy/.env` (template: `deploy/.env.example`); secrets are files under
+# `deploy/secrets/` (git-ignored), mounted read-only. `scripts/ci_check.py` checks this file
+# (test T1): every port has a private `host_ip`, no host network, no privileged container, and
+# every service carries the hardening keys below. Secret files must be readable by uid 10001.
+name: dbig
+
+x-hardening: &hardening
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  user: "10001:10001"
+  mem_limit: 1g
+  pids_limit: 128
+  tmpfs: ["/tmp:size=64m,mode=1777"]
+  restart: unless-stopped
+  init: true
+
+networks:
+  dbig:
+    driver: bridge
+    # IPv4 only: IPv6 publishing is on by default, and the firewall rules are IPv4 (report 3.3).
+    enable_ipv6: false
+    ipam:
+      config:
+        - subnet: ${DBIG_SUBNET:?set DBIG_SUBNET in deploy/.env}
+
+volumes:
+  bundles:
+  snapshots:
+  collector-state:
+  builder-state:
+  requester-state:
+  planner-state:
+
+services:
+  collectors:
+    <<: *hardening
+    image: dbig-collectors:${DBIG_VERSION:?set DBIG_VERSION in deploy/.env}
+    command:
+      - dbig
+      - serve
+      - --config=/etc/dbig/collector.toml
+      - --queue-db=/var/lib/dbig/state/queue.sqlite3
+      - --bundle-root=/data/bundles
+      - --host=${COLLECTOR_IP:?}
+      - --port=8443
+      - --tls-cert=/run/secrets/collector_tls_crt
+      - --tls-key=/run/secrets/collector_tls_key
+    environment:
+      DBIG_CALLER_KEYS_FILE: /run/secrets/collector_caller_keys
+      DBIG_SIGNING_KEY_FILE: /run/secrets/scan_signing_key
+      DBIG_TOKEN_KEY_FILE: /run/secrets/token_key
+      DBIG_SOURCE_PASSWORD_FILE: /run/secrets/source_password
+      SSL_CERT_FILE: /run/secrets/source_ca_bundle
+    secrets: [lan_ca_bundle, collector_tls_crt, collector_tls_key, collector_caller_keys, scan_signing_key,
+              token_key, source_password, source_ca_bundle]
+    volumes:
+      - ./config/collector.toml:/etc/dbig/collector.toml:ro
+      - bundles:/data/bundles
+      - collector-state:/var/lib/dbig/state
+    networks:
+      dbig:
+        ipv4_address: ${COLLECTOR_IP:?}
+    ports:
+      - {target: 8443, published: "${COLLECTOR_PORT:-8441}", host_ip: "${LAN_IP:?}", protocol: tcp}
+    healthcheck: &health
+      test: ["CMD", "python", "-c", "import ssl,sys,urllib.request as u; sys.exit(0 if u.urlopen(sys.argv[1], context=ssl.create_default_context(cafile='/run/secrets/lan_ca_bundle'), timeout=3).status == 200 else 1)", "https://${COLLECTOR_IP:?}:8443/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  builder:
+    <<: *hardening
+    image: dbig-catalog-builder:${DBIG_VERSION:?}
+    command:
+      - dbig-builder
+      - serve
+      - --config=/etc/dbig/builder.toml
+      - --host=${BUILDER_IP:?}
+      - --port=8443
+      - --tls-cert=/run/secrets/builder_tls_crt
+      - --tls-key=/run/secrets/builder_tls_key
+    environment:
+      DBIG_CALLER_KEYS_FILE: /run/secrets/builder_caller_keys
+      DBIG_SIGNING_KEY_FILE: /run/secrets/scan_signing_key
+      DBIG_TOKEN_KEY_FILE: /run/secrets/token_key
+    secrets: [lan_ca_bundle, builder_tls_crt, builder_tls_key, builder_caller_keys, scan_signing_key, token_key]
+    volumes:
+      - ./config/builder.toml:/etc/dbig/builder.toml:ro
+      - bundles:/data/bundles:ro
+      - snapshots:/data/snapshots
+      - builder-state:/var/lib/dbig/state
+    networks:
+      dbig:
+        ipv4_address: ${BUILDER_IP:?}
+    ports:
+      - {target: 8443, published: "${BUILDER_PORT:-8442}", host_ip: "${LAN_IP:?}", protocol: tcp}
+    healthcheck:
+      <<: *health
+      test: ["CMD", "python", "-c", "import ssl,sys,urllib.request as u; sys.exit(0 if u.urlopen(sys.argv[1], context=ssl.create_default_context(cafile='/run/secrets/lan_ca_bundle'), timeout=3).status == 200 else 1)", "https://${BUILDER_IP:?}:8443/healthz"]
+
+  requester:
+    <<: *hardening
+    image: dbig-catalogue-requester:${DBIG_VERSION:?}
+    command:
+      - dbig-requester
+      - serve
+      - --config=/etc/dbig/requester.toml
+      - --host=${REQUESTER_IP:?}
+      - --port=8443
+      - --tls-cert=/run/secrets/requester_tls_crt
+      - --tls-key=/run/secrets/requester_tls_key
+      - --no-access-log
+    environment:
+      DBIG_CALLER_KEYS_FILE: /run/secrets/requester_caller_keys
+      DBIG_SIGNING_KEY_FILE: /run/secrets/scan_signing_key
+      DBIG_MODEL_KEY_FILE: /run/secrets/model_key
+      DBIG_COLLECTOR_TOKEN_FILE: /run/secrets/requester_collector_token
+      SSL_CERT_FILE: /run/secrets/lan_ca_bundle
+    secrets: [requester_tls_crt, requester_tls_key, requester_caller_keys, scan_signing_key,
+              model_key, requester_collector_token, lan_ca_bundle]
+    volumes:
+      - ./config/requester.toml:/etc/dbig/requester.toml:ro
+      - snapshots:/data/snapshots:ro
+      - requester-state:/var/lib/dbig/state
+    networks:
+      dbig:
+        ipv4_address: ${REQUESTER_IP:?}
+    ports:
+      - {target: 8443, published: "${REQUESTER_PORT:-8443}", host_ip: "${LAN_IP:?}", protocol: tcp}
+    healthcheck:
+      <<: *health
+      test: ["CMD", "python", "-c", "import ssl,sys,urllib.request as u; sys.exit(0 if u.urlopen(sys.argv[1], context=ssl.create_default_context(cafile='/run/secrets/lan_ca_bundle'), timeout=3).status == 200 else 1)", "https://${REQUESTER_IP:?}:8443/healthz"]
+
+  planner:
+    <<: *hardening
+    image: dbig-lineage-planner:${DBIG_VERSION:?}
+    command:
+      - dbig-planner
+      - serve
+      - --config=/etc/dbig/planner.toml
+      - --host=${PLANNER_IP:?}
+      - --port=8443
+      - --tls-cert=/run/secrets/planner_tls_crt
+      - --tls-key=/run/secrets/planner_tls_key
+    environment:
+      DBIG_CALLER_KEYS_FILE: /run/secrets/planner_caller_keys
+    secrets: [lan_ca_bundle, planner_tls_crt, planner_tls_key, planner_caller_keys]
+    volumes:
+      - ./config/planner.toml:/etc/dbig/planner.toml:ro
+      - snapshots:/data/snapshots:ro
+      - planner-state:/var/lib/dbig/state
+    networks:
+      dbig:
+        ipv4_address: ${PLANNER_IP:?}
+    ports:
+      - {target: 8443, published: "${PLANNER_PORT:-8444}", host_ip: "${LAN_IP:?}", protocol: tcp}
+    healthcheck:
+      <<: *health
+      test: ["CMD", "python", "-c", "import ssl,sys,urllib.request as u; sys.exit(0 if u.urlopen(sys.argv[1], context=ssl.create_default_context(cafile='/run/secrets/lan_ca_bundle'), timeout=3).status == 200 else 1)", "https://${PLANNER_IP:?}:8443/healthz"]
+
+  contracts:
+    <<: *hardening
+    image: dbig-contracts:${DBIG_VERSION:?}
+    command:
+      - dbig-contracts
+      - serve
+      - --host=${CONTRACTS_IP:?}
+      - --port=8443
+      - --tls-cert=/run/secrets/contracts_tls_crt
+      - --tls-key=/run/secrets/contracts_tls_key
+    environment:
+      DBIG_CALLER_KEYS_FILE: /run/secrets/contracts_caller_keys
+    secrets: [lan_ca_bundle, contracts_tls_crt, contracts_tls_key, contracts_caller_keys]
+    networks:
+      dbig:
+        ipv4_address: ${CONTRACTS_IP:?}
+    ports:
+      - {target: 8443, published: "${CONTRACTS_PORT:-8445}", host_ip: "${LAN_IP:?}", protocol: tcp}
+    healthcheck:
+      <<: *health
+      test: ["CMD", "python", "-c", "import ssl,sys,urllib.request as u; sys.exit(0 if u.urlopen(sys.argv[1], context=ssl.create_default_context(cafile='/run/secrets/lan_ca_bundle'), timeout=3).status == 200 else 1)", "https://${CONTRACTS_IP:?}:8443/healthz"]
+
+secrets:
+  collector_tls_crt: {file: ./secrets/collector.crt}
+  collector_tls_key: {file: ./secrets/collector.key}
+  builder_tls_crt: {file: ./secrets/builder.crt}
+  builder_tls_key: {file: ./secrets/builder.key}
+  requester_tls_crt: {file: ./secrets/requester.crt}
+  requester_tls_key: {file: ./secrets/requester.key}
+  planner_tls_crt: {file: ./secrets/planner.crt}
+  planner_tls_key: {file: ./secrets/planner.key}
+  contracts_tls_crt: {file: ./secrets/contracts.crt}
+  contracts_tls_key: {file: ./secrets/contracts.key}
+  collector_caller_keys: {file: ./secrets/collector-keys.json}
+  builder_caller_keys: {file: ./secrets/builder-keys.json}
+  requester_caller_keys: {file: ./secrets/requester-keys.json}
+  planner_caller_keys: {file: ./secrets/planner-keys.json}
+  contracts_caller_keys: {file: ./secrets/contracts-keys.json}
+  scan_signing_key: {file: ./secrets/scan-signing.key}
+  token_key: {file: ./secrets/token.key}
+  source_password: {file: ./secrets/source-password}
+  source_ca_bundle: {file: ./secrets/source-ca-bundle.pem}
+  model_key: {file: ./secrets/model.key}
+  requester_collector_token: {file: ./secrets/requester-collector-token}
+  lan_ca_bundle: {file: ./secrets/lan-ca-bundle.pem}

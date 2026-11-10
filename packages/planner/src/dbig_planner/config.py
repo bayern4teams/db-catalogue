@@ -12,6 +12,9 @@ class PlannerConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     graph_dir: Path
+    # What `POST /v1/planner/graph` builds from; unset turns the route off (503).
+    snapshot_dir: Path | None = None
+    observations_path: Path | None = None
     api_key_env: str | None = Field(default=None, pattern=r"^[A-Z][A-Z0-9_]*$")
     max_request_bytes: int = Field(default=65_536, ge=1)
     max_hops: int = Field(default=4, ge=1, le=10)
