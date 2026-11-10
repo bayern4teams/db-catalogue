@@ -404,12 +404,12 @@ Compared against the five attack replies and the 34 replies recorded on 2026-10-
 
 **Recommended design (O4):**
 
-1. Add `relationships: list[edge_id]` to `answer.py::Answer`, constrained to the retrieved edge ids. [ALCE](https://arxiv.org/abs/2305.14627) reports NLI citation checks agree with humans about 78-85% of the time, so an exact id check is better than entailment.
-2. Code writes each relationship from the stored edge: its name and status, so a tentative edge stays tentative.
-3. When a reply cites an edge, the code-written lines replace the model's prose about it. In all other replies, the response returns the prose as `model_text`, so a caller can tell it from catalogue facts.
+1. Keep the model schema. `answer.py::Answer` `citations` already holds ids checked against the retrieved ones; the cited edge ids are the relationship list. [ALCE](https://arxiv.org/abs/2305.14627) reports NLI citation checks agree with humans about 78-85% of the time, so an exact id check is better than entailment.
+2. Add `relationships` to the response: code writes one entry per cited edge from the stored edge only (id, from, to, columns, status, evidence metadata), so a tentative edge stays tentative. Evidence holds counts and scores, never sampled values.
+3. `answer` stays the model's prose, unchanged for callers. The response schema documents it as model text and `relationships` as the only catalogue facts about links. Agreed with the implementer on 2026-11-10 instead of a `model_text` rename, which would change every caller and about 40 tests.
 4. Keep `LINEAGE_CLAIM` as a backstop.
 
-**What this guarantees:** no relationship reaches the structured API output without a stored edge. **What it does not:** prose in `model_text` can still say "fed by." The five attack tests assert a refusal, so they would keep failing. Changing them needs a ruling (L1); see [Decision D8](#decisions-for-the-owner).
+**What this guarantees:** no relationship reaches the structured API output without a stored edge. **What it does not:** prose in `answer` can still say "fed by." The five attack tests assert a refusal, so they would keep failing. Changing them needs a ruling (L1); see [Decision D8](#decisions-for-the-owner).
 
 ### Better results: inference (H6 resolved)
 
@@ -437,7 +437,7 @@ The 18 false pairs in C1 all have a real overlap of 0 (`artifacts/run-20261020/s
 
 | ID | Change | Why |
 | --- | --- | --- |
-| O-1 | One typed API response: `outcome`, `model_text`, `relationships[]` (with status, overlap, Wilson interval, `basis`), `citations[]`, `snapshot_digest`, `model_id` | A program can act on the fields without parsing prose. All data already exists in `answer.py` and the index. |
+| O-1 | One typed API response: `outcome`, `answer` (model text), `relationships[]` (with status, overlap, Wilson interval, `basis`), `citations[]`, `snapshot_digest`, `model_id` | A program can act on the fields without parsing prose. All data already exists in `answer.py` and the index. |
 | O-2 | A golden set of the 40 questions: expected edge ids and names, expected refusals, graded by id and replayed offline | Today grading is manual and incomplete (E1). [ragas](https://github.com/explodinggradients/ragas) has been quiet since February 2026, and a small metric set is easy to write by hand. |
 | O-3 | One failure code per refusal with its fix (J11), from `answer.py::_failure_reason` | A caller can retry or report |
 
