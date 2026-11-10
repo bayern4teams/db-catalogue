@@ -28,6 +28,7 @@ from dbig_contracts.models import (
     ValueTokens,
     utc_now,
 )
+from dbig_contracts.types import type_family as _type_family
 from rapidfuzz.fuzz import ratio
 
 from .config import B_TRUSTED_SAMPLE_METHODS, BuilderConfig
@@ -577,42 +578,6 @@ def _overlap_sentence(metrics: dict[str, Any], level: float) -> str:
     )
 
 
-# Spellings of one value domain across the three engines: PostgreSQL `format_type` names,
-# ClickHouse type names, and the Python type names MongoDB sampling records. Before these were
-# grouped, ClickHouse `String`, PostgreSQL `text` and MongoDB `str` were three different
-# families, so no text key could ever be proposed across engines.
-INTEGER_TYPES = frozenset(
-    {"integer", "bigint", "smallint", "int", "int2", "int4", "int8", "serial", "bigserial"}
-    | {f"{sign}int{bits}" for sign in ("", "u") for bits in (8, 16, 32, 64, 128, 256)}
-)
-TEXT_TYPES = frozenset(
-    {"text", "character varying", "varchar", "character", "char", "bpchar", "citext",
-     "string", "fixedstring", "str"}
-)
-UUID_TYPES = frozenset({"uuid", "uuid4"})
-# ClickHouse wrappers that change storage or nullability, not the values a key can hold.
-TRANSPARENT_WRAPPERS = ("nullable(", "lowcardinality(")
-
-
-def _type_family(value: str) -> str:
-    normalized = value.casefold().strip()
-    unwrapped = True
-    while unwrapped:
-        unwrapped = False
-        for wrapper in TRANSPARENT_WRAPPERS:
-            if normalized.startswith(wrapper) and normalized.endswith(")"):
-                normalized = normalized[len(wrapper) : -1].strip()
-                unwrapped = True
-    normalized = normalized.split("(", 1)[0].strip()
-    if normalized in INTEGER_TYPES:
-        return "integer"
-    if normalized in TEXT_TYPES:
-        return "text"
-    if normalized in UUID_TYPES:
-        return "uuid"
-    return normalized
-
-
 def assemble(
     bundle_paths: list[Path],
     output: Path,
@@ -792,9 +757,12 @@ def assemble(
     for candidate_parent in fields.values():
         if candidate_parent.id in declared_unique or candidate_parent.object_id in keyed_objects:
             continue
-        if candidate_parent.id in weak_key_ids or (
-            _measure(field_profiles.get(candidate_parent.id), "uniqueness") or 0.0
-        ) >= MEASURED_UNIQUE:
+        # A weak key claim stands only where nothing measured contradicts it (DEC-2, owner
+        # 2026-11-10: "Accept both (Recommended)").
+        uniqueness = _measure(field_profiles.get(candidate_parent.id), "uniqueness")
+        if (uniqueness or 0.0) >= MEASURED_UNIQUE or (
+            candidate_parent.id in weak_key_ids and uniqueness is None
+        ):
             unique_fields.append(candidate_parent)
     dropped_zero_overlap = 0
     dropped_expected_overlap = 0
@@ -964,12 +932,16 @@ def assemble(
         # Candidate order (F10, LEAD_REVIEW 2026-10-19; F15, DEC-32): name score; a declared key;
         # evidence tier (0 measured containment, 1 lower bound or a zero against a partly read
         # parent, 2 not measured); higher containment; same source first; weak key claim before
-        # measured uniqueness; then the id. Hash order decides nothing.
+        # measured uniqueness; then the matching name, the name and the id. Hash order decides
+        # nothing.
         child_source = child.source_id
+        child_name = child.name.lower()
 
         def rank(
-            item: tuple[int, Field, str, Evidence], source: str = child_source
-        ) -> tuple[int, int, int, float, bool, int, str]:
+            item: tuple[int, Field, str, Evidence],
+            source: str = child_source,
+            own_name: str = child_name,
+        ) -> tuple[int, int, int, float, bool, int, bool, str, str]:
             score, parent, _, overlap = item
             claim = 0 if parent.id in declared_unique else 1 if parent.id in weak_key_ids else 2
             if overlap.kind != "value_containment":
@@ -983,10 +955,19 @@ def assemble(
                 -float(overlap.metrics.get("contained_fraction") or 0),
                 parent.source_id != source,
                 claim,
+                # DEC-1: on a tie the parent column whose name matches wins, then the name, so
+                # one snapshot and another pick the same column.
+                parent.name.lower() != own_name,
+                parent.name,
                 parent.id,
             )
 
-        for score, parent, rule, overlap in sorted(ranked, key=rank)[: config.top_k_per_field]:
+        # One candidate per parent table, its best-ranked column (DEC-1, owner 2026-11-10:
+        # "Accept both (Recommended)"); the rank is total, so the choice is deterministic.
+        best: dict[str, tuple[int, Field, str, Evidence]] = {}
+        for ranked_item in sorted(ranked, key=rank):
+            best.setdefault(ranked_item[1].object_id, ranked_item)
+        for score, parent, rule, overlap in list(best.values())[: config.top_k_per_field]:
             lexical = _evidence(
                 child,
                 "name_similarity",

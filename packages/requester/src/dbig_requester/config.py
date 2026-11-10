@@ -27,6 +27,9 @@ class AnswerConfig(BaseModel):
     # Extra attempts after a reply that is only a verdict (F17); 0 makes a single attempt.
     answer_retries: int = Field(default=1, ge=0)
     retrieval_limit: int = Field(default=10, ge=1, le=100)
+    # Entries retrieved for a list question ("list all ...") or a question about a type, instead
+    # of `retrieval_limit` (B6, B7). Capped by the search route's own limit of 100.
+    list_limit: int = Field(default=100, ge=1, le=100)
     # Most relationship edges, with their evidence status, passed to the model beside the
     # retrieved entries (DEC-5). 0 passes none.
     relationship_limit: int = Field(default=20, ge=0, le=200)

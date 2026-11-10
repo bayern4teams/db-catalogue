@@ -17,6 +17,7 @@ from typing import Any, Literal
 from dbig_contracts.artifact import read_artifact
 from dbig_contracts.errors import OperatorError
 from dbig_contracts.models import Edge, Evidence, Field, Object, Source
+from dbig_contracts.types import type_family
 from pydantic import BaseModel, ConfigDict
 from pydantic import Field as PydanticField
 
@@ -142,6 +143,9 @@ class SearchRequest(BaseModel):
     objects_only: bool = False
     kind: str | None = None
     data_type: str | None = None
+    # Fields whose type falls in this category of `type_categories`, set by `ask` for a question
+    # about a type (B6).
+    type_category: str | None = None
     tag: str | None = None
     capability: str | None = None
     evidence_status: str | None = None
@@ -390,11 +394,13 @@ def search(state: Path, request: SearchRequest) -> dict:
                 and term.casefold() not in STOPWORDS
                 and not STOPWORDS.intersection(_singulars(term.casefold()))
             ]
-            if not terms and not (request.objects_only and request.source_ids):
+            if not terms and request.type_category is None and not (
+                request.objects_only and request.source_ids
+            ):
                 # A question made only of common words has nothing to look up. Returning every
                 # entry instead would hand a model an arbitrary slice of the catalogue. A list
                 # question scoped to a named source is the exception: its answer is that
-                # source's objects.
+                # source's objects, and a type question's answer is the fields of that type.
                 return _empty(manifest, digest, request)
         sql = "SELECT e.* FROM entries e"
         conditions = []
@@ -451,6 +457,11 @@ def search(state: Path, request: SearchRequest) -> dict:
         )
         for row in connection.execute(sql, parameters):
             item = dict(row)
+            if request.type_category is not None and (
+                item["data_type"] is None
+                or request.type_category not in type_categories(item["data_type"])
+            ):
+                continue
             if request.tag is not None and request.tag not in json.loads(item["tags"]):
                 continue
             if request.capability is not None and request.capability not in json.loads(
@@ -691,6 +702,55 @@ def fields_of(state: Path, object_ids: set[str]) -> list[dict]:
 
 # Words that ask for a list of objects when plural ("which tables ...", "list the collections").
 OBJECT_WORDS = frozenset("table collection view".split())
+
+
+# B6 (owner 2026-11-10, "Map type words (Recommended)"): the SQL standard's type categories. DATE,
+# TIME and TIMESTAMP are datetime types; exact and approximate numerics beyond the integer family
+# are listed here in PostgreSQL and ClickHouse spelling, and `float` as MongoDB sampling records it.
+NUMERIC_TYPES = frozenset(
+    {"numeric", "decimal", "real", "float", "double precision", "double", "float4", "float8",
+     "float32", "float64", "bfloat16", "decimal32", "decimal64", "decimal128", "decimal256"}
+)
+BOOLEAN_TYPES = frozenset({"boolean", "bool"})
+# A question word, in singular form, and the category it names.
+TYPE_WORDS = {
+    "timestamp": "datetime", "datetime": "datetime", "date": "datetime",
+    "numeric": "numeric", "number": "numeric", "decimal": "numeric", "float": "numeric",
+    "integer": "integer", "text": "text", "string": "text",
+    "boolean": "boolean", "bool": "boolean", "uuid": "uuid",
+}
+# A type word counts only beside one of these: "what date did it run" is not about a type.
+TYPE_QUESTION_WORDS = frozenset({"type", "typed"})
+# Words that ask for every match, not the best few (B7, owner 2026-11-10: "List mode").
+LIST_WORDS = frozenset({"all", "every", "list"})
+
+
+def type_categories(data_type: str) -> set[str]:
+    """The engine type's family (`dbig_contracts.types`) and the SQL categories it belongs to."""
+    family = type_family(data_type)
+    found = {family}
+    if family == "integer" or family in NUMERIC_TYPES:
+        found.add("numeric")
+    if family.startswith(("date", "time")):
+        found.add("datetime")
+    if family in BOOLEAN_TYPES:
+        found.add("boolean")
+    return found
+
+
+def question_type(question: str) -> str | None:
+    """The type category a question asks about, or None (B6)."""
+    forms = [
+        {word, *_singulars(word)}
+        for word in (item.casefold() for item in re.findall(r"\w+", question, flags=re.UNICODE))
+    ]
+    if not any(TYPE_QUESTION_WORDS & alternatives for alternatives in forms):
+        return None
+    return next(
+        (TYPE_WORDS[form] for alternatives in forms for form in sorted(alternatives)
+         if form in TYPE_WORDS),
+        None,
+    )
 
 
 def question_scope(state: Path, question: str) -> tuple[list[str], bool, set[str]]:

@@ -15,12 +15,14 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 
 from .config import AnswerConfig
 from .search import (
+    LIST_WORDS,
     SearchRequest,
     StaleIndexError,
     bridge_paths,
     chained_paths,
     fields_of,
     question_scope,
+    question_type,
     relationships_for,
     search,
 )
@@ -197,21 +199,29 @@ def answer_question(
     # first entries alphabetically, unrelated to the question.
     try:
         sources, listing, source_words = question_scope(state, question)
+        words = re.findall(r"\w+", question, flags=re.UNICODE)
+        # B6: a question about a type retrieves the fields of that type, in the named sources;
+        # its other words do not filter. shortcut: "timestamps in orders" is not narrowed to
+        # `orders`; upgrade to matching the leftover words when a question needs it.
+        category = question_type(question)
+        # B7: "list all ..." and a type question get every match up to `list_limit`.
+        limit = (
+            config.list_limit
+            if category or LIST_WORDS.intersection(word.casefold() for word in words)
+            else config.retrieval_limit
+        )
         # A source named in the question filters the search, so its words need not also match;
         # a list question ("which tables ...") retrieves objects, not columns (DEC-7).
-        remaining = " ".join(
-            word
-            for word in re.findall(r"\w+", question, flags=re.UNICODE)
-            if word.casefold() not in source_words
-        )
+        remaining = " ".join(word for word in words if word.casefold() not in source_words)
         results = search(
             state,
             SearchRequest(
-                query=remaining,
-                limit=config.retrieval_limit,
+                query="" if category else remaining,
+                limit=limit,
                 match="any",
                 source_ids=sources or None,
-                objects_only=listing,
+                objects_only=listing and not category,
+                type_category=category,
             ),
         )
         if not results["results"] and listing and sources:
@@ -221,7 +231,7 @@ def answer_question(
                 state,
                 SearchRequest(
                     query="",
-                    limit=config.retrieval_limit,
+                    limit=limit,
                     match="any",
                     source_ids=sources,
                     objects_only=True,

@@ -122,7 +122,7 @@ def test_the_vllm_example_has_no_active_max_tokens_line():
 # --- P6-8 / F12: outcome is required ------------------------------------------------------------
 
 
-def _ask(tmp_path, monkeypatch, reply) -> tuple[dict, list[dict]]:
+def _ask(tmp_path, monkeypatch, reply, **extra) -> tuple[dict, list[dict]]:
     """Ask one question; `reply(payload)` returns the model's raw content. Returns the result and
     the requests the stub recorded."""
     snapshot = build_snapshot(
@@ -133,7 +133,7 @@ def _ask(tmp_path, monkeypatch, reply) -> tuple[dict, list[dict]]:
     monkeypatch.setenv("MODEL_KEY", MODEL_KEY)
     with ModelStub(reply) as stub:
         config = AnswerConfig(base_url=stub.url, model="local-model", model_digest="rev-1",
-                              api_key_env="MODEL_KEY")
+                              api_key_env="MODEL_KEY", **extra)
         result = answer_question(tmp_path / "state", "which column holds the gadget website?",
                                  config)
         requests = list(stub.requests)
@@ -214,6 +214,9 @@ def test_answered_with_no_citation_is_still_refused(tmp_path, monkeypatch):
         tmp_path, monkeypatch,
         lambda _: json.dumps({"checked": ["x"],
             "answer": "It is there.", "citations": [], "outcome": "answered"}),
+        # Owner ruling 2026-11-10, "Retries off in those 3 (Recommended)": B2 retries this case;
+        # the retry itself is tested in tests/phase7/test_p7_4_no_bare_verdicts.py.
+        answer_retries=0,
     )
     assert result["error"]["code"] == "MODEL_INVALID_CITATION"
 

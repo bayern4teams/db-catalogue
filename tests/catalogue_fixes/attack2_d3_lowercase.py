@@ -19,6 +19,9 @@ from catalogue_fixture_kit import build_snapshot, candidates
 
 REPO = Path(__file__).resolve().parents[2]
 OLD_TREE = Path(os.environ.get("DBIG_OLD_TREE2", "/tmp/wt-old2"))
+# Owner ruling 2026-11-10, "Retire as stale (Recommended)": these 27 cases expect a link to the
+# fixture parent `rowkey`, whose name resembles no child; DEC-1 proposes nothing then (TODO.md, A2).
+STALE = pytest.mark.skip(reason="stale against DEC-1: parent rowkey resembles no child name")  # C5: reason=retired as stale against DEC-1, see TODO.md A2 table; approved=owner, 2026-11-10; review=2027-05-10
 
 
 def _pairs(tmp_path, monkeypatch, parent, column, *, name="s", child_type="integer", extra=None):
@@ -38,7 +41,7 @@ def test_names_whose_stem_is_not_a_table_propose_nothing(tmp_path, monkeypatch, 
     assert _pairs(tmp_path, monkeypatch, "vendor", column) == set()
 
 
-@pytest.mark.parametrize("column", ["ids", "id", "vendorids", "vendor", "vendoridx", "idvendor", "vendorid1"])
+@pytest.mark.parametrize("column", ["ids", "id", "vendorids", pytest.param("vendor", marks=STALE), "vendoridx", "idvendor", "vendorid1"])
 def test_ids_only_and_malformed_names_do_not_get_the_suffix_reading(tmp_path, monkeypatch, column):
     """`vendor` itself links only through the exact-name rule (a separate, older path)."""
     found = _pairs(tmp_path, monkeypatch, "vendor", column)
@@ -48,6 +51,7 @@ def test_ids_only_and_malformed_names_do_not_get_the_suffix_reading(tmp_path, mo
         assert found == set(), found
 
 
+@STALE
 @pytest.mark.parametrize(
     "column",
     ["vendorid", "VENDORID", "Vendorid", "vendorno", "vendorref", "vendorkey", "vendorcode",
@@ -57,11 +61,13 @@ def test_every_bare_suffix_reads_when_the_stem_is_known(tmp_path, monkeypatch, c
     assert _pairs(tmp_path, monkeypatch, "vendor", column) == {("shipment", "vendor")}
 
 
+@STALE
 @pytest.mark.parametrize("parent", ["vendors", "Vendor", "VENDORS"])
 def test_a_plural_or_differently_cased_parent_table_still_matches(tmp_path, monkeypatch, parent):
     assert _pairs(tmp_path, monkeypatch, parent, "vendorid") == {("shipment", parent)}
 
 
+@STALE
 def test_a_short_table_name_is_the_only_way_a_suffix_lookalike_links(tmp_path, monkeypatch):
     """Characterisation (passes), the collision the rule accepts: `casino` reads as `casi` +
     `no` only if a table called `casi` exists. Without it, nothing; `cleaf` and `monkey` (which
@@ -82,6 +88,7 @@ def test_a_stem_equal_to_the_childs_own_table_never_links_to_itself(tmp_path, mo
     assert not [item for item in found if item[0] == item[2]], found
 
 
+@STALE
 def test_two_tables_with_one_normalised_name_both_become_candidates(tmp_path, monkeypatch):
     """`vendor` in two sources, a child column `vendorid`: both are proposed, as the separated
     form already does; not one silently overwriting the other."""
@@ -94,6 +101,7 @@ def test_two_tables_with_one_normalised_name_both_become_candidates(tmp_path, mo
     assert sorted(found) == [("shipment", "vendorid", "vendor", "rowkey")] * 2, found
 
 
+@STALE
 def test_the_child_in_a_table_with_the_parents_name_in_another_source(tmp_path, monkeypatch):
     """`beta.vendor.vendorid` against `alpha.vendor`: different objects, so allowed, and the same
     as the snake_case form (parity)."""
@@ -107,6 +115,7 @@ def test_the_child_in_a_table_with_the_parents_name_in_another_source(tmp_path, 
     assert run("vendorid", "lower") == run("vendor_id", "snake") != []
 
 
+@STALE
 @pytest.mark.parametrize(
     ("parent", "singular"),
     [("vendor", "vendor"), ("vendors", "vendor"), ("status", "status"),

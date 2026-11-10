@@ -116,7 +116,10 @@ CAUSES: dict[str, dict] = {
     "truncated_empty": dict(stub={"finish_reason": "length", "content": ""},
                             code="MODEL_TRUNCATED"),
     "unknown_id": dict(stub={"reply": _unknown_id}, code="MODEL_INVALID_CITATION"),
-    "no_citation": dict(stub={"reply": _no_citation}, code="MODEL_INVALID_CITATION"),
+    # Owner ruling 2026-11-10, "Retries off in those 3 (Recommended)": the stub answers once, and
+    # B2 retries this case; the retry is tested in test_p7_4_no_bare_verdicts.py.
+    "no_citation": dict(stub={"reply": _no_citation}, code="MODEL_INVALID_CITATION",
+                        config={"answer_retries": 0}),
     "too_long": dict(stub={"reply": _reply(answer=CANARY * 10)}, config={"max_answer_chars": 5},
                      code="MODEL_ANSWER_TOO_LONG"),
     "lineage_claim": dict(stub={"reply": _reply(answer=f"{CANARY} is derived from elsewhere")},

@@ -1146,12 +1146,24 @@ def test_the_application_never_configures_logging():
     """Report for H4: the app sets no level, handler or format, so the `openai` library's DEBUG
     request log (which can hold a prompt) is off unless an operator turns it on."""
     config_calls = {"basicConfig", "dictConfig", "fileConfig", "setLevel", "addHandler"}
-    found = []
+    found, exempt = [], 0
     for path in _source_files():
-        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        # Owner ruling 2026-11-10, "Allow that one (Recommended)": only `cap_model_client_logs`
+        # may set a level, and only to raise the model client's libraries above DEBUG (B1).
+        allowed = {
+            id(inner) for node in ast.walk(tree)
+            if isinstance(node, ast.FunctionDef) and node.name == "cap_model_client_logs"
+            for inner in ast.walk(node)
+        }
+        for node in ast.walk(tree):
             if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
                 if node.func.attr in config_calls:
-                    found.append(f"{path.relative_to(ROOT)}:{node.lineno}")
+                    if id(node) in allowed and node.func.attr == "setLevel":
+                        exempt += 1
+                    else:
+                        found.append(f"{path.relative_to(ROOT)}:{node.lineno}")
+    assert exempt == 1, "control: the one allowed call is in cap_model_client_logs"
     assert not found, found
 
 
