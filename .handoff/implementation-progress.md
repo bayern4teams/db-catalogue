@@ -1,6 +1,7 @@
 # Implementation progress (feat/improvements)
 
-Updated 2026-11-11. Resume from here; details and evidence are in TODO.md.
+Updated 2026-11-11. Stopped at 90% of the 5-hour limit (resets 14:20 UTC) on the lead's order.
+Start no new work until the lead says the limit has reset. Details and evidence are in TODO.md.
 
 ## Done
 
@@ -12,6 +13,9 @@ Updated 2026-11-11. Resume from here; details and evidence are in TODO.md.
 - Deployment stamps set in ARCHITECTURE.md and TECHNICAL_IMPLEMENTATION.md §17.6.
 
 ## Open
+
+- CI on 306fd6d (head; the docs lint fix for the Docs checks red since b715a82): pending at stop.
+- Owner's approval for the remote TLS probe: not arrived in this session (2026-11-11).
 
 - Remote TLS check per database: `not checked`. This session's permission check refused the
   probe; retry only after the owner approves it in this session.
