@@ -1,7 +1,6 @@
 # Implementation progress (feat/improvements)
 
-Updated 2026-11-11 after the limit reset. The scope the lead set is done except the remote TLS
-check. Details and evidence are in TODO.md.
+Updated 2026-11-11 after the limit reset. The scope the lead set is done, the remote TLS check included. Details and evidence are in TODO.md.
 
 ## Done
 
@@ -17,10 +16,8 @@ check. Details and evidence are in TODO.md.
 
 ## Open
 
-- Owner's approval for the remote TLS probe: not arrived in this session (2026-11-11).
+- Remote TLS: probed 2026-11-11 with the owner's yes; TLS is off on all five project databases (TODO.md). Enabling it is a remote change that needs a new owner yes.
 
-- Remote TLS check per database: `not checked`. This session's permission check refused the
-  probe; retry only after the owner approves it in this session.
 - Requester scan status stays `queued` over the HTTP adapter (TODO.md, needs a decision).
 - On the LAN host, with an owner yes: install the firewall, T4 from a LAN host and from off the
   subnet, T5, T6 after a Docker restart and a reboot, T7.
