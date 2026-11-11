@@ -29,7 +29,7 @@ The only things that cross a trust boundary are signed bundles, a snapshot and s
 
 ## Deployment
 
-<!-- verified: PENDING -->
+<!-- verified: 2bf154a -->
 
 Two ways to run it. Each role can run as a Python process started by its own command, as before. Or the five packages run as five containers on one LAN host, from `deploy/compose.yaml` (report Part 3; owner decisions D1, D2 and D6 of 2026-11-10).
 
@@ -69,7 +69,7 @@ The caller runs the pipeline (lead ruling D3 (a)): it asks the requester for a s
 | L4 application | every model, Langfuse and collector URL passes `private_base_url`; a database host must be, or resolve only to, private addresses; a `serve` binds only loopback, or a private IP literal with TLS | `packages/contracts/src/dbig_contracts/security.py::bind_refusal`, `::private_host_refusal` |
 | L5 caller identity | a key per caller, stored as SHA-256 with scopes and an expiry; two hashes per caller let a key rotate | `packages/contracts/src/dbig_contracts/service.py::ServiceGuard` |
 
-Every service serves TLS with an IP-SAN certificate from a private CA (`scripts/make_ci_certs.py --ip`). Docker's `iptables` backend is required, because the `nftables` backend has no `DOCKER-USER` chain. Containers run read-only as uid 10001 with every capability dropped. Secrets are files under `deploy/secrets/`, read through `<NAME>_FILE`. Images are built on a machine with internet and loaded on the host from one `docker save` tarball (`scripts/build_images.py`), so the host needs no outbound access. `scripts/lan_boundary_check.py` checks the boundary on the host (T4, T5, T7). Those live checks have not run yet.
+Every service serves TLS with an IP-SAN certificate from a private CA (`scripts/make_ci_certs.py --ip`). Docker's `iptables` backend is required, because the `nftables` backend has no `DOCKER-USER` chain. Containers run read-only as uid 10001 with every capability dropped. Secrets are files under `deploy/secrets/`, read through `<NAME>_FILE`. Images are built on a machine with internet and loaded on the host from one `docker save` tarball (`scripts/build_images.py`), so the host needs no outbound access. `scripts/lan_boundary_check.py` checks the boundary on the host (T4, T5, T7). On 2026-11-11 the stack ran end to end on one machine (ports on loopback), and T5 and T7 passed in throwaway network namespaces; T4 and T6 on the LAN host, and the firewall on a real host, have not run.
 
 | Setting | Where | Example |
 | --- | --- | --- |

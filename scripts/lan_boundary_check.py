@@ -79,15 +79,39 @@ def egress(env: dict[str, str]) -> list[str]:
     return problems
 
 
-def rules(env: dict[str, str]) -> list[str]:
-    """T7: the installed DBIG chain is exactly the committed rule list."""
-    expected = [" ".join(["-A", "DBIG", *rule]) for rule in _firewall().rules(env)]
-    listed = _run("iptables", "-S", "DBIG").splitlines()
-    # iptables prints a single address as `/32`; the committed list writes it bare.
-    installed = [line.replace("/32 ", " ") for line in listed if line.startswith("-A")]
+def _clauses(tokens: list[str]) -> frozenset[str]:
+    """One rule as a set of option clauses, so the comparison ignores the order iptables prints
+    them in. iptables also writes a single address as `/32`, adds `-m tcp` after `-p tcp` and
+    reorders `--ctstate` values; those are normalised. The caller still compares rule order."""
+    clauses: list[str] = []
+    negate = False
+    for word in tokens:
+        if word == "!":
+            negate = True
+        elif word.startswith("-"):
+            clauses.append(("! " if negate else "") + word)
+            negate = False
+        else:
+            value = word.removesuffix("/32")
+            if clauses[-1].endswith("--ctstate"):
+                value = ",".join(sorted(value.split(",")))
+            clauses[-1] += " " + value
+    return frozenset(clauses) - {"-m tcp"}
+
+
+def chain_problems(env: dict[str, str], listed: str) -> list[str]:
+    """T7 on `iptables -S DBIG` output: the installed chain is exactly the committed rule list."""
+    expected = [_clauses(rule) for rule in _firewall().rules(env)]
+    lines = [line for line in listed.splitlines() if line.startswith("-A")]
+    installed = [_clauses(line.split()[2:]) for line in lines]
     if installed == expected:
         return []
     return ["T7: iptables -S DBIG differs from deploy/lan_firewall.py --print; re-run --apply"]
+
+
+def rules(env: dict[str, str]) -> list[str]:
+    """T7: the installed DBIG chain is exactly the committed rule list."""
+    return chain_problems(env, _run("iptables", "-S", "DBIG"))
 
 
 def main() -> None:

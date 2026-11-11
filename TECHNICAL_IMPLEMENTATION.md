@@ -891,7 +891,7 @@ Before calling the two packages independent, build and install each wheel in sep
 
 ### 17.6 Services on the LAN (report Part 3, 2026-11-10)
 
-<!-- verified: PENDING -->
+<!-- verified: 2bf154a -->
 
 Owner decisions D1 ("TLS, private CA"), D2 ("TLS on each DB"), D6 ("Build here, copy tar") and the lead's D3, D4, D5 and D7 rulings (§16 item 12). The deployment, the five layers and their settings are in [ARCHITECTURE.md](ARCHITECTURE.md#deployment); this section is the code.
 
@@ -911,4 +911,4 @@ Owner decisions D1 ("TLS, private CA"), D2 ("TLS on each DB"), D6 ("Build here, 
 
 Scopes by route: collector `scan`; requester `search`, `ask`, `scan`, `reindex`; planner `plan`, `graph`; builder `assemble`; contracts `validate`. The services' TLS certificates come from `scripts/make_ci_certs.py --name <service> --ip <address>`, which reuses the CA in its output folder. `scripts/build_images.py` builds `deploy/Dockerfile` once per package and saves one tarball. `deploy/lan_firewall.py --print` is the committed rule list that `scripts/lan_boundary_check.py` compares with the host (T7).
 
-Tests: `tests/test_service_security.py` (T2 and the key rules), `tests/catalogue_fixes/test_part3_services.py` (guard, contracts, builder job, reindex and graph), `tests/test_serve_bind.py::test_serve_over_tls_with_a_caller_key_file` (a real HTTPS port), `tests/test_scan.py::test_the_serve_worker_requeues_a_crashed_scan_and_processes_it`, `tests/test_repository_policy.py` (T1, on the shipped compose file with PyYAML, a dev-only dependency) and `tests/test_lan_firewall.py`. T4 to T7 are live checks on the host and have not run.
+Tests: `tests/test_service_security.py` (T2 and the key rules), `tests/catalogue_fixes/test_part3_services.py` (guard, contracts, builder job, reindex and graph), `tests/test_serve_bind.py::test_serve_over_tls_with_a_caller_key_file` (a real HTTPS port), `tests/test_scan.py::test_the_serve_worker_requeues_a_crashed_scan_and_processes_it`, `tests/test_repository_policy.py` (T1, on the shipped compose file with PyYAML, a dev-only dependency), `tests/test_lan_firewall.py` and `tests/test_lan_boundary_check.py`. T7 compares each rule as a set of option clauses (`scripts/lan_boundary_check.py::chain_problems`), because `iptables -S` reorders the matches and `--ctstate` values and adds `-m tcp`; a plain text comparison failed on every real chain (found 2026-11-11). T4 to T7 on the LAN host have not run; the local runs are in TODO.md.
