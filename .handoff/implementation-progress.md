@@ -1,7 +1,7 @@
 # Implementation progress (feat/improvements)
 
-Updated 2026-11-11. Stopped at 90% of the 5-hour limit (resets 14:20 UTC) on the lead's order.
-Start no new work until the lead says the limit has reset. Details and evidence are in TODO.md.
+Updated 2026-11-11 after the limit reset. The scope the lead set is done except the remote TLS
+check. Details and evidence are in TODO.md.
 
 ## Done
 
@@ -11,10 +11,12 @@ Start no new work until the lead says the limit has reset. Details and evidence 
 - T4 (loopback stand-in), T5 and T7 in throwaway `unshare -rn` namespaces; T7 comparison bug
   fixed with a failing test first (`tests/test_lan_boundary_check.py`).
 - Deployment stamps set in ARCHITECTURE.md and TECHNICAL_IMPLEMENTATION.md §17.6.
+- CI: Docs checks were red from b715a82 to 734629c (markdownlint MD012 and MD047, then five
+  Vale errors); fixed in 306fd6d and bdbf3e7. GitHub Rule checks and Docs checks pass on
+  bdbf3e7. GitLab shows no pipelines for this branch.
 
 ## Open
 
-- CI on 306fd6d (head; the docs lint fix for the Docs checks red since b715a82): pending at stop.
 - Owner's approval for the remote TLS probe: not arrived in this session (2026-11-11).
 
 - Remote TLS check per database: `not checked`. This session's permission check refused the
