@@ -64,3 +64,13 @@ def test_mongodb_prefers_tls_and_clickhouse_adds_ports():
     for stack in ("zoominfo-ch", "bench-ch"):
         targets = {port.split(":")[1] for port in _service(stack)["ports"]}
         assert targets == {"8443", "9440"}
+
+
+@pytest.mark.parametrize("stack", sorted(remote_tls.STACKS))
+def test_the_database_process_reads_only_the_copies_made_at_start(stack):
+    """On the host, tls/ is mode 0700 and owned by the SSH user, so only the root start step can
+    read /dbig-tls; a database process that opened it directly failed on bench-mongo, 2026-11-11
+    ("cannot read certificate authority file ... Permission denied")."""
+    service = _service(stack)
+    assert service["volumes"] == ["./tls:/dbig-tls:ro"]  # no file the database reads in place
+    assert "/dbig-tls" not in " ".join(service.get("command", []))
