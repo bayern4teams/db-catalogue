@@ -888,7 +888,6 @@ REST v1 routes: `POST /v1/lineage/paths`, `POST /v1/join-paths`, and `POST /v1/p
 
 Before calling the two packages independent, build and install each wheel in separate clean Windows and Linux environments and prove neither imports the other or a source driver. Contract fixtures must round-trip through both CLIs and REST APIs using the same sealed snapshot; test unknown major and additive minor versions. Test requester search/answer grounding, stale-index rejection, authorization/replay of both scan adapters, and model outage. Test planner lineage versus join separation, multi-input/multi-output OpenLineage ambiguity, SQL dialect and Mongo pipeline rendering, cross-source unresolved staging, prompt injection, read-only AST policy, and that no execution path exists. CI should start these gates only as the packages are implemented; CI now runs these gates as described in section 15; a gate not named there is not yet automated.
 
-
 ### 17.6 Services on the LAN (report Part 3, 2026-11-10)
 
 <!-- verified: 2bf154a -->
