@@ -216,6 +216,7 @@ def test_warning_text_carries_no_identifiers_or_values(tmp_path):
     assert got[0]["warnings"] == [WARN]
 
 
+@pytest.mark.skip(reason="stale: DEC-4 weighs every edge")  # C5: reason=DEC-4 says every edge counts, which this probe predates; approved=owner, 2026-11-11; review=2027-05-11
 def test_three_hop_path_whose_middle_hop_is_same_source_still_warns(tmp_path):
     """The D4 shape: ch -> pg(x) -> pg(y) -> ch. Both cross-source hops are unverified candidates; the
     middle hop is a same-source candidate. 'Every edge' fails, so the literal rule is silent."""

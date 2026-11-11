@@ -278,8 +278,10 @@ def test_an_explained_reply_passes_on_the_first_attempt_with_the_same_result_sha
     result, requests = ask(tmp_path, monkeypatch, [EXPLAINED])
     assert len(requests) == 1
     assert "error" not in result and "code" not in result, result
+    # Owner ruling A, 2026-11-11, "Add it (Recommended)": B3 adds the code-written `relationships`.
     assert set(result) == {"ir_version", "snapshot_digest", "answer", "citations", "cited",
-                           "model_digest"}, "no `checked` or attempt count leaks into the result"
+                           "model_digest", "relationships"}, (
+        "no `checked` or attempt count leaks into the result")
     assert result["model_digest"] == "rev-1" and result["citations"]
 
 

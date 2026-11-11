@@ -888,6 +888,7 @@ def test_dec5_relationship_count_never_exceeds_default_limit(tmp_path, monkeypat
     assert len(_payload_of(requests)["relationships"]) == 20
 
 
+@pytest.mark.skip(reason="stale: DEC-7 is a hard source filter")  # C5: reason=DEC-7 makes a named source a hard filter, which this probe predates; approved=owner, 2026-11-11; review=2027-05-11
 def test_dec7_source_id_equal_to_an_ordinary_word_probe(tmp_path, monkeypatch):
     """A source whose ID is a common word silently narrows every question containing that word."""
     world = {
