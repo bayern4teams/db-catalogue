@@ -189,6 +189,22 @@ def _resolved(cited: str, entries: list[dict], relationships: list[dict]) -> dic
     return {"id": cited}
 
 
+def _written(edge: dict) -> dict:
+    """B3 (owner D8, 2026-11-10: "Code writes it"): a relationship as the catalogue stores it,
+    never as the model put it. Evidence is metadata only: the tier and the measured numbers."""
+    evidence = {"tier": edge.get("evidence_tier")} | {
+        key: edge[key] for key in ("basis", "estimate", "lower", "upper") if key in edge
+    }
+    return {
+        "id": edge["id"],
+        "from": edge["from"],
+        "to": edge["to"],
+        "columns": edge["columns"],
+        "status": edge["status"],
+        "evidence": {key: value for key, value in evidence.items() if value is not None},
+    }
+
+
 def answer_question(
     state: Path, question: str, config: AnswerConfig, *, client: Any | None = None
 ) -> dict:
@@ -248,8 +264,10 @@ def answer_question(
             "snapshot_digest": results["snapshot_digest"],
         }
     # Every field of each retrieved object, and of each object of a retrieved field, joins the
-    # context after the retrieved items, once each (F13, DEC-18: no cap per table).
+    # context after the retrieved items, once each (F13, DEC-18: no cap per table). Not for a
+    # type question: its answer is the matching fields only (owner, 2026-11-10).
     owners = {item.get("object_id") or item["id"] for item in retrieved}
+    expanded = [] if category else fields_of(state, owners)
     # F16, DEC-24: tables that only link two retrieved ones join with their key columns. A
     # `relationship_limit` of 0 passes no relationship, so no bridge either.
     bridges, path_lines = bridge_paths(
@@ -261,7 +279,7 @@ def answer_question(
     )
     entries = [
         *retrieved,
-        *(item for item in fields_of(state, owners) if item["id"] not in allowed),
+        *(item for item in expanded if item["id"] not in allowed),
         *(item for item in bridges if item["id"] not in allowed),
     ]
     allowed |= {item["id"] for item in entries}
@@ -412,6 +430,10 @@ def answer_question(
         # (DEC-9). Taken from the retrieved metadata, never from the model's text.
         "cited": [
             _resolved(cited, entries, relationships) for cited in parsed.citations
+        ],
+        # Each cited ID that is a stored edge, written from that edge; a cited table gives none.
+        "relationships": [
+            _written(edge) for edge in relationships if edge["id"] in set(parsed.citations)
         ],
         "model_digest": config.model_digest,
     }

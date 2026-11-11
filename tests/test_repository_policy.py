@@ -533,3 +533,25 @@ def test_a_hardened_service_on_a_private_host_ip_passes(ci_check):
 def test_each_break_of_the_lan_policy_is_named(ci_check, changes, word):
     problems = ci_check.compose_problems({"services": {"one": _service(**changes)}})
     assert any(word in problem for problem in problems), problems
+
+
+def test_the_shipped_compose_file_keeps_the_lan_policy(ci_check):
+    """T1 on `deploy/compose.yaml` itself, with the placeholders of `deploy/.env.example`."""
+    import yaml
+
+    env = {}
+    for line in (ROOT / "deploy" / ".env.example").read_text(encoding="utf-8").splitlines():
+        if line.strip() and not line.startswith("#"):
+            key, _, value = line.partition("=")
+            env[key.strip()] = value.strip()
+
+    def substitute(match: re.Match) -> str:
+        name, default = match.group(1), match.group(3)
+        assert name in env or default is not None, f"{name} is not in deploy/.env.example"
+        return env.get(name, default or "")
+
+    text = (ROOT / "deploy" / "compose.yaml").read_text(encoding="utf-8")
+    rendered = re.sub(r"\$\{(\w+)(:?[-?]([^}]*))?\}", substitute, text)
+    config = yaml.safe_load(rendered)
+    assert set(config["services"]) == {"collectors", "builder", "requester", "planner", "contracts"}
+    assert ci_check.compose_problems(config) == []

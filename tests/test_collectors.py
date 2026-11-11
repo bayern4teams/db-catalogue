@@ -386,7 +386,9 @@ def test_collect_signed_bundle_contains_no_secret(tmp_path, monkeypatch):
     fake_pg = types.ModuleType("pg8000")
     fake_pg.dbapi = types.SimpleNamespace(connect=lambda **kwargs: PgConnection())
     monkeypatch.setitem(sys.modules, "pg8000", fake_pg)
-    monkeypatch.setenv("DBIG_CONNECTION", '{"host":"synthetic","password":"canary-secret"}')
+    # C5: reason=the database host must now be private (L4), so the placeholder name became a
+    # private IP; approved=owner, 2026-11-11; review=2027-05-11
+    monkeypatch.setenv("DBIG_CONNECTION", '{"host":"10.0.0.5","password":"canary-secret"}')
     monkeypatch.setenv("DBIG_SIGNING_KEY", "synthetic-signing-key-with-at-least-32-bytes")
     destination = tmp_path / "bundle"
     collect(config(), destination)

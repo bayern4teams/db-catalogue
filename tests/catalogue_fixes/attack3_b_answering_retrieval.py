@@ -304,11 +304,17 @@ def test_dec6_probe_whitespace_variants_of_claim_phrases(tmp_path, monkeypatch, 
     ],
 )
 def test_dec6_probe_paraphrased_claims(tmp_path, monkeypatch, claim):
-    """Not in the Decision's phrase list (derived from / flows into / writes to). Reported, not
-    a defect by itself: the ceiling is documented in the code."""
-    _, state = _state(tmp_path, monkeypatch, _rel_world())
+    """Not in the Decision's phrase list (derived from / flows into / writes to). The guarantee
+    is the structured output (owner D8, 2026-11-10, "Code writes it"): the reply cites a table,
+    so no relationship is claimed, whatever its text says."""
+    snapshot, state = _state(tmp_path, monkeypatch, _rel_world())
     result, _, _ = _ask(state, "gadget", monkeypatch, _answer_with(answer=claim))
-    assert "error" in result, f"paraphrased lineage claim accepted: {claim!r}"
+    # C5: reason=the refusal assertion is retired; B3 makes relationships code-written from
+    # stored edges instead; approved=owner, 2026-11-10; review=2027-05-10
+    stored = {edge.id for edge in _edges(snapshot)}
+    assert "error" not in result, result
+    assert all(entry["id"] in stored for entry in result["relationships"]), result
+    assert result["relationships"] == [], f"a relationship was claimed for {claim!r}"
 
 
 def test_dec6_not_established_needs_no_citation_and_has_its_own_code(tmp_path, monkeypatch):
@@ -531,6 +537,8 @@ def test_dec7_plural_tables_word_alone_without_source_does_not_dump_everything_u
         assert len(_payload_of(requests)["items"]) <= 10 + 0, "retrieval_limit must bound the context"
 
 
+# Owner ruling 2026-11-10, "Retire as stale (Recommended)": list mode (H5) replaces the cap.
+@pytest.mark.skip(reason="stale: H5 list mode retrieves up to list_limit")  # C5: reason=H5 list mode replaces the retrieval_limit cap for list questions; approved=owner, 2026-11-10; review=2027-05-10
 def test_dec7_retrieval_limit_bounds_object_listing(tmp_path, monkeypatch):
     _, state = _state(tmp_path, monkeypatch, _three_sources(n_tables=15))
     _, requests, _ = _ask(state, "list the clickhouse tables", monkeypatch, retrieval_limit=5)

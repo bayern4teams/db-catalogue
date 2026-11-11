@@ -4,9 +4,7 @@ from __future__ import annotations
 
 import ast
 import importlib.metadata
-import json
 import re
-import shutil
 import subprocess
 import sys
 import tomllib
@@ -221,8 +219,9 @@ HARDENING_PRESENT = ("user", "mem_limit", "pids_limit", "tmpfs")
 
 
 def compose_problems(config: dict) -> list[str]:
-    """T1 on the output of `docker compose config --format json`: every published port binds a
-    private `host_ip`, no host network or privileged container, and the hardening keys."""
+    """T1 on a parsed compose file (`tests/test_repository_policy.py` loads `deploy/compose.yaml`
+    with PyYAML, a dev-only dependency, owner 2026-11-11): every published port binds a private
+    `host_ip`, no host network or privileged container, and the hardening keys."""
     import ipaddress
 
     problems = []
@@ -243,25 +242,6 @@ def compose_problems(config: dict) -> list[str]:
             if address is None or address.is_unspecified or not address.is_private:
                 problems.append(f"{name}: port {port.get('target')} needs a private host_ip")
     return problems
-
-
-def _check_compose() -> None:
-    if shutil.which("docker") is None:
-        # C5 exception, said aloud rather than silent. Reason: the GitLab repository-policy
-        # image has no Docker, so T1 runs where Docker is (GitHub runners, local). Approval:
-        # pending, asked the lead session on 2026-11-10. Review: 2026-12-10.
-        print("T1 compose policy: not checked here, docker not found")
-        return
-    rendered = subprocess.run(
-        ("docker", "compose", "--env-file", "deploy/.env.example", "-f", "deploy/compose.yaml",
-         "config", "--format", "json"),
-        cwd=ROOT, capture_output=True, text=True, check=False,
-    )
-    if rendered.returncode != 0:
-        raise SystemExit(f"deploy/compose.yaml does not render: {rendered.stderr.strip()}")
-    problems = compose_problems(json.loads(rendered.stdout))
-    if problems:
-        raise SystemExit("deploy/compose.yaml breaks the LAN policy (T1): " + "; ".join(problems))
 
 
 def main() -> None:
@@ -333,7 +313,6 @@ def main() -> None:
     _check_uv_pins()
     _check_graph_tool_pins()
     _check_import_dependencies()
-    _check_compose()
 
     subprocess.run(("git", "diff", "--check"), cwd=ROOT, check=True)
     subprocess.run(("git", "diff", "--cached", "--check"), cwd=ROOT, check=True)

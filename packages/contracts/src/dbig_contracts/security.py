@@ -4,6 +4,7 @@ import hashlib
 import hmac
 import logging
 import os
+import socket
 from datetime import UTC, datetime
 from ipaddress import ip_address
 from pathlib import Path
@@ -52,6 +53,30 @@ def private_base_url(value: str) -> str:
     if parsed.scheme != "https" and not is_loopback_literal(parsed.hostname):
         raise ValueError("non-loopback private endpoints require HTTPS")
     return value.rstrip("/")
+
+
+def private_host_refusal(host: str) -> str | None:
+    """Why a database host is refused, or None when every address it names is private or
+    loopback (report Part 3, layer L4; owner 2026-11-11: "Look up, all private"). A name is
+    looked up, and one public address among its answers refuses it."""
+    candidate = host.strip()
+    if candidate.startswith("[") and candidate.endswith("]"):
+        candidate = candidate[1:-1]
+    try:
+        addresses = [ip_address(candidate)]
+    except ValueError:
+        try:
+            answers = socket.getaddrinfo(candidate, None, type=socket.SOCK_STREAM)
+        except (OSError, UnicodeError):
+            return f"database host {host!r} does not resolve; check the name or use its address"
+        # A link-local IPv6 answer carries a scope (`fe80::1%eth0`), which ip_address refuses.
+        addresses = [ip_address(str(answer[4][0]).split("%", 1)[0]) for answer in answers]
+    if not addresses or any(not (item.is_private or item.is_loopback) for item in addresses):
+        return (
+            f"database host {host!r} is not private: every address it names must be a private "
+            "or loopback address"
+        )
+    return None
 
 
 class SecretReferenceError(OperatorError):

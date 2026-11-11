@@ -374,3 +374,54 @@ def test_other_runtime_errors_are_not_disguised(monkeypatch, tmp_path, calls):
     sys.modules["pg8000.dbapi"].connect = broken  # type: ignore[attr-defined]  # C5: reason=mypy cannot see attributes set on a fake module; approved=user, 2026-11-08; review=2027-05-08
     with pytest.raises(RuntimeError, match="a genuine bug"):
         _collect(monkeypatch, tmp_path, "postgresql", PG_LOOPBACK, tls=False)
+
+
+# --- the database host is private (owner ruling 2026-11-11, "Look up, all private") ------------
+
+
+def _resolver(monkeypatch, table: dict[str, list[str]]) -> None:
+    """DNS is a boundary this project does not own; each name resolves to the listed addresses."""
+    import socket
+
+    def lookup(host, *_args, **_kwargs):
+        if host not in table:
+            raise socket.gaierror("unknown host")
+        return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (ip, 0)) for ip in table[host]]
+
+    monkeypatch.setattr(socket, "getaddrinfo", lookup)
+
+
+@pytest.mark.parametrize("host", ["8.8.8.8", "2001:4860::8888"])
+def test_a_public_database_address_is_refused_before_connecting(monkeypatch, tmp_path, calls, host):
+    with pytest.raises(OperatorError, match="private"):
+        _collect(monkeypatch, tmp_path, "postgresql", {**PG_REMOTE, "host": host})
+    assert calls == []
+
+
+def test_a_name_resolving_only_to_private_addresses_connects(monkeypatch, tmp_path, calls):
+    _resolver(monkeypatch, {"db.lan": ["10.1.2.3", "10.1.2.4"]})
+    with pytest.raises(Connected):
+        _collect(monkeypatch, tmp_path, "clickhouse", {**CH_REMOTE, "host": "db.lan"})
+    assert calls[0]["kwargs"]["host"] == "db.lan"
+
+
+def test_a_name_with_one_public_address_is_refused(monkeypatch, tmp_path, calls):
+    _resolver(monkeypatch, {"db.example": ["10.1.2.3", "93.184.216.34"]})
+    with pytest.raises(OperatorError, match="private"):
+        _collect(monkeypatch, tmp_path, "postgresql", {**PG_REMOTE, "host": "db.example"})
+    assert calls == []
+
+
+def test_a_name_that_does_not_resolve_is_refused(monkeypatch, tmp_path, calls):
+    _resolver(monkeypatch, {})
+    with pytest.raises(OperatorError, match="resolve"):
+        _collect(monkeypatch, tmp_path, "postgresql", {**PG_REMOTE, "host": "nowhere.lan"})
+    assert calls == []
+
+
+def test_every_mongodb_member_must_be_private(monkeypatch, tmp_path, calls):
+    with pytest.raises(OperatorError, match="private"):
+        _collect(
+            monkeypatch, tmp_path, "mongodb", {"uri": "mongodb://10.0.0.7:27017,8.8.8.8:27017"}
+        )
+    assert calls == []

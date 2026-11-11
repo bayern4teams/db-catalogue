@@ -51,10 +51,10 @@ services:
       DBIG_CALLER_KEYS_FILE: /run/secrets/collector_caller_keys
       DBIG_SIGNING_KEY_FILE: /run/secrets/scan_signing_key
       DBIG_TOKEN_KEY_FILE: /run/secrets/token_key
-      DBIG_SOURCE_PASSWORD_FILE: /run/secrets/source_password
+      DBIG_SOURCE_CONNECTION_FILE: /run/secrets/source_connection
       SSL_CERT_FILE: /run/secrets/source_ca_bundle
     secrets: [lan_ca_bundle, collector_tls_crt, collector_tls_key, collector_caller_keys, scan_signing_key,
-              token_key, source_password, source_ca_bundle]
+              token_key, source_connection, source_ca_bundle]
     volumes:
       - ./config/collector.toml:/etc/dbig/collector.toml:ro
       - bundles:/data/bundles
@@ -149,6 +149,8 @@ services:
     secrets: [lan_ca_bundle, planner_tls_crt, planner_tls_key, planner_caller_keys]
     volumes:
       - ./config/planner.toml:/etc/dbig/planner.toml:ro
+      # Observed SQL and OpenLineage files, supplied by the operator; an empty folder is valid.
+      - ./config/observations:/etc/dbig/observations:ro
       - snapshots:/data/snapshots:ro
       - planner-state:/var/lib/dbig/state
     networks:
@@ -200,7 +202,7 @@ secrets:
   contracts_caller_keys: {file: ./secrets/contracts-keys.json}
   scan_signing_key: {file: ./secrets/scan-signing.key}
   token_key: {file: ./secrets/token.key}
-  source_password: {file: ./secrets/source-password}
+  source_connection: {file: ./secrets/source-connection.json}
   source_ca_bundle: {file: ./secrets/source-ca-bundle.pem}
   model_key: {file: ./secrets/model.key}
   requester_collector_token: {file: ./secrets/requester-collector-token}

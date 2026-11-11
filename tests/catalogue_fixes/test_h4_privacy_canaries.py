@@ -585,7 +585,10 @@ def test_the_ask_request_holds_the_question_and_catalogue_metadata_only(world):
     result, _, stub, payload = _ask_succeeds_citing(world)
     assert "error" not in result, result
     body = stub.requests[0]["body"]
-    assert set(payload) == {"question", "items", "relationships"}
+    # Owner ruling 2026-11-10, "Allow paths (Recommended)": B4's `paths` holds table names and
+    # relationship IDs only; every other key stays blocked.
+    assert set(payload) <= {"question", "items", "relationships", "paths"}
+    assert {"question", "items", "relationships"} <= set(payload)
     assert payload["question"] == QUESTION  # the prompt is the one thing that is meant to be there
     outside_the_question = json.dumps({**payload, "question": ""}) + json.dumps(
         [m for m in body["messages"] if m["role"] == "system"]

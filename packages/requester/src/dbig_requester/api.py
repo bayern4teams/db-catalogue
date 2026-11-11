@@ -8,7 +8,7 @@ from dbig_contracts.scan import ScanRequest
 from dbig_contracts.security import service_keys
 from dbig_contracts.service import ServiceGuard
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from .answer import answer_question
 from .config import RequesterConfig
@@ -26,6 +26,22 @@ ROUTE_SCOPES = {
 
 class QuestionBody(BaseModel):
     question: str = Field(min_length=1, max_length=1024)
+
+
+class QuestionResponse(BaseModel):
+    """A grounded answer. Only `relationships` states how tables link (B3, owner D8)."""
+
+    model_config = ConfigDict(extra="allow")
+
+    answer: str = Field(
+        description="The model's own text about the retrieved metadata. Not a catalogue fact: "
+        "a link it describes is established only by an entry in relationships."
+    )
+    citations: list[str] = Field(description="The retrieved IDs the answer cites.")
+    relationships: list[dict] = Field(
+        description="The only catalogue facts about links: one entry per cited stored edge, "
+        "written by code from that edge (names, columns, status, metadata-only evidence)."
+    )
 
 
 class ScanBody(BaseModel):
@@ -86,7 +102,7 @@ def create_app(config: RequesterConfig) -> FastAPI:
         except ValueError as error:
             raise HTTPException(status_code=409, detail={"code": str(error)}) from error
 
-    @app.post("/v1/catalogue/questions")
+    @app.post("/v1/catalogue/questions", response_model=QuestionResponse)
     def question_route(body: QuestionBody):
         if config.answer is None:
             raise HTTPException(status_code=503, detail={"code": "MODEL_NOT_CONFIGURED"})

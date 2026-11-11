@@ -103,3 +103,12 @@ def test_an_ordinary_question_keeps_the_retrieval_limit(tmp_path, monkeypatch):
     items = _context(tmp_path, monkeypatch, "Which code columns exist?")
     owners = {item["object_name"] for item in items if item["name"] == "code"}
     assert len(owners) == AnswerConfig.model_fields["retrieval_limit"].default
+
+
+def test_a_type_question_context_holds_only_fields_of_that_type(tmp_path, monkeypatch):
+    """Owner ruling 2026-11-10, "Only matching fields (Recommended)": the DEC-18 table expansion
+    is skipped for a type question, so the `id` and `code` columns of each table stay out."""
+    items = _context(tmp_path, monkeypatch, "Which columns have a timestamp type?")
+    fields = [item for item in items if item["kind"] == "field"]
+    assert fields, "control: the timestamp fields were retrieved"
+    assert {item["data_type"] for item in fields} == {"timestamp"}, [i["name"] for i in fields]

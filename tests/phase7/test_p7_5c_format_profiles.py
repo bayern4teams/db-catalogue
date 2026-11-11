@@ -914,7 +914,9 @@ def test_a_pg_bundle_keeps_the_real_range_only_in_the_local_only_file(
     fake_pg = types.ModuleType("pg8000")
     fake_pg.dbapi = types.SimpleNamespace(connect=lambda **kwargs: FakePg(PG_TABLES))
     monkeypatch.setitem(sys.modules, "pg8000", fake_pg)
-    monkeypatch.setenv("DBIG_CONNECTION", '{"host":"synthetic"}')
+    # C5: reason=the database host must now be private (L4), so the placeholder name became a
+    # private IP; approved=owner, 2026-11-11; review=2027-05-11
+    monkeypatch.setenv("DBIG_CONNECTION", '{"host":"10.0.0.5"}')
     monkeypatch.setenv("DBIG_SIGNING_KEY", "synthetic-signing-key-with-at-least-32-bytes")
     caplog.set_level(logging.DEBUG)
     destination = tmp_path / "bundle"

@@ -33,7 +33,12 @@ from dbig_contracts.models import (
     ValueTokens,
     utc_now,
 )
-from dbig_contracts.security import is_loopback_literal, key_from_env, secret_from_env
+from dbig_contracts.security import (
+    is_loopback_literal,
+    key_from_env,
+    private_host_refusal,
+    secret_from_env,
+)
 
 from .config import SourceConfig
 
@@ -1963,6 +1968,13 @@ def _require_loopback(hosts: list[str]) -> None:
             )
 
 
+def _require_private(hosts: list[str]) -> None:
+    """Refuse a database host that is, or resolves to, any address that is not private."""
+    for host in hosts or [""]:
+        if refusal := private_host_refusal(host):
+            raise OperatorError(refusal)
+
+
 def _certificate_failure(error: BaseException, config: SourceConfig) -> OperatorError | None:
     """Recognise a certificate that did not verify anywhere in an exception chain.
 
@@ -2151,6 +2163,7 @@ def _collect(config: SourceConfig, destination: Path) -> None:
         }
         if not config.tls:
             _require_loopback([str(connection.get("host", ""))])
+        _require_private([str(connection.get("host", ""))])
         client = dbapi.connect(
             **allowed,
             ssl_context=ssl.create_default_context(cafile=ca_file) if config.tls else None,
@@ -2170,6 +2183,7 @@ def _collect(config: SourceConfig, destination: Path) -> None:
         }
         if not config.tls:
             _require_loopback([str(connection.get("host", ""))])
+        _require_private([str(connection.get("host", ""))])
         tls_options: dict[str, Any] = {"secure": config.tls}
         if config.tls:
             tls_options["verify"] = True
@@ -2187,16 +2201,18 @@ def _collect(config: SourceConfig, destination: Path) -> None:
             raise ValueError("MongoDB connection needs only uri")
         _refuse_mongo_tls_overrides(connection["uri"], config)
         mongo_options: dict[str, Any] = {"tls": config.tls}
+        # Before parsing: parsing an SRV URI performs DNS lookups, which would hang or fail
+        # with a driver error before this refusal could be reported.
+        if not config.tls and connection["uri"].startswith("mongodb+srv://"):
+            raise OperatorError("tls = false cannot be used with a mongodb+srv:// URI")
+        parsed = uri_parser.parse_uri(connection["uri"], connect_timeout=None)
+        members = [host for host, _ in parsed["nodelist"]]
         if config.tls:
             if ca_file is not None:
                 mongo_options["tlsCAFile"] = ca_file
         else:
-            # Before parsing: parsing an SRV URI performs DNS lookups, which would hang or fail
-            # with a driver error before this refusal could be reported.
-            if connection["uri"].startswith("mongodb+srv://"):
-                raise OperatorError("tls = false cannot be used with a mongodb+srv:// URI")
-            parsed = uri_parser.parse_uri(connection["uri"], connect_timeout=None)
-            _require_loopback([host for host, _ in parsed["nodelist"]])
+            _require_loopback(members)
+        _require_private(members)
         client = MongoClient(
             connection["uri"],
             serverSelectionTimeoutMS=config.read_timeout_seconds * 1000,
