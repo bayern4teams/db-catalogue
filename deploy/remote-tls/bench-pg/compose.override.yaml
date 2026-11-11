@@ -1,0 +1,14 @@
+# TLS for bench-pg (owner ruling D2, 2026-11-11). Installed by deploy/remote_tls.py next to the stack's
+# compose.yaml, which Docker Compose merges automatically; deleting this file and tls/ undoes it.
+# Plaintext stays on (owner: "Keep plaintext too"). The key is copied to the postgres user at start,
+# because PostgreSQL refuses a key it does not own.
+services:
+  postgres:
+    volumes:
+      - ./tls:/dbig-tls:ro
+    entrypoint:
+      - sh
+      - -c
+      - install -o postgres -g postgres -m 600 /dbig-tls/server.key /tmp/dbig-server.key && install -o postgres -g postgres -m 644 /dbig-tls/server.crt /tmp/dbig-server.crt && exec docker-entrypoint.sh "$$@"
+      - --
+    command: ["postgres", "-c", "max_connections=200", "-c", "ssl=on", "-c", "ssl_cert_file=/tmp/dbig-server.crt", "-c", "ssl_key_file=/tmp/dbig-server.key"]

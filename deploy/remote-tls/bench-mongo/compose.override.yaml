@@ -1,0 +1,15 @@
+# TLS for bench-mongo (owner ruling D2, 2026-11-11). Installed by deploy/remote_tls.py next to the
+# stack's compose.yaml, which Docker Compose merges automatically; deleting this file and tls/ undoes
+# it. `preferTLS` keeps plaintext clients working (owner: "Keep plaintext too"); no client
+# certificate is required. The key is copied to the mongodb user at start.
+services:
+  mongo:
+    volumes:
+      - ./tls:/dbig-tls:ro
+    entrypoint:
+      - sh
+      - -c
+      - install -o mongodb -g mongodb -m 600 /dbig-tls/server.pem /tmp/dbig-server.pem && exec docker-entrypoint.sh "$$@"
+      - --
+    command: ["mongod", "--tlsMode", "preferTLS", "--tlsCertificateKeyFile", "/tmp/dbig-server.pem",
+              "--tlsCAFile", "/dbig-tls/ca.crt", "--tlsAllowConnectionsWithoutCertificates"]

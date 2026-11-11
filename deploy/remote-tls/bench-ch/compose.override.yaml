@@ -1,0 +1,17 @@
+# TLS for bench-ch (owner ruling D2, 2026-11-11). Installed by deploy/remote_tls.py next to the stack's
+# compose.yaml, which Docker Compose merges automatically; deleting this file and tls/ undoes it.
+# Plaintext 8123 and 9000 stay (owner: "Keep plaintext too"); HTTPS 8443 and native TLS 9440 are
+# added and published like the existing ports. The key is copied to the clickhouse user at start.
+services:
+  clickhouse:
+    volumes:
+      - ./tls:/dbig-tls:ro
+      - ./tls/clickhouse-tls.xml:/etc/clickhouse-server/config.d/dbig-tls.xml:ro
+    entrypoint:
+      - sh
+      - -c
+      - install -o clickhouse -g clickhouse -m 600 /dbig-tls/server.key /tmp/dbig-server.key && install -o clickhouse -g clickhouse -m 644 /dbig-tls/server.crt /tmp/dbig-server.crt && exec /entrypoint.sh "$$@"
+      - --
+    ports:
+      - "8402:8443"
+      - "9402:9440"
