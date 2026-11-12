@@ -561,6 +561,16 @@ def _visible_edges(
     return edges, ranks, adjacent
 
 
+Visible = tuple[dict[str, tuple[str, str, str]], dict[str, int], dict[str, list[tuple[str, str]]]]
+
+
+def visible_edges(state: Path, include_unverified: bool = False) -> Visible:
+    """`_visible_edges` read once, for a caller that walks paths more than once per question
+    (review finding 10, 2026-11-12)."""
+    with closing(sqlite3.connect(_database(state))) as connection:
+        return _visible_edges(connection, include_unverified)
+
+
 def _shortest_paths(
     adjacent: dict[str, list[tuple[str, str]]],
     reach: dict[str, dict[str, int]],
@@ -587,7 +597,13 @@ def _shortest_paths(
 
 
 def bridge_paths(
-    state: Path, ends: set[str], max_hops: int, max_bridges: int, include_unverified: bool = False
+    state: Path,
+    ends: set[str],
+    max_hops: int,
+    max_bridges: int,
+    include_unverified: bool = False,
+    *,
+    visible: Visible | None = None,
 ) -> tuple[list[dict], list[dict]]:
     """F16, DEC-24: the tables on a shortest path of at most `max_hops` edges between two of the
     `ends`, through tables that are not themselves ends, at most `max_bridges` of them, as index
@@ -599,7 +615,7 @@ def bridge_paths(
     if len(ends) < 2 or max_hops < 2 or max_bridges < 1:
         return [], []
     with closing(sqlite3.connect(_database(state))) as connection:
-        edges, ranks, adjacent = _visible_edges(connection, include_unverified)
+        edges, ranks, adjacent = visible or _visible_edges(connection, include_unverified)
         reach = {end: _distances(adjacent, end, max_hops) for end in sorted(ends & adjacent.keys())}
         kept: list[str] = []
         used: dict[str, None] = {}
@@ -649,6 +665,8 @@ def chained_paths(
     shown: set[str],
     max_hops: int,
     include_unverified: bool = False,
+    *,
+    visible: Visible | None = None,
 ) -> list[dict]:
     """B4 (N-I10): for each two of the `ends` with no direct line, the strongest shortest path of
     at most `max_hops` edges over the `shown` relationships (`relationship_limit` still bounds what
@@ -656,8 +674,7 @@ def chained_paths(
     contained in a longer one is left out."""
     if len(ends) < 2 or max_hops < 2:
         return []
-    with closing(sqlite3.connect(_database(state))) as connection:
-        edges, ranks, adjacent = _visible_edges(connection, include_unverified)
+    edges, ranks, adjacent = visible or visible_edges(state, include_unverified)
     adjacent = {
         node: [step for step in steps if step[1] in shown] for node, steps in adjacent.items()
     }

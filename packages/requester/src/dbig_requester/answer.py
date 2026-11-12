@@ -25,6 +25,7 @@ from .search import (
     question_type,
     relationships_for,
     search,
+    visible_edges,
 )
 
 # The schema sent to the server carries no length or item bound: llama.cpp refuses one ("failed
@@ -270,12 +271,15 @@ def answer_question(
     expanded = [] if category else fields_of(state, owners)
     # F16, DEC-24: tables that only link two retrieved ones join with their key columns. A
     # `relationship_limit` of 0 passes no relationship, so no bridge either.
+    # One read of the visible relationships for both path walks below (review finding 10).
+    visible = visible_edges(state, config.include_unverified_cross_source)
     bridges, path_lines = bridge_paths(
         state,
         owners,
         config.path_max_hops,
         config.path_max_bridge_tables if config.relationship_limit else 0,
         config.include_unverified_cross_source,
+        visible=visible,
     )
     entries = [
         *retrieved,
@@ -318,6 +322,7 @@ def answer_question(
         {item["id"] for item in relationships},
         config.path_max_hops,
         config.include_unverified_cross_source,
+        visible=visible,
     )
     allowed |= {item["id"] for item in relationships}
     try:
