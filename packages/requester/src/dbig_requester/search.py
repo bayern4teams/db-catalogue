@@ -719,10 +719,18 @@ TYPE_WORDS = {
     "integer": "integer", "text": "text", "string": "text",
     "boolean": "boolean", "bool": "boolean", "uuid": "uuid",
 }
-# A type word counts only beside one of these: "what date did it run" is not about a type.
+# A type word counts in a question with one of these words: "what date did it run" is not about
+# a type. It also counts right before a column word ("show integer columns") or after "are" or
+# "is" that follows one ("which columns are dates?"); "which column holds a card number" is not
+# about a type (review finding 6, 2026-11-12).
 TYPE_QUESTION_WORDS = frozenset({"type", "typed"})
-# Words that ask for every match, not the best few (B7, owner 2026-11-10: "List mode").
-LIST_WORDS = frozenset({"all", "every", "list"})
+COLUMN_WORDS = frozenset({"column", "field"})
+# B7 (owner 2026-11-10: "List mode"): "list" asks for every match, and "all" or "every" does
+# when a table or column word follows within LIST_REACH words; "Are all orders linked to a
+# customer?" is a yes-or-no question, not a list (review finding 7, 2026-11-12).
+LIST_VERB = "list"
+LIST_QUANTIFIERS = frozenset({"all", "every"})
+LIST_REACH = 3
 
 
 def type_categories(data_type: str) -> set[str]:
@@ -744,12 +752,31 @@ def question_type(question: str) -> str | None:
         {word, *_singulars(word)}
         for word in (item.casefold() for item in re.findall(r"\w+", question, flags=re.UNICODE))
     ]
-    if not any(TYPE_QUESTION_WORDS & alternatives for alternatives in forms):
-        return None
-    return next(
-        (TYPE_WORDS[form] for alternatives in forms for form in sorted(alternatives)
-         if form in TYPE_WORDS),
-        None,
+    typed = any(TYPE_QUESTION_WORDS & alternatives for alternatives in forms)
+    for at, alternatives in enumerate(forms):
+        named = next(
+            (TYPE_WORDS[form] for form in sorted(alternatives) if form in TYPE_WORDS), None
+        )
+        if named is None:
+            continue
+        before_column = at + 1 < len(forms) and bool(forms[at + 1] & COLUMN_WORDS)
+        after_column = at >= 2 and forms[at - 1] & {"are", "is"} and any(
+            alternative & COLUMN_WORDS for alternative in forms[: at - 1]
+        )
+        if typed or before_column or after_column:
+            return named
+    return None
+
+
+def asks_for_list(question: str) -> bool:
+    """Whether a question asks for every match rather than the best few (B7)."""
+    words = [item.casefold() for item in re.findall(r"\w+", question, flags=re.UNICODE)]
+    listed = OBJECT_WORDS | COLUMN_WORDS
+    return LIST_VERB in words or any(
+        word in LIST_QUANTIFIERS
+        and any({later, *_singulars(later)} & listed
+                for later in words[at + 1 : at + 1 + LIST_REACH])
+        for at, word in enumerate(words)
     )
 
 

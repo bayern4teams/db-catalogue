@@ -15,9 +15,9 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 
 from .config import AnswerConfig
 from .search import (
-    LIST_WORDS,
     SearchRequest,
     StaleIndexError,
+    asks_for_list,
     bridge_paths,
     chained_paths,
     fields_of,
@@ -223,7 +223,7 @@ def answer_question(
         # B7: "list all ..." and a type question get every match up to `list_limit`.
         limit = (
             config.list_limit
-            if category or LIST_WORDS.intersection(word.casefold() for word in words)
+            if category or asks_for_list(question)
             else config.retrieval_limit
         )
         # A source named in the question filters the search, so its words need not also match;

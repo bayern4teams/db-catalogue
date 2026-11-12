@@ -112,3 +112,26 @@ def test_a_type_question_context_holds_only_fields_of_that_type(tmp_path, monkey
     fields = [item for item in items if item["kind"] == "field"]
     assert fields, "control: the timestamp fields were retrieved"
     assert {item["data_type"] for item in fields} == {"timestamp"}, [i["name"] for i in fields]
+
+
+@pytest.mark.parametrize(
+    ("question", "category"),
+    [
+        # Review finding 6 (owner "Yes, fix all", 2026-11-12): the owner's H4 examples name the
+        # type beside a column word, without the word "type".
+        ("show integer columns", "integer"),
+        ("which columns are dates?", "datetime"),
+        ("Which fields are text?", "text"),
+        ("what date did it run", None),
+        ("What date did the last run happen?", None),
+    ],
+)
+def test_a_type_word_beside_a_column_word_asks_about_a_type(question, category):
+    assert question_type(question) == category
+
+
+def test_all_inside_a_yes_no_question_keeps_the_retrieval_limit(tmp_path, monkeypatch):
+    """Review finding 7: "all" only asks for a list beside a table or column word."""
+    items = _context(tmp_path, monkeypatch, "Are all codes linked to a customer?")
+    owners = {item["object_name"] for item in items if item["name"] == "code"}
+    assert len(owners) == AnswerConfig.model_fields["retrieval_limit"].default
