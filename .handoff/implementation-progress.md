@@ -16,12 +16,10 @@ Updated 2026-11-11 after the limit reset. The scope the lead set is done, the re
 
 ## Open
 
-- Remote TLS (D2), stopped at the usage limit. Done: bench-pg, diffbot-pg. bench-mongo failed and was restored (healthy, no TLS);
-  its fixed override exited in a local dry run, cause not checked: debug locally first
-  (`docker run` with the override's entrypoint, see TODO.md). Not started: zoominfo-ch, bench-ch (local dry run passed).
-  Then the collector run over TLS. Installer: `deploy/remote_tls.py`; CA in ~/dbig-ca; foreign CA for verify: any throwaway CA.
+- Remote TLS (D2): on for all five, verified (TODO.md). Collector over TLS complete for diffbot-pg and
+  zoominfo-ch; bench-pg, bench-ch and bench-mongo wait for credentials from the owner. zoominfo-ch has a
+  pre-existing merge error on one part (TODO.md); reported, not touched.
 
-- Remote TLS: probed 2026-11-11 with the owner's yes; TLS is off on all five project databases (TODO.md). Enabling it is a remote change that needs a new owner yes.
 
 - Requester scan status stays `queued` over the HTTP adapter (TODO.md, needs a decision).
 - On the LAN host, with an owner yes: install the firewall, T4 from a LAN host and from off the
