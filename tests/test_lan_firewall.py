@@ -47,3 +47,56 @@ def test_the_example_env_renders():
 def test_a_public_or_malformed_address_is_refused(changes):
     with pytest.raises((SystemExit, ValueError)):
         firewall.rules({**ENV, **changes})
+
+
+# Review findings 1 and 2 (owner "Yes, fix all", 2026-11-12). The iptables programs are the
+# boundary this project does not own, so fakes on PATH record what `--apply` sends them.
+FAKE = """#!/usr/bin/env python3
+import json, os, sys
+stdin = "" if sys.stdin.isatty() else sys.stdin.read()
+with open(os.environ["FAKE_LOG"], "a") as log:
+    log.write(json.dumps({"tool": os.path.basename(sys.argv[0]), "args": sys.argv[1:],
+                          "stdin": stdin}) + "\\n")
+sys.exit(1 if "-C" in sys.argv else 0)  # no jump installed yet
+"""
+
+
+def _apply_with_fakes(tmp_path, monkeypatch, env):
+    import json
+    import sys
+
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    for tool in ("iptables", "ip6tables", "iptables-restore", "ip6tables-restore"):
+        path = bin_dir / tool
+        path.write_text(FAKE.replace("/usr/bin/env python3", sys.executable, 1))
+        path.chmod(0o755)
+    monkeypatch.setenv("PATH", str(bin_dir))
+    monkeypatch.setenv("FAKE_LOG", str(tmp_path / "calls.jsonl"))
+    firewall._apply(env)
+    return [json.loads(line) for line in (tmp_path / "calls.jsonl").read_text().splitlines()]
+
+
+APPLY_ENV = {**ENV, "DBIG_BRIDGE": "dbig0"}
+
+
+def test_apply_rebuilds_each_chain_in_one_transaction(tmp_path, monkeypatch):
+    """Finding 2: a flush followed by appends leaves an open chain when an append fails; one
+    `iptables-restore --noflush` per family either installs the whole chain or nothing."""
+    calls = _apply_with_fakes(tmp_path, monkeypatch, APPLY_ENV)
+    changing = [c for c in calls if "-C" not in c["args"]]
+    assert {c["tool"] for c in changing} == {"iptables-restore", "ip6tables-restore"}
+    ipv4 = next(c for c in changing if c["tool"] == "iptables-restore")
+    assert "--noflush" in ipv4["args"]
+    lines = ipv4["stdin"].splitlines()
+    assert lines[0] == "*filter" and lines[-1] == "COMMIT"
+    assert f"-A DBIG -s {ENV['DBIG_SUBNET']} -j DROP" in lines
+    assert "-I DOCKER-USER 1 -j DBIG" in lines
+
+
+def test_ipv6_rules_touch_only_our_bridge(tmp_path, monkeypatch):
+    """Finding 1: an unscoped IPv6 DROP under DOCKER-USER cut every container on the host."""
+    calls = _apply_with_fakes(tmp_path, monkeypatch, APPLY_ENV)
+    ipv6 = [c for c in calls if c["tool"].startswith("ip6tables") and "-C" not in c["args"]]
+    rules = [line for c in ipv6 for line in c["stdin"].splitlines() if line.startswith("-A DBIG")]
+    assert rules and all(" -i dbig0 " in f"{r} " or " -o dbig0 " in f"{r} " for r in rules)

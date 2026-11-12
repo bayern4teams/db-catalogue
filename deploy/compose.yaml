@@ -21,6 +21,9 @@ networks:
     driver: bridge
     # IPv4 only: IPv6 publishing is on by default, and the firewall rules are IPv4 (report 3.3).
     enable_ipv6: false
+    # A fixed bridge name, so the IPv6 firewall rules touch only this network (deploy/lan_firewall.py).
+    driver_opts:
+      com.docker.network.bridge.name: ${DBIG_BRIDGE:?set DBIG_BRIDGE in deploy/.env}
     ipam:
       config:
         - subnet: ${DBIG_SUBNET:?set DBIG_SUBNET in deploy/.env}

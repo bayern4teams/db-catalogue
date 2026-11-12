@@ -65,7 +65,7 @@ The caller runs the pipeline (lead ruling D3 (a)): it asks the requester for a s
 | --- | --- | --- |
 | L1 host bind | each published port has `host_ip` set to the LAN address, never all interfaces | `deploy/compose.yaml`, checked by `scripts/ci_check.py::compose_problems` in the tests (T1) |
 | L2 inbound firewall | `DOCKER-USER` drops LAN-interface traffic from outside the LAN CIDR | `deploy/lan_firewall.py`, `deploy/dbig-firewall.service` |
-| L3 egress firewall | the compose subnet reaches only the listed database, model and Langfuse addresses | same |
+| L3 egress firewall | the compose subnet reaches only the listed database, model and Langfuse addresses; IPv6 is dropped on the compose bridge only (`DBIG_BRIDGE`), so other containers on the host are untouched | same |
 | L4 application | every model, Langfuse and collector URL passes `private_base_url`; a database host must be, or resolve only to, private addresses; a `serve` binds only loopback, or a private IP literal with TLS | `packages/contracts/src/dbig_contracts/security.py::bind_refusal`, `::private_host_refusal` |
 | L5 caller identity | a key per caller, stored as SHA-256 with scopes and an expiry; two hashes per caller let a key rotate | `packages/contracts/src/dbig_contracts/service.py::ServiceGuard` |
 

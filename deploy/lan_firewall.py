@@ -1,8 +1,9 @@
 """LAN boundary firewall for the five services, as code (report Part 3.3, layers L2 and L3; B10).
 
-Rules go in a `DBIG` chain that `DOCKER-USER` jumps to. The chain is flushed and rebuilt each
-run, so the installed rules are exactly the printed list (test T7). Docker's `iptables` backend
-is required: the `nftables` backend has no `DOCKER-USER` chain
+Rules go in a `DBIG` chain that `DOCKER-USER` jumps to. Each run rebuilds the chain in one
+`iptables-restore --noflush` transaction per address family, so the installed rules are exactly
+the printed list (test T7) and a failed run leaves the previous rules in place. Docker's
+`iptables` backend is required: the `nftables` backend has no `DOCKER-USER` chain
 (https://docs.docker.com/engine/network/firewall-nftables/).
 
     python3 deploy/lan_firewall.py --env deploy/.env --print     # show the rules, change nothing
@@ -76,33 +77,40 @@ def rules(env: dict[str, str]) -> list[list[str]]:
     return chain
 
 
-def commands(env: dict[str, str]) -> list[list[str]]:
-    return [
-        ["-N", CHAIN],
-        ["-F", CHAIN],
-        *(["-A", CHAIN, *rule] for rule in rules(env)),
-        ["-D", "DOCKER-USER", "-j", CHAIN],
-        ["-I", "DOCKER-USER", "1", "-j", CHAIN],
-    ]
+def _restore_input(chain: list[list[str]], add_jump: bool) -> str:
+    """One `iptables-restore --noflush` transaction: declaring the chain empties it, the rules
+    refill it, and the jump from DOCKER-USER is added only when it is missing. The kernel applies
+    the whole table or nothing, so a failed rule leaves the previous chain in place."""
+    lines = ["*filter", f":{CHAIN} - [0:0]"]
+    lines += [" ".join(["-A", CHAIN, *rule]) for rule in chain]
+    if add_jump:
+        lines.append(f"-I DOCKER-USER 1 -j {CHAIN}")
+    return "\n".join([*lines, "COMMIT"]) + "\n"
+
+
+def ipv6_rules(env: dict[str, str]) -> list[list[str]]:
+    """The compose network has no IPv6 (`enable_ipv6: false`), so IPv6 to or from our bridge is
+    dropped; other containers on the host are not touched (B4)."""
+    bridge = env["DBIG_BRIDGE"]
+    return [["-i", bridge, "-j", "DROP"], ["-o", bridge, "-j", "DROP"]]
+
+
+def _run(arguments: list[str], stdin: str | None = None) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(  # noqa: S603 # C5: reason=fixed argv, no user input; approved=owner, 2026-11-10; review=2027-05-10
+        arguments, input=stdin, capture_output=True, text=True, check=False
+    )
 
 
 def _apply(env: dict[str, str]) -> None:
-    for tool, table in (("iptables", commands(env)), ("ip6tables", None)):
-        executable = shutil.which(tool)
-        if executable is None:
+    for tool, chain in (("iptables", rules(env)), ("ip6tables", ipv6_rules(env))):
+        executable, restore = shutil.which(tool), shutil.which(f"{tool}-restore")
+        if executable is None or restore is None:
             raise SystemExit(f"{tool} not found; install it, Docker's iptables backend needs it")
-        steps = table if table is not None else [
-            # IPv6: the compose network has none, so every forwarded IPv6 packet is dropped.
-            ["-N", CHAIN], ["-F", CHAIN], ["-A", CHAIN, "-j", "DROP"],
-            ["-D", "DOCKER-USER", "-j", CHAIN], ["-I", "DOCKER-USER", "1", "-j", CHAIN],
-        ]
-        for step in steps:
-            # `-N` fails on an existing chain and `-D` on a missing jump: both are expected.
-            result = subprocess.run(  # noqa: S603 # C5: reason=fixed argv, no user input; approved=owner, 2026-11-10; review=2027-05-10
-                [executable, *step], capture_output=True, text=True
-            )
-            if result.returncode != 0 and step[0] not in {"-N", "-D"}:
-                raise SystemExit(f"{tool} {' '.join(step)} failed: {result.stderr.strip()}")
+        # `-C` exits non-zero when the jump is missing, including on a first run with no chain.
+        has_jump = _run([executable, "-C", "DOCKER-USER", "-j", CHAIN]).returncode == 0
+        result = _run([restore, "--noflush"], _restore_input(chain, not has_jump))
+        if result.returncode != 0:
+            raise SystemExit(f"{tool}-restore failed, previous rules kept: {result.stderr.strip()}")
 
 
 def main() -> None:
