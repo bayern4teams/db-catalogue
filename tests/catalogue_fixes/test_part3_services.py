@@ -17,7 +17,9 @@ import pytest
 from catalogue_fixture_kit import BUNDLE_KEY, write_bundle
 from dbig_builder.api import create_app as builder_app
 from dbig_builder.api import run_one
+from dbig_builder.builder import assemble
 from dbig_builder.config import BuilderConfig, ServiceConfig
+from dbig_contracts import jobs
 from dbig_contracts.api import create_app as contracts_app
 from dbig_contracts.schemas import ADAPTERS
 from dbig_planner.api import create_app as planner_app
@@ -103,6 +105,26 @@ def test_an_assembly_job_writes_a_snapshot_and_points_current_at_it(tmp_path, mo
     assert current.is_symlink() and current.resolve() == (tmp_path / "snapshots" / job).resolve()
     assert (current / "manifest.json").is_file()
     assert run_one(config) is False, "control: the queue is empty after one job"
+
+
+def test_a_job_requeued_after_its_snapshot_was_written_finishes_it(tmp_path, monkeypatch):
+    """Review finding 4: the worker crashed after the snapshot was published and before the job
+    was finished. The requeued job finishes with that snapshot, and the half-written folder a
+    killed write leaves behind is removed."""
+    config = _builder_config(tmp_path, monkeypatch)
+    snapshots = tmp_path / "snapshots"
+    job = jobs.submit(config.service.jobs_db, {"bundles": ["alpha-1"]})
+    claimed = jobs.claim(config.service.jobs_db)
+    assert claimed is not None and claimed[0] == job
+    assemble([tmp_path / "bundles" / "alpha-1"], snapshots / job, config)  # then the crash
+    (snapshots / f".{job}-stale").mkdir()  # what a killed write_artifact leaves behind
+    jobs.requeue_running(config.service.jobs_db)
+    assert run_one(config) is True
+    done = jobs.status(config.service.jobs_db, job)
+    assert done["status"] == "complete", done
+    assert done["result"]["snapshot"] == job
+    assert (snapshots / "current").resolve() == (snapshots / job).resolve()
+    assert not (snapshots / f".{job}-stale").exists()
 
 
 @pytest.mark.parametrize("name", ["missing", "../bundles/alpha-1", "/etc", ".hidden"])

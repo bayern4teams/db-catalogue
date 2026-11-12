@@ -12,10 +12,12 @@ from __future__ import annotations
 import logging
 import os
 import re
+import shutil
 import threading
 from pathlib import Path
 
 from dbig_contracts import jobs
+from dbig_contracts.artifact import read_artifact
 from dbig_contracts.errors import OperatorError
 from dbig_contracts.security import service_keys
 from dbig_contracts.service import ServiceGuard
@@ -92,10 +94,18 @@ def run_one(config: BuilderConfig) -> bool:
         return False
     job_id, payload = claimed
     root = service.bundles_root.resolve()
+    destination = service.snapshots_root / job_id
     try:
-        manifest = assemble(
-            [root / name for name in payload["bundles"]], service.snapshots_root / job_id, config
-        )
+        # A killed write leaves only its hidden temporary folder; one worker per queue file, so no
+        # other writer owns this job's leftovers.
+        for leftover in service.snapshots_root.glob(f".{job_id}-*"):
+            shutil.rmtree(leftover)
+        if destination.exists():
+            # A requeued job whose worker crashed after publishing: `write_artifact` publishes by
+            # one rename after the manifest, so the folder is complete; reading it checks that.
+            manifest, _ = read_artifact(destination)
+        else:
+            manifest = assemble([root / name for name in payload["bundles"]], destination, config)
         _point_current(service.snapshots_root, job_id)
     except OperatorError as error:
         jobs.finish(service.jobs_db, job_id, result=None, error=str(error)[:1024])
