@@ -17,6 +17,10 @@ from pathlib import Path
 from typing import Any
 
 BUSY_TIMEOUT_MS = 5000
+# Crash requeues before a job is failed instead (review finding 3, 2026-11-12); services pass
+# their configured value.
+MAX_CRASH_REQUEUES = 3
+CRASH_LIMIT = "CRASH_LIMIT_REACHED"
 
 
 def open_queue(path: Path, table_sql: str) -> sqlite3.Connection:
@@ -27,6 +31,10 @@ def open_queue(path: Path, table_sql: str) -> sqlite3.Connection:
     connection.execute("PRAGMA journal_mode=WAL")
     connection.execute(f"PRAGMA busy_timeout={BUSY_TIMEOUT_MS}")
     connection.execute(table_sql)
+    # A queue made before crash requeues were counted gains the column in place.
+    table = table_sql.split("EXISTS ")[1].split("(")[0]
+    if "attempts" not in {row[1] for row in connection.execute(f"PRAGMA table_info({table})")}:
+        connection.execute(f"ALTER TABLE {table} ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0")
     connection.commit()
     return connection
 
@@ -93,9 +101,25 @@ def status(path: Path, job_id: str) -> dict[str, Any] | None:
     }
 
 
-def requeue_running(path: Path) -> int:
+def requeue_crashed(
+    connection: sqlite3.Connection, table: str, max_requeues: int, error: str
+) -> int:
+    """Put back every `running` row of `table`, which at start-up is a crashed run's, and count
+    it. A row already requeued `max_requeues` times is failed with `error` instead, so a job that
+    crashes its worker every time stops coming back. Returns how many rows went back."""
+    connection.execute(
+        f"UPDATE {table} SET status='failed', error=? "  # noqa: S608 # C5: reason=table is one of two fixed names in this package; approved=owner, 2026-11-12; review=2027-05-12
+        "WHERE status='running' AND attempts >= ?",
+        (error, max_requeues),
+    )
+    cursor = connection.execute(
+        f"UPDATE {table} SET status='queued', attempts=attempts+1 WHERE status='running'"  # noqa: S608 # C5: reason=table is one of two fixed names in this package; approved=owner, 2026-11-12; review=2027-05-12
+    )
+    connection.commit()
+    return cursor.rowcount
+
+
+def requeue_running(path: Path, max_requeues: int = MAX_CRASH_REQUEUES) -> int:
     """Put back every `running` job: with one worker per file, at start-up it is a crashed run's."""
     with closing(open_queue(path, _JOBS)) as connection:
-        cursor = connection.execute("UPDATE jobs SET status='queued' WHERE status='running'")
-        connection.commit()
-    return cursor.rowcount
+        return requeue_crashed(connection, "jobs", max_requeues, CRASH_LIMIT)

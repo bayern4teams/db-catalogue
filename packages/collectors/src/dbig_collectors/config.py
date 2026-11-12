@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Literal
 
 from dbig_contracts.errors import OperatorError, load_toml_section, validate_configuration
+from dbig_contracts.jobs import MAX_CRASH_REQUEUES
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
@@ -74,6 +75,8 @@ class SourceConfig(BaseModel):
     max_request_ttl_seconds: int = Field(default=3600, ge=1)
     # Seconds the `serve` worker waits before looking again when the queue is empty.
     scan_poll_seconds: float = Field(default=5.0, gt=0, le=3600)
+    # Crash requeues of one scan before the worker fails it with CRASH_LIMIT_REACHED.
+    max_crash_requeues: int = Field(default=MAX_CRASH_REQUEUES, ge=0, le=100)
 
     @model_validator(mode="after")
     def token_key_needs_an_id(self) -> SourceConfig:

@@ -114,7 +114,7 @@ def run_one(config: BuilderConfig) -> bool:
 
 def run_worker(config: BuilderConfig, stop: threading.Event) -> None:
     service = _service(config)
-    jobs.requeue_running(service.jobs_db)
+    jobs.requeue_running(service.jobs_db, service.max_crash_requeues)
     while not stop.is_set():
         try:
             busy = run_one(config)

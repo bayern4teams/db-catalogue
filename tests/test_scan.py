@@ -7,7 +7,13 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from dbig_collectors.api import create_app as collector_app
 from dbig_collectors.config import SourceConfig
-from dbig_collectors.scan import accept_scan, process_next, run_worker, scan_status
+from dbig_collectors.scan import (
+    accept_scan,
+    process_next,
+    requeue_running,
+    run_worker,
+    scan_status,
+)
 from dbig_contracts.scan import ScanReceipt, ScanRequest, SignedScanRequest, sign_scan
 from dbig_requester.config import ScanConfig
 from dbig_requester.scan import dispatch_scan
@@ -217,3 +223,19 @@ def test_the_serve_worker_requeues_a_crashed_scan_and_processes_it(tmp_path, mon
         worker.join(timeout=5)
     assert not worker.is_alive()
     assert scan_status(queue, "request-1").error.startswith("EXPIRED_REQUEST")
+
+
+def test_a_scan_that_keeps_crashing_the_worker_fails_after_three_requeues(tmp_path, monkeypatch):
+    """Review finding 3: after the default of 3 crash requeues, the next crash fails the scan."""
+    monkeypatch.setenv("DBIG_SIGNING_KEY", KEY)
+    queue = tmp_path / "site-queue.sqlite3"
+    accept_scan(sign_scan(request(), "test", KEY.encode()), site_config(), queue)
+    for crash in range(1, 5):
+        with sqlite3.connect(queue) as connection:  # the worker took it, then the process died
+            connection.execute("UPDATE scans SET status='running'")
+        requeue_running(queue)
+        if crash <= 3:
+            assert scan_status(queue, "request-1").status == "queued", crash
+    receipt = scan_status(queue, "request-1")
+    assert receipt.status == "failed"
+    assert receipt.error.startswith("CRASH_LIMIT_REACHED")

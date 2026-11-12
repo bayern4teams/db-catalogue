@@ -10,7 +10,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from dbig_contracts.errors import OperatorError
-from dbig_contracts.jobs import open_queue
+from dbig_contracts.jobs import CRASH_LIMIT, MAX_CRASH_REQUEUES, open_queue, requeue_crashed
 from dbig_contracts.scan import ScanReceipt, ScanRequest, SignedScanRequest, verify_scan
 from dbig_contracts.security import key_from_env
 
@@ -169,20 +169,22 @@ def process_next(config: SourceConfig, queue_path: Path, output_root: Path) -> S
     return scan_status(queue_path, request.id)
 
 
-def requeue_running(queue_path: Path) -> int:
+def requeue_running(queue_path: Path, max_requeues: int = MAX_CRASH_REQUEUES) -> int:
     """Put back scans left `running` by a crash. Only for start-up of the one worker that owns
     this queue file (report Part 3: the collector runs one worker per container)."""
     with closing(_open_queue(queue_path)) as connection:
-        cursor = connection.execute("UPDATE scans SET status='queued' WHERE status='running'")
-        connection.commit()
-    return cursor.rowcount
+        return requeue_crashed(
+            connection, "scans", max_requeues,
+            f"{CRASH_LIMIT}: the collector stopped during this scan {max_requeues + 1} times; "
+            "it is not retried. Check the collector's log and memory limit, then submit it again",
+        )
 
 
 def run_worker(
     config: SourceConfig, queue_path: Path, output_root: Path, stop: threading.Event
 ) -> None:
     """Process queued scans until `stop` is set, waiting `scan_poll_seconds` when idle."""
-    requeue_running(queue_path)
+    requeue_running(queue_path, config.max_crash_requeues)
     while not stop.is_set():
         try:
             busy = process_next(config, queue_path, output_root) is not None

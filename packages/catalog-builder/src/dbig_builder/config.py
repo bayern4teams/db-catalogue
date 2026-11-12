@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Literal
 
 from dbig_contracts.errors import load_toml_section, validate_configuration
+from dbig_contracts.jobs import MAX_CRASH_REQUEUES
 from dbig_contracts.security import key_from_env, private_base_url
 from pydantic import (
     BaseModel,
@@ -82,6 +83,8 @@ class ServiceConfig(BaseModel):
     max_request_bytes: int = Field(default=65_536, ge=1)
     max_requests_per_minute: int = Field(default=60, ge=1)
     poll_seconds: float = Field(default=5.0, gt=0, le=3600)
+    # Crash requeues of one assembly before it fails with CRASH_LIMIT_REACHED.
+    max_crash_requeues: int = Field(default=MAX_CRASH_REQUEUES, ge=0, le=100)
 
 
 class BuilderConfig(BaseModel):
