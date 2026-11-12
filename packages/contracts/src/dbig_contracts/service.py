@@ -58,7 +58,9 @@ class ServiceGuard:
         self.route_scopes = sorted(route_scopes.items(), key=lambda item: -len(item[0]))
         self.max_request_bytes = max_request_bytes
         self.max_requests_per_minute = max_requests_per_minute
-        self.timestamps: deque[float] = deque()
+        # One window per caller, so a busy caller cannot lock the others out (review finding 9,
+        # 2026-11-12); bounded by the callers in the key file.
+        self.timestamps: dict[str, deque[float]] = {}
         self.lock = Lock()
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
@@ -81,8 +83,13 @@ class ServiceGuard:
             await _json(send, 403, {"error": {"code": "FORBIDDEN_SCOPE"}})
             return
         if method == "POST":
-            length = headers.get(b"content-length", b"").decode("latin-1")
-            if not length.isdecimal() or int(length) > self.max_request_bytes:
+            # No Content-Length (an empty or chunked body) is allowed: the loop below still bounds
+            # what is read (review finding 8, 2026-11-12). A stated length must fit.
+            length = headers.get(b"content-length")
+            if length is not None and (
+                not length.decode("latin-1").isdecimal()
+                or int(length) > self.max_request_bytes
+            ):
                 await _json(send, 413, {"error": {"code": "PAYLOAD_TOO_LARGE"}})
                 return
             body = bytearray()
@@ -108,13 +115,14 @@ class ServiceGuard:
         if self.max_requests_per_minute is not None:
             with self.lock:
                 now = time.monotonic()
-                while self.timestamps and self.timestamps[0] < now - 60:
-                    self.timestamps.popleft()
-                if len(self.timestamps) >= self.max_requests_per_minute:
+                window = self.timestamps.setdefault(caller.caller, deque())
+                while window and window[0] < now - 60:
+                    window.popleft()
+                if len(window) >= self.max_requests_per_minute:
                     limited = True
                 else:
                     limited = False
-                    self.timestamps.append(now)
+                    window.append(now)
             if limited:
                 await _json(send, 429, {"error": {"code": "RATE_LIMITED"}})
                 return

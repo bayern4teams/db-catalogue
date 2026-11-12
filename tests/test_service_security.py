@@ -118,3 +118,52 @@ def test_an_unset_secret_names_both_ways_to_set_it(monkeypatch):
     monkeypatch.delenv("DB_PASSWORD_FILE", raising=False)
     with pytest.raises(SecretReferenceError, match="DB_PASSWORD_FILE"):
         secret_from_env("DB_PASSWORD", purpose="database password")
+
+
+# Review findings 8 and 9 (owner "Yes, fix all", 2026-11-12), on the guard itself over ASGI.
+def _guard(tokens, **limits):
+    import asyncio
+
+    from dbig_contracts.security import CallerKey
+    from dbig_contracts.service import ServiceGuard
+
+    async def inner(scope, receive, send):
+        await send({"type": "http.response.start", "status": 200, "headers": []})
+        await send({"type": "http.response.body", "body": b""})
+
+    keys = [CallerKey(caller=name, sha256=hashlib.sha256(token.encode()).hexdigest(),
+                      scopes=frozenset({"search"}), expires_at=datetime.now(UTC) + timedelta(1))
+            for name, token in tokens.items()]
+    guard = ServiceGuard(inner, keys=keys, route_scopes={}, max_request_bytes=16, **limits)
+
+    def call(token, chunks, headers=()):
+        messages = iter([{"type": "http.request", "body": chunk, "more_body": i < len(chunks) - 1}
+                         for i, chunk in enumerate(chunks)])
+        sent = []
+
+        async def receive():
+            return next(messages)
+
+        async def send(message):
+            sent.append(message)
+
+        scope = {"type": "http", "path": "/v1/x", "method": "POST",
+                 "headers": [(b"authorization", f"Bearer {token}".encode()), *headers]}
+        asyncio.run(guard(scope, receive, send))
+        return sent[0]["status"]
+
+    return call
+
+
+def test_a_post_with_no_length_and_no_body_is_not_too_large():
+    call = _guard({"a": "token-a"})
+    assert call("token-a", [b""]) == 200
+    assert call("token-a", [b"x" * 10, b"y" * 10]) == 413, "a chunked body past the bound"
+    assert call("token-a", [b"{}"], [(b"content-length", b"999")]) == 413
+
+
+def test_the_rate_limit_counts_each_caller_on_its_own():
+    call = _guard({"a": "token-a", "b": "token-b"}, max_requests_per_minute=2)
+    empty = [(b"content-length", b"0")]
+    assert [call("token-a", [b""], empty) for _ in range(3)] == [200, 200, 429]
+    assert call("token-b", [b""], empty) == 200, "another caller is not slowed by the first one"
