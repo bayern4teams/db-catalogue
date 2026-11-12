@@ -235,7 +235,8 @@ def _set_version(state: Path, value: str) -> None:
         c.commit()
 
 
-@pytest.mark.parametrize("old", ["7", "6", "", "9 ", "09", "8", "10"])
+# "9" replaced "10" by the owner's test E ruling of 2026-11-12 ("Yes, swap 10 for 9"): 10 is current.
+@pytest.mark.parametrize("old", ["7", "6", "", "9 ", "09", "8", "9"])
 def test_any_other_version_is_stale_through_ask_search_rest_and_cli(tmp_path, monkeypatch, old):
     state = _index(tmp_path, monkeypatch, TWO)
     _set_version(state, old)
