@@ -16,9 +16,8 @@ Updated 2026-11-11 after the limit reset. The scope the lead set is done, the re
 
 ## Review findings (owner "Yes, fix all", 2026-11-12)
 
-All ten done and committed (TODO.md lists the commits), except ClickHouse pinning in finding 5:
-waits for the lead's ruling on `test_a_name_resolving_only_to_private_addresses_connects`. Two
-older attack-test failures need rulings (TODO.md).
+All ten done and committed (TODO.md lists the commits), ClickHouse pinning included after the
+owner's ruling. Two older attack-test failures need rulings (TODO.md).
 
 ## Open
 

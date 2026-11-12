@@ -402,7 +402,10 @@ def test_a_name_resolving_only_to_private_addresses_connects(monkeypatch, tmp_pa
     _resolver(monkeypatch, {"db.lan": ["10.1.2.3", "10.1.2.4"]})
     with pytest.raises(Connected):
         _collect(monkeypatch, tmp_path, "clickhouse", {**CH_REMOTE, "host": "db.lan"})
-    assert calls[0]["kwargs"]["host"] == "db.lan"
+    # Review finding 5: the driver connects to the checked address and verifies the certificate
+    # against the name (owner ruling, 2026-11-12: "Allow it (Recommended)").
+    assert calls[0]["kwargs"]["host"] == "10.1.2.3"
+    assert calls[0]["kwargs"]["server_host_name"] == "db.lan"
 
 
 def test_a_name_with_one_public_address_is_refused(monkeypatch, tmp_path, calls):

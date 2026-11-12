@@ -2203,12 +2203,19 @@ def _collect(config: SourceConfig, destination: Path) -> None:
         }
         if not config.tls:
             _require_loopback([str(connection.get("host", ""))])
-        _require_private([str(connection.get("host", ""))])
+        host = str(connection.get("host", ""))
+        address = private_address(host)
         tls_options: dict[str, Any] = {"secure": config.tls}
         if config.tls:
             tls_options["verify"] = True
             if ca_file is not None:
                 tls_options["ca_cert"] = ca_file
+        if address != host:
+            # A name: connect to the checked address and verify the certificate against the name
+            # (review finding 5; owner ruling, 2026-11-12: "Allow it (Recommended)").
+            allowed["host"] = address
+            if config.tls:
+                tls_options["server_host_name"] = host
         client = clickhouse_connect.get_client(**allowed, **tls_options)
         try:
             data = discover_clickhouse(client, config, budget)
