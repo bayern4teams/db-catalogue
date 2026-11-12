@@ -205,10 +205,11 @@ def _set_version(state: Path, version: str) -> None:
 
 
 def test_a_freshly_built_index_is_version_seven(cross_state):
-    assert search_module.INDEX_VERSION == "9"
+    # The owner's test E ruling of 2026-11-12 ("Yes, expect 10") bumped it: the `scope` column.
+    assert search_module.INDEX_VERSION == "10"
     with closing(sqlite3.connect(search_module._database(cross_state))) as connection:
         stored = dict(connection.execute("SELECT key, value FROM meta"))["index_version"]
-    assert stored == "9"
+    assert stored == "10"
 
 
 def test_a_version_six_index_answers_stale_index_and_calls_no_model(cross_state, monkeypatch):
@@ -216,6 +217,22 @@ def test_a_version_six_index_answers_stale_index_and_calls_no_model(cross_state,
     result, _, _, stub = _ask(cross_state, monkeypatch, QUESTION)
     assert result == {"error": {"code": "STALE_INDEX"}}
     assert stub.requests == []
+    with pytest.raises(ValueError, match="STALE_INDEX"):
+        search(cross_state, SearchRequest(query="vendor"))
+
+
+def test_a_version_nine_index_is_stale_not_a_missing_column(cross_state, monkeypatch):
+    """Test E (owner, 2026-11-12): a version 9 index has no `scope` column. It must answer
+    STALE_INDEX, the code whose remedy is `dbig-requester index`, never "no such column"."""
+    with closing(sqlite3.connect(search_module._database(cross_state))) as connection:
+        connection.execute("DROP TABLE fts")
+        connection.execute(
+            "CREATE VIRTUAL TABLE fts USING fts5(id UNINDEXED, name, context, description)"
+        )
+        connection.commit()
+    _set_version(cross_state, "9")
+    result, _, _, stub = _ask(cross_state, monkeypatch, QUESTION)
+    assert result == {"error": {"code": "STALE_INDEX"}} and stub.requests == []
     with pytest.raises(ValueError, match="STALE_INDEX"):
         search(cross_state, SearchRequest(query="vendor"))
 

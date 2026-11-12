@@ -385,8 +385,11 @@ three-database snapshot:
   query budget is unchanged. MongoDB has no comments. Control characters are removed and text
   over 1,000 characters is cut with an ellipsis. Shown on the page, searchable, and given to
   `ask`; `include_comments = false` turns collection off.
-- **Search.** The index holds each entry's name, its owning table and schema, and its comment.
-  Terms match as prefixes and results are ranked by bm25 with weights 10/4/1 over those three.
+- **Search.** The index holds each entry's name, its owning table, its comment, and its scope
+  (schema or namespace, source ID, engine kind and source name). Terms match the first three as
+  prefixes and the scope only as whole words, so `pos` does not find every field of a
+  `postgresql` source (test E, owner 2026-11-12; index version 10). Results are ranked by bm25
+  with weights 10/4/1/4.
   `match = "all"` (default, the CLI and API) requires every term; `match = "any"` (used by
   `ask`) drops common words and ranks by any term. `ask` no longer falls back to unfiltered
   entries when nothing matches; it returns `NO_CATALOGUE_MATCH` without calling the model.

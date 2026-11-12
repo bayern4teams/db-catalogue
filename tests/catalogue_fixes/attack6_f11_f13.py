@@ -120,7 +120,8 @@ TWO = {
 
 
 def test_index_version_is_7():
-    assert INDEX_VERSION == "9"  # P7-5 (F11-b) bumped it
+    # The owner's test E ruling of 2026-11-12 ("Yes, expect 10") bumped it: the `scope` column.
+    assert INDEX_VERSION == "10"
 
 
 def _rewrite(snapshot: Path, dest: Path, extra_edges) -> Path:

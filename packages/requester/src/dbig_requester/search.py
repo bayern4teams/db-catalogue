@@ -33,13 +33,13 @@ STOPWORDS = frozenset(
     "we you your all list find give get "
     "column table field number holds store stored".split()
 )
-# Relevance weights for bm25 over the indexed columns: name, context (owning table and schema),
-# description. A hit on the entry's own name matters most, its table's name next.
-WEIGHTS = (10.0, 4.0, 1.0)
+# Relevance weights for bm25 over the indexed columns: name, context (owning table), description,
+# scope (namespace, source ID, kind and name). A hit on the entry's own name matters most.
+WEIGHTS = (10.0, 4.0, 1.0, 4.0)
 # Bump when what `index_snapshot` writes into the full-text table changes meaning. An index
 # written under another version is refused with STALE_INDEX instead of answering from words it
 # does not hold (a search would return nothing, as if the catalogue lacked the column).
-INDEX_VERSION = "9"
+INDEX_VERSION = "10"
 
 
 class StaleIndexError(OperatorError):
@@ -189,7 +189,8 @@ def index_snapshot(
     with closing(sqlite3.connect(temporary)) as connection:
         try:
             connection.execute(
-                "CREATE VIRTUAL TABLE fts USING fts5(id UNINDEXED, name, context, description)"
+                "CREATE VIRTUAL TABLE fts "
+                "USING fts5(id UNINDEXED, name, context, description, scope)"
             )
         except sqlite3.OperationalError as error:
             raise RuntimeError("FTS5_UNAVAILABLE") from error
@@ -336,16 +337,15 @@ def index_snapshot(
                 "INSERT INTO entries VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)", (*row, *extra)
             )
             connection.execute(
-                "INSERT INTO fts(id,name,context,description) VALUES (?,?,?,?)",
+                "INSERT INTO fts(id,name,context,description,scope) VALUES (?,?,?,?,?)",
                 (
                     row[0],
                     _indexed_text(row[3]),
-                    " ".join(
-                        _indexed_text(part)
-                        for part in (*extra[:2], source_words.get(row[1]))
-                        if part
-                    ),
+                    _indexed_text(extra[0]),
                     _indexed_text(extra[2]),
+                    " ".join(
+                        _indexed_text(part) for part in (extra[1], source_words.get(row[1])) if part
+                    ),
                 ),
             )
         connection.executemany(
@@ -406,7 +406,7 @@ def search(state: Path, request: SearchRequest) -> dict:
         conditions = []
         parameters: list[str | float | int] = []
         if terms:
-            sql = "SELECT e.*, bm25(fts, ?, ?, ?) AS rank FROM entries e JOIN fts ON fts.id=e.id"
+            sql = "SELECT e.*, bm25(fts, ?, ?, ?, ?) AS rank FROM entries e JOIN fts ON fts.id=e.id"
             parameters.extend(WEIGHTS)
             conditions.append("fts MATCH ?")
             # Each term as a quoted prefix: `customer` finds `customers` and `customer_id`, and
@@ -845,8 +845,12 @@ def question_scope(state: Path, question: str) -> tuple[list[str], bool, set[str
 
 def _term_query(term: str) -> str:
     # `term` is word characters only (`\w+`), so it cannot carry a quote or an FTS5 operator.
-    alternatives = "".join(f' OR "{singular}"' for singular in _singulars(term.casefold()))
-    return f'("{term}"*{alternatives})' if alternatives else f'"{term}"*'
+    # Names, table names and descriptions match by prefix; the scope words (namespace, source ID,
+    # kind) only whole, so `pos` does not find every field of a `postgresql` source (test E,
+    # owner 2026-11-12: "Fix search (Recommended)").
+    whole = " OR ".join(f'"{word}"' for word in (term, *_singulars(term.casefold())))
+    singulars = "".join(f' OR "{singular}"' for singular in _singulars(term.casefold()))
+    return f'({{name context description}} : ("{term}"*{singulars}) OR scope : ({whole}))'
 
 
 def _empty(manifest: Any, digest: str, request: SearchRequest) -> dict:
