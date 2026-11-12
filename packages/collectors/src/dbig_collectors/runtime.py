@@ -36,11 +36,15 @@ from dbig_contracts.models import (
 from dbig_contracts.security import (
     is_loopback_literal,
     key_from_env,
+    private_address,
     private_host_refusal,
     secret_from_env,
 )
 
 from .config import SourceConfig
+
+# pg8000's own default when the connection reference names no port.
+PG_DEFAULT_PORT = 5432
 
 
 class BudgetExhausted(RuntimeError):
@@ -2163,12 +2167,28 @@ def _collect(config: SourceConfig, destination: Path) -> None:
         }
         if not config.tls:
             _require_loopback([str(connection.get("host", ""))])
-        _require_private([str(connection.get("host", ""))])
-        client = dbapi.connect(
-            **allowed,
-            ssl_context=ssl.create_default_context(cafile=ca_file) if config.tls else None,
-            timeout=config.read_timeout_seconds,
-        )
+        host = str(connection.get("host", ""))
+        address = private_address(host)
+        pinned = None
+        if address != host:
+            # A name: connect to the address that was checked, so a second lookup cannot send
+            # the driver elsewhere; pg8000 still verifies the certificate against the name in
+            # `host` (review finding 5). An IP literal is never looked up again.
+            pinned = socket.create_connection(
+                (address, int(connection.get("port", PG_DEFAULT_PORT))),
+                timeout=config.read_timeout_seconds,
+            )
+        try:
+            client = dbapi.connect(
+                **allowed,
+                **({"sock": pinned} if pinned is not None else {}),
+                ssl_context=ssl.create_default_context(cafile=ca_file) if config.tls else None,
+                timeout=config.read_timeout_seconds,
+            )
+        except BaseException:
+            if pinned is not None:
+                pinned.close()
+            raise
         try:
             data = discover_postgresql(client, config, budget)
         finally:
@@ -2212,6 +2232,9 @@ def _collect(config: SourceConfig, destination: Path) -> None:
                 mongo_options["tlsCAFile"] = ca_file
         else:
             _require_loopback(members)
+        # shortcut: PyMongo looks the names up again and finds replica-set members itself, and it
+        # cannot connect by address while still verifying the certificate against the name, so
+        # the check cannot be pinned (review finding 5); IP literals in the URI close the gap.
         _require_private(members)
         client = MongoClient(
             connection["uri"],

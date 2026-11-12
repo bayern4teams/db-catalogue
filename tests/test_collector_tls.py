@@ -425,3 +425,34 @@ def test_every_mongodb_member_must_be_private(monkeypatch, tmp_path, calls):
             monkeypatch, tmp_path, "mongodb", {"uri": "mongodb://10.0.0.7:27017,8.8.8.8:27017"}
         )
     assert calls == []
+
+
+def test_postgresql_connects_to_the_address_that_was_checked(monkeypatch, tmp_path, calls):
+    """Review finding 5: the name was looked up for the private check and again by the driver, so
+    a second answer could point elsewhere. The socket now goes to the checked address, and the
+    driver keeps the name for certificate verification."""
+    import socket
+
+    answers = iter([["10.1.2.3"], ["93.184.216.34"]])  # a rebinding name: private, then public
+
+    def lookup(host, *_args, **_kwargs):
+        return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (ip, 0)) for ip in next(answers)]
+
+    opened: list[tuple] = []
+    class Pinned:
+        def close(self):
+            pass
+
+    pinned = Pinned()
+
+    def create_connection(address, *_args, **_kwargs):
+        opened.append(address)
+        return pinned
+
+    monkeypatch.setattr(socket, "getaddrinfo", lookup)
+    monkeypatch.setattr(socket, "create_connection", create_connection)
+    with pytest.raises(Connected):
+        _collect(monkeypatch, tmp_path, "postgresql", {**PG_REMOTE, "host": "db.lan"})
+    assert opened == [("10.1.2.3", 5432)]
+    assert calls[0]["kwargs"]["sock"] is pinned
+    assert calls[0]["kwargs"]["host"] == "db.lan"

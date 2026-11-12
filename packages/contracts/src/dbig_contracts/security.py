@@ -6,7 +6,7 @@ import logging
 import os
 import socket
 from datetime import UTC, datetime
-from ipaddress import ip_address
+from ipaddress import IPv4Address, IPv6Address, ip_address
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -59,6 +59,22 @@ def private_host_refusal(host: str) -> str | None:
     """Why a database host is refused, or None when every address it names is private or
     loopback (report Part 3, layer L4; owner 2026-11-11: "Look up, all private"). A name is
     looked up, and one public address among its answers refuses it."""
+    checked = _checked_addresses(host)
+    return checked if isinstance(checked, str) else None
+
+
+def private_address(host: str) -> str:
+    """The first address `host` names, after the `private_host_refusal` check. A driver that
+    connects to it, not to the name, cannot be sent elsewhere by a second lookup (review
+    finding 5, 2026-11-12)."""
+    checked = _checked_addresses(host)
+    if isinstance(checked, str):
+        raise OperatorError(checked)
+    return str(checked[0])
+
+
+def _checked_addresses(host: str) -> list[IPv4Address | IPv6Address] | str:
+    """Every address `host` names when all are private or loopback, else why it is refused."""
     candidate = host.strip()
     if candidate.startswith("[") and candidate.endswith("]"):
         candidate = candidate[1:-1]
@@ -76,7 +92,7 @@ def private_host_refusal(host: str) -> str | None:
             f"database host {host!r} is not private: every address it names must be a private "
             "or loopback address"
         )
-    return None
+    return addresses
 
 
 class SecretReferenceError(OperatorError):
