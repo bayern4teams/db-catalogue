@@ -14,38 +14,11 @@ Updated 2026-11-11 after the limit reset. The scope the lead set is done, the re
   Vale errors); fixed in 306fd6d and bdbf3e7. GitHub Rule checks and Docs checks pass on
   bdbf3e7. GitLab shows no pipelines for this branch.
 
-## Next: owner "Yes, fix all", 2026-11-12 (relayed by the lead): 10 review findings
+## Review findings (owner "Yes, fix all", 2026-11-12)
 
-Stopped before starting at 78% of the 5-hour limit (80% rule; resets 09:50 UTC). Failing test first
-for each bug (D3, L3); check each against the code first and skip one that is wrong, saying why.
-Checked so far against the code (2026-11-12), nothing changed yet:
-- 8 confirmed: `dbig_contracts.service::ServiceGuard` sends 413 when Content-Length is missing
-  (`"".isdecimal()` is false), even with an empty body.
-- 9 confirmed: one `timestamps` deque for all callers.
-- 3 confirmed for `dbig_contracts.jobs::requeue_running`: no attempt count; `scan.requeue_running`
-  not read yet.
-- 1, 2, 4, 5, 6, 7, 10: not checked yet.
-The findings, as relayed:
-1. `deploy/lan_firewall.py` ip6tables branch drops forwarded IPv6 for every container; scope it to
-   our compose network or bridge (B4).
-2. `_apply`: a failed append after the flush leaves the chain without its final DROP; build a new
-   chain and swap the DOCKER-USER jump atomically (or iptables-restore).
-3. `jobs.requeue_running`, `scan.requeue_running`: attempt count; after N crash requeues, fail
-   with a clear code.
-4. builder `api.run_one`: a requeued job whose snapshot directory exists fails with
-   FileExistsError; finish a complete snapshot (point `current`) or remove a partial one safely.
-5. `security.private_host_refusal`: the name is resolved twice (check, driver); connect to the
-   checked address with the name kept for TLS, or record why not.
-6. `search.question_type` needs "type"/"typed": "show integer columns", "which columns are dates?"
-   must reach the type filter, "what date did it run" must not; replay N-C4 and the owner examples.
-7. LIST_WORDS: "all"/"every" anywhere switches to list mode; "Are all orders linked to a
-   customer?" must not.
-8. ServiceGuard: missing length with an empty body counts as 0; keep the bound for real and
-   chunked bodies.
-9. ServiceGuard rate limit per caller key.
-10. `search.bridge_paths` and `chained_paths` each load `_visible_edges`; load once per question.
-Rules: capped batches, ruff, mypy, rule_check, Docs: line per commit, push, CI green (start ci.yml
-by workflow_dispatch), no merge; firewall tested only in a throwaway namespace.
+All ten done and committed (TODO.md lists the commits), except ClickHouse pinning in finding 5:
+waits for the lead's ruling on `test_a_name_resolving_only_to_private_addresses_connects`. Two
+older attack-test failures need rulings (TODO.md).
 
 ## Open
 
