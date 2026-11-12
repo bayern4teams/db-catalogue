@@ -135,3 +135,11 @@ def test_all_inside_a_yes_no_question_keeps_the_retrieval_limit(tmp_path, monkey
     items = _context(tmp_path, monkeypatch, "Are all codes linked to a customer?")
     owners = {item["object_name"] for item in items if item["name"] == "code"}
     assert len(owners) == AnswerConfig.model_fields["retrieval_limit"].default
+
+
+def test_a_type_question_that_names_a_table_keeps_only_that_table(tmp_path, monkeypatch):
+    """Lead decision, 2026-11-12: a type question narrowed by a table name it holds; without one
+    (N-C4, N-C6) every field of the type in the named sources stays."""
+    items = _context(tmp_path, monkeypatch, "Which timestamp columns are in t03?")
+    made = sorted(item["name"] for item in items if item["name"].startswith("made"))
+    assert made == ["made03"]

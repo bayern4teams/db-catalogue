@@ -785,6 +785,26 @@ def question_type(question: str) -> str | None:
     return None
 
 
+def named_objects(
+    state: Path, question: str, source_ids: list[str] | None, skip: set[str], limit: int
+) -> set[str]:
+    """The tables and collections a type question names by their own words, so "which timestamp
+    columns are in orders?" keeps the fields of `orders` (lead decision, 2026-11-12). Type,
+    column, table and `skip` words (the source words) are not names. Only object names count:
+    a column word such as "version" in "other than version columns" names what is left out."""
+    not_names = set(TYPE_WORDS) | TYPE_QUESTION_WORDS | COLUMN_WORDS | OBJECT_WORDS | skip
+    words = [
+        word for word in re.findall(r"\w+", question, flags=re.UNICODE)
+        if not {word.casefold(), *_singulars(word.casefold())} & not_names
+    ]
+    if not words:
+        return set()
+    found = search(state, SearchRequest(
+        query=" ".join(words), limit=limit, match="any", source_ids=source_ids, objects_only=True,
+    ))
+    return {item["id"] for item in found["results"]}
+
+
 def asks_for_list(question: str) -> bool:
     """Whether a question asks for every match rather than the best few (B7)."""
     words = [item.casefold() for item in re.findall(r"\w+", question, flags=re.UNICODE)]

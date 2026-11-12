@@ -21,6 +21,7 @@ from .search import (
     bridge_paths,
     chained_paths,
     fields_of,
+    named_objects,
     question_scope,
     question_type,
     relationships_for,
@@ -217,9 +218,8 @@ def answer_question(
     try:
         sources, listing, source_words = question_scope(state, question)
         words = re.findall(r"\w+", question, flags=re.UNICODE)
-        # B6: a question about a type retrieves the fields of that type, in the named sources;
-        # its other words do not filter. shortcut: "timestamps in orders" is not narrowed to
-        # `orders`; upgrade to matching the leftover words when a question needs it.
+        # B6: a question about a type retrieves the fields of that type, in the named sources,
+        # and in the tables it names, if it names any (lead decision, 2026-11-12).
         category = question_type(question)
         # B7: "list all ..." and a type question get every match up to `list_limit`.
         limit = (
@@ -241,6 +241,12 @@ def answer_question(
                 type_category=category,
             ),
         )
+        if category and (
+            tables := named_objects(state, question, sources or None, source_words, limit)
+        ):
+            results["results"] = [
+                item for item in results["results"] if item.get("object_id") in tables
+            ]
         if not results["results"] and listing and sources:
             # Leftover words ("contain", "its") matched nothing: the answer to a list question
             # for a named source is that source's objects.
