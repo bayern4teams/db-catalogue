@@ -108,12 +108,12 @@ def requeue_crashed(
     it. A row already requeued `max_requeues` times is failed with `error` instead, so a job that
     crashes its worker every time stops coming back. Returns how many rows went back."""
     connection.execute(
-        f"UPDATE {table} SET status='failed', error=? "  # noqa: S608 # C5: reason=table is one of two fixed names in this package; approved=not yet, asked the lead session, 2026-11-12; review=2027-05-12
+        f"UPDATE {table} SET status='failed', error=? "  # noqa: S608 # C5: reason=table is one of two fixed names in this package; approved=owner, 2026-11-12; review=2027-05-12
         "WHERE status='running' AND attempts >= ?",
         (error, max_requeues),
     )
     cursor = connection.execute(
-        f"UPDATE {table} SET status='queued', attempts=attempts+1 WHERE status='running'"  # noqa: S608 # C5: reason=table is one of two fixed names in this package; approved=not yet, asked the lead session, 2026-11-12; review=2027-05-12
+        f"UPDATE {table} SET status='queued', attempts=attempts+1 WHERE status='running'"  # noqa: S608 # C5: reason=table is one of two fixed names in this package; approved=owner, 2026-11-12; review=2027-05-12
     )
     connection.commit()
     return cursor.rowcount

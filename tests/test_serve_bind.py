@@ -111,7 +111,7 @@ def test_serve_over_tls_with_a_caller_key_file(tmp_path):
     }]}), encoding="utf-8")
     config, (method, path, extra), expected = _requester(tmp_path)
     port = _free_port()
-    process = subprocess.Popen(  # noqa: S603 # C5: reason=fixed argv of this interpreter, no shell; approved=not yet, asked the lead session, 2026-11-10; review=2027-05-10
+    process = subprocess.Popen(  # noqa: S603 # C5: reason=fixed argv of this interpreter, no shell; approved=owner, 2026-11-12; review=2027-05-12
         [
             sys.executable, "-c", "from dbig_requester.cli import main; main()",
             "serve", "--config", str(config), "--host", "127.0.0.1", "--port", str(port),

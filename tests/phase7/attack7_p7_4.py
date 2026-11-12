@@ -223,6 +223,7 @@ def test_answer_too_long_after_retry(tmp_path, monkeypatch):
 def test_success_after_retry_is_clean_shape(tmp_path, monkeypatch):
     result, requests = ask(tmp_path, monkeypatch, [BARE, EXPLAINED])
     assert len(requests) == 2 and "error" not in result
+    # Owner ruling D, 2026-11-12, "Add it (Recommended)": B3 adds the code-written `relationships`.
     assert set(result) == {
         "ir_version",
         "snapshot_digest",
@@ -230,6 +231,7 @@ def test_success_after_retry_is_clean_shape(tmp_path, monkeypatch):
         "citations",
         "cited",
         "model_digest",
+        "relationships",
     }
 
 
