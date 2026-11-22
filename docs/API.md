@@ -19,20 +19,20 @@ Request body (`SignedScanRequest`):
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `request` | ScanRequest | yes |  |
-| `key_id` | string | yes |  |
-| `signature` | string | yes |  |
+| `request` | ScanRequest | yes | — |
+| `key_id` | string | yes | — |
+| `signature` | string | yes | — |
 
 Response body (`ScanReceipt`):
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `ir_version` | string | no |  |
-| `request_id` | string | yes |  |
-| `status` | `submitted` / `queued` / `running` / `complete` / `failed` | yes |  |
-| `received_at` | string(date-time) | yes |  |
-| `bundle_path` | string or null | no |  |
-| `error` | string or null | no |  |
+| `ir_version` | string | no | — |
+| `request_id` | string | yes | — |
+| `status` | `submitted` / `queued` / `running` / `complete` / `failed` | yes | — |
+| `received_at` | string(date-time) | yes | — |
+| `bundle_path` | string or null | no | — |
+| `error` | string or null | no | — |
 
 Status codes: 200, 422.
 
@@ -48,12 +48,12 @@ Response body (`ScanReceipt`):
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `ir_version` | string | no |  |
-| `request_id` | string | yes |  |
-| `status` | `submitted` / `queued` / `running` / `complete` / `failed` | yes |  |
-| `received_at` | string(date-time) | yes |  |
-| `bundle_path` | string or null | no |  |
-| `error` | string or null | no |  |
+| `ir_version` | string | no | — |
+| `request_id` | string | yes | — |
+| `status` | `submitted` / `queued` / `running` / `complete` / `failed` | yes | — |
+| `received_at` | string(date-time) | yes | — |
+| `bundle_path` | string or null | no | — |
+| `error` | string or null | no | — |
 
 Status codes: 200, 422.
 
@@ -69,7 +69,7 @@ Request body (`AssemblyBody`):
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `bundles` | list[string] | yes |  |
+| `bundles` | list[string] | yes | — |
 
 Status codes: 202, 422.
 
@@ -95,7 +95,7 @@ Request body (`QuestionBody`):
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `question` | string | yes |  |
+| `question` | string | yes | — |
 
 Response body (`QuestionResponse`):
 
@@ -141,20 +141,20 @@ Request body (`SearchRequest`):
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `query` | string | no |  |
-| `source_id` | string or null | no |  |
-| `source_ids` | list[string] or null | no |  |
-| `objects_only` | boolean | no |  |
-| `kind` | string or null | no |  |
-| `data_type` | string or null | no |  |
-| `type_category` | string or null | no |  |
-| `tag` | string or null | no |  |
-| `capability` | string or null | no |  |
-| `evidence_status` | string or null | no |  |
-| `max_age_seconds` | integer or null | no |  |
-| `limit` | integer | no |  |
-| `offset` | integer | no |  |
-| `match` | `all` / `any` | no |  |
+| `query` | string | no | — |
+| `source_id` | string or null | no | — |
+| `source_ids` | list[string] or null | no | — |
+| `objects_only` | boolean | no | — |
+| `kind` | string or null | no | — |
+| `data_type` | string or null | no | — |
+| `type_category` | string or null | no | — |
+| `tag` | string or null | no | — |
+| `capability` | string or null | no | — |
+| `evidence_status` | string or null | no | — |
+| `max_age_seconds` | integer or null | no | — |
+| `limit` | integer | no | — |
+| `offset` | integer | no | — |
+| `match` | `all` / `any` | no | — |
 
 Status codes: 200, 422.
 
@@ -166,8 +166,8 @@ Request body (`ScanBody`):
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `request` | ScanRequest | yes |  |
-| `adapter` | `bundle` / `http` | yes |  |
+| `request` | ScanRequest | yes | — |
+| `adapter` | `bundle` / `http` | yes | — |
 
 Status codes: 200, 422.
 
@@ -193,10 +193,10 @@ Request body (`PathRequest`):
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `from_id` | string | yes |  |
-| `to_id` | string | yes |  |
-| `max_hops` | integer or null | no |  |
-| `max_paths` | integer or null | no |  |
+| `from_id` | string | yes | — |
+| `to_id` | string | yes | — |
+| `max_hops` | integer or null | no | — |
+| `max_paths` | integer or null | no | — |
 
 Status codes: 200, 422.
 
@@ -208,10 +208,10 @@ Request body (`PathRequest`):
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `from_id` | string | yes |  |
-| `to_id` | string | yes |  |
-| `max_hops` | integer or null | no |  |
-| `max_paths` | integer or null | no |  |
+| `from_id` | string | yes | — |
+| `to_id` | string | yes | — |
+| `max_hops` | integer or null | no | — |
+| `max_paths` | integer or null | no | — |
 
 Status codes: 200, 422.
 
@@ -229,8 +229,8 @@ Request body (`PlanRequest`):
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `path_id` | string | yes |  |
-| `max_rows` | integer or null | no |  |
+| `path_id` | string | yes | — |
+| `max_rows` | integer or null | no | — |
 
 Status codes: 200, 422.
 

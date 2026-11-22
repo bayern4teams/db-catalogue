@@ -87,8 +87,8 @@ def fields(doc: dict[str, Any], name: str) -> list[tuple[str, str, str, str]]:
     required = set(schema.get("required", []))
     rows = []
     for prop, spec in props.items():
-        rows.append((prop, type_text(spec), "yes" if prop in required else "no",
-                     (spec.get("description") or "").replace("\n", " ")))
+        description = (spec.get("description") or "—").replace("\n", " ")
+        rows.append((prop, type_text(spec), "yes" if prop in required else "no", description))
     return rows
 
 
