@@ -8,13 +8,15 @@ workflow:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api"
     - if: $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    # A `vX.Y.Z` tag runs only the release stage below (owner decision 10, 2026-11-21).
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/
 
 default:
   # The instance runner (git.n4t.com) is tag-gated: run_untagged is off, so every job
   # must carry its tag or it stays pending forever.
   tags: [bayern]
 
-stages: [policy, checks]
+stages: [policy, checks, release]
 
 # rule-check and docs mirror .github/workflows/rules.yml and docs.yml (AGENTS.md K4, J12).
 # Not yet run on the GitLab runner: they only run on merge requests and the default branch.
@@ -22,6 +24,8 @@ stages: [policy, checks]
 variables:
   UV_VERSION: "0.12.19"
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  DOCKER_VERSION: "29.9.2"
+  COMPOSE_VERSION: "5.7.0"
 
 .python:
   image: python:3.12-bookworm
@@ -175,3 +179,73 @@ docs:
     - vale sync && vale $DOCS
     - lychee --offline --no-progress $DOCS
     - python3 scripts/mermaid_check.py $DOCS
+
+# --- release: a `vX.Y.Z` tag (owner decision 10, 2026-11-21), mirroring the GitHub release.yml.
+# The five images go to this project's container registry, the wheels and checksums to its
+# Python package registry, and a GitLab Release links them. All private: they take the
+# project's visibility (owner: both remotes stay private). Same shape as normalization's
+# release stage.
+
+.on-release:
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/
+
+.docker-cli:
+  services:
+    - name: docker:29.9.2-dind
+      alias: docker
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+
+.docker-scripts:
+  # Pinned docker CLI + compose plugin, verified as in normalization (its .docker-scripts).
+  docker_setup: &docker_setup
+    - apt-get update -qq && apt-get install -y -qq curl ca-certificates >/dev/null
+    - curl -fsSL "https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKER_VERSION}.tgz" | tar -xz -C /usr/local/bin --strip-components=1 docker/docker
+    - mkdir -p /usr/local/lib/docker/cli-plugins
+    - base=https://github.com/docker/compose/releases/download/v${COMPOSE_VERSION}
+    - curl -fsSL -o /usr/local/lib/docker/cli-plugins/docker-compose "$base/docker-compose-linux-x86_64"
+    - curl -fsSL -o /tmp/compose.sha256 "$base/docker-compose-linux-x86_64.sha256"
+    - echo "$(awk '{print $1}' /tmp/compose.sha256)  /usr/local/lib/docker/cli-plugins/docker-compose" | sha256sum -c -
+    - chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+    - docker version --format '{{.Client.Version}} / {{.Server.Version}}'
+
+release-images:
+  extends: [.python, .on-release, .docker-cli, .docker-scripts]
+  stage: release
+  timeout: 45m
+  script:
+    - python scripts/check_release_version.py "$CI_COMMIT_TAG"
+    - *docker_setup
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+    # Image names, build arguments and the smoke test live in scripts/build_images.py.
+    - python scripts/build_images.py --version "${CI_COMMIT_TAG#v}" --push
+      --registry "$CI_REGISTRY_IMAGE/"
+
+release-packages:
+  extends: [.python, .on-release]
+  stage: release
+  script:
+    - python scripts/check_release_version.py "$CI_COMMIT_TAG"
+    - uv build --all-packages
+    - sha256sum dist/* > dist/SHA256SUMS.txt
+    - |
+      base="${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/dbig/${CI_COMMIT_TAG#v}"
+      for f in dist/*; do
+        curl --fail -sS --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file "$f" "$base/$(basename "$f")" >/dev/null
+      done
+
+release:
+  extends: .on-release
+  stage: release
+  needs: [release-images, release-packages]
+  image: registry.gitlab.com/gitlab-org/release-cli:v0.24.0
+  before_script: []
+  script:
+    - echo "Release $CI_COMMIT_TAG, images $CI_REGISTRY_IMAGE/dbig-*:$CI_COMMIT_TAG"
+  release:
+    tag_name: $CI_COMMIT_TAG
+    name: $CI_COMMIT_TAG
+    description: "Images: $CI_REGISTRY_IMAGE/dbig-*:$CI_COMMIT_TAG. Packages: this project's
+      package registry, dbig/${CI_COMMIT_TAG#v}. Deploy: docs/DEPLOY.md."

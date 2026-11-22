@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: write
+  packages: write
 
 jobs:
   release:
@@ -35,6 +36,7 @@ jobs:
       - name: Verify code, tests and dependencies
         run: |
           python scripts/ci_check.py
+          python scripts/check_release_version.py "${GITHUB_REF_NAME}"
           uv run ruff check .
           uv run mypy packages
           uv run pytest
@@ -48,7 +50,24 @@ jobs:
         run: uv build --all-packages
       - name: Generate checksums
         run: sha256sum dist/* > dist/SHA256SUMS.txt
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push the five service images
+        # Owner decision 10 (2026-11-21): the five images on both remotes, private like the
+        # repository. Names, build arguments and the smoke test live in scripts/build_images.py.
+        # No image signing: keyless cosign writes to the public Sigstore log (normalization
+        # release.yml carries the same rule).
+        run: >-
+          python scripts/build_images.py --version "${GITHUB_REF_NAME#v}" --push
+          --registry "ghcr.io/${GITHUB_REPOSITORY,,}/"
       - name: Publish verified GitHub release artifacts
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "${GITHUB_REF_NAME}" dist/* --verify-tag --generate-notes
+        run: >-
+          gh release create "${GITHUB_REF_NAME}" dist/* --verify-tag --generate-notes
+          --notes "Images: ghcr.io/${GITHUB_REPOSITORY,,}/dbig-*:${GITHUB_REF_NAME}.
+          Deploy: docs/DEPLOY.md."

@@ -3,10 +3,14 @@
 
 Run on a machine with internet, from the repository root:
 
-    python scripts/build_images.py --version 0.1.0 --out ../dbig-images-0.1.0.tar
+    python scripts/build_images.py --version 0.1.0 --save --out ../dbig-images-0.1.0.tar
 
 Then copy the tarball to the LAN host and run `docker load -i dbig-images-0.1.0.tar` there. The
 host never pulls or builds, so the no-outbound rule has no build exception.
+
+With `--push` (optionally `--registry <prefix/>`) the images are pushed instead of saved — this
+is what the tag release pipelines on both remotes run, so the image names, build arguments and
+smoke test live only here (owner decision 10, 2026-11-21: five images on both remotes).
 """
 
 from __future__ import annotations
@@ -36,14 +40,23 @@ def _run(*arguments: str) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--version", required=True)
-    parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--out", type=Path, help="tarball to write (with --save)")
+    parser.add_argument("--save", action="store_true", help="save the images to --out")
+    parser.add_argument("--push", action="store_true", help="push the images to --registry")
+    parser.add_argument("--registry", default="", help="image prefix, ending with '/'")
     arguments = parser.parse_args()
+    if arguments.save == arguments.push:
+        raise SystemExit("choose exactly one of --save (needs --out) or --push")
+    if arguments.save and arguments.out is None:
+        raise SystemExit("--save needs --out <tarball>")
+    if arguments.registry and not arguments.registry.endswith("/"):
+        raise SystemExit("--registry must end with '/'")
     docker = shutil.which("docker")
     if docker is None:
         raise SystemExit("docker is required to build the images")
     tags = []
     for image, (package, extras, command) in IMAGES.items():
-        tag = f"{image}:{arguments.version}"
+        tag = f"{arguments.registry}{image}:{arguments.version}"
         _run(
             docker, "build", "--file", "deploy/Dockerfile", "--tag", tag,
             "--build-arg", f"PACKAGE={package}",
@@ -53,8 +66,13 @@ def main() -> None:
         # Smoke test: the command starts in the image as built (a wrong venv path fails here).
         _run(docker, "run", "--rm", "--read-only", tag, command, "serve", "--help")
         tags.append(tag)
-    _run(docker, "save", "--output", str(arguments.out.resolve()), *tags)
-    print(f"saved {len(tags)} images to {arguments.out}")
+    if arguments.push:
+        for tag in tags:
+            _run(docker, "push", tag)
+        print(f"pushed {len(tags)} images to {arguments.registry or '<local>'}")
+    else:
+        _run(docker, "save", "--output", str(arguments.out.resolve()), *tags)
+        print(f"saved {len(tags)} images to {arguments.out}")
 
 
 if __name__ == "__main__":
