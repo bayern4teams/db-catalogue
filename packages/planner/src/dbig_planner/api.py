@@ -30,7 +30,7 @@ def create_app(config: PlannerConfig) -> FastAPI:
         max_requests_per_minute=config.max_requests_per_minute,
     )
 
-    @app.post("/v1/lineage/paths")
+    @app.post("/v1/lineage/paths", summary="Find lineage paths")
     def lineage_paths(body: PathRequest):
         try:
             return find_paths(config.graph_dir, body, "lineage", config)

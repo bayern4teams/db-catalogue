@@ -14,8 +14,8 @@ app machine, for example `10.10.9.50`; ask the person who runs it.
 
 The app keeps a **catalogue** of your PostgreSQL, ClickHouse and MongoDB databases: their tables,
 fields, types and **proposed** relationships. It never reads row values. Another app on the LAN
-asks it questions through plain HTTP: "which table holds invoices", "what does this column feed",
-"is this record valid for schema X". A private model answers questions with citations.
+asks it questions through plain HTTP: "which table holds invoices," "what does this column feed,"
+"is this record valid for schema X." A private model answers questions with citations.
 
 | Service | Port (default) | What it is for | Scopes its routes need |
 | --- | --- | --- | --- |
@@ -36,7 +36,7 @@ a public bind address. `GET /healthz` needs no key; **every other route, includi
 2. **Ask the person who runs the app for a caller key.** What they do, and what you get, is
    section 3. One key per calling app, with only the scopes that app needs.
 3. **Keep the key text secret.** It is a bearer token: anyone who has it can use your scopes. It
-   is not stored on the server — only its SHA-256 hash is — so there is no way to show it again;
+   is not stored on the server—only its SHA-256 hash is—so there is no way to show it again;
    lose it and you get a new one.
 4. **Keys expire.** Each entry carries an `expires_at`; an expired key gives 401 like a wrong one.
 
@@ -77,8 +77,8 @@ there is no database of keys.
 
 3. **[app-machine] Restart that service** so it re-reads the file:
    `docker compose up -d --force-recreate requester` (the service's own name).
-4. **[laptop] Prove it.** Send the key as a bearer header; a scope test matters too — a
-   builder-scoped key used on the requester's search route gives 401, measured:
+4. **[laptop] Prove it.** Send the key as a bearer header; a scope test matters too—a
+   builder-scoped key used on the `search` route gives `401`, measured:
 
    ```bash
    curl -s -o /dev/null -w '%{http_code}\n' \
@@ -114,12 +114,12 @@ curl -s -X POST $APP:8443/v1/catalogue/questions -H "Authorization: Bearer $KEY"
   -H 'Content-Type: application/json' -d '{"question": "<your question>"}'
 ```
 
-The answer holds `answer` (the model's text — not a catalogue fact), `citations` (the retrieved
+The answer holds `answer` (the model's text—not a catalogue fact), `citations` (the retrieved
 ids it cites) and `relationships` (the only catalogue facts about links, written by code from
 stored edges). **The reasoning model takes 12 to 60 s**; the requester itself gives up at
 `timeout_seconds = 60` (`deploy/config/requester.toml`) with 503 `MODEL_TIMEOUT`. A question
 containing *lineage*, *derived from*, *flows into* or *writes to* is refused
-`LINEAGE_REQUIRES_PLANNER` — those questions belong to the planner.
+`LINEAGE_REQUIRES_PLANNER`—those questions belong to the planner.
 
 ### 4.3 Requester: ask for a fresh scan (`scan`)
 
@@ -144,7 +144,7 @@ After a finished assembly the requester still serves the old index until you rei
 curl -s -X POST $APP:8444/v1/planner/graph -H "Authorization: Bearer $KEY"
 ```
 
-The answer holds `snapshot_digest` — the version of the catalogue the planner is reading; compare
+The answer holds `snapshot_digest`—the version of the catalogue the planner is reading; compare
 it with what the requester reports when the two seem to disagree. `POST /v1/join-paths` and
 `POST /v1/lineage/paths` take `from_id` and `to_id` (the ids from 4.1); `POST /v1/plans` turns a
 `path_id` into a reviewable SQL or MongoDB read. The planner **never runs** what it writes.
@@ -162,14 +162,14 @@ The answer holds `valid: true` for a good record. An unknown record type is refu
 ### 4.7 Collectors: scan directly (`scan`)
 
 `POST $APP:8441/v1/collector/scan-requests` takes a **signed** scan request (`request`, `key_id`,
-`signature`) — signing uses `deploy/secrets/scan-signing.key` and is for the requester or an
+`signature`)—signing uses `deploy/secrets/scan-signing.key` and is for the requester or an
 operator, not an ordinary caller. Prefer 4.3.
 
 ### 4.8 Errors
 
 Bare codes in the body: `NOT_FOUND` (no such id or job), `UNKNOWN_SCHEMA` (contracts),
 `MODEL_TIMEOUT` (503, the model is slow or down), `STALE_INDEX` (the index is older than the
-snapshot). `401` covers a missing, wrong, expired or out-of-scope key — the service does not say
+snapshot). `401` covers a missing, wrong, expired or out-of-scope key—the service does not say
 which, so check the scopes first.
 
 ## 5. Daily work
@@ -190,10 +190,10 @@ which, so check the scopes first.
 | --- | --- | --- |
 | `401` even on `/openapi.json` | No key, wrong key, expired key, or the key lacks that route's scope. | Check the header is `Authorization: Bearer <key text>`; ask for the scope; check `expires_at`. |
 | `503` with `MODEL_TIMEOUT` | The model is slow or down. Answers took 12 to 60 s in measurement. | Retry; ask the operator to check vLLM, or raise `timeout_seconds` in `deploy/config/requester.toml`. |
-| `STALE_INDEX` | The requester's index is older than the catalogue snapshot. | Reindex: `dbig-requester index` [app-machine] or `POST /v1/catalogue/reindex`. |
+| `STALE_INDEX` | The search index of the requester is older than the catalogue snapshot. | Reindex: `dbig-requester index` on the app machine or `POST /v1/catalogue/reindex`. |
 | A question about lineage is refused `LINEAGE_REQUIRES_PLANNER` | By design: link questions go to the planner. | Use `POST /v1/lineage/paths` or `/v1/join-paths` (4.5). |
 | A service refuses to start, message about the bind address | `LAN_IP` is not a private address, or the flag is missing. | `LAN_IP` must be the private LAN address; `DBIG_ALLOW_PLAIN_LAN=1` in `deploy/.env` allows a private bind with plain HTTP, nothing public. |
-| Langfuse web crash-loops with `P1013` or `P1000` | A `LANGFUSE_*` password is not hex: the passwords sit inside `DATABASE_URL` and base64 breaks Prisma. | Set them with `openssl rand -hex 24`; after rotating a password also run `ALTER USER` in the Langfuse postgres container. |
+| Langfuse web crash-loops with `P1013` or `P1000` | A `LANGFUSE_*` password is not hex: the passwords sit inside `DATABASE_URL` and base64 breaks Prisma. | Set them with `openssl rand -hex 24`; after rotating a password also run `ALTER USER` in the Langfuse Postgres container. |
 
 ## 7. Limits you should know
 

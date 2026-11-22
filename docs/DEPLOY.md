@@ -1,7 +1,7 @@
 # Move the catalogue to the app machine
 
 This guide runs the five catalogue services, and their optional Langfuse telemetry, on the
-**app machine** — the same host the normalization app runs its API on (a separate repository).
+**app machine**—the same host the normalization app runs its API on (a separate repository).
 The databases live on the benchmark box and stay read-only to the collector. Why it is built
 this way: [ADR-001](adr/ADR-001-app-machine-plain-http.md). Every command says where it runs:
 **[app machine]**, **[owner]** (your admin page or shell), **[box]**, **[vLLM machine]**,
@@ -40,7 +40,7 @@ TEST-NET placeholders (owner decision 1).
 
 Give the machine **8 GiB of memory and 40 GiB of free disk** for db-catalogue together with
 normalization. normalization's own numbers are in its deploy guide, "Move the app to the app
-machine" — a separate repository; do not add the two guides' sizes independently.
+machine"—a separate repository; do not add the two guides' sizes independently.
 Check: `df -h /` and `free -g` show the headroom.
 
 ## 3. Let the app machine reach the box and vLLM
@@ -57,7 +57,7 @@ Check: `df -h /` and `free -g` show the headroom.
 1. **[owner]** Create the read-only account on each bench database as `docs/LOCAL_RUN.md`
    step 2 says (`dbig_reader`; ClickHouse with `readonly = 2`).
 2. **[owner]** Fill `deploy/secrets/source-connection-slot1.json` through `slot3.json`
-   yourself, one login each, in the URL form the committed placeholder shows, e.g.
+   yourself, one login each, in the URL form the committed placeholder shows, for example
    `{"url": "postgresql://dbig_reader:<password>@<bench box address>:5432/<database>"}`.
    Owner decision 5: the owner adds these files; they never go into git, a chat log or a
    ticket. Check: each file parses as JSON with only a `url` key.
@@ -97,8 +97,8 @@ Values live as files under `deploy/secrets/`, never in `.env`.
 2. **[owner]** Put the CA that signed the database certificates in `source-ca-bundle.pem` and
    the vLLM bearer key into `model.key`; the slot files are step 4. Caller keys: each
    `caller-keys-<service>.json` holds a `keys` array; an entry has `caller`, `sha256`, `scopes`
-   and `expires_at`. Make a random key per caller, hash it, and write the hash into the file —
-   the key itself lives only on the caller — then replace every rehearsal `sha256` and
+   and `expires_at`. Make a random key per caller, hash it, and write the hash into the file:
+   the key itself lives only on the caller—then replace every rehearsal `sha256` and
    `expires_at`: `printf '%s' '<the caller key>' | sha256sum`. The scopes per service:
 
    | Service | Scopes |
@@ -115,9 +115,9 @@ Values live as files under `deploy/secrets/`, never in `.env`.
 ## 8. Start
 
 **[app machine]**, in `~/db-catalogue/deploy`:
-`docker compose -f compose.yaml -f compose.sources.yaml --env-file .env up -d` — to run
+`docker compose -f compose.yaml -f compose.sources.yaml --env-file .env up -d`—to run
 Langfuse from the first start, add `-f compose.langfuse.yaml` (its keys come in step 11).
-Check: `docker compose ps` shows seven services `healthy` — the five plus the ClickHouse and
+Check: `docker compose ps` shows seven services `healthy`—the five plus the ClickHouse and
 MongoDB collector replicas.
 
 ## 9. Health and scope checks
@@ -179,7 +179,7 @@ Check: `GET /v1/catalogue/search?query=<a word from your schema>` returns hits.
 3. **[app machine]** Put the keys in `secrets/langfuse-public.key` and
    `secrets/langfuse-secret.key` (`printf '%s' '<pk...>' > …`), then restart the two tracing
    services: `docker compose -f compose.yaml -f compose.sources.yaml --env-file .env up -d builder requester`.
-   Check: the project page shows traces — metadata-only, never prompts, replies, SQL or values
+   Check: the project page shows traces—metadata-only, never prompts, replies, SQL or values
    (enforced in code); Langfuse never phones home (`TELEMETRY_ENABLED=false`); if it is down
    the services keep working and drop telemetry.
 
@@ -187,11 +187,11 @@ Check: `GET /v1/catalogue/search?query=<a word from your schema>` returns hits.
 
 Tag `v0.1.0` only after the app machine has passed steps 8–10 end to end (owner decision 7).
 
-1. **[laptop]** The gate — the tag must equal every package version:
+1. **[laptop]** The gate—the tag must equal every package version:
    `python3 scripts/check_release_version.py v0.1.0`. Both CI files run the same check.
 2. **[laptop]** `git tag -a v0.1.0 -m "v0.1.0"`, then push the tag; `origin` pushes to GitHub
    and GitLab both.
-3. **[GitHub]** and **[GitLab]**: the release pipelines publish to both remotes — images to
+3. **[GitHub]** and **[GitLab]**: the release pipelines publish to both remotes—images to
    `ghcr.io` and the GitLab container registry, wheels to the GitLab package registry.
 4. **[app machine]** Adopt a release: set `DBIG_VERSION` (and `DBIG_REGISTRY`, step 5),
    `docker compose -f compose.yaml -f compose.sources.yaml --env-file .env pull`, then the
@@ -204,9 +204,9 @@ Every line below was measured in the laptop rehearsal of 2026-11-22:
 | Symptom | Cause and fix |
 | --- | --- |
 | `langfuse-web` crash-loops: Prisma `P1013` | A base64 password inside `DATABASE_URL` (`+/=` are not valid there). Regenerate `LANGFUSE_DB_PASSWORD` (and the other two) with `openssl rand -hex 24`. |
-| `langfuse-web` crash-loops: Prisma `P1000` | The password rotated in `.env` but Postgres kept the old one. Run `ALTER USER langfuse WITH PASSWORD '<new>'` inside the langfuse-postgres container, or recreate the volumes. |
-| `ask` answers 503 `MODEL_TIMEOUT` | The default 20 s timeout is too short; answers take 12–60 s. `deploy/config/requester.toml` sets `timeout_seconds = 60` — keep it. |
-| `PermissionError` after copying files into a volume from the host | Copied files carry the host uid's ownership. Fix it inside the service's container: `docker compose exec -u 0 <service> chown -R 10001:10001 <path>`. |
+| `langfuse-web` crash-loops: Prisma `P1000` | The password rotated in `.env` but Postgres kept the old one. Run `ALTER USER langfuse WITH PASSWORD '<new>'` inside the `langfuse-postgres` container, or recreate the volumes. |
+| `ask` answers 503 `MODEL_TIMEOUT` | The default 20 s timeout is too short; answers take 12-60 s. `deploy/config/requester.toml` sets `timeout_seconds = 60`—keep it. |
+| `PermissionError` after copying files into a volume from the host | Copied files carry the host user's ownership. Fix it inside the service's container: `docker compose exec -u 0 <service> chown -R 10001:10001 <path>`. |
 | A service restart-loops with exit code 127 | An old or wrong image tag. `pull` again and check `DBIG_VERSION`. |
 
 ## Not checked
