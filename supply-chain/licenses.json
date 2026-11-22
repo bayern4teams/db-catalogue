@@ -84,10 +84,10 @@
     "evidence": "legacy-license-field",
     "release_url": "https://pypi.org/pypi/distro/1.9.0/json"
   },
-  "dnspython==2.9.0": {
+  "dnspython==2.9.2": {
     "declaration": "ISC",
     "evidence": "spdx-expression",
-    "release_url": "https://pypi.org/pypi/dnspython/2.9.0/json"
+    "release_url": "https://pypi.org/pypi/dnspython/2.9.2/json"
   },
   "fastapi==0.141.1": {
     "declaration": "MIT",
