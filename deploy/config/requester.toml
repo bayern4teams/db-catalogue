@@ -15,6 +15,11 @@ base_url = "${VLLM_BASE_URL}"
 model = "${VLLM_MODEL}"
 model_digest = "${VLLM_MODEL_DIGEST}"
 api_key_env = "DBIG_MODEL_KEY"
+# Reasoning models answer slowly: the measured direct call took 12 s and a full context took
+# over 20 s (laptop rehearsal 2026-11-22, MODEL_TIMEOUT for the two slowest questions). 60 s
+# covers the observed answers with room; the timeout is what makes a dead model an operator-
+# visible 503 instead of a hung request.
+timeout_seconds = 60
 langfuse_url = "${LANGFUSE_URL}"
 langfuse_public_key_env = "DBIG_LANGFUSE_PUBLIC_KEY"
 langfuse_secret_key_env = "DBIG_LANGFUSE_SECRET_KEY"
