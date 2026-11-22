@@ -12,7 +12,7 @@ from .scan import accept_scan, scan_status
 
 
 def create_app(config: SourceConfig, queue_path: Path) -> FastAPI:
-    app = FastAPI()
+    app = FastAPI(docs_url=None, redoc_url=None)
     app.add_middleware(
         ServiceGuard,
         keys=service_keys(config.http_token_env, purpose="collector HTTP bearer token"),

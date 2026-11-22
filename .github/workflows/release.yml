@@ -69,5 +69,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: >-
           gh release create "${GITHUB_REF_NAME}" dist/* --verify-tag --generate-notes
-          --notes "Images: ghcr.io/${GITHUB_REPOSITORY,,}/dbig-*:${GITHUB_REF_NAME}.
+          --notes "Images: ghcr.io/${GITHUB_REPOSITORY,,}/dbig-*:${GITHUB_REF_NAME#v}.
           Deploy: docs/DEPLOY.md."

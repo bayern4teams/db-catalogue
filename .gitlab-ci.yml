@@ -8,7 +8,7 @@ workflow:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api"
     - if: $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-    # A `vX.Y.Z` tag runs only the release stage below (owner decision 10, 2026-11-21).
+    # A `vX.Y.Z` tag runs the checks and then the release stage below (owner decision 10, 2026-11-21).
     - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/
 
 default:
@@ -212,7 +212,9 @@ docs:
     - docker version --format '{{.Client.Version}} / {{.Server.Version}}'
 
 release-images:
-  extends: [.python, .on-release, .docker-cli, .docker-scripts]
+  # .docker-scripts is not extended: its anchor key would become an unknown job key; the
+  # `*docker_setup` alias below pulls its steps in.
+  extends: [.python, .on-release, .docker-cli]
   stage: release
   timeout: 45m
   script:
@@ -230,11 +232,13 @@ release-packages:
     - python scripts/check_release_version.py "$CI_COMMIT_TAG"
     - uv build --all-packages
     - sha256sum dist/* > dist/SHA256SUMS.txt
+    # Wheels and source archives go to the Python package registry (owner decision 10), so
+    # other apps can `pip install` them; the checksum file goes to the generic registry.
+    - uv publish --publish-url "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi"
+      --username gitlab-ci-token --password "${CI_JOB_TOKEN}" dist/*.whl dist/*.tar.gz
     - |
       base="${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/dbig/${CI_COMMIT_TAG#v}"
-      for f in dist/*; do
-        curl --fail -sS --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file "$f" "$base/$(basename "$f")" >/dev/null
-      done
+      curl --fail -sS --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file dist/SHA256SUMS.txt "$base/SHA256SUMS.txt" >/dev/null
 
 release:
   extends: .on-release
@@ -242,10 +246,11 @@ release:
   needs: [release-images, release-packages]
   image: registry.gitlab.com/gitlab-org/release-cli:v0.24.0
   before_script: []
+  # The `release:` keyword expands variables but runs no shell, so `${CI_COMMIT_TAG#v}` would stay
+  # literal there; release-cli runs from the script instead. Images carry the version without the v.
   script:
-    - echo "Release $CI_COMMIT_TAG, images $CI_REGISTRY_IMAGE/dbig-*:$CI_COMMIT_TAG"
-  release:
-    tag_name: $CI_COMMIT_TAG
-    name: $CI_COMMIT_TAG
-    description: "Images: $CI_REGISTRY_IMAGE/dbig-*:$CI_COMMIT_TAG. Packages: this project's
-      package registry, dbig/${CI_COMMIT_TAG#v}. Deploy: docs/DEPLOY.md."
+    - VERSION="${CI_COMMIT_TAG#v}"
+    - >-
+      release-cli create --name "$CI_COMMIT_TAG" --tag-name "$CI_COMMIT_TAG"
+      --description "Images: $CI_REGISTRY_IMAGE/dbig-*:$VERSION. Python packages and
+      SHA256SUMS.txt (dbig/$VERSION): this project's package registry. Deploy: docs/DEPLOY.md."

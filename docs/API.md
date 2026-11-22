@@ -2,7 +2,7 @@
 
 Every route and field of the five services, generated from their live OpenAPI
 documents by `python scripts/export_api_docs.py`—do not hand-edit. All routes,
-including `/openapi.json` and `/docs`, need a caller key in the `Authorization:
+including `/openapi.json`, need a caller key in the `Authorization:
 Bearer <key>` header (owner decision 16, 2026-11-21); scopes per route are listed
 under each service. Replace `<app-machine address>` with the host address; the
 ports are the `deploy/.env` settings named in the headings.

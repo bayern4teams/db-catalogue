@@ -100,6 +100,10 @@ def test_all_five_services_serve_an_openapi_document_with_a_key(tmp_path, monkey
         assert document["paths"], f"{name}: the document lists no route"
         # /healthz is mounted by the guard, not by the router, so the document never lists it.
         assert any(path.startswith("/v1/") for path in document["paths"]), name
+        # No Swagger or ReDoc page: both load scripts from a public CDN, which a LAN-only
+        # caller cannot reach, and fetch the document without the key (review 2026-11-22).
+        assert client.get("/docs", headers={"authorization": header}).status_code == 404, name
+        assert client.get("/redoc", headers={"authorization": header}).status_code == 404, name
 
 
 def test_the_openapi_paths_are_the_routed_ones(tmp_path, monkeypatch):

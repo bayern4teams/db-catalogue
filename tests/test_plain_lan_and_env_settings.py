@@ -3,7 +3,7 @@
 The opt-in is read from `DBIG_ALLOW_PLAIN_LAN` at call time, so one variable turns it on for
 the deployment and off everywhere else; every rule it relaxes keeps the rest of its check
 (a public address, an all-interfaces bind and a name are still refused with the flag set).
-`load_toml_section` expands `${NAME}` from the environment inside quoted strings only
+`load_toml_section` expands `${NAME}` from the environment in parsed strings only
 (owner decision 11: plain settings live in `deploy/.env`, committed files keep placeholders).
 """
 
@@ -90,3 +90,22 @@ def test_an_unset_variable_names_the_setting_and_the_fix(tmp_path, monkeypatch):
     with pytest.raises(OperatorError, match="DBIG_TEST_MISSING") as caught:
         load_toml_section(_toml(tmp_path, '[s]\nk = "${DBIG_TEST_MISSING}"\n'), "s")
     assert "deploy/.env" in str(caught.value)
+
+
+def test_a_placeholder_in_a_comment_is_not_read(tmp_path):
+    """Review 2026-11-22: only values are expanded, never comment text."""
+    toml = '[s]\n# old: k = "${DBIG_TEST_COMMENTED_OUT}"\nk = "v"\n'
+    assert load_toml_section(_toml(tmp_path, toml), "s") == {"k": "v"}
+
+
+def test_a_stray_quote_in_a_comment_does_not_stop_a_later_expansion(tmp_path, monkeypatch):
+    """Review 2026-11-22: a lone `"` in a comment once shifted the quote pairing."""
+    monkeypatch.setenv("DBIG_TEST_URL", "http://10.0.0.5:8000/v1")
+    toml = '[s]\n# a 5" disk\nk = "${DBIG_TEST_URL}"\n'
+    assert load_toml_section(_toml(tmp_path, toml), "s") == {"k": "http://10.0.0.5:8000/v1"}
+
+
+def test_placeholders_in_keys_and_lists_are_expanded(tmp_path, monkeypatch):
+    monkeypatch.setenv("DBIG_TEST_ID", "pg1")
+    toml = '[s]\nm = { "${DBIG_TEST_ID}" = ["a-${DBIG_TEST_ID}"] }\n'
+    assert load_toml_section(_toml(tmp_path, toml), "s") == {"m": {"pg1": ["a-pg1"]}}

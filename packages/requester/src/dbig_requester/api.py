@@ -50,7 +50,7 @@ class ScanBody(BaseModel):
 
 
 def create_app(config: RequesterConfig) -> FastAPI:
-    app = FastAPI()
+    app = FastAPI(docs_url=None, redoc_url=None)
     app.add_middleware(
         ServiceGuard,
         keys=service_keys(config.api_key_env, purpose="requester API bearer token"),

@@ -13,7 +13,7 @@ and for the first release tag after the app-machine pass (decision 7).
   `load_toml_section` expands it and a missing name fails with the setting and the variable
   (`packages/contracts/src/dbig_contracts/errors.py`). Real values live only in git-ignored
   `deploy/.env`.
-- OpenAPI (`/openapi.json`, `/docs`) is on on all five services; every route including those
+- OpenAPI (`/openapi.json`; `/docs` and `/redoc` turned off by the 2026-11-22 review) is on on all five services; every route including those
   two stays behind the caller key and its scope.
 - Deployment files: `deploy/compose.yaml` (the five services), `compose.sources.yaml`
   (ClickHouse and MongoDB collector replicas), `compose.langfuse.yaml` (self-hosted
