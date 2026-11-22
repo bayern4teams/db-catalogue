@@ -42,10 +42,12 @@ and for the first release tag after the app-machine pass (decision 7).
   ClickHouse 841, Redis 92, Postgres 33, MinIO 24 MiB); volumes 151 MiB; images ~1.5 GB.
   Five services under test load: 33–84 MiB each, capped at `DBIG_MEM_LIMIT`=1 GiB.
 - Sizing for the app machine: 8 GiB memory, 40 GiB free disk for both projects (was 6/20).
-- GitHub CI observed for the pushed branch: Rule checks and Docs checks green on the final
-  commits (an earlier red run was markdownlint MD060 in the generated table; fixed at
-  `e361fe3`). GitLab CI could not be observed — this laptop has no glab/CLI auth for
-  git.personal.com (push itself works over SSH).
+- GitHub CI green on the final tip `b024713` (observed): CI (full suite 1444 passed +
+  integration + isolation + supply chain), Rule checks, Docs checks. Two failures found
+  and fixed on the way: pip-audit flagged CVE-2026-128089 in dnspython 2.9.0 (bumped to
+  2.9.2, license inventory refreshed) and a missing J13 `Docs:` line (amended). GitLab CI
+  could not be observed — this laptop has no glab/CLI auth for git.personal.com (push
+  itself works over SSH).
 
 ## Not checked
 

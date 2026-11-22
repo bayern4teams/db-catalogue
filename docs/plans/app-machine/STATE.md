@@ -2,6 +2,12 @@
 
 Ledger. Newest first. Commits carry their verification; D1/D4 per AGENTS.md.
 
+- 2026-11-22 CI green on the branch tip b024713 (GitHub, observed): CI full suite
+  (1444 passed), Rule checks, Docs checks. Found + fixed via CI: dnspython CVE-2026-128089
+  (lock bumped 2.9.2 + license inventory, bf17da3/5947b30) and one missing J13 Docs: line
+  (amended to b024713, force-push by owner yes). DONE for this session; open: owner merge
+  decision, GitLab pipeline observation, live collect, key rotation.
+
 - 2026-11-22 97f1955 green docs gate: em-dash/quote/terms fixes, planner route summary
   (Vale.Terms flagged the auto-title), API.md regenerated live; markdownlint 0, Vale 0
   errors, lychee 0 on all 13 docs; planner rebuilt + healthy, openapi tests pass.
