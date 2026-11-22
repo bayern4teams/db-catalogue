@@ -38,6 +38,23 @@ def is_loopback_literal(host: str) -> bool:
         return False
 
 
+PLAIN_LAN_ENV = "DBIG_ALLOW_PLAIN_LAN"
+# C5: reason=plain HTTP on a LAN-only deployment (vLLM call and service bind); the owner decided
+# it on 2026-11-21 for app-machine ("we don't need https for now", and the services run plain
+# HTTP on the LAN); review=2027-05-21. Set only in the deployment's env; unset keeps every rule.
+# Decision recorded in docs/adr/ADR-001-app-machine-plain-http.md.
+
+
+def plain_lan_allowed() -> bool:
+    """True when the deployment opts into plain HTTP for private LAN endpoints (owner, 2026-11-21).
+
+    The default is False, so every default path still requires HTTPS off loopback and every
+    existing security test holds unchanged (L1). A caller must pair this with the private-address
+    checks: it permits plain HTTP, never a public address or a name.
+    """
+    return os.environ.get(PLAIN_LAN_ENV, "") == "1"
+
+
 def private_base_url(value: str) -> str:
     parsed = urlsplit(value)
     if parsed.scheme not in {"http", "https"} or not parsed.hostname:
@@ -50,8 +67,15 @@ def private_base_url(value: str) -> str:
         raise ValueError("private endpoint must use an IP literal") from error
     if not (address.is_private or address.is_loopback):
         raise ValueError("endpoint must resolve to a private address")
-    if parsed.scheme != "https" and not is_loopback_literal(parsed.hostname):
-        raise ValueError("non-loopback private endpoints require HTTPS")
+    if (
+        parsed.scheme != "https"
+        and not is_loopback_literal(parsed.hostname)
+        and not plain_lan_allowed()
+    ):
+        raise ValueError(
+            "non-loopback private endpoints require HTTPS; on a LAN-only deployment set "
+            f"{PLAIN_LAN_ENV}=1 to allow plain HTTP (owner decision 2026-11-21)"
+        )
     return value.rstrip("/")
 
 
@@ -186,6 +210,11 @@ def bind_refusal(host: str, *, tls: bool) -> str | None:
     if not address.is_private:
         return "bind only to a loopback or private LAN address"
     if not tls:
+        # C5: reason=plain HTTP bind on a LAN-only deployment; approved=owner, 2026-11-21;
+        # review=2027-05-21 (docs/adr/ADR-001-app-machine-plain-http.md). The refusal text below
+        # is what every existing test pins; the opt-in only turns it off, never a public bind on.
+        if plain_lan_allowed():
+            return None
         return "without TLS only loopback binds; a LAN bind needs --tls-cert and --tls-key"
     return None
 

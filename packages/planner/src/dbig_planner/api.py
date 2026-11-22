@@ -21,7 +21,7 @@ ROUTE_SCOPES = {
 
 
 def create_app(config: PlannerConfig) -> FastAPI:
-    app = FastAPI(title="DBIG lineage planner", docs_url=None, redoc_url=None)
+    app = FastAPI(title="DBIG lineage planner")
     app.add_middleware(
         ServiceGuard,
         keys=service_keys(config.api_key_env, purpose="planner API bearer token"),

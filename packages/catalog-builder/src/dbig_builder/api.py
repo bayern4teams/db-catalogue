@@ -46,7 +46,7 @@ def _service(config: BuilderConfig) -> ServiceConfig:
 
 def create_app(config: BuilderConfig) -> FastAPI:
     service = _service(config)
-    app = FastAPI(title="DBIG catalog builder", docs_url=None, redoc_url=None, openapi_url=None)
+    app = FastAPI(title="DBIG catalog builder")
     app.add_middleware(
         ServiceGuard,
         keys=service_keys(service.api_key_env, purpose="builder API bearer token"),

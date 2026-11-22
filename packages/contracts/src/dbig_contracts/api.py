@@ -29,7 +29,7 @@ MAX_REQUESTS_PER_MINUTE = 120
 
 def create_app(keys_file: Path) -> FastAPI:
     schemas = json_schemas()
-    app = FastAPI(title="DBIG contracts", docs_url=None, redoc_url=None, openapi_url=None)
+    app = FastAPI(title="DBIG contracts")
     app.add_middleware(
         ServiceGuard,
         keys=load_caller_keys(keys_file),
