@@ -10,7 +10,7 @@ from dbig_contracts.errors import OperatorError
 from dbig_contracts.scan import SignedScanRequest
 from dbig_contracts.security import key_from_env, serve_refusal
 
-from .config import load_config
+from .config import load_config, load_sources
 from .runtime import collect
 from .scan import accept_scan, process_next, run_worker
 
@@ -66,7 +66,7 @@ def validate_bundle(path: Path, key_env: str) -> None:
 @click.option("--queue-db", type=click.Path(path_type=Path), required=True)
 def accept_scan_command(config_path: Path, request_path: Path, queue_db: Path) -> None:
     envelope = SignedScanRequest.model_validate_json(request_path.read_bytes())
-    receipt = accept_scan(envelope, load_config(config_path), queue_db)
+    receipt = accept_scan(envelope, load_sources(config_path), queue_db)
     click.echo(receipt.model_dump_json())
 
 
@@ -77,7 +77,7 @@ def accept_scan_command(config_path: Path, request_path: Path, queue_db: Path) -
 @click.option("--queue-db", type=click.Path(path_type=Path), required=True)
 @click.option("--out-root", type=click.Path(path_type=Path), required=True)
 def process_scans_command(config_path: Path, queue_db: Path, out_root: Path) -> None:
-    receipt = process_next(load_config(config_path), queue_db, out_root)
+    receipt = process_next(load_sources(config_path), queue_db, out_root)
     click.echo(receipt.model_dump_json() if receipt else json.dumps({"status": "empty"}))
 
 
@@ -111,7 +111,7 @@ def serve(
 
     from .api import create_app
 
-    config = load_config(config_path)
+    config = load_sources(config_path)
     app = create_app(config, queue_db)
     stop = threading.Event()
     if bundle_root is not None:

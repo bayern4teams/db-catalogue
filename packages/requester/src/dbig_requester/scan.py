@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import json
 import os
 import sqlite3
 import tempfile
 from contextlib import closing
 from datetime import UTC, datetime
 from pathlib import Path
+from urllib.error import HTTPError, URLError
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from dbig_contracts.artifact import canonical
@@ -49,6 +51,28 @@ def scan_status(state: Path, request_id: str) -> ScanReceipt | None:
             "SELECT receipt FROM receipts WHERE id=?", (request_id,)
         ).fetchone()
     return ScanReceipt.model_validate_json(row[0]) if row else None
+
+
+class CollectorUnavailable(OperatorError):
+    """The collector refused or did not answer; the API reports it as 502, not as the caller's
+    fault (laptop rehearsal 2026-11-22: a collector 401 surfaced as a bare 500)."""
+
+
+def _refusal_code(error: HTTPError) -> str:
+    """The collector's own refusal code when it sent one, else its HTTP status."""
+    try:
+        code = json.loads(error.read(4096))["detail"]["code"]
+    except Exception:  # any unreadable body falls back to the status
+        code = None
+    if isinstance(code, str) and code:
+        return code
+    hint = (
+        ": add the hash of the requester's collector token to the collector's caller keys "
+        "with the scan scope"
+        if error.code == 401
+        else ""
+    )
+    return f"COLLECTOR_REFUSED_{error.code}{hint}"
 
 
 def dispatch_scan(
@@ -107,10 +131,18 @@ def dispatch_scan(
             headers={"Content-Type": "application/json", "Authorization": "Bearer " + token},
             method="POST",
         )
-        with build_opener(_NoRedirect).open(
-            message, timeout=config.http_timeout_seconds
-        ) as response:
-            receipt = ScanReceipt.model_validate_json(response.read(65_536))
+        try:
+            with build_opener(_NoRedirect).open(
+                message, timeout=config.http_timeout_seconds
+            ) as response:
+                receipt = ScanReceipt.model_validate_json(response.read(65_536))
+        except HTTPError as error:
+            raise CollectorUnavailable(_refusal_code(error)) from None
+        except (URLError, TimeoutError) as error:
+            raise CollectorUnavailable(
+                f"COLLECTOR_UNREACHABLE: {base} did not answer ({type(error).__name__}); check "
+                "that the collector runs and collector_url points to it"
+            ) from None
         if receipt.request_id != request.id:
             raise OperatorError("mismatched collector receipt")
     else:

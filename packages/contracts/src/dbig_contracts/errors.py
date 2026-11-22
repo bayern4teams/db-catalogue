@@ -74,6 +74,16 @@ def describe_validation(error: ValidationError) -> str:
     )
 
 
+def load_toml(path: Path) -> dict[str, Any]:
+    """Read a whole TOML configuration file, `${NAME}` expanded, as an operator error."""
+    try:
+        data = tomllib.loads(path.read_text(encoding="utf-8"))
+    except tomllib.TOMLDecodeError as error:
+        # The decoder reports only a position, never the offending text.
+        raise OperatorError(f"configuration {path} is not valid TOML: {error}") from error
+    return _expand_placeholders(data, path)
+
+
 def load_toml_section(path: Path, section: str) -> dict[str, Any]:
     """Read one `[section]` table from a TOML configuration file, as an operator error.
 
@@ -81,11 +91,7 @@ def load_toml_section(path: Path, section: str) -> dict[str, Any]:
     (`_expand_placeholders`), so a committed file keeps placeholders while the plain values
     live in the deployment's env (owner decision 11, 2026-11-21).
     """
-    try:
-        data = _expand_placeholders(tomllib.loads(path.read_text(encoding="utf-8")), path)
-    except tomllib.TOMLDecodeError as error:
-        # The decoder reports only a position, never the offending text.
-        raise OperatorError(f"configuration {path} is not valid TOML: {error}") from error
+    data = load_toml(path)
     if set(data) != {section} or not isinstance(data[section], dict):
         raise OperatorError(f"configuration {path} must contain only a [{section}] table")
     return dict(data[section])

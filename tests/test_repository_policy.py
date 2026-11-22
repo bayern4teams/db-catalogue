@@ -565,13 +565,10 @@ def _rendered_compose(ci_check, name: str):
 
 
 def test_the_companion_compose_files_keep_the_lan_policy(ci_check):
-    """T1 over the companion files started with the stack (owner, 2026-11-22: the collector
-    replicas live in compose.sources.yaml, so the rule covers them too). Langfuse is telemetry
+    """T1's LAN rule over the Langfuse file started with the stack. Langfuse is telemetry
     infrastructure, not one of the five hardened services: its own rule is that every published
-    port binds the LAN address and no service uses the host network."""
-    sources = _rendered_compose(ci_check, "compose.sources.yaml")
-    assert set(sources["services"]) == {"collectors-ch", "collectors-mongo"}
-    assert ci_check.compose_problems(sources) == []
+    port binds the LAN address and no service uses the host network. (The collector replicas of
+    compose.sources.yaml were replaced by one multi-source collector, owner 2026-11-22, B1.)"""
     langfuse = _rendered_compose(ci_check, "compose.langfuse.yaml")
     for name, service in langfuse["services"].items():
         assert service.get("network_mode") != "host", name

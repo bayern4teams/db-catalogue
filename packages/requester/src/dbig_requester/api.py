@@ -12,7 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from .answer import answer_question
 from .config import RequesterConfig
-from .scan import dispatch_scan, scan_status
+from .scan import CollectorUnavailable, dispatch_scan, scan_status
 from .search import SearchRequest, index_snapshot, search
 
 # The scope a caller key needs, by path prefix (report Part 3, layer L5).
@@ -117,6 +117,8 @@ def create_app(config: RequesterConfig) -> FastAPI:
             raise HTTPException(status_code=503, detail={"code": "SCAN_NOT_CONFIGURED"})
         try:
             return dispatch_scan(body.request, config.scan, config.state_dir, body.adapter)
+        except CollectorUnavailable as error:
+            raise HTTPException(status_code=502, detail={"code": str(error)}) from error
         except ValueError as error:
             raise HTTPException(status_code=403, detail={"code": str(error)}) from error
 

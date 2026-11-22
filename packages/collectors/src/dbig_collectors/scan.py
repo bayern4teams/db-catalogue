@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import sqlite3
 import threading
+from collections.abc import Sequence
 from contextlib import closing
 from datetime import UTC, datetime
 from pathlib import Path
@@ -16,6 +17,17 @@ from dbig_contracts.security import key_from_env
 
 from .config import SourceConfig
 from .runtime import collect
+
+# One source, or every source one collector serves (owner 2026-11-22, answer B1).
+Sources = SourceConfig | Sequence[SourceConfig]
+
+
+def listed_sources(sources: Sources) -> list[SourceConfig]:
+    return [sources] if isinstance(sources, SourceConfig) else list(sources)
+
+
+def _source(sources: Sources, source_id: str) -> SourceConfig | None:
+    return next((s for s in listed_sources(sources) if s.source_id == source_id), None)
 
 
 def _open_queue(path: Path) -> sqlite3.Connection:
@@ -35,7 +47,12 @@ def _open_queue(path: Path) -> sqlite3.Connection:
     return connection
 
 
-def accept_scan(envelope: SignedScanRequest, config: SourceConfig, queue_path: Path) -> ScanReceipt:
+def accept_scan(envelope: SignedScanRequest, sources: Sources, queue_path: Path) -> ScanReceipt:
+    # The source is chosen by the still unverified request only to pick its key; the signature
+    # check below then covers every field, the source ID included.
+    config = _source(sources, envelope.request.source_id)
+    if config is None:
+        raise OperatorError("UNAUTHORIZED_REQUESTER_OR_SOURCE")
     if envelope.key_id != config.signing_key_id:
         raise OperatorError("UNKNOWN_SIGNING_KEY")
     verify_scan(
@@ -122,7 +139,7 @@ def scan_status(queue_path: Path, request_id: str) -> ScanReceipt | None:
     )
 
 
-def process_next(config: SourceConfig, queue_path: Path, output_root: Path) -> ScanReceipt | None:
+def process_next(sources: Sources, queue_path: Path, output_root: Path) -> ScanReceipt | None:
     with closing(_open_queue(queue_path)) as connection:
         connection.execute("BEGIN IMMEDIATE")
         row = connection.execute(
@@ -137,6 +154,16 @@ def process_next(config: SourceConfig, queue_path: Path, output_root: Path) -> S
             connection.execute(
                 "UPDATE scans SET status='failed',error=? WHERE id=?",
                 ("EXPIRED_REQUEST: the request expired before it was processed", request.id),
+            )
+            connection.commit()
+            return scan_status(queue_path, request.id)
+        config = _source(sources, request.source_id)
+        if config is None:
+            # The source left the configuration after the scan was queued.
+            connection.execute(
+                "UPDATE scans SET status='failed',error=? WHERE id=?",
+                (f"UNKNOWN_SOURCE: {request.source_id!r} is no longer configured; add it to "
+                 "the sources file and submit the scan again", request.id),
             )
             connection.commit()
             return scan_status(queue_path, request.id)
@@ -181,13 +208,15 @@ def requeue_running(queue_path: Path, max_requeues: int = MAX_CRASH_REQUEUES) ->
 
 
 def run_worker(
-    config: SourceConfig, queue_path: Path, output_root: Path, stop: threading.Event
+    sources: Sources, queue_path: Path, output_root: Path, stop: threading.Event
 ) -> None:
     """Process queued scans until `stop` is set, waiting `scan_poll_seconds` when idle."""
+    # Service settings are equal across sources (config.load_sources checks it).
+    config = listed_sources(sources)[0]
     requeue_running(queue_path, config.max_crash_requeues)
     while not stop.is_set():
         try:
-            busy = process_next(config, queue_path, output_root) is not None
+            busy = process_next(sources, queue_path, output_root) is not None
         except Exception:
             # A queue the worker cannot read must not end the service; the cause stays in the
             # scan row where `process_next` could record it.

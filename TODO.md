@@ -26,7 +26,21 @@ Brief: the night-run brief (owner chat 2026-11-21/22). Ledger of the run:
 - [x] Laptop rehearsal passed: 7/7 healthy, every /healthz 200, one real route per service
   with a caller key (scope check 401 included), every OpenAPI opened, 7 of 7 real questions
   answered right with citations verified. Evidence: REHEARSAL_NOTES.md (commands + numbers).
-- [ ] Not checked (stated, C3): live collect (bench TLS off; owner adds logins), fresh-collect
+- [x] Lead review of the branch (2026-11-22, 8 findings; owner: "you must apply fixes"):
+  GitLab CI file valid again (lint), release texts name tag `0.1.0`, wheels to the GitLab
+  Python registry, release text expands the version, `/docs` and `/redoc` off, `${NAME}`
+  expanded after parsing (`bd1eb87`). Owner answers A1 and B1 (2026-11-22): plain database
+  links per database (`tls = false`, same flag, review 2027-05-21) and one collector for any
+  number of databases in `deploy/sources.toml` (slots and `compose.sources.yaml` removed).
+  Rehearsal also found and fixed: a collector refusal surfaced as a bare 500 (now 502 with the
+  reason), the requester's collector token missing from the collector's caller keys (DEPLOY
+  step 7), the guide's combined Langfuse command (it merged the projects), the guide's scan
+  example (missing `reply_location`, wrong adapter and requester) and polling the requester's
+  status route, which keeps the first receipt. Evidence: `tests/test_many_sources.py`,
+  `tests/test_collector_tls.py`; full suite 1461 passed / 70 skipped / 1 xfailed of 1532.
+- [ ] Follow-up: the requester's `GET /v1/scan-requests/<id>` never refreshes an `http` scan
+  from the collector (the guides point to the collector's route instead).
+- [ ] Not checked (stated, C3): live collect (the owner adds logins), fresh-collect
   answer quality, app-machine itself, real tag runs. Owner key rotation: the model key appeared
   in a pasted brief — rotate it.
 

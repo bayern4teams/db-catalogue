@@ -123,8 +123,11 @@ containing *lineage*, *derived from*, *flows into* or *writes to* is refused
 
 ### 4.3 Requester: ask for a fresh scan (`scan`)
 
-`POST $APP:8443/v1/scan-requests` with a `ScanRequest` and `"adapter": "http"`; then poll
-`GET /v1/scan-requests/<request_id>` until `status` is `complete`. See [API.md](API.md) for the
+`POST $APP:8443/v1/scan-requests` with a `ScanRequest` and `"adapter": "http"`; then poll the
+collector's `GET $APP:8441/v1/collector/scan-requests/<request_id>` (a collector key with the
+`scan` scope) until `status` is `complete` or `failed`. The requester route
+`GET /v1/scan-requests/<request_id>` keeps the first receipt (`queued`) and does not follow the
+scan (laptop rehearsal, 2026-11-22). See [API.md](API.md) for the
 request body; the collector side is section 4.6.
 
 ### 4.4 Builder: rebuild the snapshot (`assemble`)
@@ -209,6 +212,6 @@ which, so check the scopes first.
   collector (4.7).
 - Keys are files on the app machine. There is no key UI, no self-service, no audit log of calls.
 
-Not checked by this manual's author: a live collect against the bench databases (their TLS is
-off; the owner adds the logins); answer quality on a fresh collect; the LAN firewall (kept in the
+Not checked by this manual's author: a live collect against the bench databases (the owner adds
+the logins); answer quality on a fresh collect; the LAN firewall (kept in the
 repo but unused for now, owner decision 2).

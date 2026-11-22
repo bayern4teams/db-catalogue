@@ -15,8 +15,9 @@ and for the first release tag after the app-machine pass (decision 7).
   `deploy/.env`.
 - OpenAPI (`/openapi.json`; `/docs` and `/redoc` turned off by the 2026-11-22 review) is on on all five services; every route including those
   two stays behind the caller key and its scope.
-- Deployment files: `deploy/compose.yaml` (the five services), `compose.sources.yaml`
-  (ClickHouse and MongoDB collector replicas), `compose.langfuse.yaml` (self-hosted
+- Deployment files: `deploy/compose.yaml` (the five services; one collector reads every
+  database in `deploy/sources.toml`, owner answer B1 of 2026-11-22, which replaced
+  `compose.sources.yaml`), `compose.langfuse.yaml` (its own Compose project) (self-hosted
   Langfuse 4.83.0 + ClickHouse/Postgres/Redis/MinIO, pinned), `deploy/.env.example`
   (TEST-NET placeholders), six committed TOML configs with slots, `secrets/` convention.
 - Releases: tag `vX.Y.Z` on either remote runs the same gate
@@ -66,3 +67,13 @@ and for the first release tag after the app-machine pass (decision 7).
 - Open questions: should README/ARCHITECTURE link to `docs/USER_MANUAL.md` /
   `docs/DEPLOY.md` from the front page (J13 says the files own the topic; not linked yet);
   the Langfuse web UI currently binds `LAN_IP:3000` — confirm that is who you want to see it.
+
+## Lead review and fixes (2026-11-22)
+
+The lead session reviewed the branch and applied the fixes (owner: "you must apply fixes"). See
+TODO.md, "Lead review of the branch", for the list and the evidence. Laptop rehearsal after the
+fixes: five services healthy; on all five, `/healthz` 200, `/openapi.json` 401 without a key and
+200 with one, `/docs` 404; scans for three listed databases accepted through the requester and
+each run by the one collector against its own login file as a plain connection (they failed on
+purpose: the rehearsal logins point to unroutable private addresses, so no real database was
+touched); an unlisted database and an unlisted namespace answered 403 `UNAUTHORIZED_SCOPE`.

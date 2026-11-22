@@ -7,7 +7,12 @@ import tomllib
 from pathlib import Path
 from typing import Literal
 
-from dbig_contracts.errors import OperatorError, load_toml_section, validate_configuration
+from dbig_contracts.errors import (
+    OperatorError,
+    load_toml,
+    load_toml_section,
+    validate_configuration,
+)
 from dbig_contracts.jobs import MAX_CRASH_REQUEUES
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -16,7 +21,10 @@ class SourceConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
     source_id: str = Field(min_length=1)
     kind: Literal["postgresql", "clickhouse", "mongodb"]
-    connection_env: str = Field(pattern=r"^[A-Z][A-Z0-9_]*$")
+    # The login JSON: an environment reference, or its own file (one file per database in a
+    # multi-source deployment, owner 2026-11-22, answer B1). Exactly one of the two.
+    connection_env: str | None = Field(default=None, pattern=r"^[A-Z][A-Z0-9_]*$")
+    connection_file: Path | None = None
     signing_key_env: str = Field(pattern=r"^[A-Z][A-Z0-9_]*$")
     signing_key_id: str = Field(min_length=1)
     namespaces: list[str] = Field(min_length=1)
@@ -89,6 +97,20 @@ class SourceConfig(BaseModel):
         return self
 
     @model_validator(mode="after")
+    def one_login_reference(self) -> SourceConfig:
+        if (self.connection_env is None) == (self.connection_file is None):
+            raise ValueError(
+                f"source {self.source_id!r} needs exactly one of connection_env or "
+                "connection_file"
+            )
+        return self
+
+    @property
+    def login_reference(self) -> str:
+        """Where the login comes from, for messages (never the login itself)."""
+        return self.connection_env or str(self.connection_file)
+
+    @model_validator(mode="after")
     def ca_file_needs_tls(self) -> SourceConfig:
         if self.tls_ca_file is not None:
             if not self.tls:
@@ -111,6 +133,7 @@ def load_config(path: Path) -> SourceConfig:
         "source_id",
         "kind",
         "connection_env",
+        "connection_file",
         "signing_key_env",
         "signing_key_id",
         "http_token_env",
@@ -128,3 +151,50 @@ def load_config(path: Path) -> SourceConfig:
                     f"environment override DBIG_{key.upper()} is not a valid value: {error}"
                 ) from error
     return validate_configuration(path, SourceConfig, source)
+
+
+# Settings of the one HTTP service and worker, not of a database: every listed source must agree.
+SERVICE_FIELDS = (
+    "http_token_env",
+    "max_request_bytes",
+    "max_queued_scans",
+    "scan_poll_seconds",
+    "max_crash_requeues",
+)
+
+
+def load_sources(path: Path) -> list[SourceConfig]:
+    """Every database one collector serves (owner 2026-11-22, answer B1).
+
+    The file holds `[[source]]` tables and an optional `[defaults]` table whose keys apply to
+    every source that does not set them. A file with a single `[source]` table still loads.
+    """
+    data = load_toml(path)
+    if set(data) == {"source"} and isinstance(data["source"], dict):
+        return [load_config(path)]
+    unknown = set(data) - {"defaults", "source"}
+    tables = data.get("source")
+    if unknown or not isinstance(tables, list) or not tables:
+        raise OperatorError(
+            f"configuration {path} must hold one or more [[source]] tables and at most a "
+            f"[defaults] table; add a [[source]] table for each database"
+        )
+    defaults = data.get("defaults", {})
+    sources = [
+        validate_configuration(path, SourceConfig, {**defaults, **table}) for table in tables
+    ]
+    seen: set[str] = set()
+    for source in sources:
+        if source.source_id in seen:
+            raise OperatorError(
+                f"configuration {path} lists source_id {source.source_id!r} twice; give each "
+                "database its own source_id"
+            )
+        seen.add(source.source_id)
+    for field in SERVICE_FIELDS:
+        if len({repr(getattr(source, field)) for source in sources}) > 1:
+            raise OperatorError(
+                f"configuration {path}: {field} differs between sources, but one collector "
+                "serves them all; set it once in [defaults]"
+            )
+    return sources

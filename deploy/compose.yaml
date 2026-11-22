@@ -8,10 +8,12 @@
 # Plain HTTP on the LAN (owner decisions 12 and 14, 2026-11-21, C5 review 2027-05-21): the
 # services bind without a certificate because DBIG_ALLOW_PLAIN_LAN=1 is set here; the bind rule
 # still refuses a public address and an all-interfaces bind, and a caller key is still required
-# on every route (decision 16). Database TLS is unchanged (the collector still requires it).
+# on every route (decision 16). Database connections may be plain too, per database
+# (`tls = false` in sources.toml; owner 2026-11-22, answer A1).
 #
-# Collector replicas for source slots 2 and 3: `deploy/compose.sources.yaml` (start both files
-# together; docs/DEPLOY.md). Langfuse: `deploy/compose.langfuse.yaml` (owner decision 4).
+# Databases: one collector reads every database listed in `deploy/sources.toml` (template:
+# `sources.example.toml`; owner 2026-11-22, answer B1), with one login file per database in
+# `deploy/secrets/sources/`. Langfuse: `deploy/compose.langfuse.yaml` (owner decision 4).
 #
 # Images (owner decision 8): with DBIG_REGISTRY empty in .env, `docker compose build` builds
 # them from this clone; set DBIG_REGISTRY to the registry path to run the tagged images instead.
@@ -67,7 +69,7 @@ services:
     command:
       - dbig
       - serve
-      - --config=/etc/dbig/collector.toml
+      - --config=/etc/dbig/sources.toml
       - --queue-db=/var/lib/dbig/state/queue.sqlite3
       - --bundle-root=/data/bundles
       - --host=${COLLECTOR_IP:?set COLLECTOR_IP in deploy/.env}
@@ -77,13 +79,10 @@ services:
       DBIG_CALLER_KEYS_FILE: /run/secrets/collector_caller_keys
       DBIG_SIGNING_KEY_FILE: /run/secrets/scan_signing_key
       DBIG_TOKEN_KEY_FILE: /run/secrets/token_key
-      DBIG_SOURCE_CONNECTION_FILE: /run/secrets/source_connection
-      SOURCE_ID_1: ${SOURCE_ID_1:?set SOURCE_ID_1 in deploy/.env}
-      SOURCE_NAMESPACES_1: ${SOURCE_NAMESPACES_1:?set SOURCE_NAMESPACES_1 in deploy/.env}
-    secrets: [collector_caller_keys, scan_signing_key, token_key, source_connection,
-              source_ca_bundle]
+    secrets: [collector_caller_keys, scan_signing_key, token_key, source_ca_bundle]
     volumes:
-      - ./config/collector-slot1.toml:/etc/dbig/collector.toml:ro
+      - ./sources.toml:/etc/dbig/sources.toml:ro
+      - ./secrets/sources:/run/secrets/sources:ro
       - bundles:/data/bundles
       - collector-state:/var/lib/dbig/state
     networks:
@@ -169,19 +168,12 @@ services:
       LANGFUSE_URL: ${LANGFUSE_URL:?}
       DBIG_LANGFUSE_PUBLIC_KEY_FILE: /run/secrets/langfuse_public_key
       DBIG_LANGFUSE_SECRET_KEY_FILE: /run/secrets/langfuse_secret_key
-      SOURCE_ID_1: ${SOURCE_ID_1:?}
-      SOURCE_NAMESPACES_1: ${SOURCE_NAMESPACES_1:?}
-      SOURCE_ID_2: ${SOURCE_ID_2:?set SOURCE_ID_2 in deploy/.env}
-      SOURCE_NAMESPACES_2: ${SOURCE_NAMESPACES_2:?set SOURCE_NAMESPACES_2 in deploy/.env}
-      SOURCE_ID_3: ${SOURCE_ID_3:?set SOURCE_ID_3 in deploy/.env}
-      SOURCE_NAMESPACES_3: ${SOURCE_NAMESPACES_3:?set SOURCE_NAMESPACES_3 in deploy/.env}
       COLLECTOR_IP: ${COLLECTOR_IP:?}
-      COLLECTOR_CH_IP: ${COLLECTOR_CH_IP:?set COLLECTOR_CH_IP in deploy/.env}
-      COLLECTOR_MONGO_IP: ${COLLECTOR_MONGO_IP:?set COLLECTOR_MONGO_IP in deploy/.env}
     secrets: [requester_caller_keys, scan_signing_key, model_key, requester_collector_token,
               langfuse_public_key, langfuse_secret_key]
     volumes:
       - ./config/requester.toml:/etc/dbig/requester.toml:ro
+      - ./sources.toml:/etc/dbig/sources.toml:ro
       - snapshots:/data/snapshots:ro
       - requester-state:/var/lib/dbig/state
     networks:
@@ -262,7 +254,6 @@ secrets:
   contracts_caller_keys: {file: ./secrets/caller-keys-contracts.json}
   scan_signing_key: {file: ./secrets/scan-signing.key}
   token_key: {file: ./secrets/token.key}
-  source_connection: {file: ./secrets/source-connection-slot1.json}
   source_ca_bundle: {file: ./secrets/source-ca-bundle.pem}
   model_key: {file: ./secrets/model.key}
   requester_collector_token: {file: ./secrets/requester-collector-token}

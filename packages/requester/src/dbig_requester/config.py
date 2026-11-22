@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Literal
 
-from dbig_contracts.errors import load_toml_section, validate_configuration
+from dbig_contracts.errors import load_toml, load_toml_section, validate_configuration
 from dbig_contracts.security import private_base_url
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -63,10 +63,16 @@ class ScanConfig(BaseModel):
 
     signing_key_env: str = Field(pattern=r"^[A-Z][A-Z0-9_]*$")
     key_id: str = Field(min_length=1)
-    allowed_sources: dict[str, list[str]] = Field(min_length=1)
+    allowed_sources: dict[str, list[str]] = Field(default_factory=dict)
     allowed_capabilities: list[Literal["metadata", "sample", "history"]] = ["metadata"]
     handoff_root: Path | None = None
     collector_urls: dict[str, str] = Field(default_factory=dict)
+    # The deployment's sources file (deploy/sources.toml, owner 2026-11-22, answer B1): every
+    # `[[source]]` adds its source_id and namespaces to allowed_sources, and is sent to
+    # `collector_url` unless collector_urls names another collector for it. Only those two keys
+    # are read; the logins stay with the collector.
+    sources_file: Path | None = None
+    collector_url: str | None = None
     http_token_env: str | None = None
     http_timeout_seconds: int = Field(default=10, ge=1)
 
@@ -74,6 +80,29 @@ class ScanConfig(BaseModel):
     @classmethod
     def private_collectors(cls, value: dict[str, str]) -> dict[str, str]:
         return {source: private_base_url(url) for source, url in value.items()}
+
+    @field_validator("collector_url")
+    @classmethod
+    def private_collector(cls, value: str | None) -> str | None:
+        return private_base_url(value) if value is not None else None
+
+    @model_validator(mode="after")
+    def sources_from_file(self) -> ScanConfig:
+        if self.sources_file is not None:
+            tables = load_toml(self.sources_file).get("source")
+            tables = [tables] if isinstance(tables, dict) else tables or []
+            for table in tables:
+                source_id, namespaces = table.get("source_id"), table.get("namespaces")
+                if not isinstance(source_id, str) or not isinstance(namespaces, list):
+                    raise ValueError(
+                        f"{self.sources_file}: every [[source]] needs source_id and namespaces"
+                    )
+                self.allowed_sources.setdefault(source_id, namespaces)
+                if self.collector_url is not None:
+                    self.collector_urls.setdefault(source_id, self.collector_url)
+        if not self.allowed_sources:
+            raise ValueError("scan needs allowed_sources or a sources_file that lists a source")
+        return self
 
 
 class RequesterConfig(BaseModel):

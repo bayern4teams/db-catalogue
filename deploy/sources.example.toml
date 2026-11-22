@@ -1,0 +1,40 @@
+# Every database the collector reads (owner 2026-11-22, answer B1: any number of databases).
+# Copy to deploy/sources.toml (git-ignored) and list your own; the collector and the requester
+# both read that file. Add or remove a database: edit it, then `docker compose up -d`.
+#
+# Each login is its own JSON file in deploy/secrets/sources/, readable by uid 10001:
+#   PostgreSQL  {"host": "...", "port": 5432, "database": "...", "user": "...", "password": "..."}
+#   ClickHouse  {"host": "...", "port": 8123, "username": "...", "password": "..."}
+#   MongoDB     {"uri": "mongodb://user:password@host:27017/?authSource=admin"}
+# Use read-only accounts (owner decision 5). Hosts must be private LAN addresses.
+
+# Applies to every [[source]] that does not set the key itself.
+[defaults]
+signing_key_env = "DBIG_SIGNING_KEY"
+signing_key_id = "local"
+authorized_requesters = ["catalogue"]
+http_token_env = "DBIG_COLLECTOR_TOKEN"
+# Plain connections on the LAN for now (owner 2026-11-22, answer A1; needs
+# DBIG_ALLOW_PLAIN_LAN=1, review 2027-05-21). For a database with TLS, set in its own table:
+#   tls = true
+#   tls_ca_file = "/run/secrets/source_ca_bundle"
+tls = false
+
+[[source]]
+source_id = "example-pg"
+kind = "postgresql"
+connection_file = "/run/secrets/sources/example-pg.json"
+# One or more schemas.
+namespaces = ["public"]
+
+[[source]]
+source_id = "example-ch"
+kind = "clickhouse"
+connection_file = "/run/secrets/sources/example-ch.json"
+namespaces = ["default"]
+
+[[source]]
+source_id = "example-mongo"
+kind = "mongodb"
+connection_file = "/run/secrets/sources/example-mongo.json"
+namespaces = ["appdb"]

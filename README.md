@@ -99,7 +99,7 @@ Performance at 10 sources, 200 objects and 1,000 fields is in [ARCHITECTURE.md](
 - Executed lineage is unavailable until you choose a source of query history. OpenLineage events work (a completed run is `executed`, a job event is `defined`).
 - A cross-source plan stays `unresolved` until you configure a staging target.
 - The model features need a private OpenAI-compatible model server (vLLM is the documented target). No GPU host has passed the acceptance gate.
-- The services bind to loopback only, unless the deployment sets `DBIG_ALLOW_PLAIN_LAN=1`, which also allows a private LAN address without TLS (owner decision 2026-11-21, ADR-001; review 2027-05-21). A public address or all-interfaces bind is refused either way.
+- The services bind to loopback only, unless the deployment sets `DBIG_ALLOW_PLAIN_LAN=1`, which also allows a private LAN address without TLS, and plain connections to private databases marked `tls = false` (owner decisions 2026-11-21 and 2026-11-22, ADR-001; review 2027-05-21). A public address or all-interfaces bind is refused either way.
 - Only the database versions that CI runs are supported.
 
 The full guarantees and non-goals are in [ARCHITECTURE.md](ARCHITECTURE.md#guarantees-and-limits).
@@ -115,4 +115,5 @@ MIT. See [LICENSE](LICENSE). Licenses of the pinned dependencies are in `supply-
 - [GLOSSARY.md](GLOSSARY.md): terms.
 - [docs/LESSONS.md](docs/LESSONS.md): approaches that failed.
 - [docs/LOCAL_RUN.md](docs/LOCAL_RUN.md) and [docs/LIVE_TEST.md](docs/LIVE_TEST.md): run it on your databases.
+- [docs/USER_MANUAL.md](docs/USER_MANUAL.md), [docs/API.md](docs/API.md) and [docs/DEPLOY.md](docs/DEPLOY.md): call the services, every route, and move them to app-machine.
 - [THREAT_MODEL.md](docs/THREAT_MODEL.md), [TODO.md](TODO.md), [ARCHITECTURE_RESEARCH.md](docs/ARCHITECTURE_RESEARCH.md), [AGENTS.md](AGENTS.md).

@@ -7,11 +7,12 @@ from dbig_contracts.security import service_keys
 from dbig_contracts.service import ServiceGuard
 from fastapi import FastAPI, HTTPException
 
-from .config import SourceConfig
-from .scan import accept_scan, scan_status
+from .scan import Sources, accept_scan, listed_sources, scan_status
 
 
-def create_app(config: SourceConfig, queue_path: Path) -> FastAPI:
+def create_app(sources: Sources, queue_path: Path) -> FastAPI:
+    # Service settings are equal across sources (config.load_sources checks it).
+    config = listed_sources(sources)[0]
     app = FastAPI(docs_url=None, redoc_url=None)
     app.add_middleware(
         ServiceGuard,
@@ -23,7 +24,7 @@ def create_app(config: SourceConfig, queue_path: Path) -> FastAPI:
     @app.post("/v1/collector/scan-requests", response_model=ScanReceipt)
     def post_scan(envelope: SignedScanRequest):
         try:
-            return accept_scan(envelope, config, queue_path)
+            return accept_scan(envelope, sources, queue_path)
         except ValueError as error:
             raise HTTPException(status_code=403, detail={"code": str(error)}) from error
 

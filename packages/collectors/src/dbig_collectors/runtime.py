@@ -34,8 +34,10 @@ from dbig_contracts.models import (
     utc_now,
 )
 from dbig_contracts.security import (
+    PLAIN_LAN_ENV,
     is_loopback_literal,
     key_from_env,
+    plain_lan_allowed,
     private_address,
     private_host_refusal,
     secret_from_env,
@@ -1964,11 +1966,18 @@ def _require_loopback(hosts: list[str]) -> None:
     the rule is that nothing crosses a network unencrypted. The same rule already governs plain
     HTTP to a private model endpoint.
     """
+    # C5: reason=plaintext to databases on a LAN-only deployment; approved=owner, 2026-11-22
+    # ("about TLS for now we don't want it", answer A1); review=2027-05-21
+    # (docs/adr/ADR-001-app-machine-plain-http.md). The opt-in skips only this rule: every
+    # caller still refuses a public or missing host (private_address, _require_private).
+    if plain_lan_allowed():
+        return
     for host in hosts or [""]:
         if not is_loopback_literal(host):
             raise OperatorError(
                 f"tls = false is allowed only for loopback IP literals such as 127.0.0.1 or ::1, "
-                f"not {host or 'an unspecified host'!r}; enable TLS on the server instead"
+                f"not {host or 'an unspecified host'!r}; enable TLS on the server, or on a "
+                f"LAN-only deployment set {PLAIN_LAN_ENV}=1"
             )
 
 
@@ -2078,11 +2087,11 @@ def _connection_failure(error: BaseException, config: SourceConfig) -> OperatorE
         ):
             return OperatorError(
                 f"{where}: the server refused the login; check the user and password in "
-                f"{config.connection_env} and that the account exists on that server"
+                f"{config.login_reference} and that the account exists on that server"
             )
         if code == "3D000":
             return OperatorError(
-                f"{where}: the database named in {config.connection_env} does not exist on the "
+                f"{where}: the database named in {config.login_reference} does not exist on the "
                 "server"
             )
         reason = None
@@ -2097,7 +2106,7 @@ def _connection_failure(error: BaseException, config: SourceConfig) -> OperatorE
         if reason is not None:
             return OperatorError(
                 f"{where}: could not reach the server ({reason}); check the host and port in "
-                f"{config.connection_env}, that this machine can reach them through any "
+                f"{config.login_reference}, that this machine can reach them through any "
                 "firewall, and read_timeout_seconds for a slow network"
             )
         current = current.__cause__ or current.__context__
@@ -2148,10 +2157,21 @@ def collect(config: SourceConfig, destination: Path) -> None:
         raise
 
 
+def connection_settings(config: SourceConfig) -> str:
+    """The source's login JSON, from its own file or from its environment reference."""
+    if config.connection_file is None:
+        return secret_from_env(config.connection_env, purpose="source connection settings")
+    try:
+        return config.connection_file.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as error:
+        raise OperatorError(
+            f"source {config.source_id!r}: connection_file {config.connection_file} cannot be "
+            f"read ({type(error).__name__}); mount it readable by the service user"
+        ) from None
+
+
 def _collect(config: SourceConfig, destination: Path) -> None:
-    connection = json.loads(
-        secret_from_env(config.connection_env, purpose="source connection settings")
-    )
+    connection = json.loads(connection_settings(config))
     if not isinstance(connection, dict):
         raise ValueError("connection reference must contain a JSON object")
     signing_key = key_from_env(config.signing_key_env, purpose="collector bundle signing")

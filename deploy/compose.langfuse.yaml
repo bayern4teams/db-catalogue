@@ -3,9 +3,13 @@
 # the LAN address (LAN_IP) only, its data in its own volumes, and nothing on this list may
 # reach the internet — TELEMETRY_ENABLED=false keeps Langfuse itself from phoning home.
 #
-# Start it with the stack:
+# Start it as its own Compose project, next to the stack (in deploy/):
 #
-#     docker compose -f compose.yaml -f compose.sources.yaml -f compose.langfuse.yaml up -d
+#     docker compose -f compose.langfuse.yaml --env-file .env up -d
+#
+# Never combine it with compose.yaml in one command: Compose merges the two `name:` keys, so the
+# five services would start a second time under the project `dbig-langfuse` (laptop rehearsal,
+# 2026-11-22: the merged project failed on an overlapping network address pool).
 #
 # Versions are pinned to one Langfuse release (measured on this laptop; bump all four together,
 # see docs/DEPLOY.md). The services send metadata-only traces (never prompts, replies, SQL or

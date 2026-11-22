@@ -7,6 +7,8 @@
 *.p12
 # Deployment secrets and generated certificates (deploy/compose.yaml mounts them)
 deploy/secrets/
+# The deployment's database list (template: deploy/sources.example.toml)
+deploy/sources.toml
 
 # Python and test products
 .venv/

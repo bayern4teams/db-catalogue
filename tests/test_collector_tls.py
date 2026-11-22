@@ -459,3 +459,52 @@ def test_postgresql_connects_to_the_address_that_was_checked(monkeypatch, tmp_pa
     assert opened == [("10.1.2.3", 5432)]
     assert calls[0]["kwargs"]["sock"] is pinned
     assert calls[0]["kwargs"]["host"] == "db.lan"
+
+
+# --- plaintext on the private LAN, by the deployment's opt-in (owner 2026-11-22, A1) -----------
+
+
+@pytest.fixture
+def plain_lan(monkeypatch):
+    monkeypatch.setenv("DBIG_ALLOW_PLAIN_LAN", "1")
+
+
+def test_postgresql_plaintext_on_a_private_address_with_the_opt_in(
+    monkeypatch, tmp_path, calls, plain_lan
+):
+    with pytest.raises(Connected):
+        _collect(monkeypatch, tmp_path, "postgresql", PG_REMOTE, tls=False)
+    assert calls[0]["kwargs"]["ssl_context"] is None
+
+
+def test_clickhouse_plaintext_on_a_private_address_with_the_opt_in(
+    monkeypatch, tmp_path, calls, plain_lan
+):
+    with pytest.raises(Connected):
+        _collect(monkeypatch, tmp_path, "clickhouse", CH_REMOTE, tls=False)
+    assert calls[0]["kwargs"]["secure"] is False
+
+
+def test_mongodb_plaintext_on_private_members_with_the_opt_in(
+    monkeypatch, tmp_path, calls, plain_lan
+):
+    with pytest.raises(Connected):
+        _collect(monkeypatch, tmp_path, "mongodb",
+                 {"uri": "mongodb://10.0.0.7:27017,10.0.0.8:27017"}, tls=False)
+    assert calls[0]["kwargs"]["tls"] is False
+
+
+@pytest.mark.parametrize("host", ["8.8.8.8", ""])
+def test_the_opt_in_never_allows_plaintext_to_a_public_or_missing_host(
+    monkeypatch, tmp_path, calls, plain_lan, host
+):
+    with pytest.raises(OperatorError):
+        _collect(monkeypatch, tmp_path, "postgresql", {**PG_REMOTE, "host": host}, tls=False)
+    assert calls == [], "no connection may be attempted"
+
+
+def test_tls_stays_the_default_with_the_opt_in(monkeypatch, tmp_path, calls, plain_lan):
+    """The opt-in allows `tls = false`; a source that keeps TLS still verifies."""
+    with pytest.raises(Connected):
+        _collect(monkeypatch, tmp_path, "postgresql", PG_REMOTE)
+    assert calls[0]["kwargs"]["ssl_context"].verify_mode == ssl.CERT_REQUIRED

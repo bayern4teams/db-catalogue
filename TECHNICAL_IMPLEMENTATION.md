@@ -360,7 +360,22 @@ CA file is passed explicitly because, verified from the installed driver source,
 find trust roots differently: pg8000 uses `ssl.create_default_context()`, ClickHouse Connect
 0.15.1 takes `ca_cert=` and otherwise uses the OS store, and PyMongo 4.18.1 takes `tlsCAFile`
 and handles `SSL_CERT_FILE` differently on Windows. `tls = false` requires every host to be a
-loopback IP literal, the same rule as plain HTTP to a private model endpoint. The bundle's
+loopback IP literal, the same rule as plain HTTP to a private model endpoint, unless the
+deployment sets `DBIG_ALLOW_PLAIN_LAN=1`: then a private address is allowed too and a public or
+missing host is still refused (`runtime.py::_require_loopback`; owner 2026-11-22, answer A1;
+C5 review 2027-05-21; `tests/test_collector_tls.py`).
+
+**Many sources, one collector (owner 2026-11-22, answer B1).** `config.py::load_sources` reads
+`[[source]]` tables with an optional `[defaults]` table (a file with one `[source]` table still
+loads). Source IDs must be unique, and the service settings (`http_token_env`, request and queue
+limits, polling, crash retries) must be equal across sources, because one HTTP service and one
+worker serve them all. `scan.py::accept_scan` picks the source the request names, then verifies the
+signature with that source's key; `process_next` runs the scan with that source's settings, and a
+scan whose source was removed after queuing fails with `UNKNOWN_SOURCE`. A login comes from
+`connection_env` or, one file per database, from `connection_file` (exactly one;
+`runtime.py::connection_settings`). The requester reads the same file through
+`[requester.scan] sources_file` (only `source_id` and `namespaces`) and sends every listed source to
+`collector_url` (`tests/test_many_sources.py`). The bundle's
 `Source.transport` records which applied; it is an optional additive field, absent from older
 bundles and excluded from canonical bytes when absent.
 
@@ -663,9 +678,9 @@ Commands as implemented (`packages/*/src/*/cli.py`). Option names come from the 
 ```text
 dbig collect --config <source.toml> --out <bundle-dir>
 dbig validate-bundle <bundle-dir> --key-env <ENV>
-dbig accept-scan --config <source.toml> --request <request.json> --queue-db <db>
-dbig process-scans --config <source.toml> --queue-db <db> --out-root <dir>
-dbig serve --config <source.toml> --queue-db <db> --host <loopback-ip> --port <port>
+dbig accept-scan --config <sources.toml> --request <request.json> --queue-db <db>
+dbig process-scans --config <sources.toml> --queue-db <db> --out-root <dir>
+dbig serve --config <sources.toml> --queue-db <db> --host <loopback-ip> --port <port>
 dbig-builder assemble --config <builder.toml> --bundle <dir> [--bundle <dir> ...] --out <snapshot-dir>
 dbig-builder assemble-incremental --config <builder.toml> --state <sqlite> [--bundle <dir> ...] --out <snapshot-dir>
 dbig-builder validate-graph <snapshot-dir>

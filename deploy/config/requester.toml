@@ -24,16 +24,13 @@ langfuse_url = "${LANGFUSE_URL}"
 langfuse_public_key_env = "DBIG_LANGFUSE_PUBLIC_KEY"
 langfuse_secret_key_env = "DBIG_LANGFUSE_SECRET_KEY"
 
-# Scan requests over the private collector HTTP adapters (decision 14: plain HTTP on the LAN).
-# The three slots match deploy/.env; the dummy rule of deploy/.env.example applies below too.
+# Scan requests over the private collector HTTP adapter (decision 14: plain HTTP on the LAN).
+# Every database in deploy/sources.toml may be scanned, in its listed namespaces, through the
+# one collector (owner 2026-11-22, answer B1).
 [requester.scan]
 signing_key_env = "DBIG_SIGNING_KEY"
 key_id = "local"
 allowed_capabilities = ["metadata"]
 http_token_env = "DBIG_COLLECTOR_TOKEN"
-collector_urls = { "${SOURCE_ID_1}" = "http://${COLLECTOR_IP}:8443", "${SOURCE_ID_2}" = "http://${COLLECTOR_CH_IP}:8443", "${SOURCE_ID_3}" = "http://${COLLECTOR_MONGO_IP}:8443" }
-
-[requester.scan.allowed_sources]
-"${SOURCE_ID_1}" = ["${SOURCE_NAMESPACES_1}"]
-"${SOURCE_ID_2}" = ["${SOURCE_NAMESPACES_2}"]
-"${SOURCE_ID_3}" = ["${SOURCE_NAMESPACES_3}"]
+sources_file = "/etc/dbig/sources.toml"
+collector_url = "http://${COLLECTOR_IP}:8443"

@@ -8,7 +8,7 @@ One fixed term per concept. Documents use these words and no synonyms.
 
 | Term | Definition | Code |
 | --- | --- | --- |
-| collector | Process that runs beside one source with read-only credentials and writes a signed bundle. | `packages/collectors/src/dbig_collectors/runtime.py::collect` |
+| collector | Process that reads one or more sources with read-only credentials and writes one signed bundle per scan. | `packages/collectors/src/dbig_collectors/runtime.py::collect` |
 | builder | Central process that validates bundles and publishes a snapshot. | `packages/catalog-builder/src/dbig_builder/builder.py::assemble` |
 | requester | Module that searches a snapshot, answers questions with a private model, and dispatches scan requests. | `packages/requester/src/dbig_requester/search.py::search` |
 | planner | Module that builds a path graph from a snapshot and observations, and renders plans. It never runs a plan. | `packages/planner/src/dbig_planner/graph.py::build_graph` |

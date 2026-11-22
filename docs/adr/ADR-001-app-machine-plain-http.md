@@ -24,19 +24,26 @@ All decisions below are the owner's; the words column is quoted from the brief.
 | 17 | Start empty on app-machine and collect again; laptop `dbig_*` volumes are not moved and not deleted. | brief |
 | 18 | Write `docs/USER_MANUAL.md`, `docs/DEPLOY.md`, `docs/API.md`. | brief |
 | 19 | Update normalization's `docs/DEPLOY.md` too: combined memory and disk needs in both guides. | brief |
+| 20 | Database connections may be plain too, per database, with the same switch and review date (2026-11-22). | "about TLS for now we don't want it. we will provide it later not now"; answer "A1" |
+| 21 | One collector serves any number of databases, listed in `deploy/sources.toml` with one login file each; the three fixed slots are gone (2026-11-22). | "everything should be dynamic"; answer "B1" |
 
 ## What changes in the code, and what does not
 
 - Plain HTTP becomes an explicit setting (`DBIG_ALLOW_PLAIN_LAN`, see `docs/plans/app-machine/STATE.md`):
   the compose sets it; nothing else does. `bind_refusal`, `serve_refusal` and `private_base_url`
   keep refusing plain HTTP by default, so every existing test passes unchanged (L1).
-- Database TLS policy is untouched (owner decision D2 of 2026-11-10 stays in force).
+- Database TLS becomes a per-database choice (decision 20): `tls = false` reaches a private
+  address only with `DBIG_ALLOW_PLAIN_LAN=1` (`dbig_collectors.runtime::_require_loopback`); a
+  public or missing host is still refused. This supersedes D2 for app-machine until the review.
+- `deploy/sources.toml` breaks decision 11's "one settings file" on purpose (decision 21): a list
+  of databases does not fit flat `.env` lines. The collector (`dbig_collectors.config::load_sources`)
+  and the requester (`ScanConfig.sources_file`) read the same file.
 - The LAN firewall files stay in the repo, unused for now (decision 2; deleting needs a yes, B2).
 - Per-caller keys and scopes stay required on every route, OpenAPI endpoints included (decision 16).
 
 ## Consequences
 
-- Two C5 exceptions (the plain-HTTP bind and the plain-HTTP vLLM call) carry
+- Three C5 exceptions (the plain-HTTP bind, the plain-HTTP vLLM call, plain database links) carry
   `reason=LAN-only deployment; approved=owner, 2026-11-21; review=2027-05-21` next to the code.
 - Moving settings from `deploy/config/*.toml` to `deploy/.env` keeps the Pydantic validators;
   only where the values are read changes (decision 11).
