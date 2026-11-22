@@ -2,7 +2,35 @@
 
 Update this file when work starts, a fact changes, a decision is needed, a check runs, or work finishes. Do not batch updates at the end. Use `- [ ]`, `- [x]`, or `- [~]` (in progress); add a short evidence link/command with every completion. Ask the user about any question, suggestion, or debt as soon as it is discovered. All verified changes are committed. This ledger is a plan, not a claim of implemented runtime capability.
 
-## Current change: improvement report Part 1 (started 2026-11-09, branch feat/improvements)
+## Current change: move db-catalogue to app-machine (started 2026-11-22, branch `feat/app-machine`)
+
+Brief: the night-run brief (owner chat 2026-11-21/22). Ledger of the run:
+`docs/plans/app-machine/STATE.md`; measured rehearsal numbers:
+`docs/plans/app-machine/REHEARSAL_NOTES.md`; owner decisions: ADR-001.
+
+- [x] Plain-HTTP LAN opt-in `DBIG_ALLOW_PLAIN_LAN=1` (default still refuses), `${NAME}`
+  settings in the shared TOML loader, OpenAPI on all five with the caller-key guard.
+  Evidence: `ea2f60c`, `tests/test_plain_lan_and_env_settings.py`,
+  `tests/test_openapi_all_services.py` (42 passed, mutation-checked both ways).
+- [x] Deployment files: `deploy/.env.example` (all plain settings, one comment each),
+  `compose.yaml` plain HTTP + HTTP healthchecks, `compose.sources.yaml` (collector replicas;
+  T1 kept, new companion test added — none changed), `compose.langfuse.yaml` (Langfuse
+  4.83.0 pinned, minio by digest). Evidence: `7fb39bb`, `docker compose config --quiet` OK
+  for all three files, every committed TOML loaded through the real loaders.
+- [x] Releases both remotes: five images to GHCR + GitLab registry, wheels + SHA256SUMS to
+  the GitLab package registry, GitLab Release, `scripts/check_release_version.py` gate;
+  `build_images.py --push`. Evidence: `561d80f`, actionlint + zizmor clean.
+- [~] Docs trio `docs/USER_MANUAL.md`, `docs/DEPLOY.md`, `docs/API.md` (decision 18):
+  API.md done (`5faee2f`, generated from the live OpenAPI); manual and deploy in progress.
+- [ ] normalization guide correction (decision 19, own repo, own branch, not merged).
+- [x] Laptop rehearsal passed: 7/7 healthy, every /healthz 200, one real route per service
+  with a caller key (scope check 401 included), every OpenAPI opened, 7 of 7 real questions
+  answered right with citations verified. Evidence: REHEARSAL_NOTES.md (commands + numbers).
+- [ ] Not checked (stated, C3): live collect (bench TLS off; owner adds logins), fresh-collect
+  answer quality, app-machine itself, real tag runs. Owner key rotation: the model key appeared
+  in a pasted brief — rotate it.
+
+## Previous change: improvement report Part 1 (started 2026-11-09, branch feat/improvements)
 
 Source: `docs/improvement-report.md` on `docs/improvement-report` at b505b83. Rulings relayed by the lead session, 2026-11-09 (not the owner's own words): H1 (a); H2 (a) without (c); H3 (b); H7 (a). Live resume state: `.handoff/implementation-progress.md`.
 
