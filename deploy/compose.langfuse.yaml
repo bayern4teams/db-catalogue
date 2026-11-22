@@ -1,0 +1,180 @@
+# Self-hosted Langfuse next to the five services (owner decision 4, 2026-11-21). It is
+# telemetry infrastructure (TECHNICAL_IMPLEMENTATION.md): its own network, its ports bound to
+# the LAN address (LAN_IP) only, its data in its own volumes, and nothing on this list may
+# reach the internet — TELEMETRY_ENABLED=false keeps Langfuse itself from phoning home.
+#
+# Start it with the stack:
+#
+#     docker compose -f compose.yaml -f compose.sources.yaml -f compose.langfuse.yaml up -d
+#
+# Versions are pinned to one Langfuse release (measured on this laptop; bump all four together,
+# see docs/DEPLOY.md). The services send metadata-only traces (never prompts, replies, SQL or
+# values); if Langfuse is down the services keep working and drop telemetry (the rule holds
+# regardless of this file).
+#
+# The CHANGEME secrets below are NOT defaults to keep: docs/DEPLOY.md generates real values
+# into deploy/.env / deploy/secrets/ before the first start.
+name: dbig-langfuse
+
+x-pinned: &pinned
+  restart: unless-stopped
+
+services:
+  langfuse-web:
+    <<: *pinned
+    image: docker.io/langfuse/langfuse:4.83.0
+    depends_on:
+      langfuse-postgres: {condition: service_healthy}
+      langfuse-clickhouse: {condition: service_healthy}
+      langfuse-redis: {condition: service_healthy}
+      langfuse-minio: {condition: service_healthy}
+    ports:
+      - {target: 3000, published: "${LANGFUSE_PORT:-3000}", host_ip: "${LAN_IP:?set LAN_IP in deploy/.env}", protocol: tcp}
+    environment:
+      NEXTAUTH_URL: ${LANGFUSE_URL:?set LANGFUSE_URL in deploy/.env}
+      # Langfuse reads these three as plain environment values only (it has no *_FILE form),
+      # so unlike the services' keys they live in deploy/.env, generated per deployment:
+      # `openssl rand -hex 32` for ENCRYPTION_KEY, `openssl rand -base64 32` for the others.
+      NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:?set LANGFUSE_NEXTAUTH_SECRET in deploy/.env}
+      SALT: ${LANGFUSE_SALT:?set LANGFUSE_SALT in deploy/.env}
+      ENCRYPTION_KEY: ${LANGFUSE_ENCRYPTION_KEY:?set LANGFUSE_ENCRYPTION_KEY in deploy/.env}
+      DATABASE_URL: "postgresql://langfuse:${LANGFUSE_DB_PASSWORD:?set LANGFUSE_DB_PASSWORD in deploy/.env}@langfuse-postgres:5432/langfuse"
+      CLICKHOUSE_MIGRATION_URL: clickhouse://langfuse-clickhouse:9000
+      CLICKHOUSE_URL: http://langfuse-clickhouse:8123
+      CLICKHOUSE_USER: langfuse
+      CLICKHOUSE_PASSWORD: ${LANGFUSE_CH_PASSWORD:?set LANGFUSE_CH_PASSWORD in deploy/.env}
+      CLICKHOUSE_CLUSTER_ENABLED: "false"
+      REDIS_HOST: langfuse-redis
+      REDIS_PORT: "6379"
+      REDIS_AUTH: ${LANGFUSE_REDIS_PASSWORD:?set LANGFUSE_REDIS_PASSWORD in deploy/.env}
+      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
+      LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
+      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: langfuse
+      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: ${LANGFUSE_S3_SECRET:?set LANGFUSE_S3_SECRET in deploy/.env}
+      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://langfuse-minio:9000
+      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
+      LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: langfuse
+      LANGFUSE_S3_MEDIA_UPLOAD_REGION: auto
+      LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: langfuse
+      LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: ${LANGFUSE_S3_SECRET:?}
+      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://langfuse-minio:9000
+      LANGFUSE_S3_MEDIA_UPLOAD_INTERNAL_ENDPOINT: http://langfuse-minio:9000
+      LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: "true"
+      TELEMETRY_ENABLED: "false"
+    networks: [langfuse]
+
+  langfuse-worker:
+    <<: *pinned
+    image: docker.io/langfuse/langfuse-worker:4.83.0
+    depends_on:
+      langfuse-postgres: {condition: service_healthy}
+      langfuse-clickhouse: {condition: service_healthy}
+      langfuse-redis: {condition: service_healthy}
+      langfuse-minio: {condition: service_healthy}
+    environment:
+      NEXTAUTH_URL: ${LANGFUSE_URL:?}
+      DATABASE_URL: "postgresql://langfuse:${LANGFUSE_DB_PASSWORD:?}@langfuse-postgres:5432/langfuse"
+      SALT: ${LANGFUSE_SALT:?}
+      ENCRYPTION_KEY: ${LANGFUSE_ENCRYPTION_KEY:?}
+      CLICKHOUSE_MIGRATION_URL: clickhouse://langfuse-clickhouse:9000
+      CLICKHOUSE_URL: http://langfuse-clickhouse:8123
+      CLICKHOUSE_USER: langfuse
+      CLICKHOUSE_PASSWORD: ${LANGFUSE_CH_PASSWORD:?}
+      CLICKHOUSE_CLUSTER_ENABLED: "false"
+      REDIS_HOST: langfuse-redis
+      REDIS_PORT: "6379"
+      REDIS_AUTH: ${LANGFUSE_REDIS_PASSWORD:?}
+      LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
+      LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
+      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: langfuse
+      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: ${LANGFUSE_S3_SECRET:?}
+      LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://langfuse-minio:9000
+      LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
+      LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: langfuse
+      LANGFUSE_S3_MEDIA_UPLOAD_REGION: auto
+      LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: langfuse
+      LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: ${LANGFUSE_S3_SECRET:?}
+      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://langfuse-minio:9000
+      LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: "true"
+      TELEMETRY_ENABLED: "false"
+    networks: [langfuse]
+
+  langfuse-postgres:
+    <<: *pinned
+    image: docker.io/postgres:17.6
+    environment:
+      POSTGRES_USER: langfuse
+      POSTGRES_PASSWORD: ${LANGFUSE_DB_PASSWORD:?}
+      POSTGRES_DB: langfuse
+      TZ: UTC
+      PGTZ: UTC
+    volumes:
+      - langfuse-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U langfuse"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+    networks: [langfuse]
+
+  langfuse-clickhouse:
+    <<: *pinned
+    image: docker.io/clickhouse/clickhouse-server:25.12
+    user: "101:101"
+    environment:
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: langfuse
+      CLICKHOUSE_PASSWORD: ${LANGFUSE_CH_PASSWORD:?}
+    volumes:
+      - langfuse-clickhouse-data:/var/lib/clickhouse
+      - langfuse-clickhouse-logs:/var/log/clickhouse-server
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8123/ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [langfuse]
+
+  langfuse-redis:
+    <<: *pinned
+    image: docker.io/redis:7.4
+    command: >
+      --requirepass ${LANGFUSE_REDIS_PASSWORD:?}
+      --maxmemory-policy noeviction
+    volumes:
+      - langfuse-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 10s
+      retries: 10
+    networks: [langfuse]
+
+  langfuse-minio:
+    <<: *pinned
+    image: cgr.dev/chainguard/minio@sha256:dc5e098902c102b848a72b96671c235f1f8464ccad60a62d1f205f8c221ce12b
+    entrypoint: sh
+    command: -c 'mkdir -p /data/langfuse && minio server --address ":9000" --console-address ":9001" /data'
+    environment:
+      MINIO_ROOT_USER: langfuse
+      MINIO_ROOT_PASSWORD: ${LANGFUSE_S3_SECRET:?}
+    volumes:
+      - langfuse-minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [langfuse]
+
+networks:
+  langfuse:
+    driver: bridge
+    enable_ipv6: false
+
+volumes:
+  langfuse-postgres-data:
+  langfuse-clickhouse-data:
+  langfuse-clickhouse-logs:
+  langfuse-redis-data:
+  langfuse-minio-data:

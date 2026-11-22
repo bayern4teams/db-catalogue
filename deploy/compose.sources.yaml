@@ -1,0 +1,122 @@
+# Collector replicas for source slots 2 and 3 (owner 2026-11-22: slots decision). Start it
+# together with deploy/compose.yaml:
+#
+#     docker compose -f compose.yaml -f compose.sources.yaml [-f compose.langfuse.yaml] up -d
+#
+# One `collectors` process serves exactly one source (SourceConfig holds one `[source]` table),
+# so each further database gets a replica here with its own config file, its own state volume
+# and its own container name. A deployment with fewer sources removes its replica here and
+# leaves the requester's slot as the documented dummy (deploy/.env.example).
+#
+# The replicas carry the same hardening as the five services; tests/test_repository_policy.py
+# runs the T1 check over this file too.
+name: dbig
+
+x-hardening: &hardening
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  user: "10001:10001"
+  mem_limit: ${DBIG_MEM_LIMIT:-1g}
+  pids_limit: 128
+  tmpfs: ["/tmp:size=64m,mode=1777"]
+  restart: unless-stopped
+  init: true
+
+x-settings: &settings
+  DBIG_ALLOW_PLAIN_LAN: ${DBIG_ALLOW_PLAIN_LAN:?set DBIG_ALLOW_PLAIN_LAN in deploy/.env}
+
+volumes:
+  collector-ch-state:
+  collector-mongo-state:
+
+services:
+  collectors-ch:
+    <<: *hardening
+    image: ${DBIG_REGISTRY}dbig-collectors:${DBIG_VERSION:?set DBIG_VERSION in deploy/.env}
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        PACKAGE: dbig-collectors
+        EXTRAS: "--extra postgresql --extra clickhouse --extra mongodb --extra api"
+    container_name: dbig-collectors-ch
+    command:
+      - dbig
+      - serve
+      - --config=/etc/dbig/collector.toml
+      - --queue-db=/var/lib/dbig/state/queue.sqlite3
+      - --bundle-root=/data/bundles
+      - --host=${COLLECTOR_CH_IP:?set COLLECTOR_CH_IP in deploy/.env}
+      - --port=8443
+    environment:
+      <<: *settings
+      DBIG_CALLER_KEYS_FILE: /run/secrets/collector_caller_keys
+      DBIG_SIGNING_KEY_FILE: /run/secrets/scan_signing_key
+      DBIG_TOKEN_KEY_FILE: /run/secrets/token_key
+      DBIG_SOURCE_CONNECTION_FILE: /run/secrets/source_connection_ch
+      SOURCE_ID_2: ${SOURCE_ID_2:?set SOURCE_ID_2 in deploy/.env}
+      SOURCE_NAMESPACES_2: ${SOURCE_NAMESPACES_2:?set SOURCE_NAMESPACES_2 in deploy/.env}
+    secrets: [collector_caller_keys, scan_signing_key, token_key, source_connection_ch,
+              source_ca_bundle]
+    volumes:
+      - ./config/collector-slot2.toml:/etc/dbig/collector.toml:ro
+      - bundles:/data/bundles
+      - collector-ch-state:/var/lib/dbig/state
+    networks:
+      dbig:
+        ipv4_address: ${COLLECTOR_CH_IP:?}
+    ports:
+      - {target: 8443, published: "${COLLECTOR_CH_PORT:-8446}", host_ip: "${LAN_IP:?set LAN_IP in deploy/.env}", protocol: tcp}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys,urllib.request as u; sys.exit(0 if u.urlopen(sys.argv[1], timeout=3).status == 200 else 1)", "http://${COLLECTOR_CH_IP:?}:8443/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  collectors-mongo:
+    <<: *hardening
+    image: ${DBIG_REGISTRY}dbig-collectors:${DBIG_VERSION:?}
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        PACKAGE: dbig-collectors
+        EXTRAS: "--extra postgresql --extra clickhouse --extra mongodb --extra api"
+    container_name: dbig-collectors-mongo
+    command:
+      - dbig
+      - serve
+      - --config=/etc/dbig/collector.toml
+      - --queue-db=/var/lib/dbig/state/queue.sqlite3
+      - --bundle-root=/data/bundles
+      - --host=${COLLECTOR_MONGO_IP:?set COLLECTOR_MONGO_IP in deploy/.env}
+      - --port=8443
+    environment:
+      <<: *settings
+      DBIG_CALLER_KEYS_FILE: /run/secrets/collector_caller_keys
+      DBIG_SIGNING_KEY_FILE: /run/secrets/scan_signing_key
+      DBIG_TOKEN_KEY_FILE: /run/secrets/token_key
+      DBIG_SOURCE_CONNECTION_FILE: /run/secrets/source_connection_mongo
+      SOURCE_ID_3: ${SOURCE_ID_3:?set SOURCE_ID_3 in deploy/.env}
+      SOURCE_NAMESPACES_3: ${SOURCE_NAMESPACES_3:?set SOURCE_NAMESPACES_3 in deploy/.env}
+    secrets: [collector_caller_keys, scan_signing_key, token_key, source_connection_mongo,
+              source_ca_bundle]
+    volumes:
+      - ./config/collector-slot3.toml:/etc/dbig/collector.toml:ro
+      - bundles:/data/bundles
+      - collector-mongo-state:/var/lib/dbig/state
+    networks:
+      dbig:
+        ipv4_address: ${COLLECTOR_MONGO_IP:?}
+    ports:
+      - {target: 8443, published: "${COLLECTOR_MONGO_PORT:-8447}", host_ip: "${LAN_IP:?}", protocol: tcp}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys,urllib.request as u; sys.exit(0 if u.urlopen(sys.argv[1], timeout=3).status == 200 else 1)", "http://${COLLECTOR_MONGO_IP:?}:8443/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+secrets:
+  source_connection_ch: {file: ./secrets/source-connection-slot2.json}
+  source_connection_mongo: {file: ./secrets/source-connection-slot3.json}

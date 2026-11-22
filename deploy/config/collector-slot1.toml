@@ -1,0 +1,17 @@
+# Collector source slot 1 (deploy/compose.yaml `collectors`). Every `${NAME}` reads the
+# environment the container gets, which compose fills from deploy/.env (owner decision 11:
+# plain settings live there, this committed file keeps placeholders). Slot 2 and 3 are in
+# deploy/compose.sources.yaml with collector-slot2.toml and collector-slot3.toml.
+[source]
+source_id = "${SOURCE_ID_1}"
+kind = "postgresql"
+# The reference names only; the JSON login itself is secrets/source-connection-slot1.json
+# (DBIG_SOURCE_CONNECTION_FILE, mounted by compose — owner decision 5: read-only logins).
+connection_env = "DBIG_SOURCE_CONNECTION"
+signing_key_env = "DBIG_SIGNING_KEY"
+signing_key_id = "local"
+namespaces = ["${SOURCE_NAMESPACES_1}"]
+# Database TLS stays required (owner decision D2, 2026-11-11, still in force; the plain-HTTP
+# decision of 2026-11-21 covers the services and the vLLM call, not the databases).
+tls = true
+tls_ca_file = "/run/secrets/source_ca_bundle"

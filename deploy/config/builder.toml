@@ -1,0 +1,26 @@
+# The builder service (deploy/compose.yaml `builder`). ${NAME} reads the container environment,
+# filled from deploy/.env (owner decision 11). Key references name environment variables only;
+# the values are the mounted files (NAME_FILE form, dbig_contracts.security::secret_from_env).
+[builder]
+signing_keys = { local = "DBIG_SIGNING_KEY" }
+
+[builder.service]
+bundles_root = "/data/bundles"
+snapshots_root = "/data/snapshots"
+jobs_db = "/var/lib/dbig/state/jobs.sqlite3"
+
+# The semantic review runs on the private vLLM (decision 3: address, model and key are
+# settings). Plain HTTP to it is allowed by DBIG_ALLOW_PLAIN_LAN=1 (decision 12, C5 review
+# 2027-05-21); a public or named address is still refused. Review failure never blocks a
+# snapshot: candidates the model rejects stay unreviewed, they are not made up.
+[builder.review]
+base_url = "${VLLM_BASE_URL}"
+model = "${VLLM_MODEL}"
+model_digest = "${VLLM_MODEL_DIGEST}"
+api_key_env = "DBIG_MODEL_KEY"
+
+# Metadata-only traces (AGENTS.md): run ids, node names, token counts, timings, codes — never
+# prompts, replies, SQL or values.
+langfuse_url = "${LANGFUSE_URL}"
+langfuse_public_key_env = "DBIG_LANGFUSE_PUBLIC_KEY"
+langfuse_secret_key_env = "DBIG_LANGFUSE_SECRET_KEY"

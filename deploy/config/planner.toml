@@ -1,0 +1,8 @@
+# The planner service (deploy/compose.yaml `planner`). ${NAME} reads the container environment,
+# filled from deploy/.env (owner decision 11).
+[planner]
+graph_dir = "/var/lib/dbig/state/graph"
+snapshot_dir = "/data/snapshots/current"
+# Observed SQL and OpenLineage events, read-only, supplied by the operator; the mounted folder
+# may be empty, and the graph route answers 503 until files appear (GRAPH_SOURCES_NOT_CONFIGURED).
+observations_path = "/etc/dbig/observations"

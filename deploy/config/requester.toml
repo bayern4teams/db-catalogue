@@ -1,0 +1,34 @@
+# The requester service (deploy/compose.yaml `requester`). ${NAME} reads the container
+# environment, filled from deploy/.env (owner decision 11).
+[requester]
+snapshot_dir = "/data/snapshots/current"
+state_dir = "/var/lib/dbig/state"
+# With DBIG_CALLER_KEYS_FILE mounted (decision 16: per-caller keys), api_key_env is unused;
+# it still must name a resolvable variable, and this one always resolves to the key file path.
+api_key_env = "DBIG_CALLER_KEYS_FILE"
+
+# Grounded answers from the private vLLM (decision 3). Plain HTTP allowed by
+# DBIG_ALLOW_PLAIN_LAN=1 (decision 12, C5 review 2027-05-21). model_digest changes with the
+# model: update VLLM_MODEL_DIGEST in deploy/.env when the model server is upgraded.
+[requester.answer]
+base_url = "${VLLM_BASE_URL}"
+model = "${VLLM_MODEL}"
+model_digest = "${VLLM_MODEL_DIGEST}"
+api_key_env = "DBIG_MODEL_KEY"
+langfuse_url = "${LANGFUSE_URL}"
+langfuse_public_key_env = "DBIG_LANGFUSE_PUBLIC_KEY"
+langfuse_secret_key_env = "DBIG_LANGFUSE_SECRET_KEY"
+
+# Scan requests over the private collector HTTP adapters (decision 14: plain HTTP on the LAN).
+# The three slots match deploy/.env; the dummy rule of deploy/.env.example applies below too.
+[requester.scan]
+signing_key_env = "DBIG_SIGNING_KEY"
+key_id = "local"
+allowed_capabilities = ["metadata"]
+http_token_env = "DBIG_COLLECTOR_TOKEN"
+collector_urls = { "${SOURCE_ID_1}" = "http://${COLLECTOR_IP}:8443", "${SOURCE_ID_2}" = "http://${COLLECTOR_CH_IP}:8443", "${SOURCE_ID_3}" = "http://${COLLECTOR_MONGO_IP}:8443" }
+
+[requester.scan.allowed_sources]
+"${SOURCE_ID_1}" = ["${SOURCE_NAMESPACES_1}"]
+"${SOURCE_ID_2}" = ["${SOURCE_NAMESPACES_2}"]
+"${SOURCE_ID_3}" = ["${SOURCE_NAMESPACES_3}"]

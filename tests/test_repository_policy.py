@@ -537,6 +537,15 @@ def test_each_break_of_the_lan_policy_is_named(ci_check, changes, word):
 
 def test_the_shipped_compose_file_keeps_the_lan_policy(ci_check):
     """T1 on `deploy/compose.yaml` itself, with the placeholders of `deploy/.env.example`."""
+    config = _rendered_compose(ci_check, "compose.yaml")
+    assert set(config["services"]) == {"collectors", "builder", "requester", "planner", "contracts"}
+    assert ci_check.compose_problems(config) == []
+
+
+def _rendered_compose(ci_check, name: str):
+    """A shipped compose file rendered with the placeholders of `deploy/.env.example`."""
+    import re
+
     import yaml
 
     env = {}
@@ -546,12 +555,25 @@ def test_the_shipped_compose_file_keeps_the_lan_policy(ci_check):
             env[key.strip()] = value.strip()
 
     def substitute(match: re.Match) -> str:
-        name, default = match.group(1), match.group(3)
-        assert name in env or default is not None, f"{name} is not in deploy/.env.example"
-        return env.get(name, default or "")
+        setting, default = match.group(1), match.group(3)
+        assert setting in env or default is not None, f"{setting} is not in deploy/.env.example"
+        return env.get(setting, default or "")
 
-    text = (ROOT / "deploy" / "compose.yaml").read_text(encoding="utf-8")
+    text = (ROOT / "deploy" / name).read_text(encoding="utf-8")
     rendered = re.sub(r"\$\{(\w+)(:?[-?]([^}]*))?\}", substitute, text)
-    config = yaml.safe_load(rendered)
-    assert set(config["services"]) == {"collectors", "builder", "requester", "planner", "contracts"}
-    assert ci_check.compose_problems(config) == []
+    return yaml.safe_load(rendered)
+
+
+def test_the_companion_compose_files_keep_the_lan_policy(ci_check):
+    """T1 over the companion files started with the stack (owner, 2026-11-22: the collector
+    replicas live in compose.sources.yaml, so the rule covers them too). Langfuse is telemetry
+    infrastructure, not one of the five hardened services: its own rule is that every published
+    port binds the LAN address and no service uses the host network."""
+    sources = _rendered_compose(ci_check, "compose.sources.yaml")
+    assert set(sources["services"]) == {"collectors-ch", "collectors-mongo"}
+    assert ci_check.compose_problems(sources) == []
+    langfuse = _rendered_compose(ci_check, "compose.langfuse.yaml")
+    for name, service in langfuse["services"].items():
+        assert service.get("network_mode") != "host", name
+        for port in service.get("ports", []):
+            assert port["host_ip"] == "192.0.2.10", f"{name}: Langfuse ports bind LAN_IP only"
