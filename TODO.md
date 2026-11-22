@@ -38,6 +38,14 @@ Brief: the night-run brief (owner chat 2026-11-21/22). Ledger of the run:
   example (missing `reply_location`, wrong adapter and requester) and polling the requester's
   status route, which keeps the first receipt. Evidence: `tests/test_many_sources.py`,
   `tests/test_collector_tls.py`; full suite 1461 passed / 70 skipped / 1 xfailed of 1532.
+- [x] DEPLOY.md and USER_MANUAL.md rewritten as complete step-by-step guides (owner 2026-11-22:
+  "complete and correct and full step by step guide"). Every call was run on the laptop stack
+  against a throwaway PostgreSQL: scan, collector status, assembly by request id, reindex,
+  planner graph, search (GET and POST), a live question (9 s, 7 citations), join paths, a plan,
+  contracts (valid, 422, 404), 401 and 403. Corrected on the way: literal `***` placeholders,
+  `chmod 600` that hid the secrets from user 10001, no caller-key template, bundles named by
+  path, `job_id` (the field is `id`), "401 for a missing scope" (it is 403), "search says
+  STALE_INDEX before a reindex" (it serves the old snapshot), and the missing planner rebuild.
 - [ ] Follow-up: the requester's `GET /v1/scan-requests/<id>` never refreshes an `http` scan
   from the collector (the guides point to the collector's route instead).
 - [ ] Not checked (stated, C3): live collect (the owner adds logins), fresh-collect

@@ -1,246 +1,393 @@
 # Move the catalogue to the app machine
 
-This guide runs the five catalogue services, and their optional Langfuse telemetry, on the
-**app machine**—the same host the normalization app runs its API on (a separate repository).
-The databases live on the benchmark box and stay read-only to the collector. Why it is built
-this way: [ADR-001](adr/ADR-001-app-machine-plain-http.md). Every command says where it runs:
-**[app machine]**, **[owner]** (your admin page or shell), **[box]**, **[vLLM machine]**,
-**[laptop]** or **[GitHub]** / **[GitLab]** (the web page). Text in `<angle brackets>` is
-yours to fill in. No real address appears in this repository: the committed files carry
-TEST-NET placeholders (owner decision 1).
+This guide installs the five catalogue services, and optionally their Langfuse telemetry, on
+the **app machine**. The normalization app runs on the same host from a separate repository.
+Follow the steps in order. Every step says where it runs: **[app machine]**, **[box]** (the
+database host), **[vLLM machine]**, **[laptop]**, or **[GitHub]** / **[GitLab]** (the web
+page). Text in `<angle brackets>` is yours to fill in. No real address is in this repository:
+the committed files carry TEST-NET placeholders (`192.0.2.x`). Why it is built this way:
+[ADR-001](adr/ADR-001-app-machine-plain-http.md). How other apps call it:
+[USER_MANUAL.md](USER_MANUAL.md).
 
 | Machine | Runs |
 | --- | --- |
-| App machine | Five services (collector, builder, requester, planner, contracts) and, when enabled, the Langfuse stack |
-| Benchmark box (`<bench box address>`) | The PostgreSQL, ClickHouse and MongoDB databases the collector reads (plain or TLS, per database) |
-| vLLM machine (`<vLLM machine address>`) | The model behind `ask` and the relationship review |
+| App machine | The five services (collectors, builder, requester, planner, contracts) and, when enabled, Langfuse |
+| Box (`<box address>`) | The PostgreSQL, ClickHouse and MongoDB databases the collector reads |
+| vLLM machine (`<vLLM machine address>`) | The model behind questions and the relationship review |
 | Laptop | Nothing of the stack. You call the API with curl. |
 
 ## 1. Prerequisites
 
-1. **[app machine]** Docker Engine with the Compose plugin (2.24 or later), and git.
-   Check: `docker compose version`.
-2. **[box]** PostgreSQL, ClickHouse and MongoDB reachable on their ports. TLS is optional per
-   database for now (owner 2026-11-22, answer A1): a database with TLS needs a certificate your
-   CA bundle verifies, and the CA goes into `source-ca-bundle.pem` (step 7).
-3. **[vLLM machine]** vLLM serving one pinned model behind a bearer key, as in
-   `docs/LOCAL_RUN.md` step 9, bound to the LAN instead of 127.0.0.1.
-4. Check from the **[app machine]**: `nc -zv <bench box address> 5432` connects (for a TLS
-   database: `openssl s_client -connect <bench box address>:5432 -starttls postgres`
-   completes), and `curl -s -H "Authorization: Bearer <vllm key>"
-   http://<vLLM machine address>:8000/v1/models` lists the model.
+<!-- verified: 24eb0b6 -->
 
-## 2. What the app machine needs
+1. **[app machine]** Linux with Docker Engine, the Compose plugin 2.24 or later, git and
+   python3. Check: `docker compose version` and `python3 --version` print versions.
+2. **[app machine]** At least **8 GiB of memory and 40 GiB of free disk** for db-catalogue
+   and normalization together. Check: `free -g` and `df -h /`. The measured parts:
 
-| Part | Measured on the laptop rehearsal, 2026-11-22 (laptop-measured) |
-| --- | --- |
-| The five services under load | 33–84 MiB each (`docker stats`); `DBIG_MEM_LIMIT` caps each at 1 GiB |
-| Langfuse stack, in use | 2.3 GiB total: web 754, worker 582, ClickHouse 841, Postgres 33, MinIO 83, Redis 9 (MiB) |
-| Langfuse volumes, after first boot | 151 MiB (Postgres 68 MB, ClickHouse 81 MB) |
-| The five images | 208–351 MB each, about 1.3 GB |
-
-Give the machine **8 GiB of memory and 40 GiB of free disk** for db-catalogue together with
-normalization. normalization's own numbers are in its deploy guide, "Move the app to the app
-machine"—a separate repository; do not add the two guides' sizes independently.
-Check: `df -h /` and `free -g` show the headroom.
-
-## 3. Let the app machine reach the box and vLLM
-
-1. **[box]** Add `<app-machine address>` to the rules of `bench-docker-firewall.service` for
-   the database ports of every database in `sources.toml` and restart the service. This is the same machine
-   and service as step 2 of the normalization guide: if that step already allowed the
-   address, only the database ports may still need adding.
-2. **[vLLM machine]** Allow `<app-machine address>` to reach port 8000, and nothing else.
-3. Check: the two checks of step 1.4 pass.
-
-## 4. Read-only logins and the database list (owner)
-
-Any number of databases, of any of the three engines, each with any number of namespaces
-(owner 2026-11-22, answer B1). One collector reads them all.
-
-1. **[owner]** Create a read-only account on each database as `docs/LOCAL_RUN.md` step 2 says
-   (`dbig_reader`; ClickHouse with `readonly = 2`).
-2. **[app machine]**, after step 5: `cd ~/db-catalogue/deploy && cp sources.example.toml
-   sources.toml`. List one `[[source]]` table per database: `source_id` (your name for it),
-   `kind` (`postgresql`, `clickhouse` or `mongodb`), `connection_file` and `namespaces`.
-   `sources.toml` is git-ignored.
-3. **[owner]** Write each login into its own file, `deploy/secrets/sources/<source_id>.json`,
-   in the form the comment at the top of `sources.example.toml` shows, for example
-   `{"host": "<box address>", "port": 5432, "database": "<db>", "user": "dbig_reader",
-   "password": "<password>"}`. Owner decision 5: these files never go into git, a chat log or a
-   ticket. Make them readable by the services: `chown -R 10001:10001 secrets/sources` and
-   `chmod 600 secrets/sources/*`.
-4. TLS per database: `tls = false` (the template's default) sends the login unencrypted over the
-   LAN, allowed only with `DBIG_ALLOW_PLAIN_LAN=1` and only to private addresses (owner
-   2026-11-22, answer A1; review 2027-05-21). A database with TLS sets `tls = true` and
-   `tls_ca_file = "/run/secrets/source_ca_bundle"` in its own table.
-5. Check: `python3 -c 'import json,sys; [json.load(open(f)) for f in sys.argv[1:]]'
-   secrets/sources/*.json` prints nothing, and every `connection_file` in `sources.toml` names
-   one of those files under `/run/secrets/sources/`.
-
-Add or remove a database later: edit `sources.toml` and its login file, then
-`docker compose --env-file .env up -d collectors requester`.
-
-## 5. Get the stack on the app machine
-
-Either build from a clone or run tagged release images (owner decision 8). **[app machine]**
-`git clone <repository URL> ~/db-catalogue` (later updates: `git pull`). Leave
-`DBIG_REGISTRY` empty to build the images from this clone. Check: the clone holds
-`deploy/compose.yaml`, `sources.example.toml` and `.env.example`. For release images:
-`docker login ghcr.io -u <github user>` (or the GitLab registry with a deploy token, as the
-normalization guide describes), then in `deploy/.env` set `DBIG_REGISTRY` to the registry path
-ending in `/` (for example `ghcr.io/<github user>/db-catalogue/`) and `DBIG_VERSION` to the
-release version (step 12).
-
-## 6. Fill deploy/.env
-
-1. **[app machine]** `cd ~/db-catalogue/deploy && cp .env.example .env && chmod 600 .env`
-2. Replace **every** TEST-NET `192.0.2.x` placeholder with the real address or network:
-   `LAN_IP`, `LAN_CIDR`, `VLLM_BASE_URL`, `LANGFUSE_URL`, `DBIG_EGRESS`. The database
-   addresses are in the login files (step 4), not here.
-3. Set `VLLM_MODEL` to the name `/v1/models` lists and `VLLM_MODEL_DIGEST` to the pinned
-   revision's digest. Generate the `LANGFUSE_*` values now: the three passwords and the
-   encryption key with `openssl rand -hex 24` (they sit inside `DATABASE_URL`, where base64's
-   `+/=` break Prisma), `LANGFUSE_NEXTAUTH_SECRET` and `LANGFUSE_SALT` with
-   `openssl rand -base64 32`.
-4. Check: `grep -c '192\.0\.2' .env` prints 0 and no line still says `<generated>`.
-
-## 7. Secrets
-
-Values live as files under `deploy/secrets/`, never in `.env`.
-
-1. **[app machine]** Generate the service keys (one command each, in `deploy/secrets/`):
-   `python3 -c 'import secrets; print(secrets.token_urlsafe(48))' > scan-signing.key` (same for
-   `token.key`; for `requester-collector-token` use `token_urlsafe(32)`).
-
-2. **[owner]** Put the CA that signed the database certificates in `source-ca-bundle.pem` (an
-   empty file when no database uses TLS) and the vLLM bearer key into `model.key`; the login
-   files are step 4. Caller keys: each
-   `caller-keys-<service>.json` holds a `keys` array; an entry has `caller`, `sha256`, `scopes`
-   and `expires_at`. Make a random key per caller, hash it, and write the hash into the file:
-   the key itself lives only on the caller—then replace every rehearsal `sha256` and
-   `expires_at`: `printf '%s' '<the caller key>' | sha256sum`. The scopes per service:
-
-   | Service | Scopes |
+   | Part | Laptop rehearsal, 2026-11-22 |
    | --- | --- |
-   | collectors | `scan` |
-   | requester | `search`, `ask`, `scan`, `reindex` |
-   | planner | `plan`, `graph` |
-   | builder | `assemble` |
-   | contracts | `validate` |
+   | The five services | 33–84 MiB each; `DBIG_MEM_LIMIT` caps each at 1 GiB |
+   | Langfuse, in use | 2.3 GiB in total |
+   | Langfuse volumes after the first start | 151 MiB |
+   | The five images | 208–351 MB each, about 1.3 GB |
 
-   The requester calls the collector with `requester-collector-token`, so that token is a caller
-   of the collector too: add an entry for it (caller `requester`, scope `scan`) to
-   `caller-keys-collectors.json`, with `printf '%s' "$(cat requester-collector-token)" | sha256sum`
-   as its `sha256`. Without it every scan through the requester answers `502` with
-   `COLLECTOR_REFUSED_401`.
+3. **[app machine]** Write down its private LAN address and network, for example
+   `10.10.9.50` and `10.10.9.0/24`. This guide calls the address `<app-machine address>`.
+4. **[vLLM machine]** vLLM serves one model behind a bearer key on a private address
+   (`docs/LOCAL_RUN.md` step 9, bound to the LAN instead of 127.0.0.1). Write down its URL,
+   the model name, the model's digest (the revision you pinned) and the key.
 
-3. Check: `chmod 600 deploy/secrets/*`, and `docker compose --env-file .env config` (in
-   `deploy/`) names no missing file.
+## 2. Let the app machine reach the databases and vLLM
 
-## 8. Start
+<!-- verified: 24eb0b6 -->
 
-**[app machine]**, in `~/db-catalogue/deploy`:
-`docker compose --env-file .env up -d`. Langfuse is a separate Compose project (step 11).
-Check: `docker compose ps` shows the five services `healthy`.
+1. **[box]** Allow `<app-machine address>` on the port of every database the catalogue will
+   read, in the box's firewall (`bench-docker-firewall.service`), then restart that service.
+   normalization's guide, step 2, changes the same service; add only the ports it lacks.
+2. **[vLLM machine]** Allow `<app-machine address>` on the vLLM port (8000 unless you changed
+   it), nothing else.
+3. Check, **[app machine]**: `nc -zv <box address> <port>` connects for each database, and
+   `curl -s -H "Authorization: Bearer <vLLM key>" http://<vLLM machine address>:8000/v1/models`
+   lists the model.
 
-## 9. Health and scope checks
+## 3. Get the code
 
-Check: the loop prints five `200`s, then `openapi.json` answers `401` without a caller key
-and `200` with one (owner decision 16; a key missing the route's scope gets `403`).
+<!-- verified: 24eb0b6 -->
+
+1. **[GitLab]** The project, Settings, Repository, Deploy tokens: create a token with
+   `read_repository` (add `read_registry` if you will pull release images, step 13).
+2. **[app machine]** Clone into your home folder; git asks for the token user and the token:
+
+   ```bash
+   git clone <repository URL> ~/db-catalogue
+   ```
+
+3. Check: `ls ~/db-catalogue/deploy` lists `compose.yaml`, `.env.example`,
+   `sources.example.toml` and `config`.
+
+From here on every **[app machine]** command runs in `~/db-catalogue/deploy`.
+
+## 4. Fill deploy/.env
+
+<!-- verified: 24eb0b6 -->
+
+`deploy/.env` holds every plain setting. Each line of `.env.example` says what it is.
+
+1. **[app machine]** `cp .env.example .env && chmod 600 .env`
+2. Replace every `192.0.2.x` placeholder: `LAN_IP` (the app machine's address), `LAN_CIDR`
+   (its network), `VLLM_BASE_URL` (`http://<vLLM machine address>:8000/v1`), `LANGFUSE_URL`
+   (`http://<app-machine address>:3000`) and `DBIG_EGRESS` (the database and vLLM
+   `address:port` pairs; it is only read by the unused firewall, owner decision 2).
+3. Set `VLLM_MODEL` to the name `/v1/models` listed in step 2, and `VLLM_MODEL_DIGEST` to the
+   model's digest. Change both together whenever the model changes.
+4. Keep `DBIG_ALLOW_PLAIN_LAN=1`. It allows plain HTTP for the services and the model on the
+   LAN, and plain connections to databases marked `tls = false` (owner decisions of
+   2026-11-21 and 2026-11-22; review date 2027-05-21). A public address stays refused.
+5. Generate the Langfuse values now, even if you start Langfuse later. The four passwords
+   and the encryption key: `openssl rand -hex 24` each (they sit inside a database URL, where
+   base64 characters break it). `LANGFUSE_NEXTAUTH_SECRET` and `LANGFUSE_SALT`:
+   `openssl rand -base64 32` each.
+6. Check: `grep -c '192\.0\.2' .env` prints `0`, and `grep -c '<' .env` prints `0`.
+
+## 5. List the databases
+
+<!-- verified: 24eb0b6 -->
+
+One collector reads any number of databases of the three engines, each with any number of
+namespaces (owner 2026-11-22, answer B1). They are listed in `deploy/sources.toml`.
+
+1. **[box]** Create a read-only account on each database (`docs/LOCAL_RUN.md` step 2:
+   `dbig_reader`; on ClickHouse with `readonly = 2`).
+2. **[app machine]** `cp sources.example.toml sources.toml && chmod 644 sources.toml`. Then
+   write one `[[source]]` table per database:
+
+   ```toml
+   [[source]]
+   source_id = "shop-pg"          # your name for it; letters, digits, - and _
+   kind = "postgresql"            # postgresql, clickhouse or mongodb
+   connection_file = "/run/secrets/sources/shop-pg.json"
+   namespaces = ["public", "sales"]   # PostgreSQL schemas, ClickHouse databases, MongoDB databases
+   ```
+
+   The `[defaults]` table at the top applies to every source; leave it as it is.
+3. **[app machine]** Write each login into its own file named in `connection_file`, under
+   `deploy/secrets/sources/`. Type the password into the file in an editor, not on the
+   command line, so it stays out of your shell history:
+
+   | kind | The file holds |
+   | --- | --- |
+   | `postgresql` | `{"host": "<box address>", "port": 5432, "database": "<db>", "user": "dbig_reader", "password": "<password>"}` |
+   | `clickhouse` | `{"host": "<box address>", "port": 8123, "username": "dbig_reader", "password": "<password>"}` |
+   | `mongodb` | `{"uri": "mongodb://dbig_reader:<password>@<box address>:27017/?authSource=admin"}` |
+
+4. TLS per database: `tls = false` (the default in `[defaults]`) sends the login unencrypted
+   over the LAN (owner 2026-11-22, answer A1). For a database that has TLS, add
+   `tls = true` and `tls_ca_file = "/run/secrets/source_ca_bundle"` to its own table, and put
+   its CA in `secrets/source-ca-bundle.pem` (step 6).
+5. Check: `python3 -c 'import json,sys; [json.load(open(f)) for f in sys.argv[1:]]'
+   secrets/sources/*.json` prints nothing, and each `connection_file` names one of those files.
+
+## 6. Create the secrets
+
+<!-- verified: 24eb0b6 -->
+
+Every key is a file under `deploy/secrets/`, never a line in `.env`.
+
+1. **[app machine]** Create the service keys:
+
+   ```bash
+   cd ~/db-catalogue/deploy/secrets
+   python3 -c 'import secrets; print(secrets.token_urlsafe(48))' > scan-signing.key
+   python3 -c 'import secrets; print(secrets.token_urlsafe(48))' > token.key
+   python3 -c 'import secrets; print(secrets.token_urlsafe(32))' > requester-collector-token
+   touch source-ca-bundle.pem langfuse-public.key langfuse-secret.key
+   ```
+
+   `source-ca-bundle.pem` stays empty unless a database uses TLS. The two Langfuse key files
+   stay empty until step 11; while they are empty, tracing is off and nothing else changes.
+2. **[app machine]** Put the vLLM key into `model.key` with an editor (one line, the key only).
+3. **[app machine]** Create the five caller-key files, still in `deploy/secrets/`. This makes
+   one `ops` key that may call every route, and lists the token of the requester as a caller of the
+   collector, which every scan needs:
+
+   ```bash
+   python3 - <<'EOF'
+   import hashlib, json, secrets
+   UNTIL = "2027-11-22T00:00:00+00:00"  # when these keys stop working; pick your own
+   def sha(text): return hashlib.sha256(text.encode()).hexdigest()
+   key = secrets.token_urlsafe(32)
+   ops = {"caller": "ops", "sha256": sha(key), "scopes": ["*"], "expires_at": UNTIL}
+   token = open("requester-collector-token").read().strip()
+   requester = {"caller": "requester", "sha256": sha(token), "scopes": ["scan"], "expires_at": UNTIL}
+   for service in ["collectors", "builder", "requester", "planner", "contracts"]:
+       keys = [ops, requester] if service == "collectors" else [ops]
+       with open(f"caller-keys-{service}.json", "w") as out:
+           json.dump({"keys": keys}, out, indent=2)
+   print("ops key, shown once; keep it in your password manager:", key)
+   EOF
+   ```
+
+   Keys for other apps come later, one per app with only the scopes it needs
+   ([USER_MANUAL.md](USER_MANUAL.md), section 3).
+4. **[app machine]** The services run as user 10001 and must read these files; nobody else
+   should:
+
+   ```bash
+   cd ~/db-catalogue/deploy
+   sudo chown -R 10001:10001 secrets && sudo chmod -R u=rX,go= secrets
+   ```
+
+   From now on, edit a file under `secrets/` with `sudo`.
+5. Check: `sudo ls secrets secrets/sources` lists `caller-keys-builder.json`,
+   `caller-keys-collectors.json`, `caller-keys-contracts.json`, `caller-keys-planner.json`,
+   `caller-keys-requester.json`, `langfuse-public.key`, `langfuse-secret.key`, `model.key`,
+   `requester-collector-token`, `scan-signing.key`, `source-ca-bundle.pem`, `token.key` and
+   your login files. Then, in `deploy/`, `docker compose --env-file .env config --quiet` prints
+   nothing; it checks that every required setting of `.env` is set, not the secret files.
+
+## 7. Build and start
+
+<!-- verified: 24eb0b6 -->
+
+1. **[app machine]** Build the five images from the clone (a few minutes the first time),
+   then start them:
+
+   ```bash
+   docker compose --env-file .env build
+   docker compose --env-file .env up -d --wait
+   ```
+
+2. Check: `docker compose ps` lists `builder`, `collectors`, `contracts`, `planner` and
+   `requester`, each `healthy`.
+
+Langfuse is a separate Compose project (step 11). Never add `-f compose.langfuse.yaml` to these
+commands: Compose would merge the two project names and start the five services a second time.
+
+## 8. Check the services
+
+<!-- verified: 24eb0b6 -->
+
+**[laptop]**, with the `ops` key of step 6:
 
 ```bash
+export APP=http://<app-machine address>
+export KEY=<ops key>
 for p in 8441 8442 8443 8444 8445; do
-  curl -s -o /dev/null -w "%{http_code} " http://<app-machine address>:$p/healthz
+  curl -s -o /dev/null -w "%{http_code} " $APP:$p/healthz
 done; echo
-curl -s -o /dev/null -w '%{http_code}\n' http://<app-machine address>:8443/openapi.json
-curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer *** key>" \
-  http://<app-machine address>:8443/openapi.json
+curl -s -o /dev/null -w '%{http_code}\n' $APP:8443/openapi.json
+curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $KEY" $APP:8443/openapi.json
 ```
 
-## 10. First data
+Check: five `200`, then `401` (no key), then `200` (with the key). The ports are the defaults;
+use yours if you changed `*_PORT` in `.env`.
 
-The stack starts empty: the volumes hold nothing until you collect. Collect each database
-in `sources.toml` through the requester (`scan` scope), one request per database (times in
-UTC), and poll the collector's `GET /v1/collector/scan-requests/<request_id>` on port 8441 (a
-collector key with the `scan` scope; the status route of the requester keeps the first `queued`
-receipt) until the receipt says `complete` and names the `bundle_path`. Use each database's own `source_id` and namespaces, for example:
+## 9. First data
 
-```bash
-curl -s -X POST -H "Authorization: Bearer *** key>" -H 'content-type: application/json' \
-  -d '{"request": {"id": "first-pg", "source_id": "bench-pg", "scopes": ["public"],
-    "capabilities": ["metadata"], "reason": "first collect", "requester_id": "catalogue",
-    "idempotency_key": "first-pg-1", "issued_at": "<now>", "expires_at": "<one hour later>",
-    "reply_location": "local-receipt"}, "adapter": "http"}' \
-  http://<app-machine address>:8443/v1/scan-requests
-```
+<!-- verified: 24eb0b6 -->
 
-Then assemble one snapshot from all the bundles (`assemble` scope) and poll
-`GET /v1/builder/assemblies/<job_id>` until the job completes:
+The stack starts empty (owner decision 17). Do this once now, and again whenever you want a
+fresh catalogue. Measured end to end on the laptop on 2026-11-22.
 
-```bash
-curl -s -X POST -H "Authorization: Bearer *** key>" -H 'content-type: application/json' \
-  -d '{"bundles": ["<bundle_path_1>", "<bundle_path_2>"]}' \
-  http://<app-machine address>:8442/v1/builder/assemblies
-```
+1. **[laptop]** Ask for a scan of each database in `sources.toml`, one request each. `id` and
+   `idempotency_key` must be new for every request; `issued_at` and `expires_at` are UTC
+   times, for example `date -u +%Y-%m-%dT%H:%M:%SZ`; `requester_id` stays `catalogue`:
 
-Finally reindex so search sees the snapshot (`reindex` scope; before it, search says
-`STALE_INDEX`):
-`curl -s -X POST -H "Authorization: Bearer <requester key>" http://<app-machine address>:8443/v1/catalogue/reindex`.
-Check: `GET /v1/catalogue/search?query=<a word from your schema>` returns hits.
+   ```bash
+   curl -s -X POST $APP:8443/v1/scan-requests -H "Authorization: Bearer $KEY" \
+     -H 'Content-Type: application/json' -d '{"request": {"id": "shop-pg-1",
+       "source_id": "shop-pg", "scopes": ["public", "sales"], "capabilities": ["metadata"],
+       "reason": "first collect", "requester_id": "catalogue", "idempotency_key": "shop-pg-1",
+       "issued_at": "<now>", "expires_at": "<one hour later>",
+       "reply_location": "local-receipt"}, "adapter": "http"}'
+   ```
+
+   The answer is `"status": "queued"`.
+2. **[laptop]** Ask the collector until the scan is `complete` (a few seconds for a small
+   database). The status route of the requester keeps the first `queued` receipt, so use this:
+
+   ```bash
+   curl -s -H "Authorization: Bearer $KEY" $APP:8441/v1/collector/scan-requests/shop-pg-1
+   ```
+
+   `"status": "failed"` comes with an `error` that names the login file or the setting to fix.
+3. **[laptop]** Build one snapshot from all the finished scans, named by their request IDs
+   (not by their `bundle_path`):
+
+   ```bash
+   curl -s -X POST $APP:8442/v1/builder/assemblies -H "Authorization: Bearer $KEY" \
+     -H 'Content-Type: application/json' -d '{"bundles": ["shop-pg-1", "<other request id>"]}'
+   ```
+
+   The answer holds the job `id`. Repeat
+   `curl -s -H "Authorization: Bearer $KEY" $APP:8442/v1/builder/assemblies/<id>` until
+   `"status": "complete"`.
+4. **[laptop]** Reindex the requester and rebuild the planner's graph, so search, questions
+   and join paths read the new snapshot. Until you do, they keep answering from the previous one:
+
+   ```bash
+   curl -s -X POST -H "Authorization: Bearer $KEY" $APP:8443/v1/catalogue/reindex
+   curl -s -X POST -H "Authorization: Bearer $KEY" $APP:8444/v1/planner/graph
+   ```
+
+   Both answer the same `snapshot_digest`.
+
+5. Check: `curl -s -H "Authorization: Bearer $KEY" "$APP:8443/v1/catalogue/search?query=<a table name>"`
+   lists that table, and a question answers with citations (10–60 s):
+
+   ```bash
+   curl -s -X POST $APP:8443/v1/catalogue/questions -H "Authorization: Bearer $KEY" \
+     -H 'Content-Type: application/json' -d '{"question": "Which table holds <something>?"}'
+   ```
+
+## 10. Give other apps their keys
+
+<!-- verified: 24eb0b6 -->
+
+For each app that will call the catalogue, follow [USER_MANUAL.md](USER_MANUAL.md), section 3:
+the app makes its own key and sends you only its hash; you add one entry to the key file of each
+service it calls and recreate that service.
 
 ## 11. Enable Langfuse (optional)
 
-1. **[app machine]** Set the `LANGFUSE_*` values (step 6) and start Langfuse as its own
-   project. Never add `-f compose.langfuse.yaml` to the step 8 command: Compose would merge the
-   two project names and start the five services a second time. The first boot runs migrations
-   for a few minutes. Check:
-   `curl -s -o /dev/null -w '%{http_code}\n' http://<app-machine address>:3000` answers.
+<!-- verified: 24eb0b6 -->
+
+1. **[app machine]** Start it as its own project (the first start runs migrations for a few
+   minutes):
 
    ```bash
    docker compose -f compose.langfuse.yaml --env-file .env up -d
    ```
 
-2. **[owner]** Open `http://<app-machine address>:3000`, create one project, copy its public
-   and secret keys.
-3. **[app machine]** Put the keys in `secrets/langfuse-public.key` and
-   `secrets/langfuse-secret.key` (`printf '%s' '<pk...>' > …`), then restart the two tracing
-   services: `docker compose --env-file .env up -d builder requester`.
-   Check: the project page shows traces—metadata-only, never prompts, replies, SQL or values
-   (enforced in code); Langfuse never phones home (`TELEMETRY_ENABLED=false`); if it is down
-   the services keep working and drop telemetry.
+   Check: `curl -s -o /dev/null -w '%{http_code}\n' http://<app-machine address>:3000` prints
+   `200`.
+2. **[laptop]** Open `http://<app-machine address>:3000`, sign up, create an organization and
+   one project, and copy the project's public and secret keys.
+3. **[app machine]** Put the two keys into `secrets/langfuse-public.key` and
+   `secrets/langfuse-secret.key` with `sudo` and an editor, then recreate the two services that
+   send traces:
 
-## 12. Releases
+   ```bash
+   docker compose --env-file .env up -d --force-recreate builder requester
+   ```
 
-Tag `v0.1.0` only after the app machine has passed steps 8–10 end to end (owner decision 7).
+   Check: after the next question, the project shows a trace. Traces hold metadata only, never
+   prompts, replies, SQL or values. If Langfuse is down, the services keep working without it.
 
-1. **[laptop]** The gate—the tag must equal every package version:
-   `python3 scripts/check_release_version.py v0.1.0`. Both CI files run the same check.
-2. **[laptop]** `git tag -a v0.1.0 -m "v0.1.0"`, then push the tag; `origin` pushes to GitHub
-   and GitLab both.
-3. **[GitHub]** and **[GitLab]**: the release pipelines publish to both remotes—images to
-   `ghcr.io` and the GitLab container registry, wheels to the GitLab Python package registry. Image tags carry the version without the `v`
-   (`0.1.0`).
-4. **[app machine]** Adopt a release: set `DBIG_VERSION` (and `DBIG_REGISTRY`, step 5),
-   `docker compose --env-file .env pull`, then the
-   step 8 command. Roll back by setting the old version and repeating.
+## 12. Daily work
+
+<!-- verified: 24eb0b6 -->
+
+All commands run **[app machine]** in `~/db-catalogue/deploy`.
+
+| Task | Do |
+| --- | --- |
+| Change a setting | Edit `.env`, then `docker compose --env-file .env up -d` |
+| Change the model | Set `VLLM_MODEL` and `VLLM_MODEL_DIGEST` (and `model.key` if the key changed), then `docker compose --env-file .env up -d --force-recreate builder requester` |
+| Add, change or remove a database | Edit `sources.toml` and its login file (step 5), then `docker compose --env-file .env up -d --force-recreate collectors requester`, then step 9 |
+| Add or remove a caller key | Edit `secrets/caller-keys-<service>.json` with `sudo`, then `docker compose --env-file .env up -d --force-recreate <service>` |
+| Refresh the catalogue | Step 9 |
+| Update the code | `git pull`, then `docker compose --env-file .env up -d --build --wait` |
+| Update to a release | Step 13 |
+| See what a service does | `docker compose logs -f <service>` |
+| Stop everything | `docker compose down` (the data volumes stay) |
+| Back up | `.env`, `sources.toml` and `secrets/` cannot be rebuilt: copy them somewhere safe. The catalogue itself is rebuilt by step 9. |
+
+## 13. Releases
+
+<!-- verified: 24eb0b6 -->
+
+Tag `v0.1.0` only after the app machine has passed steps 7 to 9 (owner decision 7).
+
+1. **[laptop]**, in the repository on `main`, check that the tag equals every package version:
+   `python3 scripts/check_release_version.py v0.1.0`. A later release changes every version,
+   commits, then tags.
+2. **[laptop]** `git tag -a v0.1.0 -m "v0.1.0"`, then `git push origin v0.1.0`. `origin`
+   pushes to GitLab and GitHub both.
+3. **[GitHub]** Actions, "Release package": wait for green. **[GitLab]** CI/CD, Pipelines, the
+   tag's pipeline: wait for the release stage. Images are tagged with the version without the
+   `v` (`0.1.0`): on GitHub `ghcr.io/<github user>/db-catalogue/dbig-*`, on GitLab under
+   Deploy, Container Registry. Wheels are in GitLab's Deploy, Package Registry.
+4. **[app machine]** To run release images instead of building: log in once
+   (`docker login ghcr.io -u <github user>` with a token that has `read:packages`, or
+   `docker login <GitLab registry address>` with the deploy token of step 3), set
+   `DBIG_REGISTRY` in `.env` to the registry path ending in `/`, for example
+   `ghcr.io/<github user>/db-catalogue/`, and `DBIG_VERSION=0.1.0`, then:
+
+   ```bash
+   docker compose --env-file .env pull
+   docker compose --env-file .env up -d --wait
+   ```
+
+   Roll back: set the old `DBIG_VERSION` and run the same two commands. With `DBIG_REGISTRY`
+   empty, `pull` has nothing to fetch; build instead (step 7).
 
 ## When something goes wrong
 
-Every line below was measured in the laptop rehearsal of 2026-11-22:
+<!-- verified: 24eb0b6 -->
 
-| Symptom | Cause and fix |
+Measured on the laptop rehearsal of 2026-11-22.
+
+| You see | Cause and fix |
 | --- | --- |
-| `langfuse-web` crash-loops: Prisma `P1013` | A base64 password inside `DATABASE_URL` (`+/=` are not valid there). Regenerate `LANGFUSE_DB_PASSWORD` (and the other two) with `openssl rand -hex 24`. |
-| `langfuse-web` crash-loops: Prisma `P1000` | The password rotated in `.env` but Postgres kept the old one. Run `ALTER USER langfuse WITH PASSWORD '<new>'` inside the `langfuse-postgres` container, or recreate the volumes. |
-| `ask` answers 503 `MODEL_TIMEOUT` | The default 20 s timeout is too short; answers take 12-60 s. `deploy/config/requester.toml` sets `timeout_seconds = 60`—keep it. |
-| `PermissionError` after copying files into a volume from the host | Copied files carry the host user's ownership. Fix it inside the service's container: `docker compose exec -u 0 <service> chown -R 10001:10001 <path>`. |
-| A service restart-loops with exit code 127 | An old or wrong image tag. `pull` again and check `DBIG_VERSION`. |
+| A service exits at start with `PermissionError` or "cannot be read" on `/run/secrets/...` | The file is not readable by user 10001. Repeat step 6.4. |
+| Scan request answers `502` `COLLECTOR_REFUSED_401` | The token of the requester is not in `caller-keys-collectors.json`. Repeat step 6.3, or add its entry, and recreate `collectors`. |
+| Scan request answers `403` `UNAUTHORIZED_SCOPE` | The `source_id` or a namespace is not in `sources.toml`. Fix the request or the file. |
+| Scan request answers `502` `UNAUTHORIZED_REQUESTER_OR_SOURCE` | `requester_id` is not `catalogue`, or the source is missing from the collector's file. |
+| Scan `failed`, error "could not reach the server" | The host or port in the named login file is wrong, or the box's firewall blocks the app machine (step 2). |
+| Assembly answers `404` `BUNDLE_NOT_FOUND` | Name the bundles by their scan request IDs, not by `bundle_path`. |
+| Search or join paths find nothing new after a scan | You did not reindex and rebuild the graph (step 9.4). |
+| `401` `UNAUTHORIZED` / `403` `FORBIDDEN_SCOPE` | A wrong or expired key / a key without that route's scope. |
+| Question answers `503` `MODEL_TIMEOUT` | The model took longer than 60 s or is down. Check vLLM; `timeout_seconds` is in `config/requester.toml`. |
+| `langfuse-web` restarts with Prisma `P1013` | A Langfuse password is not hex. Regenerate it with `openssl rand -hex 24`. |
+| `langfuse-web` restarts with Prisma `P1000` | A password changed in `.env` after the first start. Set it back, or run `ALTER USER` in `langfuse-postgres`. |
+| "Pool overlaps with other one on this address space" | `-f compose.langfuse.yaml` was added to a stack command (step 7), or `DBIG_SUBNET` clashes with another Docker network: pick a free `172.x.0.0/24`. |
 
 ## Not checked
 
-- A real app machine. Every number above is laptop-measured (rehearsal 2026-11-22).
-- A live collect from this stack against the bench databases.
-- The LAN firewall files (`deploy/dbig-firewall.service`, `deploy/lan_firewall.py`): kept in
-  the repository but unused for now (owner decision 2, 2026-11-21).
-- The answer quality of a fresh collect against real data.
+- A real app machine: every number above is from the laptop.
+- A scan of the box's databases: the laptop run used a throwaway PostgreSQL with a small schema.
+- The tag-triggered release pipelines on both remotes.
+- The LAN firewall files (`deploy/lan_firewall.py`, `deploy/dbig-firewall.service`), kept but
+  not used for now (owner decision 2).
